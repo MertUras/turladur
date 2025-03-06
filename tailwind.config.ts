@@ -53,6 +53,16 @@ const config = {
           '0%': { transform: 'scale(0.95)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
+        'text-gradient': {
+          '0%, 100%': {
+            'background-size': '200% 200%',
+            'background-position': 'left center',
+          },
+          '50%': {
+            'background-size': '200% 200%',
+            'background-position': 'right center',
+          },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -62,6 +72,7 @@ const config = {
         'slideUp': 'slideUp 0.7s ease-out',
         'pulse': 'pulse 2s ease-in-out infinite',
         'zoomIn': 'zoomIn 0.4s ease-out',
+        'text-gradient-slow': 'text-gradient 8s ease infinite',
       },
     },
   },
