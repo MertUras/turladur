@@ -41,12 +41,27 @@ const config = {
           '75%': { transform: 'translateY(10px) translateX(10px)' },
           '100%': { transform: 'translateY(0px) translateX(0px)' },
         },
+        'slideUp': {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        'pulse': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.8' },
+        },
+        'zoomIn': {
+          '0%': { transform: 'scale(0.95)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'fadeIn': 'fadeIn 0.2s ease-out',
+        'fadeIn': 'fadeIn 0.5s ease-out',
         'float': 'float 8s ease-in-out infinite',
+        'slideUp': 'slideUp 0.7s ease-out',
+        'pulse': 'pulse 2s ease-in-out infinite',
+        'zoomIn': 'zoomIn 0.4s ease-out',
       },
     },
   },

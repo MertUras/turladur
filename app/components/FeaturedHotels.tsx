@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "../utils/cn";
@@ -103,263 +103,310 @@ const filterCategories = [
 
 export default function FeaturedHotels() {
   const [activeFilter, setActiveFilter] = useState("all");
-  const [isVisible, setIsVisible] = useState(false);
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
 
-  // Görünürlük kontrolü
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-        }
-      },
-      { threshold: 0.1 }
-    );
-    
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
+  // Scroll durumunu kontrol et
+  const checkScrollPosition = () => {
+    if (sliderRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = sliderRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10); // Küçük bir tolerans ekle
     }
-    
-    return () => {
-      if (sectionRef.current) {
-        observer.unobserve(sectionRef.current);
-      }
-    };
-  }, []);
-
-  // Yıldız oluşturma fonksiyonu
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }).map((_, index) => (
-      <svg 
-        key={index} 
-        xmlns="http://www.w3.org/2000/svg" 
-        viewBox="0 0 24 24" 
-        fill={index < Math.floor(rating) ? "currentColor" : "none"}
-        stroke={index < Math.floor(rating) ? "none" : "currentColor"}
-        className={`w-4 h-4 ${index < Math.floor(rating) ? "text-yellow-400" : "text-gray-300"}`}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
-      </svg>
-    ));
   };
 
-  // Filtrelenmiş oteller - geliştirilmiş filtre
-  const filteredHotels = hotels.filter(hotel => {
-    if (activeFilter === "all") return true;
-    if (activeFilter === "deals") return hotel.discount >= 15 || hotel.promotion || hotel.limitedOffer;
-    if (activeFilter === "bestseller") return hotel.isBestSeller;
-    return hotel.location.toLowerCase().includes(activeFilter.toLowerCase());
-  });
+  // Component mount olduğunda ve pencere boyutu değiştiğinde scroll durumunu kontrol et
+  useEffect(() => {
+    checkScrollPosition();
+    window.addEventListener('resize', checkScrollPosition);
+    return () => window.removeEventListener('resize', checkScrollPosition);
+  }, []);
+
+  // Filtreye göre otelleri filtrele
+  const filteredHotels = useMemo(() => {
+    if (activeFilter === "all") return hotels;
+    if (activeFilter === "deals") return hotels.filter(hotel => hotel.discount > 15 || hotel.promotion);
+    return hotels.filter(hotel => hotel.location.toLowerCase().includes(activeFilter));
+  }, [activeFilter]);
+
+  // Yıldız sayısını render et
+  const renderStars = (rating: number) => {
+    const fullStars = Math.floor(rating);
+    const halfStar = rating % 1 >= 0.5;
+    const stars = [];
+
+    for (let i = 0; i < 5; i++) {
+      if (i < fullStars) {
+        stars.push(
+          <svg key={i} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+          </svg>
+        );
+      } else if (i === fullStars && halfStar) {
+        stars.push(
+          <svg key={i} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+            <defs>
+              <linearGradient id="halfStarGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="50%" stopColor="currentColor" />
+                <stop offset="50%" stopColor="#e5e7eb" />
+              </linearGradient>
+            </defs>
+            <path fill="url(#halfStarGradient)" d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+          </svg>
+        );
+      } else {
+        stars.push(
+          <svg key={i} className="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+          </svg>
+        );
+      }
+    }
+
+    return stars;
+  };
+
+  // Slider'ı kaydır
+  const scrollSlider = (direction: 'left' | 'right') => {
+    if (sliderRef.current) {
+      const { clientWidth } = sliderRef.current;
+      const scrollAmount = direction === 'left' ? -clientWidth / 2 : clientWidth / 2;
+      
+      sliderRef.current.scrollBy({
+        left: scrollAmount,
+        behavior: 'smooth'
+      });
+      
+      // Scroll işlemi bittikten sonra butonların durumunu kontrol et
+      setTimeout(checkScrollPosition, 500);
+    }
+  };
 
   return (
-    <section 
-      ref={sectionRef}
-      className="py-24 bg-gradient-to-b from-white to-blue-50 relative overflow-hidden"
-    >
-      {/* Dekoratif arka plan öğeleri */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-0 w-full h-full opacity-5">
-          <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-blue-900 to-transparent"></div>
-          <div className="absolute bottom-0 left-0 w-full h-64 bg-gradient-to-t from-blue-900 to-transparent"></div>
-        </div>
-      </div>
-
-      <div className="container px-4 mx-auto relative z-10">
-        {/* Özel kampanya duyurusu */}
-        <div className={`mb-12 p-4 bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg text-white text-center transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="mb-4 md:mb-0">
-              <span className="bg-yellow-400 text-blue-900 text-xs font-semibold px-3 py-1 rounded-full uppercase">Özel Fırsat</span>
-              <h3 className="text-xl font-bold mt-2">TourTech'e Özel Otel Rezervasyonlarında %20'ye Varan İndirimler</h3>
-            </div>
-            <div className="flex space-x-4">
-              <span className="bg-white bg-opacity-20 px-4 py-2 rounded-md text-sm">
-                <span className="font-semibold">Kupon Kodu:</span> TOURTECH20
-              </span>
-              <Link 
-                href="/hotels/special-offers" 
-                className="bg-white text-blue-800 px-4 py-2 rounded-md font-medium hover:bg-blue-50 transition-colors"
+    <section className="py-16 bg-gray-50">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Öne Çıkan Oteller</h2>
+            <p className="text-gray-600">En popüler ve en yüksek puan alan otelleri keşfedin</p>
+          </div>
+          
+          {/* Filter tabs */}
+          <div className="flex overflow-x-auto scrollbar-hide mt-4 md:mt-0 gap-2">
+            {filterCategories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => {
+                  setActiveFilter(category.id);
+                  // Filtre değiştiğinde yükleme animasyonu göster
+                  setIsLoading(true);
+                  setTimeout(() => setIsLoading(false), 400);
+                }}
+                className={cn(
+                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                  activeFilter === category.id
+                    ? "bg-blue-600 text-white shadow-md"
+                    : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
+                )}
               >
-                Fırsatı Yakala
-              </Link>
-            </div>
+                {category.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className={`text-center max-w-3xl mx-auto mb-16 transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          <div className="inline-block mb-4">
-            <div className="h-1 w-24 bg-blue-600 mb-1"></div>
-            <div className="h-1 w-12 bg-blue-600"></div>
-          </div>
-          <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
-            En İyi Fiyat Garantili Oteller
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Türkiye'nin en iyi otellerini keşfedin ve özel indirimlerle hemen rezervasyonunuzu yapın
-          </p>
-        </div>
-
-        {/* Filtre butonları */}
-        <div className={`flex flex-wrap justify-center gap-3 mb-12 transition-all duration-1000 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          {filterCategories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setActiveFilter(category.id)}
-              className={`px-5 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
-                activeFilter === category.id
-                  ? "bg-blue-600 text-white shadow-md"
-                  : "bg-white text-gray-700 border border-gray-300 hover:border-blue-600 hover:text-blue-600"
+        {/* Scroll butonları */}
+        <div className="relative">
+          <div className="absolute -left-4 top-1/2 transform -translate-y-1/2 z-10">
+            <button 
+              onClick={() => scrollSlider('left')}
+              disabled={!canScrollLeft}
+              className={`p-2 rounded-full shadow-lg bg-white text-gray-800 hover:bg-gray-100 transition-all ${
+                !canScrollLeft ? 'opacity-40 cursor-not-allowed' : 'opacity-100'
               }`}
+              aria-label="Sola kaydır"
             >
-              {category.label}
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
             </button>
-          ))}
-        </div>
-
-        {/* Otel kartları */}
-        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          {filteredHotels.map((hotel, idx) => (
-            <div
-              key={hotel.id}
-              className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden transition-all duration-500 transform hover:shadow-lg hover:border-blue-200 hover:-translate-y-1"
-              style={{ transitionDelay: `${idx * 100}ms` }}
+          </div>
+          
+          <div className="absolute -right-4 top-1/2 transform -translate-y-1/2 z-10">
+            <button 
+              onClick={() => scrollSlider('right')}
+              disabled={!canScrollRight}
+              className={`p-2 rounded-full shadow-lg bg-white text-gray-800 hover:bg-gray-100 transition-all ${
+                !canScrollRight ? 'opacity-40 cursor-not-allowed' : 'opacity-100'
+              }`}
+              aria-label="Sağa kaydır"
             >
-              <div className="relative h-60 w-full">
-                <Image
-                  src={hotel.image}
-                  alt={hotel.name}
-                  fill
-                  style={{ objectFit: "cover" }}
-                  className="transition-transform duration-500 hover:scale-105"
-                />
-                
-                {/* Fiyat etiketi */}
-                <div className="absolute top-4 right-4 bg-white px-3 py-2 rounded-md shadow-md">
-                  <div className="flex flex-col items-end">
-                    {hotel.oldPrice && (
-                      <span className="text-xs text-gray-500 line-through">{hotel.oldPrice} ₺</span>
-                    )}
-                    <span className="text-blue-600 font-semibold">{hotel.price} ₺ / gece</span>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </button>
+          </div>
+
+          {/* Otel kartları */}
+          <div 
+            ref={sliderRef}
+            className="flex overflow-x-auto scrollbar-hide scroll-smooth pb-4 -mx-2 px-2 snap-x"
+            onScroll={checkScrollPosition}
+          >
+            {isLoading ? (
+              // Yükleme durumu
+              Array.from({ length: 3 }).map((_, idx) => (
+                <div key={idx} className="min-w-[300px] md:min-w-[350px] p-2 snap-start">
+                  <div className="bg-white rounded-xl shadow-md overflow-hidden h-full animate-pulse">
+                    <div className="h-48 bg-gray-300"></div>
+                    <div className="p-4">
+                      <div className="h-5 w-3/4 bg-gray-300 rounded mb-3"></div>
+                      <div className="h-4 w-1/2 bg-gray-300 rounded mb-3"></div>
+                      <div className="h-4 w-full bg-gray-300 rounded mb-3"></div>
+                      <div className="h-8 w-full bg-gray-300 rounded mt-4"></div>
+                    </div>
                   </div>
                 </div>
-                
-                {/* İndirim etiketi */}
-                {hotel.discount && (
-                  <div className="absolute top-4 left-4 bg-red-600 text-white px-2 py-1 rounded-md text-sm font-bold shadow-md">
-                    %{hotel.discount} İndirim
+              ))
+            ) : filteredHotels.length > 0 ? (
+              filteredHotels.map((hotel) => (
+                <div key={hotel.id} className="min-w-[300px] md:min-w-[350px] p-2 snap-start">
+                  <div className="group bg-white rounded-xl shadow-md overflow-hidden h-full hover:shadow-xl transition-all duration-300">
+                    <div className="relative h-48 overflow-hidden">
+                      <Image 
+                        src={hotel.image} 
+                        alt={hotel.name}
+                        width={400}
+                        height={250}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                      
+                      {/* Etiketler */}
+                      <div className="absolute top-3 left-3 flex flex-col gap-2">
+                        {hotel.discount > 0 && (
+                          <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                            %{hotel.discount} İndirim
+                          </span>
+                        )}
+                        {hotel.isBestSeller && (
+                          <span className="bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded">
+                            Çok Satan
+                          </span>
+                        )}
+                        {hotel.limitedOffer && (
+                          <span className="bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded flex items-center">
+                            <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"></path>
+                            </svg>
+                            Sınırlı
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Favori butonu */}
+                      <button className="absolute top-3 right-3 p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-700 hover:text-red-500 transition-colors">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                        </svg>
+                      </button>
+                      
+                      {/* Promosyon bandı */}
+                      {hotel.promotion && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-center py-1.5 text-sm font-medium">
+                          {hotel.promotion}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="p-4">
+                      <div className="flex justify-between mb-1">
+                        <h3 className="font-bold text-lg text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">{hotel.name}</h3>
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-gray-600 mb-2">
+                        <svg className="w-4 h-4 text-gray-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        {hotel.location}
+                      </div>
+                      
+                      <div className="flex items-center mb-3">
+                        <div className="flex mr-1">
+                          {renderStars(hotel.rating)}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">{hotel.rating.toFixed(1)}</span>
+                        <span className="mx-1.5 text-gray-500">•</span>
+                        <span className="text-sm text-gray-500">{hotel.reviewCount} değerlendirme</span>
+                      </div>
+                      
+                      {/* Özellikler */}
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {hotel.features.slice(0, 3).map((feature, idx) => (
+                          <span key={idx} className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+                            {feature}
+                          </span>
+                        ))}
+                        {hotel.features.length > 3 && (
+                          <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-800">
+                            +{hotel.features.length - 3}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Fiyat ve rezervasyon */}
+                      <div className="flex items-end justify-between mt-4">
+                        <div>
+                          {hotel.oldPrice && (
+                            <span className="text-sm text-gray-500 line-through">
+                              {hotel.oldPrice} ₺
+                            </span>
+                          )}
+                          <div className="flex items-baseline">
+                            <span className="text-xl font-bold text-gray-900">{hotel.price} ₺</span>
+                            <span className="text-sm text-gray-600 ml-1">/ gece</span>
+                          </div>
+                        </div>
+                        
+                        <Link 
+                          href={`/hotel/${hotel.id}`} 
+                          className="inline-flex items-center px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm transition-colors"
+                        >
+                          İncele
+                          <svg className="ml-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                          </svg>
+                        </Link>
+                      </div>
+                    </div>
                   </div>
-                )}
-                
-                {/* Kampanya etiketi */}
-                {hotel.campaign && (
-                  <div className="absolute bottom-4 left-4 bg-blue-600 text-white px-2 py-1 rounded-md text-sm font-medium shadow-md">
-                    {hotel.campaign}
-                  </div>
-                )}
-                
-                {/* En çok satan etiketi */}
-                {hotel.isBestSeller && (
-                  <div className="absolute top-16 left-0 bg-amber-500 text-white px-4 py-1 text-sm font-medium shadow-md transform -rotate-45 -translate-x-8">
-                    En Çok Satan
-                  </div>
-                )}
-                
-                {/* Sınırlı fırsat etiketi */}
-                {hotel.limitedOffer && (
-                  <div className="absolute bottom-4 right-4 flex items-center bg-green-600 text-white px-2 py-1 rounded-md text-xs font-medium shadow-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Sınırlı Fırsat
-                  </div>
-                )}
-              </div>
-              
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-xl font-semibold text-gray-900">{hotel.name}</h3>
                 </div>
-                
-                <div className="flex items-center mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-gray-600 mr-1">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+              ))
+            ) : (
+              <div className="w-full flex justify-center items-center py-10">
+                <div className="text-center">
+                  <svg className="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
-                  <span className="text-gray-600 text-sm">{hotel.location}</span>
-                </div>
-                
-                <div className="flex items-center mb-4">
-                  <div className="flex mr-2">
-                    {renderStars(hotel.rating)}
-                  </div>
-                  <span className="text-gray-700 font-medium">{hotel.rating}</span>
-                  <span className="text-gray-500 text-sm ml-1">({hotel.reviewCount} değerlendirme)</span>
-                </div>
-                
-                {/* Promosyon */}
-                {hotel.promotion && (
-                  <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                    </svg>
-                    {hotel.promotion}
-                  </div>
-                )}
-                
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {hotel.features.map((feature, index) => (
-                    <span key={index} className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-md">
-                      {feature}
-                    </span>
-                  ))}
-                </div>
-                
-                <div className="flex justify-between items-center mt-auto">
-                  <Link 
-                    href={`/hotel/${hotel.id}`}
-                    className="text-blue-600 font-medium inline-flex items-center hover:underline"
-                  >
-                    Detayları Görüntüle
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 ml-1">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                    </svg>
-                  </Link>
-                  
-                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-300">
-                    Rezervasyon Yap
-                  </button>
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">Otel bulunamadı</h3>
+                  <p className="text-gray-600">Arama kriterlerinize uygun otel bulunamadı. Lütfen farklı bir filtre deneyin.</p>
                 </div>
               </div>
-            </div>
-          ))}
+            )}
+          </div>
         </div>
-
-        {/* Bonus indirim teklifi */}
-        <div className={`my-16 p-6 bg-gradient-to-r from-yellow-500 to-amber-600 rounded-lg shadow-xl text-white text-center transition-all duration-1000 delay-400 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          <h3 className="text-2xl font-bold mb-3">Son Dakika Rezervasyonlarda %30'a Varan İndirim!</h3>
-          <p className="mb-6 max-w-3xl mx-auto">Son 48 saat içinde başlayan konaklamalarda geçerli özel fiyatlarla lüks tatil deneyimini kaçırmayın.</p>
+        
+        {/* Tüm Otelleri Görüntüle butonları */}
+        <div className="mt-8 text-center">
           <Link 
-            href="/oteller/last-minute" 
-            className="inline-flex items-center px-6 py-3 bg-white text-amber-600 rounded-md font-semibold hover:bg-amber-50 transition-colors"
+            href="/hotels" 
+            className="inline-flex items-center px-6 py-3 rounded-lg border border-blue-600 text-blue-600 font-medium hover:bg-blue-50 transition-colors"
           >
-            Son Dakika Fırsatları
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 ml-2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-            </svg>
-          </Link>
-        </div>
-
-        {/* Tüm otelleri görüntüle butonu */}
-        <div className={`text-center mt-12 transition-all duration-1000 delay-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-          <Link 
-            href="/hotel"
-            className="inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-all duration-300 font-medium"
-          >
-            <span>Tüm Otelleri Görüntüle</span>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 ml-2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+            Tüm Otelleri Görüntüle
+            <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
             </svg>
           </Link>
         </div>

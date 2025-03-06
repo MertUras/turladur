@@ -9,7 +9,6 @@ import Footer from './components/Footer';
 import HotDeals from './components/HotDeals';
 import Newsletter from './components/Newsletter';
 import MobileOfferPopup from './components/MobileOfferPopup';
-
 export default function Home() {
   return (
     <main>

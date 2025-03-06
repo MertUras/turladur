@@ -175,12 +175,70 @@ const getDaysRemaining = (expiryDate: string) => {
 
 type CategoryTab = 'popular' | 'lastMinute' | 'discount' | 'all';
 
+// Kategori verilerini oluştur
+const categoryData = [
+  {
+    id: 'all',
+    title: 'Tüm Turlar',
+    description: 'En iyi fiyat garantisiyle tüm turlarımızı keşfedin',
+    color: 'blue',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+      </svg>
+    )
+  },
+  {
+    id: 'popular',
+    title: 'En Popüler',
+    description: 'Misafirlerimizin en çok tercih ettiği turlar',
+    color: 'orange',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.047 8.287 8.287 0 0 0 9 9.601a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 0 0 .495-7.468 5.99 5.99 0 0 0-1.925 3.547 5.975 5.975 0 0 1-2.133-1.001A3.75 3.75 0 0 0 12 18Z" />
+      </svg>
+    )
+  },
+  {
+    id: 'lastMinute',
+    title: 'Son Dakika',
+    description: 'Acele edin, son yerler ve özel fırsatlar',
+    color: 'red',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+    )
+  },
+  {
+    id: 'discount',
+    title: 'İndirimli Turlar',
+    description: 'En büyük indirimli turları kaçırmayın',
+    color: 'green',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="m9 14.25 6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0c1.1.128 1.907 1.077 1.907 2.185ZM9.75 9h.008v.008H9.75V9Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm4.125 4.5h.008v.008h-.008V13.5Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+      </svg>
+    )
+  }
+];
+
 export default function HotDeals() {
   const [activeCategory, setActiveCategory] = useState<CategoryTab>('all');
-  const [isScrolling, setIsScrolling] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const dealsRef = useRef<HTMLDivElement>(null);
+  const [hoveredCategory, setHoveredCategory] = useState<CategoryTab | null>(null);
+  const [hoveredDeal, setHoveredDeal] = useState<number | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // Renge göre CSS sınıfı oluşturan yardımcı fonksiyon
+  const getColorClass = (color: string, isActive: boolean = false, element: 'bg' | 'text' | 'border' = 'bg') => {
+    const prefix = element === 'bg' ? 'bg' : element === 'text' ? 'text' : 'border';
+    const intensity = isActive ? '600' : element === 'bg' ? '50' : '500';
+    return `${prefix}-${color}-${intensity}`;
+  };
+
+  // Aktif kategoriyi al
+  const activeTabData = categoryData.find(cat => cat.id === activeCategory);
 
   // Yıldız oluşturan fonksiyon
   const renderStars = (rating: number) => {
@@ -212,47 +270,14 @@ export default function HotDeals() {
     return stars;
   };
 
-  // Mouse events for horizontal scrolling
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!dealsRef.current) return;
-    setIsScrolling(true);
-    setStartX(e.pageX - dealsRef.current.offsetLeft);
-    setScrollLeft(dealsRef.current.scrollLeft);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isScrolling || !dealsRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - dealsRef.current.offsetLeft;
-    const walk = (x - startX) * 2; // Scroll hızı
-    dealsRef.current.scrollLeft = scrollLeft - walk;
-  };
-
-  const handleMouseUp = () => {
-    setIsScrolling(false);
-  };
-
-  const handleMouseLeave = () => {
-    setIsScrolling(false);
-  };
-
-  // Touch events for mobile devices
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!dealsRef.current) return;
-    setIsScrolling(true);
-    setStartX(e.touches[0].pageX - dealsRef.current.offsetLeft);
-    setScrollLeft(dealsRef.current.scrollLeft);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!isScrolling || !dealsRef.current) return;
-    const x = e.touches[0].pageX - dealsRef.current.offsetLeft;
-    const walk = (x - startX) * 2;
-    dealsRef.current.scrollLeft = scrollLeft - walk;
-  };
-
-  const handleTouchEnd = () => {
-    setIsScrolling(false);
+  // Etiket rengini belirle
+  const getLabelColor = (label: 'hot' | 'last-minute' | 'best-seller') => {
+    switch (label) {
+      case 'hot': return 'orange';
+      case 'last-minute': return 'red';
+      case 'best-seller': return 'green';
+      default: return 'blue';
+    }
   };
 
   // Filtrelenmiş turları al
@@ -263,157 +288,171 @@ export default function HotDeals() {
 
   const filteredDeals = getFilteredDeals();
 
+  // Kategori değiştiğinde animasyon efekti
+  const handleCategoryChange = (category: CategoryTab) => {
+    if (category === activeCategory) return;
+    
+    setIsAnimating(true);
+    setActiveCategory(category);
+    
+    setTimeout(() => {
+      setIsAnimating(false);
+    }, 300);
+  };
+
   return (
-    <section className="py-16 bg-white">
+    <section className="py-20 bg-gradient-to-b from-white to-gray-50">
       <div className="container px-4">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center px-4 py-1 rounded-full bg-red-50 text-red-700 font-medium text-sm mb-3">
-            <span className="flex h-2 w-2 mr-2">
-              <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-red-500 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-            </span>
+        <div className="text-center mb-12">
+          <span className="inline-block py-1 px-3 rounded-full bg-red-100 text-red-800 text-sm font-medium mb-4">
             SINIRLI SÜRE TEKLİFLERİ
-          </div>
-          <h2 className="text-3xl md:text-4xl font-bold mb-3">Öne Çıkan Turlarımız</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto mb-8">
-            En popüler turlarımız, son dakika fırsatlarımız ve özel indirimli turlarımızı keşfedin. Bu fırsatları başka hiçbir yerde bulamazsınız!
+          </span>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-orange-500">
+            Öne Çıkan Turlarımız
+          </h2>
+          <p className="text-gray-600 max-w-3xl mx-auto text-lg">
+            En popüler turlarımız, son dakika fırsatlarımız ve özel indirimli turlarımızı keşfedin.
+            <br className="hidden md:inline" />
+            Bu fırsatları başka hiçbir yerde bulamazsınız!
           </p>
-          
-          {/* Kategori Seçme */}
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-8">
-            <button 
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              onClick={() => setActiveCategory('all')}
-            >
-              Tüm Turlar
-            </button>
-            <button 
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === 'popular' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              onClick={() => setActiveCategory('popular')}
-            >
-              <span className="hidden sm:inline">En </span>Popüler<span className="hidden sm:inline"> Turlar</span>
-            </button>
-            <button 
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === 'lastMinute' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              onClick={() => setActiveCategory('lastMinute')}
-            >
-              Son Dakika<span className="hidden sm:inline"> Fırsatları</span>
-            </button>
-            <button 
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === 'discount' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              onClick={() => setActiveCategory('discount')}
-            >
-              İndirimli<span className="hidden sm:inline"> Turlar</span>
-            </button>
-          </div>
         </div>
         
-        {/* Touch ve mouse kaydırma destekli tur kartları */}
-        <div 
-          className="overflow-x-auto pb-4 hide-scrollbar cursor-grab active:cursor-grabbing"
-          ref={dealsRef}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div className="inline-flex gap-6 min-w-full">
-            {filteredDeals.map((deal) => (
-              <div 
-                key={deal.id} 
-                className="relative flex-shrink-0 w-[280px] bg-white border border-gray-200 rounded-xl overflow-hidden shadow-lg group hover:shadow-xl transition-all duration-300"
-              >
+        {/* Kategori Seçme Sekmeleri */}
+        <div className="flex flex-wrap justify-center mb-12 gap-2">
+          {categoryData.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => handleCategoryChange(category.id as CategoryTab)}
+              onMouseEnter={() => setHoveredCategory(category.id as CategoryTab)}
+              onMouseLeave={() => setHoveredCategory(null)}
+              className={`px-5 py-3 rounded-full transition-all duration-300 font-medium flex items-center gap-2 ${
+                activeCategory === category.id
+                  ? `${getColorClass(category.color, true)} text-white shadow-lg shadow-${category.color}-200`
+                  : `${getColorClass(category.color, false)} hover:bg-${category.color}-100 text-gray-700`
+              }`}
+            >
+              <span className={`transition-all duration-300 ${
+                hoveredCategory === category.id && activeCategory !== category.id ? 'scale-110' : ''
+              }`}>
+                {category.icon}
+              </span>
+              <span>{category.title}</span>
+            </button>
+          ))}
+        </div>
+        
+        {/* Aktif Kategori Açıklaması */}
+        {activeTabData && (
+          <div className={`max-w-3xl mx-auto mb-10 text-center ${isAnimating ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
+            <p className={`text-lg ${getColorClass(activeTabData.color, false, 'text')}`}>
+              {activeTabData.description}
+            </p>
+          </div>
+        )}
+        
+        {/* Fırsat Kartları */}
+        <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 ${isAnimating ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
+          {filteredDeals.map((deal) => (
+            <div 
+              key={deal.id}
+              onMouseEnter={() => setHoveredDeal(deal.id)}
+              onMouseLeave={() => setHoveredDeal(null)}
+              className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 group border border-gray-100"
+            >
+              {/* Görsel Alanı */}
+              <div className="relative h-52 overflow-hidden">
+                <Image 
+                  src={deal.image} 
+                  alt={deal.title}
+                  fill
+                  className={`object-cover transition-transform duration-700 ${hoveredDeal === deal.id ? 'scale-110' : 'scale-100'}`}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent"></div>
+                
                 {/* İndirim etiketi */}
-                <div className="absolute top-4 left-4 z-10 bg-red-600 text-white text-sm font-bold px-3 py-1 rounded-full shadow-md">
+                <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur-sm text-red-600 text-sm font-bold px-3 py-1 rounded-full shadow-md flex items-center gap-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m9 14.25 6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0c1.1.128 1.907 1.077 1.907 2.185Z" />
+                  </svg>
                   %{deal.discount} İndirim
                 </div>
                 
-                {/* Türüne göre etiket */}
+                {/* Etiket */}
                 <div className="absolute top-4 right-4 z-10">
-                  {deal.label === 'hot' && (
-                    <div className="bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.047 8.287 8.287 0 0 0 9 9.601a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 0 0 .495-7.468 5.99 5.99 0 0 0-1.925 3.547 5.975 5.975 0 0 1-2.133-1.001A3.75 3.75 0 0 0 12 18Z" />
-                      </svg>
-                      POPÜLER
-                    </div>
-                  )}
-                  {deal.label === 'last-minute' && (
-                    <div className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                      </svg>
-                      SON DAKİKA
-                    </div>
-                  )}
-                  {deal.label === 'best-seller' && (
-                    <div className="bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
-                      </svg>
-                      ÇOK SATAN
-                    </div>
-                  )}
-                </div>
-                
-                {/* Görsel */}
-                <div className="relative h-48 overflow-hidden">
-                  <Image 
-                    src={deal.image} 
-                    alt={deal.title}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                  
-                  {/* Konum */}
-                  <div className="absolute bottom-4 left-4 text-white flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-                    </svg>
-                    <span className="text-sm font-medium">{deal.location}</span>
+                  <div className={`${getColorClass(getLabelColor(deal.label), true)} text-white text-xs font-bold px-3 py-1 rounded-full shadow-md flex items-center gap-1`}>
+                    {deal.label === 'hot' && (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.047 8.287 8.287 0 0 0 9 9.601a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z" />
+                        </svg>
+                        POPÜLER
+                      </>
+                    )}
+                    {deal.label === 'last-minute' && (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                        </svg>
+                        SON DAKİKA
+                      </>
+                    )}
+                    {deal.label === 'best-seller' && (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
+                        </svg>
+                        ÇOK SATAN
+                      </>
+                    )}
                   </div>
                 </div>
                 
-                {/* İçerik */}
-                <div className="p-4">
-                  <h3 className="text-lg font-bold mb-1 text-gray-800 group-hover:text-blue-700 transition-colors duration-200">
+                {/* Konum */}
+                <div className="absolute bottom-4 left-4 text-white flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+                  </svg>
+                  <span className="text-sm font-medium">{deal.location}</span>
+                </div>
+              </div>
+              
+              {/* İçerik */}
+              <div className="p-5">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-lg font-bold text-gray-800 group-hover:text-blue-600 transition-colors duration-300">
                     {deal.title}
                   </h3>
-                  
-                  {/* Değerlendirme */}
-                  <div className="flex items-center mb-2">
-                    <div className="flex mr-1">
-                      {renderStars(deal.rating)}
-                    </div>
-                    <span className="text-gray-600 text-sm">
-                      ({deal.reviewCount} değerlendirme)
-                    </span>
+                </div>
+                
+                {/* Değerlendirme */}
+                <div className="flex items-center mb-3">
+                  <div className="flex mr-1">
+                    {renderStars(deal.rating)}
                   </div>
-                  
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                    {deal.description}
-                  </p>
-                  
-                  {/* Fiyat */}
-                  <div className="flex items-baseline mb-3">
-                    <span className="text-gray-500 text-sm line-through mr-2">
+                  <span className="text-gray-600 text-sm">
+                    ({deal.reviewCount})
+                  </span>
+                </div>
+                
+                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                  {deal.description}
+                </p>
+                
+                {/* Fiyat ve Bilgiler */}
+                <div className="flex items-baseline justify-between mb-4">
+                  <div>
+                    <span className="text-gray-500 text-sm line-through">
                       {formatPrice(deal.originalPrice)}
                     </span>
-                    <span className="text-red-600 font-bold text-xl">
+                    <div className="text-red-600 font-bold text-xl">
                       {formatPrice(deal.salePrice)}
-                    </span>
-                    <span className="text-gray-500 text-xs ml-1">/ kişi</span>
+                      <span className="text-gray-500 text-xs ml-1">/ kişi</span>
+                    </div>
                   </div>
                   
-                  {/* Alt bilgi */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center text-xs text-orange-800 bg-orange-50 px-2 py-1 rounded">
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center text-xs text-orange-800 bg-orange-50 px-2 py-1 rounded mb-1">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                       </svg>
@@ -423,44 +462,49 @@ export default function HotDeals() {
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                       </svg>
-                      Son {deal.remainingSpots} kişi
+                      Son {deal.remainingSpots} kişilik
                     </div>
                   </div>
-                  
-                  {/* Buton */}
-                  <Link 
-                    href={`/tour/${deal.id}`} 
-                    className="block text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-4 py-2 transition-colors duration-200"
-                  >
-                    Hemen Rezervasyon Yap
-                  </Link>
                 </div>
                 
                 {/* İlerleme çubuğu */}
-                <div className="px-4 pb-4">
+                <div className="mb-4">
                   <div className="text-xs text-gray-600 mb-1 flex justify-between">
                     <span>Doluluk Oranı</span>
                     <span className="font-medium">{Math.min(90, 100 - (deal.remainingSpots / 20) * 100).toFixed(0)}%</span>
                   </div>
-                  <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-green-500 to-blue-600 rounded-full" 
+                      className={`h-full rounded-full ${
+                        deal.remainingSpots <= 5 
+                          ? 'bg-gradient-to-r from-red-500 to-orange-500 animate-pulse' 
+                          : 'bg-gradient-to-r from-blue-500 to-cyan-500'
+                      }`}
                       style={{ width: `${Math.min(90, 100 - (deal.remainingSpots / 20) * 100)}%` }}
                     ></div>
                   </div>
                 </div>
+                
+                {/* Buton */}
+                <Link 
+                  href={`/tour/${deal.id}`} 
+                  className="block text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-4 py-3 transition-all duration-300 transform hover:scale-[1.02] shadow-md hover:shadow-lg"
+                >
+                  Hemen Rezervasyon Yap
+                </Link>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
         
-        <div className="mt-10 text-center">
+        {/* Daha Fazla Tur Butonu */}
+        <div className="mt-16 text-center">
           <Link 
             href="/tours"
-            className="inline-flex items-center bg-white text-blue-600 hover:bg-blue-50 border-2 border-blue-600 px-6 py-3 rounded-lg font-semibold transition-colors duration-200"
+            className="inline-flex items-center bg-white text-blue-600 hover:text-white hover:bg-blue-600 border-2 border-blue-600 px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-sm hover:shadow-md"
           >
             Tüm Turları Görüntüle
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 ml-2">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform">
               <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25 21 12m0 0-3.75 3.75M21 12H3" />
             </svg>
           </Link>

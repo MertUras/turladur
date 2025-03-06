@@ -1,123 +1,148 @@
 "use client"
 import { useState } from 'react';
+import Image from "next/image";
 
 export default function Newsletter() {
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    setError('');
     
-    setStatus('loading');
+    // Email validasyonu
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      setError('Lütfen geçerli bir e-posta adresi giriniz');
+      return;
+    }
     
-    // Burada normalde API çağrısı yapılır, biz şimdilik simüle edelim
+    // Yükleniyor durumunu başlat
+    setLoading(true);
+    
+    // API çağrısını simüle et
     setTimeout(() => {
-      setStatus('success');
+      setLoading(false);
+      setSubmitted(true);
       setEmail('');
-      
-      // 3 saniye sonra formu eski haline getir
-      setTimeout(() => {
-        setStatus('idle');
-      }, 3000);
-    }, 1000);
+    }, 1500);
   };
   
   return (
-    <section className="py-12 bg-blue-50">
-      <div className="container px-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-6">
-            <h3 className="text-2xl md:text-3xl font-bold mb-2 text-gray-800">
-              Özel Fırsatlar İçin Abone Olun
-            </h3>
-            <p className="text-gray-600 max-w-xl mx-auto">
-              En iyi fiyatlardan, kampanyalardan ve gizli tekliflerden haberdar olmak için e-posta listemize katılın.
-            </p>
-          </div>
-          
-          {status === 'success' ? (
-            <div className="bg-green-50 border border-green-100 rounded-lg p-4 text-center max-w-md mx-auto">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8 text-green-500 mx-auto mb-2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-              </svg>
-              <h4 className="text-lg font-semibold text-green-800 mb-1">Başarıyla Abone Oldunuz!</h4>
-              <p className="text-green-700 text-sm">
-                İlk kampanyalarımız çok yakında gelen kutunuza ulaşacak.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col md:flex-row max-w-md md:max-w-xl mx-auto gap-2">
-              <div className="flex-grow">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="E-posta adresinizi girin"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                  required
-                />
+    <section className="py-12 bg-gradient-to-r from-blue-600 to-blue-800 relative overflow-hidden">
+      {/* Dekoratif arka plan elementleri */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute -right-24 -top-24 w-80 h-80 bg-white opacity-10 rounded-full"></div>
+        <div className="absolute -left-20 -bottom-20 w-60 h-60 bg-white opacity-10 rounded-full"></div>
+        <div className="absolute right-1/4 bottom-0 w-40 h-40 bg-white opacity-5 rounded-full"></div>
+      </div>
+      
+      <div className="container mx-auto px-4 relative z-10">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center bg-white rounded-2xl shadow-xl overflow-hidden">
+            {/* Görsel kısmı */}
+            <div className="md:w-2/5 relative h-60 md:h-auto w-full">
+              <Image 
+                src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop"
+                alt="Tatil fırsatları"
+                fill
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent flex items-center justify-center p-8 md:p-6">
+                <div>
+                  <span className="bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full mb-2 inline-block">KAÇIRMA</span>
+                  <h3 className="text-white text-xl md:text-2xl font-bold mb-2">Size Özel Fırsatları<br />Kaçırmayın!</h3>
+                  <p className="text-white/90 text-sm md:text-base">En iyi teklifler için e-bültenimize kaydolun.</p>
+                </div>
               </div>
-              
-              <button
-                type="submit"
-                className={`px-6 py-3 text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-md transition-all duration-200 flex items-center justify-center whitespace-nowrap ${
-                  status === 'loading' ? 'opacity-70 cursor-not-allowed' : ''
-                }`}
-                disabled={status === 'loading'}
-              >
-                {status === 'loading' ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </div>
+            
+            {/* Form kısmı */}
+            <div className="md:w-3/5 p-6 md:p-10">
+              {submitted ? (
+                <div className="text-center py-6">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                     </svg>
-                    İşleniyor...
-                  </>
-                ) : (
-                  <>
-                    Abone Ol
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 ml-2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 0 1-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 0 0 1.183 1.981l6.478 3.488m8.839 2.51-4.66-2.51m0 0-1.023-.55a2.25 2.25 0 0 0-2.134 0l-1.022.55m0 0-4.661 2.51m16.5 1.615a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V8.844a2.25 2.25 0 0 1 1.183-1.981l7.5-4.039a2.25 2.25 0 0 1 2.134 0l7.5 4.039a2.25 2.25 0 0 1 1.183 1.98V19.5Z" />
-                    </svg>
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-          
-          <div className="flex flex-wrap justify-center gap-8 mt-6">
-            <div className="flex items-center text-sm text-gray-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
-              </svg>
-              <span>Ücretsiz İptal</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Teşekkürler!</h3>
+                  <p className="text-gray-600 mb-6">E-bültenimize başarıyla kaydoldunuz. Size özel fırsatları içeren e-postalar almaya başlayacaksınız.</p>
+                  <button 
+                    onClick={() => setSubmitted(false)}
+                    className="text-blue-600 font-medium hover:text-blue-800 transition-colors"
+                  >
+                    Farklı bir e-posta ile kaydol
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-gray-900 text-xl md:text-2xl font-bold mb-2">En Yeni Fırsatlardan İlk Siz Haberdar Olun</h3>
+                  <p className="text-gray-600 mb-6">Haftalık bültenimize kaydolarak <span className="font-semibold">%15 indirim kuponu</span> kazanın ve özel fırsatları kaçırmayın.</p>
+                  
+                  <form onSubmit={handleSubmit}>
+                    <div className="flex flex-col space-y-3">
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                          </svg>
+                        </div>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className={`bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-300'} text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-3`}
+                          placeholder="E-posta adresiniz"
+                          required
+                        />
+                      </div>
+                      
+                      {error && (
+                        <p className="text-red-600 text-sm">{error}</p>
+                      )}
+                      
+                      <div className="flex items-start">
+                        <div className="flex items-center h-5">
+                          <input
+                            id="terms"
+                            type="checkbox"
+                            required
+                            className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-3 focus:ring-blue-300"
+                          />
+                        </div>
+                        <label htmlFor="terms" className="ml-2 text-sm text-gray-600">
+                          <a href="/privacy-policy" className="text-blue-600 hover:underline">Gizlilik politikasını</a> okudum ve kişisel verilerimin işlenmesini kabul ediyorum.
+                        </label>
+                      </div>
+                      
+                      <button
+                        type="submit"
+                        className="w-full flex items-center justify-center px-5 py-3 text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg transition-colors"
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Gönderiliyor...
+                          </>
+                        ) : (
+                          <>Kaydol</>
+                        )}
+                      </button>
+                      
+                      <p className="text-xs text-gray-500 text-center mt-2">
+                        İstediğiniz zaman e-bültenden çıkabilirsiniz. Her e-postanın altındaki aboneliği iptal et bağlantısını kullanabilirsiniz.
+                      </p>
+                    </div>
+                  </form>
+                </>
+              )}
             </div>
-            
-            <div className="flex items-center text-sm text-gray-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
-              </svg>
-              <span>En İyi Fiyat Garantisi</span>
-            </div>
-            
-            <div className="flex items-center text-sm text-gray-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v7.5" />
-              </svg>
-              <span>Erken Rezervasyon Avantajları</span>
-            </div>
-            
-            <div className="flex items-center text-sm text-gray-600">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
-              </svg>
-              <span>VIP Deneyimler</span>
-            </div>
-          </div>
-          
-          <div className="text-center text-xs text-gray-500 mt-6">
-            KVKK ile uyumlu içerikler. Verileriniz güvende. İstediğiniz zaman abonelikten çıkabilirsiniz.
           </div>
         </div>
       </div>

@@ -45,6 +45,22 @@
   animation: slideUp 0.3s ease-out forwards;
 }
 
+/* Popup için zoom animasyonu (yeni eklendi) */
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-zoomIn {
+  animation: zoomIn 0.2s ease-out forwards;
+}
+
 /* Kaydırma çubuğunu gizlemek için */
 .hide-scrollbar {
   -ms-overflow-style: none;  /* IE ve Edge */
@@ -53,4 +69,23 @@
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari ve Opera */
+}
+
+/* Modal arkaplanı için geçiş animasyonu */
+@keyframes fadeInBg {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fadeInBg {
+  animation: fadeInBg 0.2s ease-out forwards;
+}
+
+/* Uzun süreli geçişler için */
+.duration-2000 {
+  transition-duration: 2000ms;
 }
