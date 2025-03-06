@@ -5,6 +5,31 @@ import { dummyTours, dummyTourOperators } from "@/app/lib/dummy-data";
 import { parseJsonString } from "@/app/utils/format";
 import BottomBookingBar from "@/app/components/BottomBookingBar";
 
+// Heroicons bileşenlerini içe aktarıyoruz
+import {
+  MapPinIcon,
+  ClockIcon,
+  UserGroupIcon,
+  CalendarDaysIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  PhotoIcon,
+  MapIcon,
+  HeartIcon,
+  ShareIcon,
+  CurrencyDollarIcon,
+  StarIcon,
+  CheckIcon,
+  ChevronRightIcon,
+  EnvelopeIcon,
+  ArrowRightIcon,
+  ChatBubbleLeftRightIcon,
+  ChevronDownIcon
+} from "@heroicons/react/24/outline";
+
+// Solid ikonları
+import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
+
 interface TourPageProps {
   params: {
     id: string;
@@ -36,6 +61,28 @@ export default async function TourPage({ params }: TourPageProps) {
   // Tur programını parse et
   const itinerary = parseJsonString<Record<string, string>>(tour.itinerary || '{}', {});
 
+  // Yıldızları render et
+  const renderStars = (rating: number) => {
+    return (
+      <div className="flex items-center">
+        {[1, 2, 3, 4, 5].map((star) => {
+          return star <= Math.floor(rating) ? (
+            <StarIconSolid key={star} className="h-5 w-5 text-yellow-400" />
+          ) : star <= rating ? (
+            <div key={star} className="relative">
+              <StarIcon className="h-5 w-5 text-gray-300" />
+              <div className="absolute inset-0 overflow-hidden" style={{ width: `${(rating % 1) * 100}%` }}>
+                <StarIconSolid className="h-5 w-5 text-yellow-400" />
+              </div>
+            </div>
+          ) : (
+            <StarIcon key={star} className="h-5 w-5 text-gray-300" />
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white">
       {/* Üst Banner */}
@@ -50,46 +97,101 @@ export default async function TourPage({ params }: TourPageProps) {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black/50"></div>
         
+        {/* Sosyal Paylaşım ve Favori Düğmeleri */}
+        <div className="absolute top-6 right-6 flex space-x-3 z-50">
+          <button className="bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all p-3 rounded-full text-white">
+            <HeartIcon className="h-6 w-6" />
+          </button>
+          <button className="bg-white/20 backdrop-blur-md hover:bg-white/30 transition-all p-3 rounded-full text-white">
+            <ShareIcon className="h-6 w-6" />
+          </button>
+        </div>
+        
+        {/* Öne Çıkan Özellikler - Yatay Bant */}
+        <div className="absolute bottom-0 left-0 right-0 bg-black/30 backdrop-blur-md py-4 border-t border-white/10">
+          <div className="container px-4 mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex items-center text-white gap-3">
+                <div className="p-2 bg-blue-500/30 rounded-lg">
+                  <CalendarDaysIcon className="h-6 w-6 text-blue-200" />
+                </div>
+                <div>
+                  <p className="text-xs text-blue-200">Süre</p>
+                  <p className="font-medium">{tour.duration} Gün</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center text-white gap-3">
+                <div className="p-2 bg-green-500/30 rounded-lg">
+                  <UserGroupIcon className="h-6 w-6 text-green-200" />
+                </div>
+                <div>
+                  <p className="text-xs text-green-200">Grup Boyutu</p>
+                  <p className="font-medium">Maks. {tour.maxParticipants || 10} kişi</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center text-white gap-3">
+                <div className="p-2 bg-amber-500/30 rounded-lg">
+                  <MapPinIcon className="h-6 w-6 text-amber-200" />
+                </div>
+                <div>
+                  <p className="text-xs text-amber-200">Destinasyon</p>
+                  <p className="font-medium truncate max-w-[140px]">{destinations[0]}{destinations.length > 1 ? ` +${destinations.length - 1}` : ''}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center text-white gap-3">
+                <div className="p-2 bg-purple-500/30 rounded-lg">
+                  <StarIcon className="h-6 w-6 text-purple-200" />
+                </div>
+                <div>
+                  <p className="text-xs text-purple-200">Zorluk</p>
+                  <p className="font-medium">Orta Seviye</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="container px-4 text-center">
-            <div className="inline-block mb-6">
-              <div className="h-1 w-32 bg-white/80 mb-2 mx-auto"></div>
-              <div className="h-1 w-16 bg-white/60 mx-auto"></div>
+            <div className="inline-flex items-center mb-6 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full">
+              <div className="h-1 w-16 bg-white/80 mr-2"></div>
+              <span className="text-white/90 font-medium uppercase tracking-wider text-sm">Premium Tur</span>
+              <div className="h-1 w-16 bg-white/80 ml-2"></div>
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">{tour.name}</h1>
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight animate-fadeIn">{tour.name}</h1>
             <div className="flex flex-wrap items-center justify-center gap-4 text-white mb-8">
               <div className="flex items-center bg-black/30 px-4 py-2 rounded-full backdrop-blur-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 mr-2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-                </svg>
+                <MapPinIcon className="w-5 h-5 mr-2 text-blue-400" />
                 <span className="font-medium">{destinations.join(', ')}</span>
               </div>
               <div className="flex items-center bg-black/30 px-4 py-2 rounded-full backdrop-blur-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 mr-2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                </svg>
+                <ClockIcon className="w-5 h-5 mr-2 text-blue-400" />
                 <span className="font-medium">{tour.duration} gün</span>
               </div>
               <div className="flex items-center bg-black/30 px-4 py-2 rounded-full backdrop-blur-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 mr-2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
-                </svg>
+                <UserGroupIcon className="w-5 h-5 mr-2 text-blue-400" />
                 <span className="font-medium">Maks. {tour.maxParticipants || 10} kişi</span>
               </div>
             </div>
             <div className="flex flex-wrap justify-center gap-4">
               <Link 
                 href="#itinerary" 
-                className="bg-blue-600 text-white px-8 py-4 rounded-full font-semibold hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg hover:shadow-blue-500/25"
+                className="group bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-8 py-4 rounded-full font-semibold transition-all transform hover:scale-105 shadow-lg hover:shadow-blue-500/25 flex items-center"
               >
-                Tur Programı
+                <MapIcon className="h-5 w-5 mr-2" />
+                <span>Tur Programı</span>
+                <ChevronRightIcon className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link 
                 href="#booking" 
-                className="bg-white text-blue-600 px-8 py-4 rounded-full font-semibold hover:bg-gray-50 transition-all transform hover:scale-105 shadow-lg"
+                className="group bg-white text-blue-600 px-8 py-4 rounded-full font-semibold hover:bg-gray-50 transition-all transform hover:scale-105 shadow-lg flex items-center"
               >
-                Rezervasyon Yap
+                <CalendarDaysIcon className="h-5 w-5 mr-2" />
+                <span>Rezervasyon Yap</span>
+                <ChevronRightIcon className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
           </div>
@@ -103,18 +205,22 @@ export default async function TourPage({ params }: TourPageProps) {
           <div className="lg:col-span-2 space-y-16">
             {/* Tur Açıklaması */}
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-8">Tur Hakkında</h2>
+              <div className="flex items-center mb-8">
+                <div className="h-10 w-2 bg-blue-600 rounded-full mr-4"></div>
+                <h2 className="text-3xl font-bold text-gray-900">Tur Hakkında</h2>
+              </div>
               <p className="text-gray-700 text-lg leading-relaxed mb-8">{tour.description}</p>
               
               {/* Tur Özellikleri */}
-              <div className="bg-gray-50 rounded-2xl p-8">
-                <h3 className="text-2xl font-semibold text-gray-900 mb-6">Tur Özellikleri</h3>
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8 shadow-lg border border-blue-100">
+                <h3 className="text-2xl font-semibold text-gray-900 mb-6 flex items-center">
+                  <CheckCircleIcon className="h-7 w-7 text-blue-600 mr-3" />
+                  <span>Tur Özellikleri</span>
+                </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                   {inclusions.map((feature, index) => (
-                    <div key={index} className="flex items-center bg-white p-4 rounded-xl shadow-sm">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-blue-600 mr-3 flex-shrink-0">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                      </svg>
+                    <div key={index} className="flex items-center bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-1 duration-300">
+                      <CheckCircleIcon className="w-6 h-6 text-blue-600 mr-3 flex-shrink-0" />
                       <span className="text-gray-700 font-medium">{feature}</span>
                     </div>
                   ))}
@@ -124,57 +230,154 @@ export default async function TourPage({ params }: TourPageProps) {
 
             {/* Tur Resimleri */}
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-8">Fotoğraf Galerisi</h2>
+              <div className="flex items-center mb-8">
+                <div className="h-10 w-2 bg-blue-600 rounded-full mr-4"></div>
+                <h2 className="text-3xl font-bold text-gray-900 flex items-center">
+                  <PhotoIcon className="h-7 w-7 text-blue-600 mr-3" />
+                  <span>Fotoğraf Galerisi</span>
+                </h2>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {tourImages.map((image, index) => (
-                  <div key={index} className="relative h-64 rounded-2xl overflow-hidden group">
+                  <div key={index} className="relative h-64 rounded-2xl overflow-hidden group shadow-lg gallery-overlay">
                     <Image
                       src={image}
                       alt={`${tour.name} - Resim ${index + 1}`}
                       fill
-                      style={{ objectFit: "cover" }}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      style={{ objectFit: "cover", objectPosition: "center" }}
                       className="group-hover:scale-110 transition-transform duration-700"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end">
+                      <div className="p-4 w-full text-white">
+                        <p className="font-medium">Tur Görüntüsü {index + 1}</p>
+                        <p className="text-sm opacity-80">{destinations[index % destinations.length] || 'Tur Lokasyonu'}</p>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Tur Programı */}
-            <div id="itinerary">
-              <h2 className="text-3xl font-bold text-gray-900 mb-8 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8 mr-3 text-blue-600">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
-                </svg>
-                Tur Programı
-              </h2>
+            <div id="itinerary" className="scroll-mt-24">
+              <div className="flex items-center mb-8">
+                <div className="h-10 w-2 bg-blue-600 rounded-full mr-4"></div>
+                <h2 className="text-3xl font-bold text-gray-900 flex items-center">
+                  <MapIcon className="h-7 w-7 text-blue-600 mr-3" />
+                  <span>Tur Programı</span>
+                </h2>
+              </div>
+              
+              {/* Tur Programı için Görsel Zaman Çizelgesi - Mobil Cihazlarda Görünür */}
+              <div className="flex overflow-x-auto pb-4 mb-8 space-x-4 hide-scrollbar md:hidden">
+                {Object.entries(itinerary).map(([day, description], index) => {
+                  const dayNumber = day.replace('day', '');
+                  return (
+                    <div key={index} className="flex-shrink-0 w-48 bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
+                      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-3 text-white">
+                        <h3 className="font-bold">Gün {dayNumber}</h3>
+                        <p className="text-xs text-white/80">{destinations[index % destinations.length] || 'Tur Lokasyonu'}</p>
+                      </div>
+                      <div className="p-3">
+                        <p className="text-sm text-gray-700 line-clamp-3">{description.substring(0, 80)}...</p>
+                        <a href={`#day-${dayNumber}`} className="text-blue-600 text-xs font-medium flex items-center mt-2">
+                          <span>Detaylar</span>
+                          <ChevronRightIcon className="w-3 h-3 ml-1" />
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
               <div className="space-y-6">
                 {Object.entries(itinerary).map(([day, description], index) => {
                   const dayNumber = day.replace('day', '');
                   return (
-                    <div key={index} className="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 group">
-                      <div className="bg-gradient-to-r from-blue-700 to-blue-500 p-6 flex items-center relative overflow-hidden">
+                    <div id={`day-${dayNumber}`} key={index} className="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 group scroll-mt-24">
+                      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 flex items-center relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mt-10 -mr-10 opacity-50"></div>
-                        <div className="bg-white/20 rounded-full w-12 h-12 flex items-center justify-center mr-4 flex-shrink-0">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-full w-12 h-12 flex items-center justify-center mr-4 flex-shrink-0">
                           <span className="text-white text-xl font-bold">{dayNumber}</span>
                         </div>
-                        <h3 className="text-2xl font-bold text-white">Gün {dayNumber}: {destinations[index] || ''}</h3>
+                        <h3 className="text-2xl font-bold text-white">Gün {dayNumber}: {destinations[index % destinations.length] || ''}</h3>
                       </div>
                       <div className="p-8 group-hover:bg-blue-50/50 transition-colors duration-300">
-                        <p className="text-gray-700 text-lg leading-relaxed">{description}</p>
+                        <div className="flex flex-col md:flex-row gap-8">
+                          <div className="md:w-3/4">
+                            <p className="text-gray-700 text-lg leading-relaxed">{description}</p>
+                          </div>
+                          <div className="md:w-1/4 flex-shrink-0">
+                            {index < tourImages.length && (
+                              <div className="relative h-48 rounded-xl overflow-hidden shadow-md">
+                                <Image
+                                  src={tourImages[index]}
+                                  alt={`Gün ${dayNumber} - ${destinations[index % destinations.length] || ''}`}
+                                  fill
+                                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
+                                  style={{ objectFit: "cover" }}
+                                  className="hover:scale-110 transition-transform duration-700"
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
                         
                         {/* Her günün alt kısmına aktiviteler ve beklentiler eklenebilir */}
                         <div className="mt-6 pt-6 border-t border-gray-100">
+                          <h4 className="font-medium text-gray-900 mb-3">Günün Öne Çıkanları</h4>
                           <div className="flex flex-wrap gap-3">
                             {['Kahvaltı', 'Öğle Yemeği', 'Akşam Yemeği'].map((meal, i) => (
-                              <span key={i} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                <svg className="mr-1 h-3 w-3" fill="currentColor" viewBox="0 0 8 8">
-                                  <circle cx="4" cy="4" r="3" />
-                                </svg>
+                              <span key={i} className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <CheckIcon className="h-3 w-3 mr-1" />
                                 {meal}
                               </span>
                             ))}
+                            {/* Aktivite etiketleri */}
+                            {['Sanat ve Kültür', 'Doğa Yürüyüşü', 'Alışveriş', 'Plaj Aktiviteleri', 'Tarihi Gezi', 'Yerel Deneyim'].slice(0, (index % 4) + 2).map((activity, i) => (
+                              <span key={`act-${i}`} className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                <CheckIcon className="h-3 w-3 mr-1" />
+                                {activity}
+                              </span>
+                            ))}
+                          </div>
+                          
+                          {/* Günlük Program Saatleri */}
+                          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="flex items-start">
+                              <div className="p-1.5 bg-amber-100 rounded-lg mr-3 mt-0.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <span className="text-xs text-gray-500">Sabah</span>
+                                <p className="text-sm text-gray-700">08:00 - 12:00</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start">
+                              <div className="p-1.5 bg-blue-100 rounded-lg mr-3 mt-0.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <span className="text-xs text-gray-500">Öğle</span>
+                                <p className="text-sm text-gray-700">12:00 - 16:00</p>
+                              </div>
+                            </div>
+                            <div className="flex items-start">
+                              <div className="p-1.5 bg-indigo-100 rounded-lg mr-3 mt-0.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <span className="text-xs text-gray-500">Akşam</span>
+                                <p className="text-sm text-gray-700">16:00 - 20:00</p>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -188,21 +391,24 @@ export default async function TourPage({ params }: TourPageProps) {
           {/* Sağ Kolon - Rezervasyon ve Bilgiler */}
           <div>
             {/* Rezervasyon Kartı */}
-            <div id="booking" className="bg-white rounded-2xl p-8 mb-8 border border-gray-200 shadow-xl transform transition-all duration-300 hover:shadow-2xl md:relative">
+            <div id="booking" className="bg-white rounded-2xl p-8 mb-8 border border-gray-200 shadow-xl transform transition-all duration-300 hover:shadow-2xl scroll-mt-24">
               {/* Üst Banner */}
-              <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-r from-blue-700 to-blue-500 rounded-t-2xl overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-28 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mt-16 -mr-16"></div>
                 <div className="absolute top-0 left-0 w-20 h-20 bg-white/10 rounded-full -mt-10 -ml-10"></div>
               </div>
               
               {/* İçerik */}
-              <div className="relative pt-12 mt-8">
-                <h2 className="text-2xl font-bold text-white mb-6 bg-blue-600 px-6 py-3 rounded-xl inline-block -mt-20 shadow-lg">Rezervasyon</h2>
+              <div className="relative pt-16 mt-8">
+                <h2 className="text-2xl font-bold text-white mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 rounded-xl inline-block -mt-24 shadow-lg">Rezervasyon</h2>
                 
                 {/* Fiyat bilgisi */}
-                <div className="mb-8 bg-gray-50 p-6 rounded-xl border border-gray-100">
+                <div className="mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100 shadow-inner">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-700 font-medium">Fiyat</span>
+                    <span className="text-gray-700 font-medium flex items-center">
+                      <CurrencyDollarIcon className="h-5 w-5 mr-2 text-blue-600" />
+                      Fiyat
+                    </span>
                     <div className="text-right">
                       {tour.discount && tour.discount > 0 ? (
                         <>
@@ -210,120 +416,60 @@ export default async function TourPage({ params }: TourPageProps) {
                             <span className="line-through text-gray-400 text-lg mr-2">{tour.price} ₺</span>
                             <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">%{tour.discount} İndirim</span>
                           </div>
-                          <span className="text-3xl font-bold text-blue-600">{(tour.price - (tour.price * (tour.discount || 0) / 100)).toLocaleString('tr-TR')} ₺</span>
+                          <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{(tour.price - (tour.price * (tour.discount || 0) / 100)).toLocaleString('tr-TR')} ₺</span>
                         </>
                       ) : (
-                        <span className="text-3xl font-bold text-blue-600">{tour.price.toLocaleString('tr-TR')} ₺</span>
+                        <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{tour.price.toLocaleString('tr-TR')} ₺</span>
                       )}
                     </div>
                   </div>
                   <p className="text-gray-500 text-sm text-right">kişi başı</p>
+                  
+                  <div className="mt-4 pt-4 border-t border-blue-100">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">Toplam tutar ({tour.duration} gün):</span>
+                      <span className="font-semibold text-gray-800">
+                        {tour.discount && tour.discount > 0 
+                          ? ((tour.price - (tour.price * (tour.discount || 0) / 100)) * tour.duration).toLocaleString('tr-TR') 
+                          : (tour.price * tour.duration).toLocaleString('tr-TR')} ₺
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="space-y-6 mb-8">
-                  <div>
-                    <label htmlFor="date" className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 mr-2 text-blue-600">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v7.5" />
-                      </svg>
-                      Tarih Seçin
-                    </label>
-                    <div className="relative group">
-                      <select 
-                        id="date" 
-                        className="w-full border border-gray-300 rounded-xl px-4 py-3 appearance-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 pr-10 transition-all group-hover:border-blue-400"
-                      >
-                        <option value="">Tarih Seçin</option>
-                        {tour.startDate && (
-                          <>
-                            <option value={tour.startDate.toISOString()}>
-                              {tour.startDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                            </option>
-                            <option value={new Date(tour.startDate.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()}>
-                              {new Date(tour.startDate.getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                            </option>
-                            <option value={new Date(tour.startDate.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString()}>
-                              {new Date(tour.startDate.getTime() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                            </option>
-                          </>
-                        )}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-700">
-                        <svg className="w-5 h-5 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="people" className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 mr-2 text-blue-600">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
-                      </svg>
-                      Kişi Sayısı
-                    </label>
-                    <div className="relative">
-                      <div className="grid grid-cols-3 gap-2">
-                        {[1, 2, 3, 4, 5, "6+"].map((count, index) => (
-                          <div key={index} className="relative">
-                            <input 
-                              type="radio" 
-                              name="people" 
-                              id={`people-${count}`} 
-                              className="sr-only peer" 
-                              defaultChecked={count === 2}
-                            />
-                            <label 
-                              htmlFor={`people-${count}`} 
-                              className="flex flex-col items-center justify-center p-2 bg-white border border-gray-300 rounded-lg cursor-pointer peer-checked:border-blue-600 peer-checked:bg-blue-50 hover:bg-gray-50 transition-all text-center h-full text-gray-700"
-                            >
-                              <span className="text-lg font-semibold">{count}</span>
-                              <span className="text-xs text-gray-500">Kişi</span>
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <p className="text-center text-gray-600 text-sm mb-6 bg-amber-50 border border-amber-100 rounded-lg p-3">
+                  Bu sayfadan hızlı ön rezervasyon yapabilirsiniz. BottomBookingBar'ı kullanarak detaylı rezervasyon seçeneklerine ulaşabilirsiniz.
+                </p>
                 
                 <div className="space-y-4">
-                  <button className="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg hover:shadow-blue-500/25 flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 mr-2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 9v7.5m-9-6h.008v.008H12v-.008ZM12 15h.008v.008H12V15Zm0 2.25h.008v.008H12v-.008ZM9.75 15h.008v.008H9.75V15Zm0 2.25h.008v.008H9.75v-.008ZM7.5 15h.008v.008H7.5V15Zm0 2.25h.008v.008H7.5v-.008Zm6.75-4.5h.008v.008h-.008v-.008Zm0 2.25h.008v.008h-.008V15Zm0 2.25h.008v.008h-.008v-.008Zm2.25-4.5h.008v.008H16.5v-.008Zm0 2.25h.008v.008H16.5V15Z" />
-                    </svg>
-                    Rezervasyon Yap
+                  <button className="group w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white py-4 rounded-xl font-semibold transition-all transform hover:translate-y-[-2px] shadow-lg hover:shadow-blue-500/25 flex items-center justify-center">
+                    <CalendarDaysIcon className="w-6 h-6 mr-2" />
+                    <span>Hızlı Rezervasyon</span>
+                    <ArrowRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </button>
                   
-                  <button className="w-full bg-white text-blue-600 border-2 border-blue-600 py-4 rounded-xl font-semibold hover:bg-blue-50 transition-all transform hover:scale-105 shadow-lg flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 mr-2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                    </svg>
-                    Fiyat Bilgisi Al
+                  <button className="group w-full bg-white text-blue-600 border-2 border-blue-600 py-4 rounded-xl font-semibold hover:bg-blue-50 transition-all transform hover:translate-y-[-2px] shadow-lg flex items-center justify-center">
+                    <EnvelopeIcon className="w-6 h-6 mr-2" />
+                    <span>Fiyat Bilgisi Al</span>
+                    <ArrowRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </button>
-                </div>
-                
-                <div className="mt-6 text-center">
-                  <p className="text-sm text-gray-500 font-medium">Ödeme şimdi yapılmayacak</p>
                 </div>
                 
                 <div className="mt-6 pt-6 border-t border-gray-200">
                   <div className="flex items-center text-sm text-gray-600 mb-3">
                     <div className="p-1 bg-green-100 rounded-full mr-3">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-green-600">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                      </svg>
+                      <CheckCircleIcon className="w-4 h-4 text-green-600" />
                     </div>
                     <span className="font-medium">Ücretsiz iptal</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <div className="p-1 bg-green-100 rounded-full mr-3">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-green-600">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                      </svg>
+                      <CheckCircleIcon className="w-4 h-4 text-green-600" />
                     </div>
                     <span className="font-medium">Anında onay</span>
+                  </div>
+                  <div className="mt-3 text-center border-t border-gray-100 pt-3">
+                    <p className="text-sm text-gray-500 font-medium">Ödeme şimdi yapılmayacak</p>
                   </div>
                 </div>
               </div>
@@ -331,7 +477,10 @@ export default async function TourPage({ params }: TourPageProps) {
           
             {/* Mobil Rezervasyon Kartı (Yalnızca Mobilde Görünür) */}
             <div className="bg-white rounded-2xl p-6 mb-8 border border-gray-200 shadow-xl md:hidden">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Rezervasyon</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+                <CalendarDaysIcon className="h-6 w-6 mr-2 text-blue-600" />
+                Rezervasyon
+              </h2>
               
               <div className="mb-6 flex justify-between items-center">
                 <div>
@@ -339,15 +488,15 @@ export default async function TourPage({ params }: TourPageProps) {
                   {tour.discount && tour.discount > 0 ? (
                     <>
                       <span className="line-through text-gray-400 text-sm">{tour.price} ₺</span>
-                      <span className="ml-2 text-2xl font-bold text-blue-600">{(tour.price - (tour.price * (tour.discount || 0) / 100)).toLocaleString('tr-TR')} ₺</span>
+                      <span className="ml-2 text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{(tour.price - (tour.price * (tour.discount || 0) / 100)).toLocaleString('tr-TR')} ₺</span>
                     </>
                   ) : (
-                    <span className="text-2xl font-bold text-blue-600">{tour.price.toLocaleString('tr-TR')} ₺</span>
+                    <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{tour.price.toLocaleString('tr-TR')} ₺</span>
                   )}
                 </div>
                 
                 <div className="flex space-x-2">
-                  <button className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-all">
+                  <button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 transition-all">
                     Rezervasyon
                   </button>
                 </div>
@@ -355,16 +504,12 @@ export default async function TourPage({ params }: TourPageProps) {
 
               <div className="flex items-center text-sm text-gray-600 justify-center">
                 <div className="p-1 bg-green-100 rounded-full mr-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 text-green-600">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
+                  <CheckCircleIcon className="w-3 h-3 text-green-600" />
                 </div>
                 <span>Ücretsiz iptal</span>
                 <span className="mx-2">•</span>
                 <div className="p-1 bg-green-100 rounded-full mr-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 text-green-600">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                  </svg>
+                  <CheckCircleIcon className="w-3 h-3 text-green-600" />
                 </div>
                 <span>Anında onay</span>
               </div>
@@ -374,55 +519,74 @@ export default async function TourPage({ params }: TourPageProps) {
             <div className="space-y-8">
               {/* Tur Operatörü Bilgileri */}
               {tourOperator && (
-                <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Tur Operatörü</h2>
+                <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                    <ChatBubbleLeftRightIcon className="h-6 w-6 mr-2 text-blue-600" />
+                    <span>Tur Operatörü</span>
+                  </h2>
                   <div className="flex items-center mb-6">
-                    <div className="relative w-20 h-20 rounded-full overflow-hidden mr-4 border-4 border-gray-100">
+                    <div className="relative w-20 h-20 rounded-full overflow-hidden mr-4 border-4 border-gray-100 shadow-md">
                       <Image
                         src={tourOperator.logo || '/placeholder-image.jpg'}
                         alt={tourOperator.name}
                         fill
                         style={{ objectFit: "cover" }}
+                        className="hover:scale-110 transition-transform duration-500"
                       />
                     </div>
                     <div>
                       <h3 className="text-xl font-bold text-gray-900 mb-1">{tourOperator.name}</h3>
                       <div className="flex items-center text-sm">
                         <div className="flex items-center text-yellow-400 mr-2">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                            <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z" clipRule="evenodd" />
-                          </svg>
-                          <span className="font-bold text-gray-900 ml-1">4.8</span>
+                          {renderStars(4.8)}
                         </div>
                         <span className="text-gray-600">(24 değerlendirme)</span>
                       </div>
                     </div>
                   </div>
-                  <p className="text-gray-700 mb-6 leading-relaxed">{tourOperator.description?.substring(0, 150) || 'Tur operatörü hakkında bilgi bulunmamaktadır.'}...</p>
+                  
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-5 rounded-xl border border-blue-100 mb-6">
+                    <p className="text-gray-700 leading-relaxed">{tourOperator.description?.substring(0, 150) || 'Tur operatörü hakkında bilgi bulunmamaktadır.'}...</p>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-3 mb-6">
+                    <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                      Sertifikalı
+                    </div>
+                    <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                      {tour.duration}+ yıl deneyim
+                    </div>
+                    <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+                      Çok dilli rehberler
+                    </div>
+                  </div>
+                  
                   <Link 
                     href={`/tour-operator/${tourOperator.id}`} 
                     className="text-blue-600 font-semibold hover:text-blue-700 transition-colors flex items-center group"
                   >
-                    Tur operatörü hakkında daha fazla bilgi
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                    </svg>
+                    <span>Tur operatörü hakkında daha fazla bilgi</span>
+                    <ArrowRightIcon className="w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
               )}
 
               {/* Dahil Olanlar / Olmayanlar */}
-              <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Dahil Olanlar / Olmayanlar</h2>
+              <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                  <CheckCircleIcon className="h-6 w-6 mr-2 text-blue-600" />
+                  Dahil Olanlar / Olmayanlar
+                </h2>
                 
                 <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Dahil Olanlar</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <CheckCircleIcon className="w-5 h-5 mr-2 text-green-600" />
+                    Dahil Olanlar
+                  </h3>
                   <ul className="space-y-3">
                     {inclusions.map((item, index) => (
-                      <li key={index} className="flex items-start bg-green-50 p-4 rounded-xl">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-green-600 mr-3 flex-shrink-0">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                        </svg>
+                      <li key={index} className="flex items-start bg-green-50 p-4 rounded-xl hover:bg-green-100 transition-colors">
+                        <CheckCircleIcon className="w-6 h-6 text-green-600 mr-3 flex-shrink-0" />
                         <span className="text-gray-700 font-medium">{item}</span>
                       </li>
                     ))}
@@ -430,13 +594,14 @@ export default async function TourPage({ params }: TourPageProps) {
                 </div>
                 
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Dahil Olmayanlar</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <XCircleIcon className="w-5 h-5 mr-2 text-red-600" />
+                    Dahil Olmayanlar
+                  </h3>
                   <ul className="space-y-3">
                     {exclusions.map((item, index) => (
-                      <li key={index} className="flex items-start bg-red-50 p-4 rounded-xl">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-red-600 mr-3 flex-shrink-0">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                        </svg>
+                      <li key={index} className="flex items-start bg-red-50 p-4 rounded-xl hover:bg-red-100 transition-colors">
+                        <XCircleIcon className="w-6 h-6 text-red-600 mr-3 flex-shrink-0" />
                         <span className="text-gray-700 font-medium">{item}</span>
                       </li>
                     ))}
@@ -446,6 +611,28 @@ export default async function TourPage({ params }: TourPageProps) {
             </div>
           </div>
         </div>
+      </div>
+      
+      {/* Animasyonlu Scroll İndikatörü */}
+      <div className="fixed bottom-28 right-8 hidden md:flex flex-col items-center animate-bounce-subtle z-30">
+        <div className="text-xs font-medium text-blue-600 mb-1">Daha Fazla</div>
+        <div className="w-10 h-10 flex items-center justify-center bg-white rounded-full shadow-lg border border-gray-200">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </div>
+      </div>
+      
+      {/* Video Tour Düğmesi */}
+      <div className="fixed top-1/2 right-8 transform -translate-y-1/2 hidden lg:block z-30">
+        <button className="group relative w-16 h-16 bg-white rounded-full shadow-lg border border-gray-200 flex items-center justify-center hover:bg-blue-50 transition-colors">
+          <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-30"></div>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="absolute -left-24 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-blue-600 text-white text-sm font-medium px-3 py-1 rounded">Video Turu</span>
+        </button>
       </div>
       
       {/* Client componenti ekliyoruz */}
