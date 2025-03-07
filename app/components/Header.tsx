@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import DealsPopup from "./DealsPopup";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [dealsOpen, setDealsOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
 
@@ -32,6 +34,7 @@ export default function Header() {
     setActiveDropdown(null);
     setIsMenuOpen(false);
     setSearchOpen(false);
+    setDealsOpen(false);
   }, [pathname]);
 
   // Arama açıldığında input'a odaklan
@@ -255,9 +258,9 @@ export default function Header() {
               İletişim
             </Link>
 
-            {/* Fırsatlar butonu */}
-            <Link 
-              href="/firsatlar" 
+            {/* Deals button */}
+            <button 
+              onClick={() => setDealsOpen(true)}
               className={`ml-2 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center ${
                 isScrolled 
                   ? "bg-blue-600 text-white hover:bg-blue-700" 
@@ -272,7 +275,7 @@ export default function Header() {
               <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">
                 Yeni
               </span>
-            </Link>
+            </button>
 
             {/* Arama Butonu */}
             <button 
@@ -481,9 +484,23 @@ export default function Header() {
             </div>
             
             <div className="border-b border-gray-100 pb-3">
-              <Link href="/deals" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                <span className="font-medium">Fırsatlar</span>
-              </Link>
+              <button 
+                onClick={() => {
+                  setDealsOpen(true);
+                  setIsMenuOpen(false); // Close mobile menu
+                }} 
+                className="flex w-full justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center">
+                  <span className="font-medium">Fırsatlar</span>
+                  <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">
+                    Yeni
+                  </span>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </button>
             </div>
             
             <div className="flex flex-col space-y-2 pt-2">
@@ -497,6 +514,12 @@ export default function Header() {
           </nav>
         </div>
       )}
+
+      {/* Deals Popup */}
+      <DealsPopup 
+        isOpen={dealsOpen} 
+        onClose={() => setDealsOpen(false)} 
+      />
     </header>
   );
 } 

@@ -240,7 +240,7 @@ export default function Stats() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="col-span-1 md:col-span-1">
               <div className="w-14 h-1 bg-blue-600 mb-4"></div>
-              <h3 className="text-2xl font-bold mb-4">Rakamlarla Büyüyen Başarımız</h3>
+              <h3 className="text-2xl font-bold mb-4 text-blue-600">Rakamlarla Büyüyen Başarımız</h3>
               <p className="text-gray-600">2023 yılında kullanıcı sayımız %75, rezervasyon sayımız %120 arttı. Hedefimiz 2024'te daha da büyümek.</p>
               
               <Link 
@@ -264,7 +264,7 @@ export default function Stats() {
                       </svg>
                     </div>
                     <div>
-                      <h4 className="font-bold text-lg mb-1">Sürekli Büyüme</h4>
+                      <h4 className="font-bold text-lg mb-1 text-blue-600">Sürekli Büyüme</h4>
                       <p className="text-gray-600">Son 5 yıldır kesintisiz büyüme trendimizi sürdürüyoruz.</p>
                     </div>
                   </div>
@@ -278,7 +278,7 @@ export default function Stats() {
                       </svg>
                     </div>
                     <div>
-                      <h4 className="font-bold text-lg mb-1">Fiyat Avantajı</h4>
+                      <h4 className="font-bold text-lg mb-1 text-orange-600">Fiyat Avantajı</h4>
                       <p className="text-gray-600">Özel anlaşmalarımız sayesinde en iyi fiyatları sunuyoruz.</p>
                     </div>
                   </div>
@@ -292,7 +292,7 @@ export default function Stats() {
                       </svg>
                     </div>
                     <div>
-                      <h4 className="font-bold text-lg mb-1">Güvenilirlik</h4>
+                      <h4 className="font-bold text-lg mb-1 text-green-600">Güvenilirlik</h4>
                       <p className="text-gray-600">Tüm rezervasyonlar garanti altına alınır ve sigortalanır.</p>
                     </div>
                   </div>
@@ -306,7 +306,7 @@ export default function Stats() {
                       </svg>
                     </div>
                     <div>
-                      <h4 className="font-bold text-lg mb-1">7/24 Destek</h4>
+                      <h4 className="font-bold text-lg mb-1 text-red-600">7/24 Destek</h4>
                       <p className="text-gray-600">Seyahatinizin her anında yanınızdayız.</p>
                     </div>
                   </div>

@@ -3,6 +3,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { dummyTourOperators, dummyTours } from "@/app/lib/dummy-data";
 import { parseJsonString } from "@/app/utils/format";
+import {
+  MapPinIcon,
+  StarIcon,
+  CheckCircleIcon,
+  ChevronRightIcon,
+  PhoneIcon,
+  EnvelopeIcon,
+  GlobeAltIcon,
+  ClockIcon,
+  CalendarDaysIcon,
+  UserGroupIcon,
+  ArrowTrendingUpIcon,
+  ChatBubbleLeftRightIcon
+} from "@heroicons/react/24/outline";
 
 interface TourOperatorPageProps {
   params: {
@@ -22,214 +36,334 @@ export default async function TourOperatorPage({ params }: TourOperatorPageProps
   // Tur operatörüne ait turları al
   const operatorTours = dummyTours.filter((tour) => tour.tourOperatorId === tourOperator.id);
   
+  // Rating stars oluşturma fonksiyonu
+  const renderStars = (rating: number) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+    
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <StarIcon key={`full-${i}`} className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+      );
+    }
+    
+    if (hasHalfStar) {
+      stars.push(
+        <div key="half" className="relative">
+          <StarIcon className="w-5 h-5 text-gray-300 fill-gray-300" />
+          <div className="absolute top-0 left-0 w-1/2 overflow-hidden">
+            <StarIcon className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+          </div>
+        </div>
+      );
+    }
+    
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(
+        <StarIcon key={`empty-${i}`} className="w-5 h-5 text-gray-300 fill-gray-300" />
+      );
+    }
+    
+    return stars;
+  };
+
+  // Özellikleri ve onlara ait ikonları tanımlama
+  const features = [
+    { name: "Profesyonel Rehberler", icon: <UserGroupIcon className="w-5 h-5 text-blue-600" /> },
+    { name: "Konforlu Ulaşım", icon: <ArrowTrendingUpIcon className="w-5 h-5 text-blue-600" /> },
+    { name: "Kaliteli Konaklama", icon: <CheckCircleIcon className="w-5 h-5 text-blue-600" /> },
+    { name: "Lisanslı Operatör", icon: <CheckCircleIcon className="w-5 h-5 text-blue-600" /> },
+    { name: "7/24 Destek", icon: <ChatBubbleLeftRightIcon className="w-5 h-5 text-blue-600" /> },
+    { name: "En İyi Fiyat Garantisi", icon: <CheckCircleIcon className="w-5 h-5 text-blue-600" /> }
+  ];
+
+  // Çalışma saatleri
+  const workingHours = [
+    { day: "Pazartesi - Cuma", hours: "09:00 - 18:00" },
+    { day: "Cumartesi", hours: "10:00 - 16:00" },
+    { day: "Pazar", hours: "Kapalı" }
+  ];
+  
   return (
-    <div className="bg-white">
+    <div className="bg-gray-50">
       {/* Üst Banner */}
-      <div className="relative h-[50vh] md:h-[60vh] lg:h-[70vh]">
+      <div className="relative h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-[80vh]">
         <Image
           src={tourOperator.logo || '/placeholder-image.jpg'}
           alt={tourOperator.name}
           fill
           priority
+          sizes="100vw"
           style={{ objectFit: "cover" }}
+          className="brightness-[0.7]"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/60"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-black/70"></div>
         
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="container px-4 text-center">
-            <div className="inline-block mb-4">
-              <div className="h-1 w-24 bg-white mb-1 mx-auto"></div>
-              <div className="h-1 w-12 bg-white mx-auto"></div>
+            <div className="inline-block mb-2 sm:mb-4 animate-float">
+              <div className="h-1 w-16 sm:w-24 bg-blue-400 mb-1 mx-auto"></div>
+              <div className="h-1 w-8 sm:w-12 bg-blue-500 mx-auto"></div>
             </div>
-            <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">{tourOperator.name}</h1>
-            <div className="flex items-center justify-center space-x-2 text-white mb-6">
-              <div className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-1">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-                </svg>
-                <span>{tourOperator.city || 'İstanbul'}, {tourOperator.country || 'Türkiye'}</span>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-3 sm:mb-6 drop-shadow-lg">
+              {tourOperator.name}
+            </h1>
+            <div className="flex flex-col items-center justify-center space-y-2 sm:space-y-3 md:space-y-0 md:flex-row md:space-x-4 lg:space-x-6 text-white mb-4 sm:mb-6 md:mb-8">
+              <div className="flex items-center bg-black/20 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm sm:text-base w-full max-w-xs md:max-w-none md:w-auto">
+                <MapPinIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 text-blue-300 flex-shrink-0" />
+                <span className="truncate">{tourOperator.city || 'İstanbul'}, {tourOperator.country || 'Türkiye'}</span>
               </div>
-              <span>•</span>
-              <div className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-1">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
-                </svg>
-                <span>4.8 / 5 (24 değerlendirme)</span>
+              
+              <div className="flex items-center bg-black/20 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm sm:text-base w-full max-w-xs md:max-w-none md:w-auto">
+                <div className="flex items-center text-yellow-400 mr-1.5 sm:mr-2 flex-shrink-0">
+                  {renderStars(4.8)}
+                </div>
+                <span>(24 değerlendirme)</span>
+              </div>
+              
+              <div className="flex items-center bg-black/20 backdrop-blur-sm px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm sm:text-base w-full max-w-xs md:max-w-none md:w-auto">
+                <CalendarDaysIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 text-blue-300 flex-shrink-0" />
+                <span>{operatorTours.length} Aktif Tur</span>
               </div>
             </div>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link href="#tours" className="bg-blue-700 text-white px-6 py-3 rounded-md font-medium hover:bg-blue-800 transition-colors">
-                Turları Görüntüle
+            <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-3 sm:gap-4 relative z-30">
+              <Link 
+                href="#tours" 
+                className="group bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold transition-all transform hover:translate-y-[-2px] shadow-lg hover:shadow-blue-500/25 flex items-center justify-center w-full sm:w-auto"
+              >
+                <span>Turları Görüntüle</span>
+                <ChevronRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link href="#contact" className="bg-white text-blue-700 px-6 py-3 rounded-md font-medium hover:bg-gray-100 transition-colors">
-                İletişime Geç
+              <Link 
+                href="#contact" 
+                className="group bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/20 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-semibold transition-all transform hover:translate-y-[-2px] shadow-lg flex items-center justify-center w-full sm:w-auto"
+              >
+                <span>İletişime Geç</span>
+                <ChevronRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Link>
             </div>
           </div>
         </div>
+        
+        {/* Dalga Efekti Alt Kısmı */}
+        <div className="absolute bottom-0 left-0 right-0 pointer-events-none">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className="w-full h-auto">
+            <path 
+              fill="#f9fafb" 
+              fillOpacity="1" 
+              d="M0,192L60,176C120,160,240,128,360,138.7C480,149,600,203,720,213.3C840,224,960,192,1080,160C1200,128,1320,96,1380,80L1440,64L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"
+            ></path>
+          </svg>
+        </div>
       </div>
 
       {/* Ana İçerik */}
-      <div className="container px-4 py-12">
+      <div className="container px-4 py-8 -mt-6 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Sol Kolon - Tur Operatörü Bilgileri */}
           <div className="lg:col-span-2">
             {/* Tur Operatörü Açıklaması */}
-            <div className="mb-12">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Tur Operatörü Hakkında</h2>
-              <p className="text-gray-700 mb-6 leading-relaxed">{tourOperator.description || 'Bu tur operatörü hakkında henüz detaylı bilgi bulunmamaktadır.'}</p>
+            <div className="bg-white rounded-2xl p-8 mb-12 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center mb-6">
+                <div className="h-10 w-2 bg-blue-600 rounded-full mr-4"></div>
+                <h2 className="text-3xl font-bold text-gray-900">Tur Operatörü Hakkında</h2>
+              </div>
+              
+              <div className="prose prose-lg text-gray-700 mb-8 leading-relaxed">
+                <p>{tourOperator.description || 'Bu tur operatörü hakkında henüz detaylı bilgi bulunmamaktadır.'}</p>
+                
+                <p className="mt-4">
+                  Turlarımızda en iyi deneyimi yaşamanız için profesyonel rehberlerimiz, konforlu ulaşım araçlarımız ve özenle seçilmiş konaklama imkanlarıyla hizmet veriyoruz. Her turumuzu en ince detayına kadar planlıyor ve misafirlerimizin unutulmaz anılarla dönmelerini sağlıyoruz.
+                </p>
+              </div>
               
               {/* Tur Operatörü Özellikleri */}
-              <div className="mt-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">Özellikler</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-700 mr-2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                    <span className="text-gray-700">Profesyonel Rehberler</span>
-                  </div>
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-700 mr-2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                    <span className="text-gray-700">Konforlu Ulaşım</span>
-                  </div>
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-700 mr-2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                    <span className="text-gray-700">Kaliteli Konaklama</span>
-                  </div>
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-700 mr-2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                    <span className="text-gray-700">Lisanslı Operatör</span>
-                  </div>
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-700 mr-2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                    </svg>
-                    <span className="text-gray-700">7/24 Destek</span>
-                  </div>
+              <div className="bg-gray-50 border border-gray-100 rounded-xl p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                  <CheckCircleIcon className="w-6 h-6 text-blue-600 mr-2" />
+                  <span>Neden Bizi Tercih Etmelisiniz?</span>
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                  {features.map((feature, index) => (
+                    <div 
+                      key={index} 
+                      className="flex items-center bg-white p-4 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 hover:translate-y-[-2px]"
+                    >
+                      <div className="p-2 bg-blue-50 rounded-lg mr-3">
+                        {feature.icon}
+                      </div>
+                      <span className="text-gray-800 font-medium">{feature.name}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
 
             {/* Turlar */}
-            <div id="tours" className="mb-12">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Turlar</h2>
-              <div className="space-y-6">
-                {operatorTours.map((tour) => {
-                  const tourImages = parseJsonString<string[]>(tour.images, []);
-                  const destinations = parseJsonString<string[]>(tour.destinations, []);
-                  
-                  return (
-                    <div key={tour.id} className="border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                      <div className="grid grid-cols-1 md:grid-cols-3">
-                        <div className="relative h-64 md:h-auto">
-                          <Image
-                            src={tourImages[0] || '/placeholder-image.jpg'}
-                            alt={tour.name}
-                            fill
-                            style={{ objectFit: "cover" }}
-                          />
-                        </div>
-                        <div className="p-6 md:col-span-2">
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <h3 className="text-xl font-semibold text-gray-900">{tour.name}</h3>
-                              <p className="text-gray-600">{destinations.join(', ')} • {tour.duration} gün • Maks. {tour.maxParticipants || 10} kişi</p>
+            <div id="tours" className="bg-white rounded-2xl p-8 mb-12 shadow-lg border border-gray-100 scroll-mt-24">
+              <div className="flex items-center mb-8">
+                <div className="h-10 w-2 bg-blue-600 rounded-full mr-4"></div>
+                <h2 className="text-3xl font-bold text-gray-900">Turlarımız</h2>
+              </div>
+              
+              {operatorTours.length > 0 ? (
+                <div className="space-y-8">
+                  {operatorTours.map((tour, index) => {
+                    const tourImages = parseJsonString<string[]>(tour.images, []);
+                    const destinations = parseJsonString<string[]>(tour.destinations, []);
+                    
+                    return (
+                      <div 
+                        key={tour.id} 
+                        className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 group"
+                        style={{ 
+                          animationDelay: `${index * 150}ms`,
+                          opacity: 0,
+                          animation: 'fadeIn 0.5s ease-out forwards' 
+                        }}
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-3">
+                          <div className="relative h-72 md:h-auto overflow-hidden">
+                            <Image
+                              src={tourImages[0] || '/placeholder-image.jpg'}
+                              alt={tour.name}
+                              fill
+                              sizes="(max-width: 768px) 100vw, 33vw"
+                              style={{ objectFit: "cover" }}
+                              className="group-hover:scale-110 transition-transform duration-700"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                            <div className="absolute bottom-4 left-4 right-4">
+                              <div className="flex flex-wrap gap-2">
+                                {destinations.slice(0, 3).map((destination, idx) => (
+                                  <span key={idx} className="bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium">
+                                    {destination}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <div className="text-2xl font-bold text-blue-700">
-                                {tour.discount && tour.discount > 0 ? (
-                                  <>
-                                    <span className="line-through text-gray-400 text-lg mr-2">{tour.price} ₺</span>
-                                    {tour.price - (tour.price * (tour.discount || 0) / 100)} ₺
-                                  </>
-                                ) : (
-                                  `${tour.price} ₺`
+                          </div>
+                          <div className="p-6 md:col-span-2">
+                            <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-4 gap-4">
+                              <div>
+                                <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">{tour.name}</h3>
+                                <div className="flex flex-wrap items-center text-sm text-gray-600 gap-2 mb-3">
+                                  <div className="flex items-center">
+                                    <CalendarDaysIcon className="w-4 h-4 mr-1 text-blue-600" />
+                                    <span>{tour.duration} gün</span>
+                                  </div>
+                                  <span>•</span>
+                                  <div className="flex items-center">
+                                    <UserGroupIcon className="w-4 h-4 mr-1 text-blue-600" />
+                                    <span>Maks. {tour.maxParticipants || 10} kişi</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100 shadow-inner">
+                                <div className="text-right">
+                                  {tour.discount && tour.discount > 0 ? (
+                                    <>
+                                      <div className="flex items-center justify-end mb-1">
+                                        <span className="line-through text-gray-400 text-lg mr-2">{tour.price} ₺</span>
+                                        <span className="bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">%{tour.discount} İndirim</span>
+                                      </div>
+                                      <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{(tour.price - (tour.price * (tour.discount || 0) / 100)).toLocaleString('tr-TR')} ₺</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">{tour.price.toLocaleString('tr-TR')} ₺</span>
+                                  )}
+                                  <p className="text-gray-500 text-sm">kişi başı</p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <p className="text-gray-700 mb-4 line-clamp-3">{tour.description}</p>
+                            
+                            <div className="mb-5">
+                              <h4 className="text-sm font-semibold text-gray-900 mb-3">Tur Özellikleri</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {parseJsonString<string[]>(tour.inclusions, []).slice(0, 5).map((feature, index) => (
+                                  <span key={index} className="pill-tag bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs flex items-center">
+                                    <CheckCircleIcon className="w-3 h-3 mr-1 text-green-600" />
+                                    {feature}
+                                  </span>
+                                ))}
+                                {parseJsonString<string[]>(tour.inclusions, []).length > 5 && (
+                                  <span className="pill-tag bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
+                                    +{parseJsonString<string[]>(tour.inclusions, []).length - 5} daha
+                                  </span>
                                 )}
                               </div>
-                              <p className="text-gray-500 text-sm">kişi başı</p>
                             </div>
-                          </div>
-                          
-                          <p className="text-gray-700 mb-4">{tour.description}</p>
-                          
-                          <div className="mb-4">
-                            <h4 className="text-sm font-semibold text-gray-900 mb-2">Tur Özellikleri</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {parseJsonString<string[]>(tour.inclusions, []).slice(0, 5).map((feature, index) => (
-                                <span key={index} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs">
-                                  {feature}
-                                </span>
-                              ))}
-                              {parseJsonString<string[]>(tour.inclusions, []).length > 5 && (
-                                <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs">
-                                  +{parseJsonString<string[]>(tour.inclusions, []).length - 5} daha
-                                </span>
-                              )}
+                            
+                            <div className="flex justify-end">
+                              <Link 
+                                href={`/tour/${tour.id}`} 
+                                className="group bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-all transform hover:translate-y-[-2px] shadow-md hover:shadow-blue-500/25 flex items-center"
+                              >
+                                <span>Detayları Gör</span>
+                                <ChevronRightIcon className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                              </Link>
                             </div>
-                          </div>
-                          
-                          <div className="flex justify-end">
-                            <Link href={`/tour/${tour.id}`} className="bg-blue-700 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-800 transition-colors">
-                              Detayları Gör
-                            </Link>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="bg-blue-50 text-blue-800 p-6 rounded-xl border border-blue-100">
+                  <p className="font-medium text-center">Bu tur operatörüne ait aktif tur bulunmamaktadır.</p>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Sağ Kolon - İletişim ve Harita */}
           <div>
             {/* İletişim Bilgileri */}
-            <div id="contact" className="bg-gray-50 rounded-lg p-6 mb-8 border border-gray-200 shadow-sm">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">İletişim Bilgileri</h2>
-              <ul className="space-y-4">
-                <li className="flex">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-700 mr-3 mt-0.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
-                  </svg>
+            <div id="contact" className="bg-white rounded-2xl p-8 mb-8 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300 scroll-mt-24">
+              <div className="flex items-center mb-6">
+                <div className="h-8 w-2 bg-blue-600 rounded-full mr-4"></div>
+                <h2 className="text-2xl font-bold text-gray-900">İletişim Bilgileri</h2>
+              </div>
+              
+              <ul className="space-y-5">
+                <li className="flex p-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition-all duration-300">
+                  <div className="p-2 bg-blue-100 rounded-lg mr-4 text-blue-800">
+                    <MapPinIcon className="w-6 h-6" />
+                  </div>
                   <div>
-                    <p className="font-medium text-gray-900">Adres</p>
+                    <p className="font-semibold text-gray-900 mb-1">Adres</p>
                     <p className="text-gray-700">{tourOperator.address || 'Adres bilgisi bulunmamaktadır.'}, {tourOperator.city || 'İstanbul'}, {tourOperator.country || 'Türkiye'}</p>
                   </div>
                 </li>
-                <li className="flex">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-700 mr-3 mt-0.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
-                  </svg>
+                <li className="flex p-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition-all duration-300">
+                  <div className="p-2 bg-blue-100 rounded-lg mr-4 text-blue-800">
+                    <PhoneIcon className="w-6 h-6" />
+                  </div>
                   <div>
-                    <p className="font-medium text-gray-900">Telefon</p>
+                    <p className="font-semibold text-gray-900 mb-1">Telefon</p>
                     <p className="text-gray-700">{tourOperator.phone || '+90 (212) 123 45 67'}</p>
                   </div>
                 </li>
-                <li className="flex">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-700 mr-3 mt-0.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                  </svg>
+                <li className="flex p-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition-all duration-300">
+                  <div className="p-2 bg-blue-100 rounded-lg mr-4 text-blue-800">
+                    <EnvelopeIcon className="w-6 h-6" />
+                  </div>
                   <div>
-                    <p className="font-medium text-gray-900">E-posta</p>
+                    <p className="font-semibold text-gray-900 mb-1">E-posta</p>
                     <p className="text-gray-700">{tourOperator.email || 'info@touroperator.com'}</p>
                   </div>
                 </li>
-                <li className="flex">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-blue-700 mr-3 mt-0.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" />
-                  </svg>
+                <li className="flex p-4 bg-gray-50 rounded-xl border border-gray-100 hover:bg-blue-50 hover:border-blue-100 transition-all duration-300">
+                  <div className="p-2 bg-blue-100 rounded-lg mr-4 text-blue-800">
+                    <GlobeAltIcon className="w-6 h-6" />
+                  </div>
                   <div>
-                    <p className="font-medium text-gray-900">Web Sitesi</p>
+                    <p className="font-semibold text-gray-900 mb-1">Web Sitesi</p>
                     <p className="text-gray-700">{tourOperator.website || 'www.touroperator.com'}</p>
                   </div>
                 </li>
@@ -237,37 +371,70 @@ export default async function TourOperatorPage({ params }: TourOperatorPageProps
             </div>
 
             {/* Çalışma Saatleri */}
-            <div className="bg-gray-50 rounded-lg p-6 mb-8 border border-gray-200 shadow-sm">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Çalışma Saatleri</h2>
-              <ul className="space-y-2">
-                <li className="flex justify-between">
-                  <span className="text-gray-700">Pazartesi - Cuma</span>
-                  <span className="font-medium text-gray-900">09:00 - 18:00</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-700">Cumartesi</span>
-                  <span className="font-medium text-gray-900">10:00 - 16:00</span>
-                </li>
-                <li className="flex justify-between">
-                  <span className="text-gray-700">Pazar</span>
-                  <span className="font-medium text-gray-900">Kapalı</span>
-                </li>
-              </ul>
+            <div className="bg-white rounded-2xl p-8 mb-8 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center mb-6">
+                <div className="h-8 w-2 bg-blue-600 rounded-full mr-4"></div>
+                <h2 className="text-2xl font-bold text-gray-900">Çalışma Saatleri</h2>
+              </div>
+              
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 shadow-inner border border-blue-100">
+                <ul className="space-y-4">
+                  {workingHours.map((item, index) => (
+                    <li key={index} className="flex justify-between items-center p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-blue-100/50">
+                      <div className="flex items-center">
+                        <ClockIcon className="w-5 h-5 text-blue-600 mr-2" />
+                        <span className="text-gray-700">{item.day}</span>
+                      </div>
+                      <span className="font-semibold text-gray-900 bg-white px-3 py-1 rounded-full text-sm shadow-sm">
+                        {item.hours}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
-            {/* Harita */}
-            <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 shadow-sm">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Konum</h2>
-              <div className="relative h-64 rounded-lg overflow-hidden">
+            {/* Konum ve Harita */}
+            <div className="bg-white rounded-2xl p-8 border border-gray-100 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="flex items-center mb-6">
+                <div className="h-8 w-2 bg-blue-600 rounded-full mr-4"></div>
+                <h2 className="text-2xl font-bold text-gray-900">Konum</h2>
+              </div>
+              
+              <div className="relative h-64 rounded-xl overflow-hidden border border-gray-200">
                 <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
-                  <p className="text-gray-500">Harita yükleniyor...</p>
+                  <div className="text-center">
+                    <MapPinIcon className="w-10 h-10 text-blue-600 mx-auto mb-2 animate-bounce-subtle" />
+                    <p className="text-gray-500">Harita görüntüsü</p>
+                  </div>
                 </div>
               </div>
-              <div className="mt-4">
-                <p className="text-gray-700">
-                  <span className="font-medium">Konum:</span> {tourOperator.city || 'İstanbul'}, {tourOperator.country || 'Türkiye'}
-                </p>
+              
+              <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <div className="flex items-center">
+                  <MapPinIcon className="w-5 h-5 text-blue-700 mr-2" />
+                  <p className="text-blue-700 font-medium">
+                    {tourOperator.address || 'Adres Bilgisi Yok'}, {tourOperator.city || 'İstanbul'}, {tourOperator.country || 'Türkiye'}
+                  </p>
+                </div>
               </div>
+            </div>
+            
+            {/* Müşteri Temsilcisiyle Görüşme - CTA */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 mt-8 shadow-lg relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-20 -mt-20"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-10 -mb-10"></div>
+              
+              <h3 className="text-xl font-bold text-white mb-4 relative z-10">Yardıma mı ihtiyacınız var?</h3>
+              <p className="text-white/90 mb-6 relative z-10">Müşteri temsilcilerimiz tüm sorularınızı yanıtlamak için hazır.</p>
+              
+              <Link 
+                href="#contact" 
+                className="group bg-white text-blue-600 px-6 py-3 rounded-xl font-semibold inline-flex items-center shadow-lg hover:bg-blue-50 transition-all transform hover:translate-y-[-2px] relative z-10"
+              >
+                <span>Hemen İletişime Geçin</span>
+                <ChevronRightIcon className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Link>
             </div>
           </div>
         </div>

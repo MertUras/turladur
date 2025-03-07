@@ -61,6 +61,36 @@
   animation: zoomIn 0.2s ease-out forwards;
 }
 
+/* Popup için fade out animasyonu */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.2s ease-out forwards;
+}
+
+/* Popup için zoom out animasyonu */
+@keyframes zoomOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.animate-zoomOut {
+  animation: zoomOut 0.2s ease-out forwards;
+}
+
 /* Kaydırma çubuğunu gizlemek için */
 .hide-scrollbar {
   -ms-overflow-style: none;  /* IE ve Edge */
