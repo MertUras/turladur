@@ -426,7 +426,7 @@ export default function Header() {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden absolute left-0 right-0 top-full bg-white shadow-xl rounded-b-lg z-40 max-h-[80vh] overflow-y-auto">
+        <div className="md:hidden absolute left-0 right-0 top-full bg-white shadow-xl rounded-b-lg z-40 max-h-[80vh] overflow-y-auto text-black">
           <nav className="flex flex-col p-4 space-y-3">
             <div className="border-b border-gray-100 pb-3">
               <button className="w-full flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors" onClick={() => toggleDropdown('destinations-mobile')}>
