@@ -10,7 +10,7 @@ import HotDeals from './components/HotDeals';
 import Newsletter from './components/Newsletter';
 import MobileOfferPopup from './components/MobileOfferPopup';
 
-export default function Home() {
+export default async function Home() {
   return (
     <main>
       <Header />
