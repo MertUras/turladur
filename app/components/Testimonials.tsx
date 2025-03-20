@@ -558,7 +558,7 @@ export default function Testimonials() {
             {getVisibleTestimonials().map((testimonial: any) => (
               <div 
                 key={testimonial.id}
-                className={`flex-none sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden transition-all duration-500 transform hover:shadow-lg hover:-translate-y-1 ${
+                className={`flex-none sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] bg-white border border-gray-200 rounded-xl shadow-md overflow-hidden transition-all duration-500 transform hover:shadow-lg hover:-translate-y-1 cursor-pointer ${
                   testimonial.index === activeIndex ? 'scale-[1.02] shadow-lg border-blue-200' : ''
                 }`}
                 style={{ 

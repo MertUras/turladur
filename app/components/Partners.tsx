@@ -235,7 +235,7 @@ export default function Partners() {
               <div className="flex flex-wrap gap-4">
                 <Link 
                   href="/kampanyalar/tursab" 
-                  className="group inline-flex items-center px-5 py-2.5 bg-white text-blue-800 rounded-lg font-medium hover:bg-blue-50 transition-all duration-300 shadow-md hover:shadow-lg"
+                  className="group inline-flex items-center px-5 py-2.5 bg-white text-blue-800 rounded-lg font-medium hover:bg-blue-50 transition-all duration-300 shadow-md hover:shadow-lg cursor-pointer"
                   onMouseEnter={() => setIsHoveredButton(true)}
                   onMouseLeave={() => setIsHoveredButton(false)}
                 >
@@ -350,7 +350,7 @@ export default function Partners() {
                   
                   <Link 
                     href={`/partners/${partner.id}`}
-                    className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-800 inline-flex items-center group"
+                    className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-800 inline-flex items-center group cursor-pointer"
                   >
                     <span>Teklifleri Gör</span>
                     <ChevronRightIcon 
@@ -381,7 +381,7 @@ export default function Partners() {
               
               <Link 
                 href="/kurumsal/isbirligi" 
-                className="group inline-flex items-center justify-center px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl"
+                className="group inline-flex items-center justify-center px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl cursor-pointer"
               >
                 <span>Kurumsal İşbirliği Başlatın</span>
                 <ArrowRightIcon className="w-4 h-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />

@@ -122,7 +122,7 @@ export default function Features() {
               onClick={() => setActiveTab(feature.id)}
               onMouseEnter={() => setHoveredFeature(feature.id)}
               onMouseLeave={() => setHoveredFeature(null)}
-              className={`px-5 py-3 rounded-full transition-all duration-300 font-medium flex items-center gap-2 ${
+              className={`px-5 py-3 rounded-full transition-all duration-300 font-medium flex items-center gap-2 cursor-pointer ${
                 activeTab === feature.id
                   ? `${getColorClass(feature.color, true)} text-white shadow-lg shadow-${feature.color}-200`
                   : `${getColorClass(feature.color, false)} hover:bg-${feature.color}-100 text-gray-700`

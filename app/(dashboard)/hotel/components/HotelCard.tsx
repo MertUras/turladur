@@ -58,7 +58,7 @@ export default function HotelCard({ hotel, featureIcons }: HotelCardProps) {
   return (
     <Link 
       href={`/hotel/${hotel.id}`} 
-      className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100"
+      className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -71,7 +71,7 @@ export default function HotelCard({ hotel, featureIcons }: HotelCardProps) {
         />
         <button
           onClick={toggleFavorite}
-          className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 ${
+          className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 cursor-pointer ${
             isFavorite 
               ? 'bg-red-500 text-white' 
               : isHovered 

@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { dummyTours, dummyTourOperators } from "@/app/lib/dummy-data";
-import { parseJsonString } from "@/app/utils/format";
-import BottomBookingBar from "@/app/components/BottomBookingBar";
+import { dummyTours, dummyTourOperators } from "@/lib/dummy-data";
+import { parseJsonString } from "@/lib/utils/format";
+import BottomBookingBar from "@/components/BottomBookingBar";
 
 // Heroicons bileşenlerini içe aktarıyoruz
 import {
@@ -34,6 +34,19 @@ interface TourPageProps {
   params: {
     id: string;
   };
+}
+
+interface ItineraryItem {
+  day: string;
+  description: string;
+}
+
+interface ReviewItem {
+  id: string;
+  name: string;
+  rating: number;
+  comment: string;
+  date: string;
 }
 
 export default async function TourPage({ params }: TourPageProps) {
@@ -218,7 +231,7 @@ export default async function TourPage({ params }: TourPageProps) {
                   <span>Tur Özellikleri</span>
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-                  {inclusions.map((feature, index) => (
+                  {inclusions.map((feature: string, index: number) => (
                     <div key={index} className="flex items-center bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-all transform hover:-translate-y-1 duration-300">
                       <CheckCircleIcon className="w-6 h-6 text-blue-600 mr-3 flex-shrink-0" />
                       <span className="text-gray-700 font-medium">{feature}</span>
@@ -238,7 +251,7 @@ export default async function TourPage({ params }: TourPageProps) {
                 </h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {tourImages.map((image, index) => (
+                {tourImages.map((image: string, index: number) => (
                   <div key={index} className="relative h-64 rounded-2xl overflow-hidden group shadow-lg gallery-overlay">
                     <Image
                       src={image}
@@ -271,7 +284,7 @@ export default async function TourPage({ params }: TourPageProps) {
               
               {/* Tur Programı için Görsel Zaman Çizelgesi - Mobil Cihazlarda Görünür */}
               <div className="flex overflow-x-auto pb-4 mb-8 space-x-4 hide-scrollbar md:hidden">
-                {Object.entries(itinerary).map(([day, description], index) => {
+                {Object.entries(itinerary).map(([day, description]: [string, string], index: number) => {
                   const dayNumber = day.replace('day', '');
                   return (
                     <div key={index} className="flex-shrink-0 w-48 bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
@@ -292,7 +305,7 @@ export default async function TourPage({ params }: TourPageProps) {
               </div>
               
               <div className="space-y-6">
-                {Object.entries(itinerary).map(([day, description], index) => {
+                {Object.entries(itinerary).map(([day, description]: [string, string], index: number) => {
                   const dayNumber = day.replace('day', '');
                   return (
                     <div id={`day-${dayNumber}`} key={index} className="bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 group scroll-mt-24">
@@ -328,14 +341,14 @@ export default async function TourPage({ params }: TourPageProps) {
                         <div className="mt-6 pt-6 border-t border-gray-100">
                           <h4 className="font-medium text-gray-900 mb-3">Günün Öne Çıkanları</h4>
                           <div className="flex flex-wrap gap-3">
-                            {['Kahvaltı', 'Öğle Yemeği', 'Akşam Yemeği'].map((meal, i) => (
+                            {['Kahvaltı', 'Öğle Yemeği', 'Akşam Yemeği'].map((meal: string, i: number) => (
                               <span key={i} className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 <CheckIcon className="h-3 w-3 mr-1" />
                                 {meal}
                               </span>
                             ))}
                             {/* Aktivite etiketleri */}
-                            {['Sanat ve Kültür', 'Doğa Yürüyüşü', 'Alışveriş', 'Plaj Aktiviteleri', 'Tarihi Gezi', 'Yerel Deneyim'].slice(0, (index % 4) + 2).map((activity, i) => (
+                            {['Sanat ve Kültür', 'Doğa Yürüyüşü', 'Alışveriş', 'Plaj Aktiviteleri', 'Tarihi Gezi', 'Yerel Deneyim'].slice(0, (index % 4) + 2).map((activity: string, i: number) => (
                               <span key={`act-${i}`} className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                 <CheckIcon className="h-3 w-3 mr-1" />
                                 {activity}

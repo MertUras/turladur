@@ -319,7 +319,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
                     <a 
                       href={deal.link} 
                       key={deal.id}
-                      className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col h-full transform hover:-translate-y-1 relative focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      className="group bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col h-full transform hover:-translate-y-1 relative focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-pointer"
                       onMouseEnter={() => setHoveredCard(deal.id)}
                       onMouseLeave={() => setHoveredCard(null)}
                       onClick={(e) => handleCardClick(e, deal.link)}

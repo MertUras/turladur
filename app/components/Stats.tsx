@@ -171,7 +171,7 @@ export default function Stats() {
           {stats.map((stat, idx) => (
             <div 
               key={stat.id}
-              className={`rounded-2xl shadow-lg transition-all duration-500 transform group relative overflow-hidden ${
+              className={`rounded-2xl shadow-lg transition-all duration-500 transform group relative overflow-hidden cursor-pointer ${
                 isVisible ? `opacity-100 translate-y-0` : `opacity-0 translate-y-10`
               }`}
               style={{ 

@@ -325,7 +325,7 @@ export default function HotDeals() {
               onClick={() => handleCategoryChange(category.id as CategoryTab)}
               onMouseEnter={() => setHoveredCategory(category.id as CategoryTab)}
               onMouseLeave={() => setHoveredCategory(null)}
-              className={`px-5 py-3 rounded-full transition-all duration-300 font-medium flex items-center gap-2 ${
+              className={`px-5 py-3 rounded-full transition-all duration-300 font-medium flex items-center gap-2 cursor-pointer ${
                 activeCategory === category.id
                   ? `${getColorClass(category.color, true)} text-white shadow-lg shadow-${category.color}-200`
                   : `${getColorClass(category.color, false)} hover:bg-${category.color}-100 text-gray-700`
@@ -488,7 +488,7 @@ export default function HotDeals() {
                 {/* Buton */}
                 <Link 
                   href={`/tour/${deal.id}`} 
-                  className="block text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-4 py-3 transition-all duration-300 transform hover:scale-[1.02] shadow-md hover:shadow-lg"
+                  className="block text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-4 py-3 transition-all duration-300 transform hover:scale-[1.02] shadow-md hover:shadow-lg cursor-pointer"
                 >
                   Hemen Rezervasyon Yap
                 </Link>
