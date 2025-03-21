@@ -368,8 +368,8 @@ export default function RegisterPage() {
             <div>
               <button
                 type="submit"
-                disabled={loading || (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword)}
-                className={`group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 ${loading || (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                disabled={loading || (formData.password !== '' && formData.confirmPassword !== '' && formData.password !== formData.confirmPassword)}
+                className={`group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 ${loading || (formData.password !== '' && formData.confirmPassword !== '' && formData.password !== formData.confirmPassword) ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 {loading ? (
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
