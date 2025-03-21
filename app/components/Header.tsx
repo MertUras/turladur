@@ -301,7 +301,7 @@ export default function Header() {
           {/* Desktop Search and Auth Buttons */}
           <div className="hidden md:flex items-center space-x-2">
             <Link 
-              href="/auth/login" 
+              href="/login" 
               className={`px-4 py-2 rounded-md text-sm font-medium border transition-all duration-300 ${
                 isScrolled 
                   ? "text-blue-700 border-blue-700 hover:bg-blue-50" 
@@ -311,7 +311,7 @@ export default function Header() {
               Giriş Yap
             </Link>
             <Link 
-              href="/auth/register" 
+              href="/register" 
               className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
                 isScrolled 
                   ? "bg-blue-700 text-white hover:bg-blue-800" 

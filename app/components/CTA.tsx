@@ -95,7 +95,7 @@ export default function CTA() {
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-10">
               <Link 
-                href="/auth/register" 
+                href="/register" 
                 className="group bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-blue-900 px-8 py-4 text-base font-semibold rounded-xl transition-all duration-300 shadow-lg inline-flex items-center justify-center transform hover:-translate-y-1 hover:shadow-xl cursor-pointer"
                 onMouseEnter={() => setIsHoveredPrimary(true)}
                 onMouseLeave={() => setIsHoveredPrimary(false)}
