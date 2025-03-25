@@ -1,7 +1,9 @@
+
+/*
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  /* config options here 
   images: {
     remotePatterns: [
       {
@@ -18,6 +20,41 @@ const nextConfig: NextConfig = {
         hostname: "placehold.co",
       },
 
+    ],
+  },
+};
+
+export default nextConfig;
+
+*/
+
+
+
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "randomuser.me",
+      },
+      {
+        protocol: "https",
+        hostname: "upload.wikimedia.org",
+      },
+      {
+        protocol: "https",
+        hostname: "placehold.co",
+      },
+      {
+        protocol: "https",
+        hostname: "via.placeholder.com",
+      },
     ],
   },
 };
