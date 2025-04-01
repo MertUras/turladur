@@ -138,9 +138,9 @@ export default function ExperiencesPage() {
             <main className="w-full">
                 <div className="w-full max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     <div className="mb-8">
-                        <h2 className="text-2xl font-semibold text-gray-900">Öne Çıkan Turlarımız</h2>
+                        <h2 className="text-2xl font-semibold text-gray-900">Öne Çıkan Rotalarımız</h2>
                         <p className="mt-2 text-sm text-gray-700">
-                            En popüler ve beğenilen turlarımızı keşfedin.
+                            En popüler ve beğenilen rotalarımızı keşfedin.
                         </p>
                     </div>
 
@@ -156,7 +156,7 @@ export default function ExperiencesPage() {
                         </div>
                     ) : (
                         <div className="relative -mx-4 sm:-mx-6 lg:-mx-8">
-                            <div 
+                            <div
                                 ref={scrollContainerRef}
                                 className="flex gap-6 overflow-x-auto scrollbar-hide pb-4 px-4 sm:px-6 lg:px-8"
                             >
@@ -211,13 +211,13 @@ export default function ExperiencesPage() {
                                 ))}
                             </div>
                             {/* Navigation Arrows */}
-                            <button 
+                            <button
                                 onClick={scrollLeft}
                                 className="absolute left-4 top-1/2 -translate-y-1/2 bg-white rounded-r-xl p-2 shadow-lg hover:shadow-xl transition-shadow z-10"
                             >
                                 <ChevronLeft className="h-6 w-6 text-gray-600" />
                             </button>
-                            <button 
+                            <button
                                 onClick={scrollRight}
                                 className="absolute right-4 top-1/2 -translate-y-1/2 bg-white rounded-l-xl p-2 shadow-lg hover:shadow-xl transition-shadow z-10"
                             >
@@ -227,7 +227,7 @@ export default function ExperiencesPage() {
                     )}
                 </div>
             </main>
-            
+
             <Footer />
         </>
     );
