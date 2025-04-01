@@ -1,4 +1,3 @@
-
 /*
 import type { NextConfig } from "next";
 
@@ -34,6 +33,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    domains: [
+      "images.unsplash.com", // BU SATIR GEREKLİ
+      "picsum.photos", // Added for random placeholder images
+    ],
     remotePatterns: [
       {
         protocol: "https",
@@ -54,6 +57,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "via.placeholder.com",
+      },
+      {
+        protocol: "https",
+        hostname: "picsum.photos",
       },
     ],
   },

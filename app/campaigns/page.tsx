@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import LiveCampaigns from "@/components/LiveCampaigns"; // Eğer yoksa comment out yapın
 import HotelFilters from "@/(dashboard)/hotel/components/HotelFilters";
@@ -12,7 +12,7 @@ export default function CampaignsPage() {
       {/* HERO BÖLÜMÜ */}
       <div className="relative h-[400px] w-full overflow-hidden">
         <Image
-          src="https://via.placeholder.com/1600x900?text=Kampanyalar+Hero"
+          src="https://images.unsplash.com/photo-1500835556837-99ac94a94552?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8dHJhdmVsfGVufDB8fDB8fHww"
           alt="Kampanyalar Hero"
           fill
           className="object-cover object-center"
@@ -49,31 +49,31 @@ export default function CampaignsPage() {
   );
 }
 
-/* HeroSection: Otel sayfasına benzer genişlikte bir görsel */
-function HeroSection() {
-  return (
-    <div className="relative h-[400px] w-full overflow-hidden">
-      {/* Arkaplan görseli */}
-      <Image
-        src=""
-        alt="Kampanyalar Hero"
-        fill
-        className="object-cover object-center"
-        priority
-      />
-      {/* Karartma katmanı */}
-      <div className="absolute inset-0 bg-black bg-opacity-40" />
+// /* HeroSection: Otel sayfasına benzer genişlikte bir görsel */
+// function HeroSection() {
+//   return (
+//     <div className="relative h-[400px] w-full overflow-hidden">
+//       {/* Arkaplan görseli */}
+//       <Image
+//         src="https://images.unsplash.com/photo-1571215682738-574b686ecb0b"
+//         alt="Kampanyalar Hero"
+//         fill
+//         className="object-cover object-center"
+//         priority
+//       />
+//       {/* Karartma katmanı */}
+//       <div className="absolute inset-0 bg-black bg-opacity-100" />
 
-      {/* Metinler */}
-      <div className="relative z-10 flex flex-col items-center justify-center h-full text-center text-white px-4">
-        <h1 className="text-3xl md:text-5xl font-bold mb-2">Kampanyalar</h1>
-        <p className="max-w-2xl">
-          Kaçırılmayacak fırsatları yakalayın! Mevcut ve güncel kampanyalar burada.
-        </p>
-      </div>
-    </div>
-  );
-}
+//       {/* Metinler */}
+//       <div className="relative z-10 flex flex-col items-center justify-center h-full text-center text-white px-4">
+//         <h1 className="text-3xl md:text-5xl font-bold mb-2">Kampanyalar</h1>
+//         <p className="max-w-2xl">
+//           Kaçırılmayacak fırsatları yakalayın! Mevcut ve güncel kampanyalar burada.
+//         </p>
+//       </div>
+//     </div>
+//   );
+// }
 
 /* Kampanya kartlarını renderlayan fonksiyonel bileşen */
 function CampaignsList() {
@@ -86,7 +86,7 @@ function CampaignsList() {
       discount: "%25",
       label: "Popüler",
       validity: "Son 3 gün",
-      imageUrl: "https://via.placeholder.com/600x400?text=Erken+Rezervasyon",
+      image: "https://images.unsplash.com/photo-1571215682738-574b686ecb0b",
     },
     {
       id: 2,

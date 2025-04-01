@@ -4,7 +4,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 
-export default function Footer() {
+interface FooterProps {
+    className?: string;
+}
+
+export default function Footer({ className = "" }: FooterProps) {
   const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
   
   const toggleAccordion = (id: string) => {
@@ -14,7 +18,7 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
   
   return (
-    <footer className="bg-gray-900 text-white pt-16 pb-8">
+    <footer className={`bg-gray-900 text-white pt-16 pb-8 ${className}`}>
       <div className="container mx-auto px-4">
         {/* Üst kısım - Logo, linkler ve mobil görünüm için akordeonlar */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 mb-12">
