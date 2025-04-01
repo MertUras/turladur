@@ -227,13 +227,13 @@ export default function Header() {
                   <Link href="/experience" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
                     Tüm Deneyimler
                   </Link>
-                  <Link href="/experience?category=Gastronomi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                  <Link href="/gastronomi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
                     Gastronomi
                   </Link>
-                  <Link href="/experience?category=Kültür" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                  <Link href="/kultur-turlari" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
                     Kültür Turları
                   </Link>
-                  <Link href="/experience?category=Macera" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                  <Link href="/macera-aktiviteleri" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
                     Macera Aktiviteleri
                   </Link>
                 </div>
