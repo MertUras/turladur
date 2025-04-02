@@ -4,80 +4,81 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 
-const routes = [
+const popularRoutes = [
   {
     id: 1,
-    name: 'Akdeniz Kıyıları',
-    description: 'Antalya\'dan Mersin\'e uzanan muhteşem koylar, antik kentler ve eşsiz plajlar.',
-    image: 'https://images.unsplash.com/photo-1605217613423-0ebe71a1f71f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-    region: 'Akdeniz',
-    popularTours: 25,
-    averagePrice: '₺3,500',
+    name: 'Kapadokya',
+    description: 'Peri bacaları, yeraltı şehirleri ve balon turlarıyla unutulmaz bir deneyim.',
+    image: 'https://images.unsplash.com/photo-1570654230464-9e63b3497a1e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+    duration: '3-4 gün',
+    bestTimeToVisit: 'Nisan - Ekim',
+    highlights: ['Balon Turu', 'Yeraltı Şehirleri', 'Şarap Tadımı', 'At Turu'],
+    priceRange: '₺2,500 - ₺4,000',
+    tourCount: 12,
+    rating: 4.8,
+    reviews: 156,
   },
   {
     id: 2,
-    name: 'İstanbul - Kapadokya',
-    description: 'Boğaz manzarasından peri bacalarına uzanan kültür ve tarih dolu bir rota.',
-    image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2071&q=80',
-    region: 'Marmara - İç Anadolu',
-    popularTours: 30,
-    averagePrice: '₺4,500',
+    name: 'Likya Yolu',
+    description: 'Antik Likya uygarlığının izlerini takip eden, deniz manzaralı yürüyüş rotası.',
+    image: 'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80',
+    duration: '7-8 gün',
+    bestTimeToVisit: 'Mart - Mayıs, Eylül - Kasım',
+    highlights: ['Antik Kentler', 'Deniz Manzarası', 'Doğa Yürüyüşü', 'Plajlar'],
+    priceRange: '₺3,500 - ₺5,000',
+    tourCount: 8,
+    rating: 4.7,
+    reviews: 78,
   },
   {
     id: 3,
-    name: 'Ege Kıyıları',
-    description: 'Fethiye\'den Bodrum\'a uzanan muhteşem koylar ve doğal güzelliklerle dolu bir rota.',
-    image: 'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80',
-    region: 'Ege',
-    popularTours: 20,
-    averagePrice: '₺3,000',
+    name: 'Pamukkale & Hierapolis',
+    description: 'Travertenler ve antik havuzuyla dünyaca ünlü doğa harikası.',
+    image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2071&q=80',
+    duration: '1-2 gün',
+    bestTimeToVisit: 'Mart - Kasım',
+    highlights: ['Travertenler', 'Antik Havuz', 'Hierapolis', 'Kleopatra Havuzu'],
+    priceRange: '₺1,500 - ₺2,500',
+    tourCount: 15,
+    rating: 4.6,
+    reviews: 92,
   },
   {
     id: 4,
-    name: 'Kapadokya - Pamukkale',
-    description: 'Peri bacaları ve travertenler arasında doğa harikalarını keşfedeceğiniz bir rota.',
-    image: 'https://images.unsplash.com/photo-1570654230464-9e63b3497a1e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-    region: 'İç Anadolu - Ege',
-    popularTours: 18,
-    averagePrice: '₺2,800',
+    name: 'Efes Antik Kenti',
+    description: 'Roma İmparatorluğu\'nun en önemli antik kentlerinden biri.',
+    image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2071&q=80',
+    duration: '1 gün',
+    bestTimeToVisit: 'Mart - Kasım',
+    highlights: ['Celsus Kütüphanesi', 'Büyük Tiyatro', 'Hadrian Tapınağı', 'Antik Agora'],
+    priceRange: '₺1,200 - ₺2,000',
+    tourCount: 10,
+    rating: 4.9,
+    reviews: 145,
   },
   {
     id: 5,
-    name: 'Karadeniz Yaylaları',
-    description: 'Yemyeşil yaylalar, şelaleler ve dağ manzaralarıyla dolu nefes kesici bir rota.',
-    image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2071&q=80',
-    region: 'Karadeniz',
-    popularTours: 15,
-    averagePrice: '₺2,800',
-  },
-  {
-    id: 6,
-    name: 'Güneydoğu Kültür Rotası',
-    description: 'Gaziantep, Şanlıurfa ve Mardin\'in kültürel zenginliklerini keşfedeceğiniz bir rota.',
-    image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2071&q=80',
-    region: 'Güneydoğu Anadolu',
-    popularTours: 12,
-    averagePrice: '₺2,500',
+    name: 'Fethiye - Ölüdeniz',
+    description: 'Muhteşem koylar ve plajlarla çevrili doğa cenneti.',
+    image: 'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80',
+    duration: '2-3 gün',
+    bestTimeToVisit: 'Mayıs - Ekim',
+    highlights: ['Ölüdeniz Plajı', 'Kelebekler Vadisi', 'Paragliding', 'Tekne Turu'],
+    priceRange: '₺2,000 - ₺3,500',
+    tourCount: 18,
+    rating: 4.8,
+    reviews: 167,
   },
 ];
 
-const regions = ['Tümü', 'Akdeniz', 'Marmara', 'Ege', 'İç Anadolu', 'Karadeniz', 'Güneydoğu Anadolu'];
-
 export default function RoutesPage() {
-  const [selectedRegion, setSelectedRegion] = useState('Tümü');
   const [searchQuery, setSearchQuery] = useState('');
-
-  const filteredRoutes = routes.filter(route => {
-    const matchesRegion = selectedRegion === 'Tümü' || route.region.includes(selectedRegion);
-    const matchesSearch = route.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         route.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesRegion && matchesSearch;
-  });
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="relative bg-blue-600">
+      <div className="relative bg-gradient-to-r from-blue-600 to-purple-600">
         <div className="absolute inset-0">
           <Image
             src="https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2071&q=80"
@@ -88,77 +89,30 @@ export default function RoutesPage() {
         </div>
         <div className="relative max-w-7xl mx-auto py-24 px-4 sm:py-32 sm:px-6 lg:px-8">
           <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-            Türkiye'nin En Güzel Rotaları
+            Türkiye'nin En Popüler Rotaları
           </h1>
           <p className="mt-6 text-xl text-white max-w-3xl">
-            Keşfedilmeyi bekleyen muhteşem yerler, unutulmaz deneyimler ve eşsiz manzaralar.
+            Keşfetmek istediğiniz rotayı seçin, size en uygun turu bulun.
           </p>
         </div>
       </div>
 
-      {/* Search and Filter Section */}
+      {/* Search Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
-                Rota Ara
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  name="search"
-                  id="search"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Akdeniz, İstanbul - Kapadokya, Ege..."
-                />
-              </div>
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+              </svg>
             </div>
-            <div>
-              <label htmlFor="region" className="block text-sm font-medium text-gray-700 mb-2">
-                Bölge
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {regions.map((region) => (
-                  <button
-                    key={region}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      selectedRegion === region
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                    onClick={() => setSelectedRegion(region)}
-                  >
-                    {region}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Results Count */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex items-center justify-between">
-          <p className="text-gray-600">
-            <span className="font-semibold text-gray-900">{filteredRoutes.length}</span> rota bulundu
-          </p>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-600 mr-2">Sırala:</span>
-            <select className="border-none bg-transparent text-sm font-medium text-gray-700 focus:outline-none focus:ring-0">
-              <option>Önerilen</option>
-              <option>Fiyata göre (Artan)</option>
-              <option>Fiyata göre (Azalan)</option>
-              <option>Popülerlik</option>
-            </select>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="block w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Rota ara... (örn: Kapadokya, Likya Yolu)"
+            />
           </div>
         </div>
       </div>
@@ -166,42 +120,77 @@ export default function RoutesPage() {
       {/* Routes Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredRoutes.map((route) => (
+          {popularRoutes.map((route) => (
             <Link
               key={route.id}
               href={`/routes/${route.id}`}
-              className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-gray-100"
+              className="group bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
             >
-              <div className="relative h-56">
+              <div className="relative h-64">
                 <Image
                   src={route.image}
                   alt={route.name}
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-300"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
               <div className="p-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-200">{route.name}</h3>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {route.region}
-                  </span>
+                <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
+                  {route.name}
+                </h3>
+                <p className="mt-2 text-gray-600 line-clamp-2">{route.description}</p>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center text-sm text-gray-500">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {route.duration}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {route.bestTimeToVisit}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {route.priceRange}
+                  </div>
                 </div>
-                <p className="mt-3 text-gray-600 line-clamp-2">{route.description}</p>
-                <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
-                  <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                    </svg>
-                    {route.popularTours} popüler tur
-                  </span>
-                  <span className="flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                    Ortalama {route.averagePrice}
-                  </span>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {route.highlights.slice(0, 3).map((highlight, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                    >
+                      {highlight}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="flex items-center">
+                      {[...Array(5)].map((_, i) => (
+                        <svg
+                          key={i}
+                          className={`w-4 h-4 ${
+                            i < Math.floor(route.rating)
+                              ? 'text-yellow-400'
+                              : 'text-gray-300'
+                          }`}
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.363 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.363-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                    </div>
+                    <span className="ml-2 text-sm text-gray-600">({route.reviews})</span>
+                  </div>
+                  <span className="text-sm font-medium text-blue-600">Detayları Gör →</span>
                 </div>
               </div>
             </Link>
@@ -215,7 +204,7 @@ export default function RoutesPage() {
           <div className="px-6 py-12 sm:px-12 sm:py-16 lg:flex lg:items-center lg:justify-between">
             <div className="max-w-xl">
               <h2 className="text-2xl font-extrabold text-white sm:text-3xl">
-                En güncel rota fırsatlarından haberdar olun
+                En güncel tur fırsatlarından haberdar olun
               </h2>
               <p className="mt-3 text-lg text-blue-100">
                 Özel indirimler, yeni rotalar ve öneriler için bültenimize kaydolun.
