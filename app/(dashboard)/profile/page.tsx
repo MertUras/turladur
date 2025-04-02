@@ -118,51 +118,46 @@ export default function ProfilePage() {
   const [cvv, setCvv] = useState('');
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [cardType, setCardType] = useState('');
-  const [savedCards, setSavedCards] = useState<Card[]>([]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Kartların süresini kontrol et
-  useEffect(() => {
-    const checkCardExpiry = () => {
-      const currentDate = new Date();
-      setSavedCards(prevCards => 
-        prevCards.map(card => {
-          const [month, year] = card.expiry.split('/');
-          const expiryDate = new Date(2000 + parseInt(year), parseInt(month) - 1);
-          const isExpired = expiryDate < currentDate;
-          
-          if (isExpired && !card.isExpired) {
-            toast.error(`"${card.type} **** ${card.lastFour}" kartınızın süresi doldu.`);
-          }
-          
-          return {
-            ...card,
-            isExpired
-          };
-        })
-      );
-    };
-
-    // Sayfa yüklendiğinde ve her saat başı kontrol et
-    checkCardExpiry();
-    const interval = setInterval(checkCardExpiry, 1000 * 60 * 60); // Her saat
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const formatDate = (dateString: string) => {
-    if (!mounted) return dateString;
-    return new Date(dateString).toLocaleDateString('tr-TR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const bookings: Record<string, Booking[]> = {
+  const [showModal, setShowModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [savedCards, setSavedCards] = useState<Card[]>([
+    {
+      id: 1,
+      type: 'Visa',
+      number: '4111111111111111',
+      name: 'AHMET YILMAZ',
+      expiry: '12/25',
+      cvv: '123',
+      logo: 'https://raw.githubusercontent.com/muhammederdem/credit-card-form/master/src/assets/images/visa.png',
+      lastFour: '1111',
+      isExpired: false
+    },
+    {
+      id: 2,
+      type: 'Mastercard',
+      number: '5111111111111118',
+      name: 'AHMET YILMAZ',
+      expiry: '09/23',
+      cvv: '456',
+      logo: 'https://raw.githubusercontent.com/muhammederdem/credit-card-form/master/src/assets/images/mastercard.png',
+      lastFour: '1118',
+      isExpired: true
+    }
+  ]);
+  
+  // Yeni eklenen durumlar
+  const [expandedFAQs, setExpandedFAQs] = useState<number[]>([0]); // İlk soruyu varsayılan olarak açık tut
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'priceAsc' | 'priceDesc' | 'dateAsc' | 'dateDesc'>('dateDesc');
+  const [filters, setFilters] = useState({
+    type: 'all',
+    priceRange: [0, 5000],
+    status: 'all',
+    date: ''
+  });
+  
+  // Rezervasyon ve favoriler için state ekleyelim
+  const [bookings, setBookings] = useState<Record<string, Booking[]>>({
     upcoming: [
       {
         id: 1,
@@ -225,9 +220,9 @@ export default function ProfilePage() {
         description: 'Antik dünyanın izlerini keşfedin'
       }
     ]
-  };
+  });
 
-  const favorites: Record<string, FavoriteItem[]> = {
+  const [favorites, setFavorites] = useState<Record<string, FavoriteItem[]>>({
     hotels: [
       {
         id: 1,
@@ -284,6 +279,49 @@ export default function ProfilePage() {
         guests: 15
       }
     ]
+  });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Kartların süresini kontrol et
+  useEffect(() => {
+    const checkCardExpiry = () => {
+      const currentDate = new Date();
+      setSavedCards(prevCards => 
+        prevCards.map(card => {
+          const [month, year] = card.expiry.split('/');
+          const expiryDate = new Date(2000 + parseInt(year), parseInt(month) - 1);
+          const isExpired = expiryDate < currentDate;
+          
+          if (isExpired && !card.isExpired) {
+            toast.error(`"${card.type} **** ${card.lastFour}" kartınızın süresi doldu.`);
+          }
+          
+          return {
+            ...card,
+            isExpired
+          };
+        })
+      );
+    };
+
+    // Sayfa yüklendiğinde ve her saat başı kontrol et
+    if (mounted) {
+      checkCardExpiry();
+      const interval = setInterval(checkCardExpiry, 1000 * 60 * 60); // Her saat
+      return () => clearInterval(interval);
+    }
+  }, [mounted]);
+
+  const formatDate = (dateString: string) => {
+    if (!mounted) return dateString;
+    return new Date(dateString).toLocaleDateString('tr-TR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   const detectCardType = (number: string) => {
@@ -309,7 +347,8 @@ export default function ProfilePage() {
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = formatCardNumber(e.target.value);
     setCardNumber(value);
-    setCardType(detectCardType(value));
+    const detectedType = detectCardType(value);
+    setCardType(detectedType);
     
     if (value.length === 19 && !validateCardNumber(value)) {
       toast.error('Geçerli bir kart numarası giriniz (16 haneli)');
@@ -372,15 +411,17 @@ export default function ProfilePage() {
       return;
     }
 
+    const cleanNumber = cardNumber.replace(/\D/g, '');
+
     const newCard = {
       id: Date.now(),
       type: cardType,
-      number: cardNumber,
+      number: cleanNumber,
       name: cardName,
       expiry: expiryDate,
       cvv: cvv,
       logo: CARD_TYPES.find(t => t.name === cardType)?.logo || '',
-      lastFour: cardNumber.slice(-4),
+      lastFour: cleanNumber.slice(-4),
       isExpired: false
     };
 
@@ -390,8 +431,112 @@ export default function ProfilePage() {
     setExpiryDate('');
     setCvv('');
     setCardType('');
+    setIsCardFlipped(false);
     setIsEditing(false);
     toast.success('Kart başarıyla kaydedildi');
+  };
+
+  const handleDeleteCard = (cardId: number) => {
+    setSavedCards(prev => prev.filter(card => card.id !== cardId));
+    toast.success('Kart başarıyla silindi');
+  };
+
+  // Yeni işlevler ekleyelim
+  const handleCancelBooking = (bookingId: number) => {
+    // Gerçek bir uygulamada burada API çağrısı yapılır
+    toast(`Rezervasyon #${bookingId} iptal edildi`, {
+      icon: '🗑️',
+    });
+    
+    // İptal edilen rezervasyonu güncelleyelim
+    const updatedBookings = {
+      ...bookings,
+      upcoming: bookings.upcoming.filter(booking => booking.id !== bookingId),
+      cancelled: [
+        ...bookings.cancelled,
+        {
+          ...bookings.upcoming.find(booking => booking.id === bookingId)!,
+          status: 'cancelled' as 'cancelled'
+        }
+      ].filter(Boolean)
+    };
+    
+    setBookings(updatedBookings);
+  };
+
+  const handleViewBookingDetails = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setShowModal(true);
+  };
+
+  const handleToggleFavorite = (item: FavoriteItem) => {
+    toast.success(`${item.name} favorilerden kaldırıldı`);
+    // Favori listesinden öğeyi kaldıralım
+    const updatedFavorites = {
+      ...favorites,
+      [favoriteTab]: favorites[favoriteTab].filter(fav => fav.id !== item.id)
+    };
+    setFavorites(updatedFavorites);
+  };
+
+  // Sıkça sorulan sorular için açılıp kapanma işlevi
+  const toggleFAQ = (index: number) => {
+    setExpandedFAQs(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index) 
+        : [...prev, index]
+    );
+  };
+
+  // Rezervasyonları filtreleme işlevi
+  const applyFilters = () => {
+    setFilterModalOpen(false);
+    toast.success('Filtreler uygulandı');
+  };
+
+  // Rezervasyonları sıralama işlevi
+  const handleSort = (order: 'priceAsc' | 'priceDesc' | 'dateAsc' | 'dateDesc') => {
+    setSortOrder(order);
+    
+    const sortedBookings = {...bookings};
+    Object.keys(sortedBookings).forEach(key => {
+      const bookingList = sortedBookings[key];
+      
+      if (order === 'priceAsc') {
+        sortedBookings[key] = [...bookingList].sort((a, b) => a.price - b.price);
+        toast.success('Rezervasyonlar fiyata göre artan sıralandı');
+      } else if (order === 'priceDesc') {
+        sortedBookings[key] = [...bookingList].sort((a, b) => b.price - a.price);
+        toast.success('Rezervasyonlar fiyata göre azalan sıralandı');
+      } else if (order === 'dateAsc') {
+        sortedBookings[key] = [...bookingList].sort((a, b) => {
+          const dateA = a.date || a.checkIn || '';
+          const dateB = b.date || b.checkIn || '';
+          return new Date(dateA).getTime() - new Date(dateB).getTime();
+        });
+        toast.success('Rezervasyonlar tarihe göre artan sıralandı');
+      } else if (order === 'dateDesc') {
+        sortedBookings[key] = [...bookingList].sort((a, b) => {
+          const dateA = a.date || a.checkIn || '';
+          const dateB = b.date || b.checkIn || '';
+          return new Date(dateB).getTime() - new Date(dateA).getTime();
+        });
+        toast.success('Rezervasyonlar tarihe göre azalan sıralandı');
+      }
+    });
+    
+    setBookings(sortedBookings);
+  };
+
+  // Filtre sıfırlama işlevi
+  const resetFilters = () => {
+    setFilters({
+      type: 'all',
+      priceRange: [0, 5000],
+      status: 'all',
+      date: ''
+    });
+    toast.success('Filtreler sıfırlandı');
   };
 
   return (
@@ -757,17 +902,196 @@ export default function ProfilePage() {
                         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Geçmiş ve gelecek tur rezervasyonlarınız</p>
                       </div>
                       <div className="flex space-x-2">
-                        <button className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                        <button 
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                          onClick={() => setFilterModalOpen(true)}
+                        >
                           <FunnelIcon className="h-4 w-4 mr-2" />
                           Filtrele
                         </button>
-                        <button className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
-                          <ArrowsUpDownIcon className="h-4 w-4 mr-2" />
-                          Sırala
+                        <div className="relative">
+                          <button 
+                            className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                            onClick={() => document.getElementById('sortDropdown')?.classList.toggle('hidden')}
+                          >
+                            <ArrowsUpDownIcon className="h-4 w-4 mr-2" />
+                            Sırala
+                          </button>
+                          <div 
+                            id="sortDropdown" 
+                            className="hidden absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-10 divide-y divide-gray-100 dark:divide-gray-700"
+                          >
+                            <div className="py-1" role="menu" aria-orientation="vertical">
+                              <button 
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" 
+                                role="menuitem"
+                                onClick={() => handleSort('priceAsc')}
+                              >
+                                Fiyat: Artan
+                              </button>
+                              <button 
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" 
+                                role="menuitem"
+                                onClick={() => handleSort('priceDesc')}
+                              >
+                                Fiyat: Azalan
+                              </button>
+                              <button 
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" 
+                                role="menuitem"
+                                onClick={() => handleSort('dateAsc')}
+                              >
+                                Tarih: Eski - Yeni
+                              </button>
+                              <button 
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" 
+                                role="menuitem"
+                                onClick={() => handleSort('dateDesc')}
+                              >
+                                Tarih: Yeni - Eski
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+                      <div className="border-b border-gray-200 dark:border-gray-700 pb-4 flex space-x-4">
+                        <button 
+                          onClick={() => setBookingTab('upcoming')}
+                          className={`px-4 py-2 text-sm font-medium rounded-lg ${bookingTab === 'upcoming' ? 
+                            'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 
+                            'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                        >
+                          Yaklaşan
+                        </button>
+                        <button 
+                          onClick={() => setBookingTab('past')}
+                          className={`px-4 py-2 text-sm font-medium rounded-lg ${bookingTab === 'past' ? 
+                            'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 
+                            'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                        >
+                          Geçmiş
+                        </button>
+                        <button 
+                          onClick={() => setBookingTab('cancelled')}
+                          className={`px-4 py-2 text-sm font-medium rounded-lg ${bookingTab === 'cancelled' ? 
+                            'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 
+                            'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                        >
+                          İptal Edilen
                         </button>
                       </div>
                     </div>
 
+                    {/* Filtreleme Modal */}
+                    {filterModalOpen && (
+                      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeInBg">
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl animate-zoomIn">
+                          <div className="p-6">
+                            <div className="flex justify-between items-center mb-4">
+                              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Rezervasyonları Filtrele</h3>
+                              <button
+                                onClick={() => setFilterModalOpen(false)}
+                                className="p-2 rounded-full text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                            </div>
+                            
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Rezervasyon Tipi
+                                </label>
+                                <select 
+                                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                  value={filters.type}
+                                  onChange={(e) => setFilters({...filters, type: e.target.value})}
+                                >
+                                  <option value="all">Tümü</option>
+                                  <option value="hotel">Otel</option>
+                                  <option value="tour">Tur</option>
+                                </select>
+                              </div>
+                              
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Fiyat Aralığı: ₺{filters.priceRange[0]} - ₺{filters.priceRange[1]}
+                                </label>
+                                <div className="flex space-x-4 items-center">
+                                  <input 
+                                    type="range" 
+                                    min="0" 
+                                    max="5000" 
+                                    step="100"
+                                    value={filters.priceRange[0]} 
+                                    onChange={(e) => setFilters({...filters, priceRange: [parseInt(e.target.value), filters.priceRange[1]]})}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                                  />
+                                  <input 
+                                    type="range" 
+                                    min="0" 
+                                    max="5000" 
+                                    step="100"
+                                    value={filters.priceRange[1]} 
+                                    onChange={(e) => setFilters({...filters, priceRange: [filters.priceRange[0], parseInt(e.target.value)]})}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Durum
+                                </label>
+                                <select 
+                                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                  value={filters.status}
+                                  onChange={(e) => setFilters({...filters, status: e.target.value})}
+                                >
+                                  <option value="all">Tümü</option>
+                                  <option value="confirmed">Onaylandı</option>
+                                  <option value="completed">Tamamlandı</option>
+                                  <option value="cancelled">İptal Edildi</option>
+                                </select>
+                              </div>
+                              
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Tarih
+                                </label>
+                                <input 
+                                  type="date" 
+                                  className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                                  value={filters.date}
+                                  onChange={(e) => setFilters({...filters, date: e.target.value})}
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="mt-6 flex justify-end space-x-3">
+                              <button
+                                onClick={resetFilters}
+                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                              >
+                                Sıfırla
+                              </button>
+                              <button
+                                onClick={applyFilters}
+                                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium rounded-lg hover:from-blue-600 hover:to-indigo-700"
+                              >
+                                Uygula
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-5 border border-blue-100 dark:border-blue-900/50 mb-6">
                       <div className="flex flex-col md:flex-row md:items-center">
                         <div className="flex-shrink-0 p-3 bg-blue-100 dark:bg-blue-800 rounded-xl">
@@ -775,122 +1099,141 @@ export default function ProfilePage() {
                         </div>
                         <div className="mt-3 md:mt-0 md:ml-4">
                           <h3 className="text-md font-medium text-gray-900 dark:text-white">Yaklaşan Rezervasyon</h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Kapadokya Balon Turu — 15 Haziran 2023, 05:30</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {bookings.upcoming.length > 0 
+                              ? `${bookings.upcoming[0].name} — ${bookings.upcoming[0].type === 'hotel' 
+                                ? `${formatDate(bookings.upcoming[0].checkIn || '')}`
+                                : `${formatDate(bookings.upcoming[0].date || '')}, ${bookings.upcoming[0].time}`}`
+                              : 'Yaklaşan rezervasyonunuz bulunmuyor.'}
+                          </p>
                         </div>
-                        <div className="mt-4 md:mt-0 md:ml-auto flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
-                          <button className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-md hover:shadow-lg transition-all duration-200">
-                            Rezervasyonu Görüntüle
-                          </button>
-                          <button className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-xl text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
-                            İptal Et
-                          </button>
-                        </div>
+                        {bookings.upcoming.length > 0 && (
+                          <div className="mt-4 md:mt-0 md:ml-auto flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
+                            <button 
+                              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-md hover:shadow-lg transition-all duration-200"
+                              onClick={() => handleViewBookingDetails(bookings.upcoming[0])}
+                            >
+                              Rezervasyonu Görüntüle
+                            </button>
+                            <button 
+                              className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-xl text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                              onClick={() => handleCancelBooking(bookings.upcoming[0].id)}
+                            >
+                              İptal Et
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     <div className="space-y-4">
                       {/* Rezervasyon Kartları */}
-                      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-all duration-200">
-                        <div className="flex flex-col md:flex-row">
-                          <div className="relative h-48 md:h-auto md:w-48 rounded-xl overflow-hidden mb-4 md:mb-0">
-                            <Image 
-                              src="https://images.unsplash.com/photo-1518639192441-8fce0a366e2e?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80"
-                              alt="Kapadokya Balon Turu"
-                              fill
-                              className="object-cover"
-                            />
-                            <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-medium px-2 py-1 rounded-lg">
-                              Onaylandı
-                            </div>
-                          </div>
-                          <div className="md:ml-6 flex-1">
-                            <div className="flex flex-col md:flex-row md:justify-between md:items-start">
-                              <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Kapadokya Balon Turu</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">15 Haziran 2023, 05:30</p>
-                              </div>
-                              <div className="mt-2 md:mt-0 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-lg">
-                                ₺2,500
+                      {bookings[bookingTab].map((booking) => (
+                        <div key={booking.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-all duration-200">
+                          <div className="flex flex-col md:flex-row">
+                            <div className="relative h-48 md:h-auto md:w-48 rounded-xl overflow-hidden mb-4 md:mb-0">
+                              <Image 
+                                src={booking.image}
+                                alt={booking.name}
+                                fill
+                                className="object-cover"
+                              />
+                              <div className="absolute top-2 left-2 bg-green-500 text-white text-xs font-medium px-2 py-1 rounded-lg">
+                                {booking.status === 'confirmed' ? 'Onaylandı' :
+                                 booking.status === 'completed' ? 'Tamamlandı' :
+                                 'İptal Edildi'}
                               </div>
                             </div>
-                            <div className="mt-4 border-t border-gray-100 dark:border-gray-700 pt-4">
-                              <div className="flex flex-wrap gap-4">
-                                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                                  <UsersIcon className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
-                                  2 Kişi
+                            <div className="md:ml-6 flex-1">
+                              <div className="flex flex-col md:flex-row md:justify-between md:items-start">
+                                <div>
+                                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{booking.name}</h3>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {booking.type === 'hotel' 
+                                      ? `${formatDate(booking.checkIn || '')} - ${formatDate(booking.checkOut || '')}`
+                                      : `${formatDate(booking.date || '')}, ${booking.time}`}
+                                  </p>
                                 </div>
-                                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                                  <ClockIcon className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
-                                  2 Saat
-                                </div>
-                                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                                  <LocationMarkerIcon className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
-                                  Nevşehir, Türkiye
-                                </div>
-                              </div>
-                              <div className="mt-4 flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                                <button className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm hover:shadow-md transition-all duration-200">
-                                  Detayları Görüntüle
-                                </button>
-                                <button className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-xl text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
-                                  Rehbere Mesaj
-                                </button>
-                                <button className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-xl text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200">
-                                  İptal Et
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm hover:shadow-md transition-all duration-200">
-                        <div className="flex flex-col md:flex-row">
-                          <div className="relative h-48 md:h-auto md:w-48 rounded-xl overflow-hidden mb-4 md:mb-0">
-                            <Image 
-                              src="https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?ixlib=rb-1.2.1&auto=format&fit=crop&w=600&q=80"
-                              alt="İstanbul Boğaz Turu"
-                              fill
-                              className="object-cover"
-                            />
-                            <div className="absolute top-2 left-2 bg-gray-500 text-white text-xs font-medium px-2 py-1 rounded-lg">
-                              Tamamlandı
-                            </div>
-                          </div>
-                          <div className="md:ml-6 flex-1">
-                            <div className="flex flex-col md:flex-row md:justify-between md:items-start">
-                              <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">İstanbul Boğaz Turu</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">10 Mayıs 2023, 14:00</p>
-                              </div>
-                              <div className="mt-2 md:mt-0 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-lg">
-                                ₺1,200
-                              </div>
-                            </div>
-                            <div className="mt-4 border-t border-gray-100 dark:border-gray-700 pt-4">
-                              <div className="flex flex-wrap gap-4">
-                                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                                  <UsersIcon className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
-                                  4 Kişi
-                                </div>
-                                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                                  <ClockIcon className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
-                                  3 Saat
-                                </div>
-                                <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                                  <LocationMarkerIcon className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
-                                  İstanbul, Türkiye
+                                <div className="mt-2 md:mt-0 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-lg">
+                                  ₺{booking.price.toLocaleString('tr-TR')}
                                 </div>
                               </div>
-                              <div className="mt-4 flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                                <button className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm hover:shadow-md transition-all duration-200">
-                                  Detayları Görüntüle
-                                </button>
+                              <div className="mt-4 border-t border-gray-100 dark:border-gray-700 pt-4">
+                                <div className="flex flex-wrap gap-4">
+                                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                    <UsersIcon className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+                                    {booking.guests} Kişi
+                                  </div>
+                                  {booking.type === 'hotel' && (
+                                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                      <ClockIcon className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+                                      {new Date(booking.checkOut || '').getDate() - new Date(booking.checkIn || '').getDate()} Gece
+                                    </div>
+                                  )}
+                                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                    <LocationMarkerIcon className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+                                    {booking.location}
+                                  </div>
+                                </div>
+                                <div className="mt-4 flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                                  <button 
+                                    className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm hover:shadow-md transition-all duration-200"
+                                    onClick={() => handleViewBookingDetails(booking)}
+                                  >
+                                    Detayları Görüntüle
+                                  </button>
+                                  {booking.status === 'confirmed' && (
+                                    <>
+                                      <button 
+                                        className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-xl text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+                                        onClick={() => {
+                                          toast.success('Rezervasyon değişikliği için rehbere mesaj gönderildi');
+                                        }}
+                                      >
+                                        Rehbere Mesaj
+                                      </button>
+                                      <button 
+                                        className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-xl text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
+                                        onClick={() => handleCancelBooking(booking.id)}
+                                      >
+                                        İptal Et
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      ))}
+                      
+                      {bookings[bookingTab].length === 0 && (
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+                          <CalendarIcon className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-500" />
+                          <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">
+                            {bookingTab === 'upcoming' 
+                              ? 'Yaklaşan rezervasyonunuz bulunmuyor' 
+                              : bookingTab === 'past' 
+                                ? 'Geçmiş rezervasyonunuz bulunmuyor' 
+                                : 'İptal edilmiş rezervasyonunuz bulunmuyor'}
+                          </h3>
+                          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            {bookingTab === 'upcoming' 
+                              ? 'Yeni bir rezervasyon yapmak için ana sayfaya dönebilirsiniz.' 
+                              : bookingTab === 'past' 
+                                ? 'Tamamlanan rezervasyonlarınız burada görüntülenecektir.' 
+                                : 'İptal ettiğiniz rezervasyonlar burada görüntülenecektir.'}
+                          </p>
+                          {bookingTab === 'upcoming' && (
+                            <button 
+                              className="mt-4 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium rounded-xl hover:from-blue-600 hover:to-indigo-700"
+                              onClick={() => toast.success('Rezervasyon sayfasına yönlendiriliyorsunuz')}
+                            >
+                              Rezervasyon Yap
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -926,7 +1269,7 @@ export default function ProfilePage() {
                       
                       <div className="pt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                         {favorites[favoriteTab].map((item) => (
-                          <div key={item.id} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200">
+                          <div key={item.id} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200 relative">
                             <div className="relative h-48">
                               <Image
                                 src={item.image}
@@ -935,7 +1278,10 @@ export default function ProfilePage() {
                                 className="object-cover"
                               />
                               <div className="absolute top-2 right-2">
-                                <button className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-red-500 hover:bg-white">
+                                <button 
+                                  className="p-2 bg-white/80 backdrop-blur-sm rounded-full text-red-500 hover:bg-white"
+                                  onClick={() => handleToggleFavorite(item)}
+                                >
                                   <HeartIcon className="h-5 w-5 fill-current" />
                                 </button>
                               </div>
@@ -953,8 +1299,13 @@ export default function ProfilePage() {
                                 </div>
                               </div>
                               <div className="mt-4 flex justify-between items-center">
-                                <span className="font-semibold text-gray-900 dark:text-white">₺{item.price}</span>
-                                <button className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800/30">
+                                <span className="font-semibold text-gray-900 dark:text-white">₺{item.price.toLocaleString('tr-TR')}</span>
+                                <button 
+                                  className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800/30"
+                                  onClick={() => {
+                                    toast.success(`${item.name} detayları görüntüleniyor`);
+                                  }}
+                                >
                                   Detaylar
                                 </button>
                               </div>
@@ -1171,10 +1522,19 @@ export default function ProfilePage() {
                                   )}
                                 </div>
                                 <div className="mt-4 flex justify-end space-x-2">
-                                  <button className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                                  <button 
+                                    className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                    onClick={() => {
+                                      // Kart detaylarını gösterme işlemleri burada yapılabilir
+                                      toast.success(`${card.type} kartı seçildi`);
+                                    }}
+                                  >
                                     <EllipsisVerticalIcon className="h-5 w-5" />
                                   </button>
-                                  <button className="p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                  <button 
+                                    className="p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                    onClick={() => handleDeleteCard(card.id)}
+                                  >
                                     <TrashIcon className="h-5 w-5" />
                                   </button>
                                 </div>
@@ -1681,42 +2041,91 @@ export default function ProfilePage() {
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Sık Sorulan Sorular</h3>
                       <div className="space-y-4">
                         <div className="border-b border-gray-100 dark:border-gray-700 pb-4">
-                          <button className="flex justify-between items-center w-full text-left">
+                          <button 
+                            className="flex justify-between items-center w-full text-left"
+                            onClick={() => toggleFAQ(0)}
+                          >
                             <h4 className="font-medium text-gray-900 dark:text-white">Rezervasyonumu nasıl iptal edebilirim?</h4>
-                            <svg className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg 
+                              className={`h-5 w-5 text-gray-500 dark:text-gray-400 transform transition-transform ${expandedFAQs.includes(0) ? 'rotate-180' : ''}`} 
+                              fill="none" 
+                              viewBox="0 0 24 24" 
+                              stroke="currentColor"
+                            >
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
                           </button>
-                          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            Rezervasyonunuzu iptal etmek için "Rezervasyonlarım" bölümüne gidin, iptal etmek istediğiniz rezervasyonu bulun ve "İptal Et" düğmesine tıklayın. İptal koşulları ve iade politikası, rezervasyon tipine ve zamanlamasına bağlı olarak değişiklik gösterebilir.
-                          </p>
+                          {expandedFAQs.includes(0) && (
+                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                              Rezervasyonunuzu iptal etmek için "Rezervasyonlarım" bölümüne gidin, iptal etmek istediğiniz rezervasyonu bulun ve "İptal Et" düğmesine tıklayın. İptal koşulları ve iade politikası, rezervasyon tipine ve zamanlamasına bağlı olarak değişiklik gösterebilir.
+                            </p>
+                          )}
                         </div>
                         
                         <div className="border-b border-gray-100 dark:border-gray-700 pb-4">
-                          <button className="flex justify-between items-center w-full text-left">
+                          <button 
+                            className="flex justify-between items-center w-full text-left"
+                            onClick={() => toggleFAQ(1)}
+                          >
                             <h4 className="font-medium text-gray-900 dark:text-white">Ödeme bilgilerimi nasıl güncelleyebilirim?</h4>
-                            <svg className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            <svg 
+                              className={`h-5 w-5 text-gray-500 dark:text-gray-400 transform transition-transform ${expandedFAQs.includes(1) ? 'rotate-180' : ''}`} 
+                              fill="none" 
+                              viewBox="0 0 24 24" 
+                              stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
                           </button>
+                          {expandedFAQs.includes(1) && (
+                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                              Ödeme bilgilerinizi güncellemek için "Ödeme Bilgileri" sekmesine gidin. Buradan mevcut kartlarınızı görüntüleyebilir, yeni kartlar ekleyebilir veya mevcut kartları silebilirsiniz. Yeni bir kart eklemek için "Yeni Kart Ekle" düğmesine tıklayarak gerekli bilgileri girin ve "Kartı Kaydet" düğmesine tıklayın.
+                            </p>
+                          )}
                         </div>
                         
                         <div className="border-b border-gray-100 dark:border-gray-700 pb-4">
-                          <button className="flex justify-between items-center w-full text-left">
+                          <button 
+                            className="flex justify-between items-center w-full text-left"
+                            onClick={() => toggleFAQ(2)}
+                          >
                             <h4 className="font-medium text-gray-900 dark:text-white">Puanlarımı nasıl kullanabilirim?</h4>
-                            <svg className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            <svg 
+                              className={`h-5 w-5 text-gray-500 dark:text-gray-400 transform transition-transform ${expandedFAQs.includes(2) ? 'rotate-180' : ''}`} 
+                              fill="none" 
+                              viewBox="0 0 24 24" 
+                              stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
                           </button>
+                          {expandedFAQs.includes(2) && (
+                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                              Puanlarınızı kullanmak için "Ödüllerim" sekmesine gidin. Burada mevcut puanlarınızı ve kullanabileceğiniz ödülleri göreceksiniz. İstediğiniz ödülün altındaki "Kullan" düğmesine tıkladığınızda, gerekli puanlar hesabınızdan düşülerek ödülünüz aktif hale gelecektir. Ödüllerinizi rezervasyon yaparken veya mevcut rezervasyonlarınız için kullanabilirsiniz.
+                            </p>
+                          )}
                         </div>
                         
                         <div>
-                          <button className="flex justify-between items-center w-full text-left">
+                          <button 
+                            className="flex justify-between items-center w-full text-left"
+                            onClick={() => toggleFAQ(3)}
+                          >
                             <h4 className="font-medium text-gray-900 dark:text-white">Şifre değiştirirken sorun yaşıyorum.</h4>
-                            <svg className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            <svg 
+                              className={`h-5 w-5 text-gray-500 dark:text-gray-400 transform transition-transform ${expandedFAQs.includes(3) ? 'rotate-180' : ''}`} 
+                              fill="none" 
+                              viewBox="0 0 24 24" 
+                              stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                             </svg>
                           </button>
+                          {expandedFAQs.includes(3) && (
+                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                              Şifre değiştirirken sorun yaşıyorsanız, lütfen şu adımları izleyin: 1) Mevcut şifrenizi doğru girdiğinizden emin olun. 2) Yeni şifreniz en az 8 karakter uzunluğunda olmalı ve büyük harf, küçük harf, rakam ve özel karakter içermelidir. 3) Şifre değiştirme işlemi sırasında internet bağlantınızın kesintisiz olduğundan emin olun. Sorun devam ederse, lütfen destek ekibimizle iletişime geçin.
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1758,7 +2167,10 @@ export default function ProfilePage() {
                           </div>
                           <h4 className="font-medium text-gray-900 dark:text-white mb-1">Canlı Sohbet</h4>
                           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Anında destek alın</p>
-                          <button className="text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline">
+                          <button 
+                            className="text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline"
+                            onClick={() => toast.success('Canlı sohbet başlatılıyor...')}
+                          >
                             Sohbet Başlat
                           </button>
                         </div>
@@ -1770,7 +2182,10 @@ export default function ProfilePage() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-4">
                         İhtiyacınız olan bilgiyi bulamadıysanız, destek ekibimiz size yardımcı olmaktan memnuniyet duyacaktır.
                       </p>
-                      <button className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium rounded-xl hover:from-blue-600 hover:to-indigo-700">
+                      <button 
+                        className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium rounded-xl hover:from-blue-600 hover:to-indigo-700"
+                        onClick={() => toast.success('Destek talebi oluşturuluyor...')}
+                      >
                         Destek Talebi Oluştur
                       </button>
                     </div>
@@ -1781,6 +2196,126 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Rezervasyon Detay Modalı */}
+      {showModal && selectedBooking && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeInBg">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl animate-zoomIn">
+            <div className="relative">
+              <div className="h-48 w-full">
+                <Image 
+                  src={selectedBooking.image}
+                  alt={selectedBooking.name}
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm p-2 rounded-full text-white hover:bg-white/40 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <div className="absolute bottom-4 left-6">
+                <div className={`inline-block px-3 py-1 rounded-lg ${
+                  selectedBooking.status === 'confirmed' ? 'bg-green-500 text-white' :
+                  selectedBooking.status === 'completed' ? 'bg-gray-500 text-white' :
+                  'bg-red-500 text-white'
+                }`}>
+                  {selectedBooking.status === 'confirmed' ? 'Onaylandı' :
+                   selectedBooking.status === 'completed' ? 'Tamamlandı' :
+                   'İptal Edildi'}
+                </div>
+              </div>
+            </div>
+            <div className="p-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{selectedBooking.name}</h2>
+              <p className="text-gray-600 dark:text-gray-400 mt-1">{selectedBooking.location}</p>
+              
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Rezervasyon Numarası</h3>
+                  <p className="text-gray-900 dark:text-white">{selectedBooking.bookingNumber}</p>
+                </div>
+                {selectedBooking.type === 'hotel' ? (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Misafir Sayısı</h3>
+                      <p className="text-gray-900 dark:text-white">{selectedBooking.guests} Kişi</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Giriş Tarihi</h3>
+                      <p className="text-gray-900 dark:text-white">{formatDate(selectedBooking.checkIn || '')}</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Çıkış Tarihi</h3>
+                      <p className="text-gray-900 dark:text-white">{formatDate(selectedBooking.checkOut || '')}</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Misafir Sayısı</h3>
+                      <p className="text-gray-900 dark:text-white">{selectedBooking.guests} Kişi</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Tarih</h3>
+                      <p className="text-gray-900 dark:text-white">{formatDate(selectedBooking.date || '')}</p>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Saat</h3>
+                      <p className="text-gray-900 dark:text-white">{selectedBooking.time}</p>
+                    </div>
+                  </>
+                )}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Toplam Tutar</h3>
+                  <p className="text-gray-900 dark:text-white">₺{selectedBooking.price.toLocaleString('tr-TR')}</p>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Açıklama</h3>
+                <p className="text-gray-900 dark:text-white mt-1">{selectedBooking.description}</p>
+              </div>
+              
+              <div className="mt-8 flex flex-col sm:flex-row sm:justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+                {selectedBooking.status === 'confirmed' && (
+                  <>
+                    <button
+                      className="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      onClick={() => {
+                        setShowModal(false);
+                        toast.success('Rezervasyon değişikliği için rehbere mesaj gönderildi');
+                      }}
+                    >
+                      Değişiklik Talebi
+                    </button>
+                    <button
+                      className="px-4 py-2 border border-transparent rounded-xl text-white bg-red-600 hover:bg-red-700"
+                      onClick={() => {
+                        handleCancelBooking(selectedBooking.id);
+                        setShowModal(false);
+                      }}
+                    >
+                      Rezervasyonu İptal Et
+                    </button>
+                  </>
+                )}
+                <button
+                  className="px-4 py-2 border border-transparent rounded-xl text-white bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                  onClick={() => setShowModal(false)}
+                >
+                  Kapat
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
