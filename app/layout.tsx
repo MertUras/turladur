@@ -3,9 +3,15 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import { SessionProvider } from "next-auth/react";
+import { headers } from "next/headers";
+import AuthProvider from "../components/providers/AuthProvider";
+import ChatWidgetWrapper from "./components/ChatWidgetWrapper";
+import { ThemeProvider } from "./providers/theme-provider";
 
 const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -19,13 +25,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="tr">
-      <body className={`${inter.className} flex flex-col min-h-screen`}>
-        <Header />
-        <main className="flex-grow">
-          {children}
-        </main>
-        <Footer />
+    <html lang="tr" suppressHydrationWarning>
+      <body className={`${inter.variable} font-sans antialiased`}>
+        <AuthProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <Header />
+            <main className="flex-grow">{children}</main>
+            <Footer />
+            <ChatWidgetWrapper />
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   );
