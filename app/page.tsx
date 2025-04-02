@@ -9,6 +9,7 @@ import Footer from './components/Footer';
 import HotDeals from './components/HotDeals';
 import Newsletter from './components/Newsletter';
 import MobileOfferPopup from './components/MobileOfferPopup';
+import Destinations from './components/Destinations';
 
 export default async function Home() {
   return (
@@ -16,6 +17,7 @@ export default async function Home() {
       <Header />
       <Hero />
       <HotDeals />
+      <Destinations />
       <Stats />
       <FeaturedHotels />
       <Testimonials />

@@ -832,7 +832,7 @@ export default function Hero() {
     <section className="relative mt-16 md:mt-0 min-h-[600px] h-[90vh] max-h-[900px] w-full overflow-hidden">
       {/* Arka Plan Görselleri */}
       <div className="absolute inset-0 w-full h-full">
-        {backgroundImages.map((image, index) => (
+        {placeholderImages.map((image, index) => (
           <div 
             key={index} 
             className={`absolute inset-0 w-full h-full transition-opacity duration-2000 ease-in-out ${
@@ -840,7 +840,7 @@ export default function Hero() {
             }`}
           >
             <Image
-              src={placeholderImages[index]} 
+              src={image} 
               alt={`Türkiye'nin güzelliklerini keşfedin ${index + 1}`}
               fill
               sizes="100vw"
