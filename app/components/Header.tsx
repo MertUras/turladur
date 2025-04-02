@@ -102,39 +102,39 @@ export default function Header() {
                 className={`px-3 py-2 rounded-md font-medium text-sm flex items-center ${
                   isScrolled ? "text-gray-700 hover:text-blue-700" : "text-white hover:text-blue-100"
                 } transition-colors duration-300`}
-                onClick={() => toggleDropdown('destinations')}
-                aria-expanded={activeDropdown === 'destinations'}
+                onClick={() => toggleDropdown('routes')}
+                aria-expanded={activeDropdown === 'routes'}
               >
-                Destinasyonlar
+                Rotalar
                 <svg 
-                  className={`ml-1 w-4 h-4 transition-transform duration-200 ${activeDropdown === 'destinations' ? 'rotate-180' : ''}`} 
+                  className={`ml-1 w-4 h-4 transition-transform duration-200 ${activeDropdown === 'routes' ? 'rotate-180' : ''}`} 
                   fill="currentColor" 
                   viewBox="0 0 20 20"
                 >
                   <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
                 </svg>
               </button>
-              {activeDropdown === 'destinations' && (
+              {activeDropdown === 'routes' && (
                 <div className="absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-xl p-4 grid grid-cols-2 gap-2 z-50 border border-gray-100 transform transition-all opacity-100 scale-100">
-                  <Link href="/destinations/istanbul" className="p-2 rounded-lg hover:bg-blue-50 flex flex-col transition-colors">
-                    <span className="font-medium text-gray-900">İstanbul</span>
-                    <span className="text-xs text-gray-500">324 otel</span>
+                  <Link href="/routes/1" className="p-2 rounded-lg hover:bg-blue-50 flex flex-col transition-colors">
+                    <span className="font-medium text-gray-900">İstanbul - Kapadokya</span>
+                    <span className="text-xs text-gray-500">30 tur</span>
                   </Link>
-                  <Link href="/destinations/antalya" className="p-2 rounded-lg hover:bg-blue-50 flex flex-col transition-colors">
-                    <span className="font-medium text-gray-900">Antalya</span>
-                    <span className="text-xs text-gray-500">196 otel</span>
+                  <Link href="/routes/2" className="p-2 rounded-lg hover:bg-blue-50 flex flex-col transition-colors">
+                    <span className="font-medium text-gray-900">Akdeniz Kıyıları</span>
+                    <span className="text-xs text-gray-500">25 tur</span>
                   </Link>
-                  <Link href="/destinations/cappadocia" className="p-2 rounded-lg hover:bg-blue-50 flex flex-col transition-colors">
-                    <span className="font-medium text-gray-900">Kapadokya</span>
-                    <span className="text-xs text-gray-500">87 otel</span>
+                  <Link href="/routes/3" className="p-2 rounded-lg hover:bg-blue-50 flex flex-col transition-colors">
+                    <span className="font-medium text-gray-900">Ege Kıyıları</span>
+                    <span className="text-xs text-gray-500">20 tur</span>
                   </Link>
-                  <Link href="/destinations/bodrum" className="p-2 rounded-lg hover:bg-blue-50 flex flex-col transition-colors">
-                    <span className="font-medium text-gray-900">Bodrum</span>
-                    <span className="text-xs text-gray-500">124 otel</span>
+                  <Link href="/routes/4" className="p-2 rounded-lg hover:bg-blue-50 flex flex-col transition-colors">
+                    <span className="font-medium text-gray-900">Kapadokya - Pamukkale</span>
+                    <span className="text-xs text-gray-500">18 tur</span>
                   </Link>
                   <div className="col-span-2 mt-2 pt-2 border-t border-gray-100">
-                    <Link href="/destinations" className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center justify-center">
-                      Tüm destinasyonları gör
+                    <Link href="/routes" className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center justify-center">
+                      Tüm rotaları gör
                       <svg className="ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path>
                       </svg>
@@ -429,20 +429,20 @@ export default function Header() {
         <div className="md:hidden absolute left-0 right-0 top-full bg-white shadow-xl rounded-b-lg z-40 max-h-[80vh] overflow-y-auto text-black">
           <nav className="flex flex-col p-4 space-y-3">
             <div className="border-b border-gray-100 pb-3">
-              <button className="w-full flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors" onClick={() => toggleDropdown('destinations-mobile')}>
-                <span className="font-medium">Destinasyonlar</span>
-                <svg className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'destinations-mobile' ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+              <button className="w-full flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors" onClick={() => toggleDropdown('routes-mobile')}>
+                <span className="font-medium">Rotalar</span>
+                <svg className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'routes-mobile' ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
                 </svg>
               </button>
               
-              {activeDropdown === 'destinations-mobile' && (
+              {activeDropdown === 'routes-mobile' && (
                 <div className="mt-2 pl-4 space-y-2">
-                  <Link href="/destinations/istanbul" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">İstanbul</Link>
-                  <Link href="/destinations/antalya" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Antalya</Link>
-                  <Link href="/destinations/cappadocia" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Kapadokya</Link>
-                  <Link href="/destinations/bodrum" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Bodrum</Link>
-                  <Link href="/destinations" className="block p-2 text-blue-600 font-medium">Tüm destinasyonlar</Link>
+                  <Link href="/routes/1" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">İstanbul - Kapadokya</Link>
+                  <Link href="/routes/2" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Akdeniz Kıyıları</Link>
+                  <Link href="/routes/3" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Ege Kıyıları</Link>
+                  <Link href="/routes/4" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Kapadokya - Pamukkale</Link>
+                  <Link href="/routes" className="block p-2 text-blue-600 font-medium">Tüm rotalar</Link>
                 </div>
               )}
             </div>

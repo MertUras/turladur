@@ -260,9 +260,9 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
             <div className="absolute -bottom-20 -right-20 w-64 h-64 rounded-full bg-gradient-to-r from-orange-200/30 to-red-300/30 blur-3xl z-0 pointer-events-none"></div>
             
             {/* Header - Sabit */}
-            <div className="relative z-20 bg-white/90 backdrop-blur-sm border-b border-gray-100 p-4 sm:p-6 flex-shrink-0">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div className="flex items-center">
+            <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-sm border-b border-gray-100 p-4 sm:p-6">
+              <div className="flex flex-col md:flex-row md:items-center gap-4 pr-12">
+                <div className="flex items-center flex-shrink-0">
                   <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-xl mr-4 shadow-lg animate-float">
                     <TagIcon className="w-6 h-6 text-white" />
                   </div>
@@ -294,16 +294,16 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
                     </button>
                   ))}
                 </div>
-                
-                <button
-                  ref={closeButtonRef}
-                  onClick={handleClose}
-                  className="absolute top-4 sm:top-6 right-4 sm:right-6 p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  aria-label="Kapat"
-                >
-                  <XMarkIcon className="w-6 h-6" />
-                </button>
               </div>
+              
+              <button
+                ref={closeButtonRef}
+                onClick={handleClose}
+                className="absolute top-4 sm:top-6 right-4 sm:right-6 p-2 rounded-full bg-white hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-sm z-50"
+                aria-label="Kapat"
+              >
+                <XMarkIcon className="w-6 h-6" />
+              </button>
             </div>
             
             {/* İçerik - Kaydırılabilir */}

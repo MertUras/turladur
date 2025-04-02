@@ -84,13 +84,13 @@ export default function Footer({ className = "" }: FooterProps) {
             </div>
             
             <div>
-              <h4 className="font-bold text-lg mb-4">Destinasyonlar</h4>
+              <h4 className="font-bold text-lg mb-4">Rotalar</h4>
               <ul className="space-y-2">
-                <li><Link href="/destinations/istanbul" className="text-gray-400 hover:text-white transition-colors">İstanbul</Link></li>
-                <li><Link href="/destinations/antalya" className="text-gray-400 hover:text-white transition-colors">Antalya</Link></li>
-                <li><Link href="/destinations/cappadocia" className="text-gray-400 hover:text-white transition-colors">Kapadokya</Link></li>
-                <li><Link href="/destinations/bodrum" className="text-gray-400 hover:text-white transition-colors">Bodrum</Link></li>
-                <li><Link href="/destinations/all" className="text-gray-400 hover:text-white transition-colors">Tüm Destinasyonlar</Link></li>
+                <li><Link href="/routes/1" className="text-gray-400 hover:text-white transition-colors">İstanbul - Kapadokya</Link></li>
+                <li><Link href="/routes/2" className="text-gray-400 hover:text-white transition-colors">Akdeniz Kıyıları</Link></li>
+                <li><Link href="/routes/3" className="text-gray-400 hover:text-white transition-colors">Ege Kıyıları</Link></li>
+                <li><Link href="/routes/4" className="text-gray-400 hover:text-white transition-colors">Kapadokya - Pamukkale</Link></li>
+                <li><Link href="/routes" className="text-gray-400 hover:text-white transition-colors">Tüm Rotalar</Link></li>
               </ul>
             </div>
             
@@ -148,16 +148,16 @@ export default function Footer({ className = "" }: FooterProps) {
               )}
             </div>
             
-            {/* Destinasyonlar Akordeonu */}
+            {/* Rotalar Akordeonu */}
             <div className="border-b border-gray-700 pb-4">
               <button 
-                onClick={() => toggleAccordion('destinations')}
+                onClick={() => toggleAccordion('routes')}
                 className="flex justify-between items-center w-full text-left font-bold"
               >
-                Destinasyonlar
+                Rotalar
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
-                  className={`h-5 w-5 transition-transform ${activeAccordion === 'destinations' ? 'transform rotate-180' : ''}`}
+                  className={`h-5 w-5 transition-transform ${activeAccordion === 'routes' ? 'transform rotate-180' : ''}`}
                   fill="none" 
                   viewBox="0 0 24 24" 
                   stroke="currentColor"
@@ -166,13 +166,13 @@ export default function Footer({ className = "" }: FooterProps) {
                 </svg>
               </button>
               
-              {activeAccordion === 'destinations' && (
+              {activeAccordion === 'routes' && (
                 <ul className="mt-3 space-y-2 pl-2">
-                  <li><Link href="/destinations/istanbul" className="text-gray-400">İstanbul</Link></li>
-                  <li><Link href="/destinations/antalya" className="text-gray-400">Antalya</Link></li>
-                  <li><Link href="/destinations/cappadocia" className="text-gray-400">Kapadokya</Link></li>
-                  <li><Link href="/destinations/bodrum" className="text-gray-400">Bodrum</Link></li>
-                  <li><Link href="/destinations/all" className="text-gray-400">Tüm Destinasyonlar</Link></li>
+                  <li><Link href="/routes/1" className="text-gray-400">İstanbul - Kapadokya</Link></li>
+                  <li><Link href="/routes/2" className="text-gray-400">Akdeniz Kıyıları</Link></li>
+                  <li><Link href="/routes/3" className="text-gray-400">Ege Kıyıları</Link></li>
+                  <li><Link href="/routes/4" className="text-gray-400">Kapadokya - Pamukkale</Link></li>
+                  <li><Link href="/routes" className="text-gray-400">Tüm Rotalar</Link></li>
                 </ul>
               )}
             </div>
