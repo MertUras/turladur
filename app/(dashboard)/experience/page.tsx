@@ -35,6 +35,7 @@ export default function ExperiencesPage() {
     const [maxPrice, setMaxPrice] = useState<number>(5000);
     const [maxDuration, setMaxDuration] = useState<number>(12);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const filterMenuRef = useRef<HTMLDivElement>(null);
 
     // Kategoriler
     const categories = [
@@ -182,14 +183,30 @@ export default function ExperiencesPage() {
         setFilteredExperiences(filtered);
     }, [searchTerm, selectedCategory, experiences, minPrice, maxPrice, maxDuration]);
 
+    // Filtre dışına tıklama kontrolü
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node) && showFilters) {
+                setShowFilters(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showFilters]);
+
     // Scroll handlers
-    const scrollLeft = () => {
+    const scrollLeft = (e: React.MouseEvent) => {
+        e.preventDefault();
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollBy({ left: -300, behavior: 'smooth' });
         }
     };
 
-    const scrollRight = () => {
+    const scrollRight = (e: React.MouseEvent) => {
+        e.preventDefault();
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollBy({ left: 300, behavior: 'smooth' });
         }
@@ -234,99 +251,164 @@ export default function ExperiencesPage() {
                                             <input
                                                 type="text"
                                                 placeholder="Nereye gitmek istersiniz?"
-                                                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                className="w-full pl-10 pr-4 py-3 text-black rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                 value={searchTerm}
                                                 onChange={(e) => setSearchTerm(e.target.value)}
+                                                onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
                                             />
                                         </div>
                                     </div>
                                     <button 
                                         className="flex items-center bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 font-medium hover:from-blue-600 hover:to-blue-700 md:rounded-l-none md:rounded-r-xl transition-all duration-300"
-                                        onClick={() => setShowFilters(!showFilters)}
+                                        onClick={(e: React.MouseEvent) => {
+                                            e.preventDefault();
+                                            setShowFilters(!showFilters);
+                                        }}
                                     >
                                         <Filter className="w-5 h-5 mr-2" />
                                         {showFilters ? "Filtreleri Gizle" : "Filtreleri Göster"}
                                     </button>
                                 </div>
-                                
-                                {/* Expandable filters */}
-                                {showFilters && (
-                                    <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Fiyat Aralığı
-                                            </label>
-                                            <div className="flex items-center space-x-3">
-                                                <div className="relative flex-grow">
-                                                    <Wallet className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                                    <input 
-                                                        type="number"
-                                                        placeholder="Min. Fiyat"
-                                                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg"
-                                                        value={minPrice}
-                                                        onChange={(e) => setMinPrice(Number(e.target.value))}
-                                                        min="0"
-                                                    />
+                            </div>
+                            
+                            {/* Portal tarzı filtre menüsü */}
+                            {showFilters && (
+                                <div className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm flex items-center justify-center">
+                                    <div 
+                                        ref={filterMenuRef}
+                                        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden transform transition-all"
+                                    >
+                                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                                            <h3 className="text-lg font-semibold text-gray-900">Filtreleme Seçenekleri</h3>
+                                            <button 
+                                                className="text-gray-500 hover:text-gray-700"
+                                                onClick={(e: React.MouseEvent) => {
+                                                    e.preventDefault();
+                                                    setShowFilters(false);
+                                                }}
+                                            >
+                                                <X className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                        
+                                        <div className="p-6 space-y-6">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Kategori
+                                                </label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {categories.map(category => (
+                                                        <button
+                                                            key={category.id}
+                                                            onClick={(e: React.MouseEvent) => {
+                                                                e.preventDefault();
+                                                                setSelectedCategory(category.id === "all" ? null : category.id);
+                                                            }}
+                                                            className={`px-4 py-2 rounded-full text-sm font-medium ${
+                                                                (category.id === "all" && !selectedCategory) || selectedCategory === category.id
+                                                                    ? "bg-blue-500 text-white shadow-md hover:bg-blue-600"
+                                                                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                                            } transition-colors`}
+                                                        >
+                                                            {category.name}
+                                                        </button>
+                                                    ))}
                                                 </div>
-                                                <span className="text-gray-500">-</span>
-                                                <div className="relative flex-grow">
-                                                    <Wallet className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                                    <input 
-                                                        type="number"
-                                                        placeholder="Max. Fiyat"
-                                                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg"
-                                                        value={maxPrice}
-                                                        onChange={(e) => setMaxPrice(Number(e.target.value))}
-                                                        min={minPrice}
-                                                    />
+                                            </div>
+                                            
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Fiyat Aralığı
+                                                </label>
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="relative flex-grow">
+                                                        <Wallet className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                                        <input 
+                                                            type="number"
+                                                            placeholder="Min. Fiyat"
+                                                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-black"
+                                                            value={minPrice}
+                                                            onChange={(e) => setMinPrice(Number(e.target.value))}
+                                                            min="0"
+                                                        />
+                                                    </div>
+                                                    <span className="text-gray-500">-</span>
+                                                    <div className="relative flex-grow">
+                                                        <Wallet className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                                        <input 
+                                                            type="number"
+                                                            placeholder="Max. Fiyat"
+                                                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-black"
+                                                            value={maxPrice}
+                                                            onChange={(e) => setMaxPrice(Number(e.target.value))}
+                                                            min={minPrice}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Maksimum Süre: {maxDuration} saat
+                                                </label>
+                                                <div className="relative">
+                                                    <div className="flex items-center">
+                                                        <Timer className="h-5 w-5 text-gray-400 mr-3" />
+                                                        <input
+                                                            type="range"
+                                                            min="1" 
+                                                            max="24"
+                                                            step="1"
+                                                            value={maxDuration}
+                                                            onChange={(e) => setMaxDuration(Number(e.target.value))}
+                                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                                                        />
+                                                    </div>
+                                                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                                        <span>1 saat</span>
+                                                        <span>12 saat</span>
+                                                        <span>24 saat</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                         
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                Maksimum Süre: {maxDuration} saat
-                                            </label>
-                                            <div className="relative">
-                                                <div className="flex items-center">
-                                                    <Timer className="h-5 w-5 text-gray-400 mr-3" />
-                                                    <input
-                                                        type="range"
-                                                        min="1" 
-                                                        max="24"
-                                                        step="1"
-                                                        value={maxDuration}
-                                                        onChange={(e) => setMaxDuration(Number(e.target.value))}
-                                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                                                    />
-                                                </div>
-                                                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                                                    <span>1 saat</span>
-                                                    <span>12 saat</span>
-                                                    <span>24 saat</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex justify-between">
+                                        <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
                                             <button 
                                                 className="text-gray-500 hover:text-gray-700 text-sm font-medium flex items-center"
-                                                onClick={resetFilters}
+                                                onClick={(e: React.MouseEvent) => {
+                                                    e.preventDefault();
+                                                    resetFilters();
+                                                }}
                                             >
                                                 <X className="w-4 h-4 mr-1" />
                                                 Filtreleri Temizle
                                             </button>
-                                            <button 
-                                                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
-                                                onClick={() => setShowFilters(false)}
-                                            >
-                                                Sonuçları Göster
-                                                <ChevronRight className="w-4 h-4 ml-1" />
-                                            </button>
+                                            <div className="flex space-x-3">
+                                                <button 
+                                                    className="text-gray-700 border border-gray-300 hover:bg-gray-100 px-4 py-2 rounded-lg transition-colors"
+                                                    onClick={(e: React.MouseEvent) => {
+                                                        e.preventDefault();
+                                                        setShowFilters(false);
+                                                    }}
+                                                >
+                                                    İptal
+                                                </button>
+                                                <button 
+                                                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+                                                    onClick={(e: React.MouseEvent) => {
+                                                        e.preventDefault();
+                                                        setShowFilters(false);
+                                                    }}
+                                                >
+                                                    Sonuçları Göster
+                                                    <ChevronRight className="w-4 h-4 ml-1" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -344,7 +426,10 @@ export default function ExperiencesPage() {
                             {categories.map(category => (
                                 <button
                                     key={category.id}
-                                    onClick={() => setSelectedCategory(category.id === "all" ? null : category.id)}
+                                    onClick={(e: React.MouseEvent) => {
+                                        e.preventDefault();
+                                        setSelectedCategory(category.id === "all" ? null : category.id);
+                                    }}
                                     className={`flex-none px-4 py-2 rounded-full text-sm font-medium ${
                                         (category.id === "all" && !selectedCategory) || selectedCategory === category.id
                                             ? "bg-blue-500 text-white shadow-md hover:bg-blue-600"
@@ -373,7 +458,10 @@ export default function ExperiencesPage() {
                         {(searchTerm || selectedCategory || minPrice > 0 || maxPrice < 5000 || maxDuration < 12) ? (
                             <button 
                                 className="flex items-center text-blue-500 hover:text-blue-600 text-sm font-medium"
-                                onClick={resetFilters}
+                                onClick={(e: React.MouseEvent) => {
+                                    e.preventDefault();
+                                    resetFilters();
+                                }}
                             >
                                 <X className="w-4 h-4 mr-1" /> Filtreleri Temizle
                             </button>
@@ -512,7 +600,10 @@ export default function ExperiencesPage() {
                                 <button
                                     key={category.id}
                                     className="group relative overflow-hidden rounded-xl h-60 shadow-md"
-                                    onClick={() => setSelectedCategory(category.id)}
+                                    onClick={(e: React.MouseEvent) => {
+                                        e.preventDefault();
+                                        setSelectedCategory(category.id);
+                                    }}
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10" />
                                     <div className="absolute inset-0 w-full h-full">
