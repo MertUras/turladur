@@ -196,7 +196,7 @@ export default function DestinationsPage() {
           ))}
         </div>
       </div>
-// ... existing code ...
+
     </div>
   );
 } 
