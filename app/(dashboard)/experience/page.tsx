@@ -449,10 +449,10 @@ export default function ExperiencesPage() {
                 <div className="w-full max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8 py-12">
                     <div className="mb-8 flex justify-between items-end">
                         <div>
-                            <h2 className="text-2xl font-semibold text-gray-900">Öne Çıkan Rotalarımız</h2>
-                            <p className="mt-2 text-sm text-gray-700">
-                                En popüler ve beğenilen rotalarımızı keşfedin.
-                            </p>
+                        <h2 className="text-2xl font-semibold text-gray-900">Öne Çıkan Rotalarımız</h2>
+                        <p className="mt-2 text-sm text-gray-700">
+                            En popüler ve beğenilen rotalarımızı keşfedin.
+                        </p>
                         </div>
                         
                         {(searchTerm || selectedCategory || minPrice > 0 || maxPrice < 5000 || maxDuration < 12) ? (
@@ -487,16 +487,16 @@ export default function ExperiencesPage() {
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {filteredExperiences.map((experience) => (
-                                <Link
-                                    key={experience.id}
-                                    href={`/experience/${experience.id}`}
+                                    <Link
+                                        key={experience.id}
+                                        href={`/experience/${experience.id}`}
                                     className="group flex flex-col h-full rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
-                                >
+                                    >
                                     <div className="relative h-[200px] w-full overflow-hidden">
-                                        <Image
-                                            src={experience.imageUrl}
-                                            alt={experience.title}
-                                            fill
+                                            <Image
+                                                src={experience.imageUrl}
+                                                alt={experience.title}
+                                                fill
                                             className="object-cover transition-transform duration-500 group-hover:scale-110"
                                         />
                                         {/* Kategori etiketi */}
@@ -507,13 +507,13 @@ export default function ExperiencesPage() {
                                                 </span>
                                             </div>
                                         )}
-                                        {experience.featured && (
-                                            <div className="absolute top-4 right-4">
-                                                <span className="inline-flex items-center rounded-full bg-white/80 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-gray-700">
-                                                    %{experience.popularityRate} Gezginin Rotasında
-                                                </span>
-                                            </div>
-                                        )}
+                                            {experience.featured && (
+                                                <div className="absolute top-4 right-4">
+                                                    <span className="inline-flex items-center rounded-full bg-white/80 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                                                        %{experience.popularityRate} Gezginin Rotasında
+                                                    </span>
+                                                </div>
+                                            )}
                                         {/* Fiyat etiketi */}
                                         <div className="absolute bottom-4 right-4">
                                             <span className="inline-flex items-center rounded-full bg-blue-500 px-3 py-1 text-sm font-medium text-white">
@@ -523,11 +523,11 @@ export default function ExperiencesPage() {
                                     </div>
                                     <div className="p-4 flex flex-col flex-grow">
                                         <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-500 transition-colors">
-                                            {experience.title}
-                                        </h3>
+                                                {experience.title}
+                                            </h3>
                                         <p className="text-sm text-gray-600 mb-3 flex-grow line-clamp-2">
-                                            {experience.description}
-                                        </p>
+                                                {experience.description}
+                                            </p>
                                         <div className="mt-auto space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center space-x-1 text-blue-500">
@@ -537,13 +537,13 @@ export default function ExperiencesPage() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between text-sm text-gray-500">
-                                                <div className="flex items-center">
+                                                    <div className="flex items-center">
                                                     <MapPin className="h-4 w-4 mr-1 text-gray-400" />
-                                                    <span>{experience.location}</span>
-                                                </div>
-                                                <div className="flex items-center">
+                                                        <span>{experience.location}</span>
+                                                    </div>
+                                                    <div className="flex items-center">
                                                     <Clock className="h-4 w-4 mr-1 text-gray-400" />
-                                                    <span>{experience.duration}</span>
+                                                        <span>{experience.duration}</span>
                                                 </div>
                                             </div>
                                             <div className="pt-3 border-t border-gray-100">
@@ -553,12 +553,12 @@ export default function ExperiencesPage() {
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                                     </svg>
                                                 </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
+                                    </Link>
+                                ))}
+                            </div>
                     )}
 
                     {/* Popular Categories Section */}
@@ -597,7 +597,7 @@ export default function ExperiencesPage() {
                                     count: 12
                                 }
                             ].map(category => (
-                                <button
+                            <button
                                     key={category.id}
                                     className="group relative overflow-hidden rounded-xl h-60 shadow-md"
                                     onClick={(e: React.MouseEvent) => {
@@ -664,7 +664,7 @@ export default function ExperiencesPage() {
                                     <button className="bg-white text-blue-600 hover:bg-gray-100 px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center self-start">
                                         Fırsatları İncele
                                         <ChevronRight className="ml-2 h-5 w-5" />
-                                    </button>
+                            </button>
                                 </div>
                                 <div className="relative h-64 lg:h-auto">
                                     <Image
