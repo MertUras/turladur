@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { dummyTours, dummyTourOperators } from "@/lib/dummy-data";
-import { parseJsonString } from "@/lib/utils/format";
-import BottomBookingBar from "@/components/BottomBookingBar";
+import { dummyTours, dummyTourOperators } from "@/app/lib/dummy-data";
+import { parseJsonString } from "@/app/utils/format";
+import BottomBookingBar from "@/app/components/BottomBookingBar";
 
 // Heroicons bileşenlerini içe aktarıyoruz
 import {

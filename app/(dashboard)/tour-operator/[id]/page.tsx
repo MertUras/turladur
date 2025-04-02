@@ -1,8 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { dummyTourOperators, dummyTours } from "@/app/lib/dummy-data";
+import { dummyTours, dummyTourOperators } from "@/app/lib/dummy-data";
 import { parseJsonString } from "@/app/utils/format";
+import BottomBookingBar from "@/app/components/BottomBookingBar";
 import {
   MapPinIcon,
   StarIcon,
