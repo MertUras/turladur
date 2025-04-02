@@ -11,7 +11,7 @@ import {
   PlusIcon,
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
-import { DatePicker } from '@/components/booking/DatePicker';
+import { DatePicker } from '@/app/components/booking/DatePicker';
 
 interface City {
   id: string;
@@ -84,7 +84,7 @@ export default function SearchBar({ cities }: SearchBarProps) {
         <DatePicker
           label="Giriş Tarihi"
           value={checkInDate}
-          onChange={(date) => {
+          onChange={(date: string) => {
             setCheckInDate(date);
             // Eğer çıkış tarihi giriş tarihinden önce veya aynı ise, çıkış tarihini sıfırla
             if (checkOutDate && checkOutDate <= date) {

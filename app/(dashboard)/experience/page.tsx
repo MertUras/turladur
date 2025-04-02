@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, MapPin, Clock, ChevronLeft, ChevronRight, Search } from "lucide-react";
-import Footer from "../../components/Footer";
 
 interface Experience {
     id: number;
@@ -227,8 +226,6 @@ export default function ExperiencesPage() {
                     )}
                 </div>
             </main>
-
-            <Footer />
         </>
     );
 }
