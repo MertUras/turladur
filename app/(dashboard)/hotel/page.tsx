@@ -3,13 +3,40 @@ import Image from 'next/image';
 import { Metadata } from 'next';
 import { 
   BuildingOfficeIcon, 
-  ChevronDownIcon
+  ChevronDownIcon,
+  ArrowUpRightIcon,
+  ShieldCheckIcon,
+  CreditCardIcon
 } from '@heroicons/react/24/outline';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { prisma } from '@/lib/prisma';
 import HotelFilters from './components/HotelFilters';
 import HotelCard from './components/HotelCard';
 import SearchBar from './components/SearchBar';
+
+// Otel ve ilgili tipler için arayüzler
+interface Hotel {
+  id: string;
+  name: string;
+  description: string;
+  location: string;
+  rating: number;
+  reviewCount: number;
+  price: number;
+  oldPrice: number;
+  discount: number;
+  image: string;
+  features: string[];
+  isBestSeller?: boolean;
+  stars: number;
+}
+
+interface FeatureIconInfo {
+  feature: string;
+  iconType: string;
+}
 
 // Şehir seçenekleri
 const cities = [
@@ -60,6 +87,25 @@ const popularFilters = [
   { id: 'sea-view', label: 'Deniz Manzaralı', icon: 'sea-view' },
 ];
 
+// Popüler destinasyonlar
+const popularDestinations = [
+  { 
+    name: 'İstanbul', 
+    image: 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=3540&q=80',
+    hotels: 42
+  },
+  { 
+    name: 'Antalya', 
+    image: 'https://images.unsplash.com/photo-1688282109227-a207922ae045?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    hotels: 28
+  },
+  { 
+    name: 'Bodrum', 
+    image: 'https://images.unsplash.com/photo-1679856564958-13669a1a1dbe?q=80&w=3087&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    hotels: 18
+  }
+];
+
 // Özellik ikonları için yardımcı fonksiyon
 const getFeatureIcon = (feature: string) => {
   const featureLower = feature.toLowerCase();
@@ -81,7 +127,6 @@ const getFeatureIcon = (feature: string) => {
   } else if (featureLower.includes('klima') || featureLower.includes('ısıtma')) {
     return 'climate';
   } else if (featureLower.includes('ücretsiz') || featureLower.includes('bedava')) {
-    // Eğer ücretsiz Wi-Fi ise, Wi-Fi ikonunu kullan
     if (featureLower.includes('wifi') || featureLower.includes('wi-fi') || featureLower.includes('internet')) {
       return 'wifi';
     }
@@ -103,8 +148,104 @@ const getFeatureIcon = (feature: string) => {
   }
 };
 
+// Özellik ikonları listesi
+const featureIcons = [
+  { feature: 'Ücretsiz Wi-Fi', iconType: 'wifi' },
+  { feature: 'Havuz', iconType: 'pool' },
+  { feature: 'Spa', iconType: 'spa' },
+  { feature: 'Deniz Manzaralı', iconType: 'sea-view' },
+  { feature: 'Her Şey Dahil', iconType: 'all-inclusive' },
+  { feature: 'Çocuk Dostu', iconType: 'kids-friendly' },
+  { feature: 'Bar', iconType: 'bar' },
+  { feature: 'Kahvaltı Dahil', iconType: 'breakfast' },
+  { feature: 'Fitness Merkezi', iconType: 'gym' },
+  { feature: 'Marina Manzaralı', iconType: 'marina' },
+  { feature: 'Aquapark', iconType: 'aquapark' },
+  { feature: 'Balon Turu', iconType: 'balloon' },
+  { feature: 'Mağara Oda', iconType: 'cave' }
+];
+
+// Dummy otel verileri
+const dummyHotels: Hotel[] = [
+  {
+    id: '1',
+    name: 'Grand Hotel Istanbul',
+    description: 'Boğaz manzaralı lüks otel',
+    location: 'İstanbul, Türkiye',
+    rating: 4.8,
+    reviewCount: 128,
+    price: 2500,
+    oldPrice: 3000,
+    discount: 17,
+    image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+    features: ['Ücretsiz Wi-Fi', 'Havuz', 'Spa', 'Deniz Manzaralı', 'Her Şey Dahil'],
+    isBestSeller: true,
+    stars: 5
+  },
+  {
+    id: '2',
+    name: 'Blue Paradise Resort',
+    description: 'Muhteşem deniz manzaralı tatil cenneti',
+    location: 'Antalya, Türkiye',
+    rating: 4.6,
+    reviewCount: 95,
+    price: 1800,
+    oldPrice: 2200,
+    discount: 18,
+    image: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+    features: ['Ücretsiz Wi-Fi', 'Havuz', 'Aquapark', 'Deniz Manzaralı', 'Her Şey Dahil'],
+    isBestSeller: true,
+    stars: 5
+  },
+  {
+    id: '3',
+    name: 'Bodrum Beach Hotel',
+    description: 'Ege\'nin incisi Bodrum\'da lüks konaklama',
+    location: 'Bodrum, Türkiye',
+    rating: 4.7,
+    reviewCount: 76,
+    price: 2100,
+    oldPrice: 2600,
+    discount: 19,
+    image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2080&q=80',
+    features: ['Ücretsiz Wi-Fi', 'Havuz', 'Spa', 'Deniz Manzaralı', 'Bar'],
+    isBestSeller: false,
+    stars: 4
+  },
+  {
+    id: '4',
+    name: 'Cappadocia Cave Hotel',
+    description: 'Peri bacaları manzaralı mağara otel',
+    location: 'Nevşehir, Türkiye',
+    rating: 4.9,
+    reviewCount: 112,
+    price: 1500,
+    oldPrice: 1800,
+    discount: 17,
+    image: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=2025&q=80',
+    features: ['Ücretsiz Wi-Fi', 'Spa', 'Balon Turu', 'Mağara Oda', 'Kahvaltı Dahil'],
+    isBestSeller: true,
+    stars: 5
+  },
+  {
+    id: '5',
+    name: 'Izmir Marina Hotel',
+    description: 'Marina manzaralı modern otel',
+    location: 'İzmir, Türkiye',
+    rating: 4.5,
+    reviewCount: 84,
+    price: 1200,
+    oldPrice: 1500,
+    discount: 20,
+    image: 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2089&q=80',
+    features: ['Ücretsiz Wi-Fi', 'Havuz', 'Marina Manzaralı', 'Bar', 'Fitness Merkezi'],
+    isBestSeller: false,
+    stars: 4
+  }
+];
+
 // Veritabanından otelleri getir
-async function getHotels() {
+async function getHotels(): Promise<Hotel[]> {
   try {
     const hotels = await prisma.hotel.findMany({
       include: {
@@ -122,10 +263,10 @@ async function getHotels() {
       }
     });
 
-    return hotels.map(hotel => {
+    return hotels.map((hotel: any) => {
       // Ortalama puanı hesapla
       const avgRating = hotel.reviews.length 
-        ? hotel.reviews.reduce((sum, review) => sum + review.rating, 0) / hotel.reviews.length 
+        ? hotel.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / hotel.reviews.length 
         : 0;
       
       // Özellikleri parse et
@@ -200,143 +341,128 @@ export const metadata: Metadata = {
 };
 
 export default async function HotelsPage() {
-  const hotels = await getHotels();
+  const hotels = dummyHotels;
 
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Hero Banner */}
-      <div className="relative h-[400px] md:h-[500px] overflow-hidden">
+      <div className="relative h-[300px] sm:h-[400px] md:h-[500px]">
         <Image
-          src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
-          alt="Lüks otel odası manzarası"
+          src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+          alt="Hotel Banner"
           fill
-          className="object-cover brightness-75"
+          className="object-cover"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/70"></div>
-        
-        {/* Hero Content */}
+        <div className="absolute inset-0 bg-black/50"></div>
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="container px-4 text-center text-white">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 drop-shadow-md">
-              Hayalinizdeki Konaklamayı Keşfedin
-            </h1>
-            <p className="text-lg md:text-xl text-gray-200 mb-8 max-w-2xl mx-auto drop-shadow-md">
-              Türkiye'nin seçkin otellerinde ayrıcalıklı bir tatil için rezervasyonunuzu hemen yapın.
+          <div className="text-center text-white px-4">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">Hayalinizdeki Tatili Keşfedin</h1>
+            <p className="text-lg sm:text-xl md:text-2xl text-white/90 max-w-2xl mx-auto">
+              Türkiye'nin en iyi otellerinde unutulmaz bir konaklama deneyimi yaşayın
             </p>
-            
-            {/* Arama ve Filtreleme Kartı */}
-            <div className="bg-white rounded-xl shadow-xl p-6 max-w-5xl mx-auto transform translate-y-12 border border-gray-100">
-              <SearchBar cities={cities} />
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Otel Listesi */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sol Sidebar - Filtreler */}
-          <div className="lg:w-1/4">
-            <HotelFilters 
-              cities={cities}
-              priceRanges={priceRanges}
-              featureFilters={featureFilters}
-              popularFilters={popularFilters}
-            />
-          </div>
-          
-          {/* Sağ Taraf - Otel Listesi */}
-          <div className="lg:w-3/4">
-            {/* Üst Bar - Sıralama ve Sonuç Sayısı */}
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Otel Sonuçları</h2>
-                <p className="text-gray-500 text-sm">{hotels.length} otel bulundu</p>
-              </div>
-              
-              <div className="relative">
-                <select 
-                  className="appearance-none bg-white border border-gray-200 rounded-lg py-2.5 pl-4 pr-10 text-gray-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
-                >
-                  <option value="recommended">Önerilen</option>
-                  <option value="price-asc">Fiyat (Artan)</option>
-                  <option value="price-desc">Fiyat (Azalan)</option>
-                  <option value="rating-desc">Puan (Yüksek-Düşük)</option>
-                  <option value="rating-asc">Puan (Düşük-Yüksek)</option>
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-500">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                  </svg>
-                </div>
-              </div>
+      {/* Arama ve Filtreleme Kartı */}
+      <div className="max-w-7xl mx-auto px-4 -mt-6 sm:-mt-8 md:-mt-12 mb-12 relative z-10">
+        <div className="bg-white rounded-xl shadow-xl p-4 sm:p-6 border border-gray-100">
+          <SearchBar cities={cities} />
+        </div>
+      </div>
+
+      {/* Avantajlar */}
+      <div className="max-w-7xl mx-auto px-4 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Link href="/hotel/guarantee" className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm text-center md:text-left flex flex-col md:flex-row items-center md:items-start gap-4 hover:shadow-md transition-shadow">
+            <div className="bg-blue-100 p-3 rounded-full">
+              <ShieldCheckIcon className="w-7 h-7 text-blue-600" />
             </div>
-            
-            {/* Otel Kartları */}
-            {hotels.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                {hotels.map((hotel) => {
-                  const hotelFeatureIcons = hotel.features.map(feature => ({
-                    feature,
-                    iconType: getFeatureIcon(feature)
-                  }));
-                  
-                  return (
-                    <HotelCard 
-                      key={hotel.id} 
-                      hotel={hotel}
-                      featureIcons={hotelFeatureIcons}
-                    />
-                  );
-                })}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">En İyi Fiyat Garantisi</h3>
+              <p className="text-sm text-gray-600">Daha uygun bir fiyat bulursanız, farkı iade ediyoruz.</p>
+            </div>
+          </Link>
+          <Link href="/hotel/cancellation" className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm text-center md:text-left flex flex-col md:flex-row items-center md:items-start gap-4 hover:shadow-md transition-shadow">
+            <div className="bg-blue-100 p-3 rounded-full">
+              <CreditCardIcon className="w-7 h-7 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Ücretsiz İptal</h3>
+              <p className="text-sm text-gray-600">Çoğu rezervasyonda ücretsiz iptal seçeneği sunuyoruz.</p>
+            </div>
+          </Link>
+          <Link href="/hotel/about" className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm text-center md:text-left flex flex-col md:flex-row items-center md:items-start gap-4 hover:shadow-md transition-shadow">
+            <div className="bg-blue-100 p-3 rounded-full">
+              <BuildingOfficeIcon className="w-7 h-7 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">10.000+ Otel</h3>
+              <p className="text-sm text-gray-600">Türkiye'nin ve dünyanın en iyi otellerini sunuyoruz.</p>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* Popüler Destinasyonlar */}
+      <div className="max-w-7xl mx-auto px-4 mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Popüler Destinasyonlar</h2>
+          <Link href="/hotel/destinations" className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1">
+            Tümünü Gör
+            <ArrowUpRightIcon className="w-4 h-4" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {popularDestinations.map((destination) => (
+            <Link href={`/hotel/destinations/${destination.name.toLowerCase()}`} key={destination.name} className="group relative h-64 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+              <Image
+                src={destination.image}
+                alt={destination.name}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-110"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+              <div className="absolute bottom-0 left-0 p-6">
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-1">{destination.name}</h3>
+                <p className="text-sm text-white/90">{destination.hotels} otel</p>
               </div>
-            ) : (
-              <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100 text-center">
-                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Otel Bulunamadı</h3>
-                <p className="text-gray-600 mb-6">Arama kriterlerinize uygun otel bulunamadı. Lütfen filtrelerinizi değiştirin.</p>
-                <button 
-                  className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-5 rounded-lg transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                  </svg>
-                  Filtreleri Temizle
-                </button>
-              </div>
-            )}
-            
-            {/* Sayfalama */}
-            {hotels.length > 0 && (
-              <div className="mt-8 flex justify-center">
-                <nav className="flex items-center gap-1">
-                  <button className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
-                    </svg>
-                  </button>
-                  
-                  <button className="w-10 h-10 flex items-center justify-center rounded-lg border border-blue-600 bg-blue-600 text-white">1</button>
-                  <button className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">2</button>
-                  <button className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">3</button>
-                  
-                  <span className="w-10 h-10 flex items-center justify-center text-gray-500">...</span>
-                  
-                  <button className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50">8</button>
-                  
-                  <button className="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-500 hover:bg-gray-50">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                  </button>
-                </nav>
-              </div>
-            )}
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Otel Listesi */}
+      <div className="max-w-7xl mx-auto px-4 mb-12">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Öne Çıkan Oteller</h2>
+          <Link href="/hotel/all" className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1">
+            Tümünü Gör
+            <ArrowUpRightIcon className="w-4 h-4" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {hotels.map((hotel) => (
+            <HotelCard key={hotel.id} hotel={hotel} featureIcons={featureIcons} />
+          ))}
+        </div>
+      </div>
+
+      {/* Alt Bilgi Banner */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 py-16">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-4">TourTech ile Tatil Fırsatlarını Kaçırmayın</h2>
+          <p className="text-sm sm:text-base text-blue-100 mb-8 max-w-2xl mx-auto">
+            En iyi fiyat garantisi ve ödüllü müşteri hizmetlerimizle unutulmaz bir tatil deneyimi yaşayın.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto">
+            <Link href="/hotel/offers" className="bg-white text-blue-700 hover:bg-blue-50 px-6 py-3 rounded-lg font-semibold transition-colors shadow-lg flex-1">
+              Özel Teklifleri Keşfedin
+            </Link>
+            <Link href="/hotel/help" className="bg-transparent text-white border border-white hover:bg-white/10 px-6 py-3 rounded-lg font-semibold transition-colors flex-1">
+              Yardım Alın
+            </Link>
           </div>
         </div>
       </div>

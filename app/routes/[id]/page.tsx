@@ -1,8 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { 
+  MapPinIcon, 
+  CalendarIcon, 
+  ClockIcon, 
+  UserGroupIcon, 
+  CurrencyDollarIcon,
+  StarIcon,
+  ArrowLeftIcon,
+  CheckCircleIcon
+} from '@heroicons/react/24/outline';
 
 interface Tour {
   id: number;
@@ -33,11 +43,21 @@ interface RouteTours {
   [key: string]: {
     name: string;
     description: string;
+    longDescription: string;
     image: string;
     location: string;
     bestTimeToVisit: string;
     weather: string;
     transportation: string;
+    duration: string;
+    priceRange: string;
+    itinerary: {
+      day: number;
+      title: string;
+      description: string;
+    }[];
+    included: string[];
+    notIncluded: string[];
     categories: {
       [key: string]: Tour[];
     };
@@ -48,11 +68,56 @@ const routeTours: RouteTours = {
   1: {
     name: 'Kapadokya',
     description: 'Peri bacaları, yeraltı şehirleri ve balon turlarıyla unutulmaz bir deneyim. UNESCO Dünya Mirası Listesi\'nde yer alan bu eşsiz bölge, doğal güzellikleri ve tarihi zenginlikleriyle ziyaretçilerini büyülüyor.',
+    longDescription: `Kapadokya, Türkiye'nin en etkileyici doğal ve tarihi bölgelerinden biridir. Peri bacaları, yeraltı şehirleri, antik kiliseler ve vadileriyle benzersiz bir deneyim sunar.
+
+    Balon turları, at turları, yürüyüş rotaları ve şarap tadımları gibi birçok aktivite seçeneği bulunmaktadır. Bölge, her mevsim farklı güzellikler sunar ve fotoğraf tutkunları için ideal bir destinasyondur.
+
+    Yeraltı şehirleri, antik kiliseler ve vadilerdeki yürüyüş rotaları ile tarihi keşfedebilir, yerel restoranlarda geleneksel lezzetleri tadabilirsiniz.`,
     image: 'https://images.unsplash.com/photo-1570654230464-9e63b3497a1e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
     location: 'Nevşehir, Türkiye',
     bestTimeToVisit: 'Nisan - Ekim',
     weather: 'Yazları sıcak (25-35°C), kışları soğuk (-5-5°C)',
     transportation: 'Nevşehir Havalimanı\'na uçuş veya Kayseri Havalimanı\'na uçuş + 1 saat transfer',
+    duration: '3-4 gün',
+    priceRange: '₺2,500 - ₺4,000',
+    itinerary: [
+      {
+        day: 1,
+        title: 'Geliş ve İlk Keşif',
+        description: 'Havaalanından transfer ve otel yerleşimi. Akşam yemeği ve Kapadokya tanıtım sunumu.'
+      },
+      {
+        day: 2,
+        title: 'Balon Turu ve Yeraltı Şehri',
+        description: 'Erken saatte balon turu. Öğleden sonra yeraltı şehri ziyareti ve vadilerde yürüyüş.'
+      },
+      {
+        day: 3,
+        title: 'At Turu ve Şarap Tadımı',
+        description: 'Sabah at turu. Öğleden sonra şarap tadımı ve akşam yemeği.'
+      },
+      {
+        day: 4,
+        title: 'Dönüş',
+        description: 'Kahvaltı sonrası havaalanı transferi.'
+      }
+    ],
+    included: [
+      'Otel konaklaması',
+      'Kahvaltı ve akşam yemeği',
+      'Profesyonel rehberlik',
+      'Tüm transferler',
+      'Balon turu',
+      'Yeraltı şehri ziyareti',
+      'Şarap tadımı',
+      'At turu'
+    ],
+    notIncluded: [
+      'Uçak bileti',
+      'Öğle yemekleri',
+      'Kişisel harcamalar',
+      'Opsiyonel turlar'
+    ],
     categories: {
       'Balon Turları': [
         {
@@ -185,15 +250,67 @@ const routeTours: RouteTours = {
 };
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
+}
+
+interface ReservationFormData {
+  name: string;
+  email: string;
+  phone: string;
+  date: string;
+  guests: number;
+  message: string;
+  tourId?: number;
 }
 
 export default function RouteDetailPage({ params }: PageProps) {
+  const resolvedParams = use(params);
   const [selectedTour, setSelectedTour] = useState<number | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const route = routeTours[params.id];
+  const [showReservationModal, setShowReservationModal] = useState(false);
+  const [reservationSuccess, setReservationSuccess] = useState(false);
+  const route = routeTours[resolvedParams.id];
+
+  const [formData, setFormData] = useState<ReservationFormData>({
+    name: '',
+    email: '',
+    phone: '',
+    date: '',
+    guests: 1,
+    message: '',
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      // Burada API çağrısı yapılacak
+      console.log('Rezervasyon formu gönderildi:', formData);
+      
+      // Başarılı rezervasyon simülasyonu
+      setReservationSuccess(true);
+      setTimeout(() => {
+        setShowReservationModal(false);
+        setReservationSuccess(false);
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          date: '',
+          guests: 1,
+          message: '',
+        });
+      }, 3000);
+    } catch (error) {
+      console.error('Rezervasyon hatası:', error);
+    }
+  };
+
+  const handleReserveTour = (tourId: number) => {
+    setFormData(prev => ({ ...prev, tourId }));
+    setShowReservationModal(true);
+  };
 
   if (!route) {
     return <div>Rota bulunamadı</div>;
@@ -202,36 +319,215 @@ export default function RouteDetailPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="absolute inset-0">
+      <div className="relative h-[400px] sm:h-[500px]">
           <Image
             src={route.image}
             alt={route.name}
             fill
-            className="object-cover opacity-20"
+          className="object-cover"
             priority
-            sizes="100vw"
-          />
+        />
+        <div className="absolute inset-0 bg-black/50"></div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center text-white px-4">
+            <Link href="/routes" className="inline-flex items-center text-white/90 hover:text-white mb-4">
+              <ArrowLeftIcon className="w-5 h-5 mr-1" />
+              Rotalara Dön
+            </Link>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">{route.name}</h1>
+            <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto">{route.description}</p>
+          </div>
         </div>
-        <div className="relative max-w-7xl mx-auto py-24 px-4 sm:py-32 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-            {route.name}
-          </h1>
-          <p className="mt-6 text-xl text-white max-w-3xl">
-            {route.description}
-          </p>
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-white">Konum</h3>
-              <p className="text-white/90">{route.location}</p>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Sol Kolon - Detaylar */}
+          <div className="lg:col-span-2">
+            {/* Genel Bilgiler */}
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Genel Bilgiler</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="flex items-center">
+                  <ClockIcon className="w-6 h-6 text-blue-600 mr-3" />
+                  <div>
+                    <p className="text-sm text-gray-500">Süre</p>
+                    <p className="font-medium">{route.duration}</p>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <CalendarIcon className="w-6 h-6 text-blue-600 mr-3" />
+                  <div>
+                    <p className="text-sm text-gray-500">En İyi Ziyaret Zamanı</p>
+                    <p className="font-medium">{route.bestTimeToVisit}</p>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <UserGroupIcon className="w-6 h-6 text-blue-600 mr-3" />
+                  <div>
+                    <p className="text-sm text-gray-500">Grup Büyüklüğü</p>
+                    <p className="font-medium">2-12 kişi</p>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  <CurrencyDollarIcon className="w-6 h-6 text-blue-600 mr-3" />
+                  <div>
+                    <p className="text-sm text-gray-500">Fiyat Aralığı</p>
+                    <p className="font-medium">{route.priceRange}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-white">En İyi Ziyaret Zamanı</h3>
-              <p className="text-white/90">{route.bestTimeToVisit}</p>
+
+            {/* Detaylı Açıklama */}
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Detaylı Açıklama</h2>
+              <div className="prose max-w-none">
+                {route.longDescription.split('\n\n').map((paragraph, index) => (
+                  <p key={index} className="text-gray-600 mb-4">{paragraph}</p>
+                ))}
+              </div>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-white">Ulaşım</h3>
-              <p className="text-white/90">{route.transportation}</p>
+
+            {/* Tur Programı */}
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Tur Programı</h2>
+              <div className="space-y-6">
+                {route.itinerary.map((day) => (
+                  <div key={day.day} className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
+                      {day.day}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{day.title}</h3>
+                      <p className="text-gray-600 mt-1">{day.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Dahil Olanlar ve Dahil Olmayanlar */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Dahil Olanlar</h2>
+                <ul className="space-y-3">
+                  {route.included.map((item, index) => (
+                    <li key={index} className="flex items-center text-gray-600">
+                      <CheckCircleIcon className="w-5 h-5 text-green-500 mr-2" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Dahil Olmayanlar</h2>
+                <ul className="space-y-3">
+                  {route.notIncluded.map((item, index) => (
+                    <li key={index} className="flex items-center text-gray-600">
+                      <CheckCircleIcon className="w-5 h-5 text-red-500 mr-2" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Sağ Kolon - Rezervasyon Formu */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Rezervasyon Yap</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Ad Soyad
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    E-posta
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                    Telefon
+                  </label>
+                  <input
+                    type="tel"
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
+                    Tarih
+                  </label>
+                  <input
+                    type="date"
+                    id="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="guests" className="block text-sm font-medium text-gray-700 mb-1">
+                    Kişi Sayısı
+                  </label>
+                  <select
+                    id="guests"
+                    value={formData.guests}
+                    onChange={(e) => setFormData({ ...formData, guests: parseInt(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                      <option key={num} value={num}>
+                        {num} Kişi
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
+                    Mesajınız
+                  </label>
+                  <textarea
+                    id="message"
+                    value={formData.message}
+                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  ></textarea>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Rezervasyon Yap
+                </button>
+              </form>
             </div>
           </div>
         </div>
@@ -311,10 +607,10 @@ export default function RouteDetailPage({ params }: PageProps) {
                             {tour.difficulty}
                           </span>
                           <button
-                            onClick={() => setSelectedTour(selectedTour === tour.id ? null : tour.id)}
+                            onClick={() => handleReserveTour(tour.id)}
                             className="text-blue-600 hover:text-blue-800 font-medium"
                           >
-                            {selectedTour === tour.id ? 'Detayları Gizle' : 'Detayları Göster'}
+                            Turu Rezerve Et
                           </button>
                         </div>
                       </div>
@@ -421,16 +717,6 @@ export default function RouteDetailPage({ params }: PageProps) {
                               </div>
                             </div>
                           </div>
-
-                          {/* Rezervasyon Butonu */}
-                          <div className="pt-4">
-                            <Link
-                              href={`/tours/${tour.id}`}
-                              className="w-full flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            >
-                              Turu Rezerve Et
-                            </Link>
-                          </div>
                         </div>
                       )}
                     </div>
@@ -461,6 +747,128 @@ export default function RouteDetailPage({ params }: PageProps) {
               height={800}
               className="rounded-lg"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Rezervasyon Modal */}
+      {showReservationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setShowReservationModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {reservationSuccess ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Rezervasyon Başarılı!</h3>
+                <p className="text-gray-600">Rezervasyonunuz alındı. En kısa sürede sizinle iletişime geçeceğiz.</p>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Rezervasyon Yap</h2>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                      Ad Soyad
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                      E-posta
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                      Telefon
+                    </label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
+                      Tarih
+                    </label>
+                    <input
+                      type="date"
+                      id="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="guests" className="block text-sm font-medium text-gray-700 mb-1">
+                      Kişi Sayısı
+                    </label>
+                    <select
+                      id="guests"
+                      value={formData.guests}
+                      onChange={(e) => setFormData({ ...formData, guests: parseInt(e.target.value) })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                        <option key={num} value={num}>
+                          {num} Kişi
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
+                      Mesajınız
+                    </label>
+                    <textarea
+                      id="message"
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    ></textarea>
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                  >
+                    Rezervasyon Yap
+                  </button>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}
