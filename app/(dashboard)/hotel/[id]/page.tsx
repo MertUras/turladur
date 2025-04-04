@@ -210,8 +210,7 @@ const getBedCount = (features: string[]): number => {
 };
 
 export default function HotelDetailPage({ params }: { params: { id: string } }) {
-  const resolvedParams = React.use(params);
-  const hotel = dummyHotels.find(h => h.id === resolvedParams.id);
+  const hotel = dummyHotels.find(h => h.id === params.id);
   const [showReservationModal, setShowReservationModal] = useState(false);
   const [reservationSuccess, setReservationSuccess] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);

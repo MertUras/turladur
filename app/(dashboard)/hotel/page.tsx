@@ -31,6 +31,12 @@ interface Hotel {
   features: string[];
   isBestSeller?: boolean;
   stars: number;
+  checkInDate: string;
+  checkOutDate: string;
+  type: string;
+  roomType: string;
+  breakfast: boolean;
+  cancellationPolicy: string;
 }
 
 interface FeatureIconInfo {
@@ -180,7 +186,13 @@ const dummyHotels: Hotel[] = [
     image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
     features: ['Ücretsiz Wi-Fi', 'Havuz', 'Spa', 'Deniz Manzaralı', 'Her Şey Dahil'],
     isBestSeller: true,
-    stars: 5
+    stars: 5,
+    checkInDate: '2024-04-15',
+    checkOutDate: '2024-04-20',
+    type: 'Lüks Otel',
+    roomType: 'Deluxe Oda',
+    breakfast: true,
+    cancellationPolicy: 'Ücretsiz İptal'
   },
   {
     id: '2',
@@ -195,7 +207,13 @@ const dummyHotels: Hotel[] = [
     image: 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
     features: ['Ücretsiz Wi-Fi', 'Havuz', 'Aquapark', 'Deniz Manzaralı', 'Her Şey Dahil'],
     isBestSeller: true,
-    stars: 5
+    stars: 5,
+    checkInDate: '2024-05-01',
+    checkOutDate: '2024-05-07',
+    type: 'Tatil Köyü',
+    roomType: 'Aile Odası',
+    breakfast: true,
+    cancellationPolicy: 'Ücretsiz İptal'
   },
   {
     id: '3',
@@ -210,7 +228,13 @@ const dummyHotels: Hotel[] = [
     image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2080&q=80',
     features: ['Ücretsiz Wi-Fi', 'Havuz', 'Spa', 'Deniz Manzaralı', 'Bar'],
     isBestSeller: false,
-    stars: 4
+    stars: 4,
+    checkInDate: '2024-06-10',
+    checkOutDate: '2024-06-15',
+    type: 'Butik Otel',
+    roomType: 'Standart Oda',
+    breakfast: false,
+    cancellationPolicy: 'Kısmi İade'
   },
   {
     id: '4',
@@ -225,7 +249,13 @@ const dummyHotels: Hotel[] = [
     image: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=2025&q=80',
     features: ['Ücretsiz Wi-Fi', 'Spa', 'Balon Turu', 'Mağara Oda', 'Kahvaltı Dahil'],
     isBestSeller: true,
-    stars: 5
+    stars: 5,
+    checkInDate: '2024-07-01',
+    checkOutDate: '2024-07-05',
+    type: 'Mağara Oteli',
+    roomType: 'Süit Oda',
+    breakfast: true,
+    cancellationPolicy: 'Ücretsiz İptal'
   },
   {
     id: '5',
@@ -240,7 +270,13 @@ const dummyHotels: Hotel[] = [
     image: 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2089&q=80',
     features: ['Ücretsiz Wi-Fi', 'Havuz', 'Marina Manzaralı', 'Bar', 'Fitness Merkezi'],
     isBestSeller: false,
-    stars: 4
+    stars: 4,
+    checkInDate: '2024-08-15',
+    checkOutDate: '2024-08-20',
+    type: 'Business Otel',
+    roomType: 'Executive Oda',
+    breakfast: true,
+    cancellationPolicy: 'Kısmi İade'
   }
 ];
 
@@ -326,7 +362,13 @@ async function getHotels(): Promise<Hotel[]> {
         image: images.length > 0 ? images[0] : 'https://images.unsplash.com/photo-1566073771259-6a8506099945',
         features: amenities.slice(0, 5),
         isBestSeller: hotel.reviews.length > 10,
-        stars: hotel.stars || 3
+        stars: hotel.stars || 3,
+        checkInDate: '',
+        checkOutDate: '',
+        type: '',
+        roomType: '',
+        breakfast: false,
+        cancellationPolicy: ''
       };
     });
   } catch (error) {

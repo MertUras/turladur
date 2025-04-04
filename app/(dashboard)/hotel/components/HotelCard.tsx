@@ -6,7 +6,9 @@ import Link from 'next/link';
 import { 
   MapPinIcon, 
   HeartIcon as HeartIconOutline,
-  StarIcon as StarIconOutline
+  StarIcon as StarIconOutline,
+  CalendarIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { 
   StarIcon as StarIconSolid,
@@ -33,6 +35,11 @@ interface Hotel {
   isBestSeller?: boolean;
   promotion?: string;
   stars: number;
+  checkInDate?: string;
+  checkOutDate?: string;
+  type: string;
+  breakfast: boolean;
+  cancellationPolicy: string;
 }
 
 interface FeatureIconInfo {
@@ -47,97 +54,151 @@ interface HotelCardProps {
 
 export default function HotelCard({ hotel, featureIcons }: HotelCardProps) {
   const [isFavorite, setIsFavorite] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const [showFeatures, setShowFeatures] = useState(false);
 
-  const toggleFavorite = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsFavorite(!isFavorite);
+  // Tarihleri formatla
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  // Gece sayısını hesapla
+  const calculateNights = () => {
+    if (!hotel.checkInDate || !hotel.checkOutDate) return 0;
+    const checkIn = new Date(hotel.checkInDate);
+    const checkOut = new Date(hotel.checkOutDate);
+    const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  // Toplam fiyatı hesapla
+  const calculateTotalPrice = () => {
+    const nights = calculateNights();
+    return hotel.price * nights;
   };
 
   return (
-    <Link 
-      href={`/hotel/${hotel.id}`} 
-      className="group block bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 border border-gray-100 cursor-pointer"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <div className="relative h-48 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+      <div className="relative">
         <Image
           src={hotel.image}
           alt={hotel.name}
-          fill
-          className={`object-cover transition-transform duration-500 ${isHovered ? 'scale-110' : 'scale-100'}`}
+          width={400}
+          height={250}
+          className="w-full h-48 object-cover"
         />
+        <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+          {hotel.isBestSeller && (
+            <div className="bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+              En Çok Satan
+            </div>
+          )}
+          <div className="bg-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+            {hotel.type}
+          </div>
+          {hotel.breakfast && (
+            <div className="bg-orange-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+              Kahvaltı Dahil
+            </div>
+          )}
+          {hotel.cancellationPolicy === 'Ücretsiz İptal' && (
+            <div className="bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+              Ücretsiz İptal
+            </div>
+          )}
+          {hotel.discount > 20 && (
+            <div className="bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
+              Süper Fırsat
+            </div>
+          )}
+        </div>
         <button
-          onClick={toggleFavorite}
-          className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 cursor-pointer ${
-            isFavorite 
-              ? 'bg-red-500 text-white' 
-              : isHovered 
-                ? 'bg-white text-gray-700 shadow-md' 
-                : 'bg-black/30 text-white'
-          }`}
+          onClick={() => setIsFavorite(!isFavorite)}
+          className="absolute top-3 right-3 p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
         >
           {isFavorite ? (
-            <HeartIconSolid className="w-5 h-5" />
+            <HeartIconSolid className="w-5 h-5 text-red-500" />
           ) : (
-            <HeartIconOutline className="w-5 h-5" />
+            <HeartIconOutline className="w-5 h-5 text-gray-600" />
           )}
         </button>
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent h-16"></div>
-        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white">
-          <div className="flex items-center gap-1">
-            <StarIconSolid className="w-4 h-4 text-yellow-400" />
-            <span className="font-semibold">{hotel.rating}</span>
-          </div>
-          <span className="text-sm text-gray-200">({hotel.reviewCount} değerlendirme)</span>
-        </div>
       </div>
-      
+
       <div className="p-4">
-        <h3 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{hotel.name}</h3>
-        <p className="text-gray-600 text-sm mt-1 flex items-center gap-1">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          {hotel.location}
-        </p>
-        
-        <div className="mt-3 flex flex-wrap gap-2">
-          {hotel.features.map((feature, index) => {
-            const iconInfo = featureIcons.find(fi => fi.feature === feature);
-            const iconType = iconInfo?.iconType || 'default';
-            
-            return (
-              <div 
-                key={feature} 
-                className={`text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1 transition-colors ${
-                  isHovered 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'bg-gray-100 text-gray-700'
-                }`}
-              >
-                <FeatureIcon type={iconType} />
-                {feature}
-              </div>
-            );
-          })}
-        </div>
-        
-        <div className="mt-4 flex items-center justify-between">
+        <div className="flex items-start justify-between mb-2">
           <div>
-            <span className="text-lg font-bold text-gray-900">{hotel.price.toLocaleString('tr-TR')} ₺</span>
-            <span className="text-gray-500 text-sm ml-1">/ gece</span>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">{hotel.name}</h3>
+            <div className="flex items-center gap-1 text-sm text-gray-600">
+              <MapPinIcon className="w-4 h-4" />
+              <span>{hotel.location}</span>
+            </div>
           </div>
-          <span className={`text-sm font-medium px-3 py-1 rounded-full ${
-            isHovered ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
-          } transition-colors`}>
-            Detaylar
-          </span>
+          <div className="flex items-center gap-1">
+            <StarIconSolid className="w-5 h-5 text-yellow-400" />
+            <span className="font-semibold text-gray-900">{hotel.rating}</span>
+            <span className="text-sm text-gray-500">({hotel.reviewCount})</span>
+          </div>
         </div>
+
+        {/* Tarih ve Fiyat Bilgileri */}
+        <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 text-sm text-blue-700">
+              <CalendarIcon className="w-4 h-4" />
+              <span>
+                {hotel.checkInDate ? formatDate(hotel.checkInDate) : 'Giriş Tarihi'} - 
+                {hotel.checkOutDate ? formatDate(hotel.checkOutDate) : 'Çıkış Tarihi'}
+              </span>
+            </div>
+            <div className="text-sm text-blue-700">
+              {calculateNights()} Gece
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="text-right">
+              <div className="text-sm text-gray-500 line-through">₺{hotel.oldPrice}</div>
+              <div className="text-lg font-bold text-blue-600">₺{hotel.price}</div>
+              <div className="text-xs text-green-600">%{hotel.discount} indirim</div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-500">Toplam</div>
+              <div className="text-lg font-bold text-blue-600">₺{calculateTotalPrice()}</div>
+              <div className="text-xs text-gray-500">/ {calculateNights()} gece</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Özellikler */}
+        <div className="mb-3">
+          <div className="flex flex-wrap gap-2">
+            {hotel.features.map((feature, index) => {
+              const iconInfo = featureIcons.find(fi => fi.feature === feature);
+              return (
+                <div 
+                  key={index} 
+                  className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-full border border-gray-200"
+                >
+                  {iconInfo && <FeatureIcon type={iconInfo.iconType} className="w-3.5 h-3.5" />}
+                  <span>{feature}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Rezervasyon Butonu */}
+        <Link 
+          href={`/hotel/${hotel.id}`}
+          className="block w-full bg-blue-600 text-white text-center py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+        >
+          Rezervasyon Yap
+        </Link>
       </div>
-    </Link>
+    </div>
   );
 } 

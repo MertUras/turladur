@@ -24,7 +24,7 @@ export function DatePicker({
   placeholder = 'Tarih seçin'
 }: DatePickerProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const triggerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
   
   // Tarihi formatla
   const formatDisplayDate = (dateString: string) => {
@@ -58,8 +58,8 @@ export function DatePicker({
         } transition-colors`}
         onClick={() => !disabled && setIsCalendarOpen(true)}
       >
-        <div className="flex items-center px-4 py-3">
-          <CalendarIcon className="h-5 w-5 text-gray-400 mr-3" />
+        <div className="flex items-center px-3 py-2">
+          <CalendarIcon className="h-4 w-4 text-gray-400 mr-2" />
           
           <input
             type="text"
@@ -68,7 +68,7 @@ export function DatePicker({
             disabled={disabled}
             value={formatDisplayDate(value)}
             placeholder={placeholder}
-            className={`block w-full border-0 p-0 focus:ring-0 ${
+            className={`block w-full border-0 p-0 focus:ring-0 text-sm ${
               disabled ? 'bg-gray-100 text-gray-500' : 'bg-white text-gray-900'
             }`}
           />

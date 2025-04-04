@@ -196,17 +196,24 @@ export function Calendar({
   // Portal kullanarak takvimi render et
   return createPortal(
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      className="fixed z-50"
+      style={{ 
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        maxHeight: '90vh',
+        overflow: 'auto'
+      }}
       aria-labelledby={`${label}-calendar`}
       role="dialog"
       aria-modal="true"
     >
       <div 
         ref={calendarRef}
-        className="bg-white rounded-xl shadow-2xl p-4 w-full max-w-md mx-4"
+        className="bg-white rounded-xl shadow-2xl p-4 w-[320px]"
       >
-        <div className="flex items-center justify-between mb-4">
-          <h2 id={`${label}-calendar`} className="text-lg font-semibold text-gray-900">
+        <div className="flex items-center justify-between mb-3">
+          <h2 id={`${label}-calendar`} className="text-base font-semibold text-gray-900">
             {label}
           </h2>
           <button
@@ -214,37 +221,37 @@ export function Calendar({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500"
           >
-            <XMarkIcon className="h-5 w-5" />
+            <XMarkIcon className="h-4 w-4" />
           </button>
         </div>
         
         {/* Ay ve yıl navigasyonu */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <button
             type="button"
             onClick={goToPrevMonth}
-            className="p-2 rounded-full hover:bg-gray-100"
+            className="p-1.5 rounded-full hover:bg-gray-100"
           >
-            <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
+            <ChevronLeftIcon className="h-4 w-4 text-gray-600" />
           </button>
           
-          <div className="text-lg font-medium text-gray-900">
+          <div className="text-base font-medium text-gray-900">
             {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
           </div>
           
           <button
             type="button"
             onClick={goToNextMonth}
-            className="p-2 rounded-full hover:bg-gray-100"
+            className="p-1.5 rounded-full hover:bg-gray-100"
           >
-            <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+            <ChevronRightIcon className="h-4 w-4 text-gray-600" />
           </button>
         </div>
         
         {/* Haftanın günleri */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
+        <div className="grid grid-cols-7 gap-0.5 mb-1">
           {DAYS.map((day) => (
-            <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+            <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
               {day}
             </div>
           ))}
