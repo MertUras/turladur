@@ -243,7 +243,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
 
   const popupContent = (
     <div 
-      className="fixed inset-0 z-[9998] flex items-center justify-center overflow-y-auto overflow-x-hidden"
+      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overflow-x-hidden"
       aria-labelledby="modal-title"
       role="dialog"
       aria-modal="true"

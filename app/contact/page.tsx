@@ -94,15 +94,15 @@ export default function ContactPage() {
         <div className="container mx-auto px-4 relative">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <div className="py-12">
-              <div className="inline-flex items-center px-4 py-2 bg-blue-50 rounded-full text-blue-700 font-medium text-sm mb-8">
+              <div className="inline-flex items-center px-4 py-2 bg-blue-50 rounded-full text-blue-700 font-medium text-sm mb-8 text-caption">
                 <BuildingOffice2Icon className="w-4 h-4 mr-2" />
                 Kurumsal İletişim
               </div>
               
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
-                Sizinle <span className="text-blue-600">İletişimde</span> Olmaktan Memnuniyet Duyarız
+              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight font-heading">
+                Sizinle <span className="text-gradient span-inherit">İletişimde</span> Olmaktan Memnuniyet Duyarız
               </h1>
-              <p className="text-xl text-gray-600 mb-10 leading-relaxed max-w-xl">
+              <p className="text-xl text-gray-600 mb-10 leading-relaxed max-w-xl font-body">
                 TourTech olarak değerli müşterilerimize ve iş ortaklarımıza profesyonel hizmet sunmaktayız. Sorularınız ve talepleriniz için bizimle iletişime geçebilirsiniz.
               </p>
               
@@ -157,8 +157,8 @@ export default function ContactPage() {
       <div className="py-20 bg-white border-b border-gray-100">
         <div className="container mx-auto px-4">
           <div className="mb-12 text-center max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">İletişim Kanallarımız</h2>
-            <p className="text-lg text-gray-600">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4 font-heading">İletişim Kanallarımız</h2>
+            <p className="text-lg text-gray-600 font-body">
               Size en uygun iletişim kanalını seçerek bizimle bağlantı kurabilirsiniz. Profesyonel ekibimiz sorularınızı yanıtlamak için hazır.
             </p>
           </div>
@@ -230,12 +230,12 @@ export default function ContactPage() {
       <div id="contactForm" className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="mb-16 text-center">
-            <div className="inline-flex items-center justify-center px-4 py-2 bg-blue-50 rounded-full text-blue-600 font-medium text-sm mb-6">
+            <div className="inline-flex items-center justify-center px-4 py-2 bg-blue-50 rounded-full text-blue-600 font-medium text-sm mb-6 text-caption">
               <EnvelopeIcon className="w-4 h-4 mr-2" />
               İletişim Formu
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Bizimle İletişime Geçin</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4 font-heading">Bizimle İletişime Geçin</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto font-body">
               Aşağıdaki formu doldurarak bizimle iletişime geçebilirsiniz. Uzman ekibimiz en kısa sürede size dönüş yapacaktır.
             </p>
           </div>
@@ -319,11 +319,11 @@ export default function ContactPage() {
                     required
                   />
                   <label htmlFor="privacy" className="ml-3 text-sm text-gray-600">
-                    <span>Kişisel verilerimin işlenmesine ilişkin </span>
+                    <span className="span-inherit">Kişisel verilerimin işlenmesine ilişkin </span>
                     <Link href="/privacy-policy" className="text-blue-600 hover:underline">
                       aydınlatma metnini
                     </Link>
-                    <span> okudum ve kabul ediyorum.</span>
+                    <span className="span-inherit"> okudum ve kabul ediyorum.</span>
                   </label>
                 </div>
                 
@@ -384,12 +384,12 @@ export default function ContactPage() {
       <div id="offices" className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="mb-16 text-center">
-            <div className="inline-flex items-center justify-center px-4 py-2 bg-blue-50 rounded-full text-blue-600 font-medium text-sm mb-6">
+            <div className="inline-flex items-center justify-center px-4 py-2 bg-blue-50 rounded-full text-blue-600 font-medium text-sm mb-6 text-caption">
               <BuildingOffice2Icon className="w-4 h-4 mr-2" />
               Ofislerimiz
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Global Ağımız</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4 font-heading">Global Ağımız</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto font-body">
               Türkiye'nin farklı şehirlerindeki TourTech ofisleri, profesyonel ekibimizle hizmetinizdedir. Size en yakın ofisimizi ziyaret edebilirsiniz.
             </p>
           </div>
@@ -402,7 +402,7 @@ export default function ContactPage() {
                     <BuildingOffice2Icon className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <span className="text-sm text-blue-600 font-medium">TourTech</span>
+                    <span className="text-sm text-blue-600 font-medium span-small">TourTech</span>
                     <h3 className="text-xl font-bold text-gray-900">{office.city} Ofisi</h3>
                   </div>
                 </div>
@@ -463,12 +463,12 @@ export default function ContactPage() {
       <div className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="mb-16 text-center">
-            <div className="inline-flex items-center justify-center px-4 py-2 bg-blue-50 rounded-full text-blue-600 font-medium text-sm mb-6">
+            <div className="inline-flex items-center justify-center px-4 py-2 bg-blue-50 rounded-full text-blue-600 font-medium text-sm mb-6 text-caption">
               <QuestionMarkCircleIcon className="w-4 h-4 mr-2" />
               Sıkça Sorulan Sorular
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Aklınızdaki Soruların Yanıtları</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4 font-heading">Aklınızdaki Soruların Yanıtları</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto font-body">
               Seyahat ve rezervasyon süreçlerinizle ilgili en çok sorulan soruların yanıtlarını burada bulabilirsiniz.
             </p>
           </div>
@@ -479,8 +479,8 @@ export default function ContactPage() {
                 <div key={index} className="bg-white rounded-xl overflow-hidden shadow-md">
                   <details className="group">
                     <summary className="flex justify-between items-center font-medium cursor-pointer list-none p-6">
-                      <span className="text-lg font-semibold text-gray-900">{faq.question}</span>
-                      <span className="ml-6 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600 group-open:rotate-180 transition-transform">
+                      <span className="text-lg font-semibold text-gray-900 span-large">{faq.question}</span>
+                      <span className="ml-6 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-600 group-open:rotate-180 transition-transform span-inherit">
                         <ChevronDownIcon className="w-5 h-5" />
                       </span>
                     </summary>
@@ -512,8 +512,8 @@ export default function ContactPage() {
       <div className="py-20 bg-blue-600">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-3xl mx-auto">
-            <h3 className="text-3xl font-bold text-white mb-6">Profesyonel Tatil Planlaması için TourTech</h3>
-            <p className="text-xl text-blue-100 mb-10">
+            <h3 className="text-3xl font-bold text-white mb-6 font-heading">Profesyonel Tatil Planlaması için TourTech</h3>
+            <p className="text-xl text-blue-100 mb-10 font-body">
               En iyi otel, tur ve aktivite seçenekleriyle unutulmaz bir tatil deneyimi için hemen keşfetmeye başlayın.
             </p>
             <div className="flex flex-wrap justify-center gap-4">

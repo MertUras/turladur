@@ -921,43 +921,6 @@ export default function ToursPage() {
           </div>
         </div>
       </div>
-
-      {/* Footer Kurumsal Bilgiler */}
-      <div className="bg-gray-900 text-white pt-16 pb-8">
-        <div className="container mx-auto px-4">
-          <div className="mb-12 max-w-xl">
-            <h2 className="text-2xl font-bold mb-6">TourTech ile Seyahat Etmenin Ayrıcalığı</h2>
-            <p className="text-gray-400 mb-6">
-              Türkiye'nin en güvenilir tur operatörleriyle çalışan TourTech, 
-              10 yılı aşkın deneyimi ile misafirlerine unutulmaz seyahat deneyimleri sunmaya devam ediyor. 
-              Profesyonel rehberler, konforlu ulaşım araçları ve özenle seçilmiş konaklama tesisleri ile 
-              yüksek kalitede hizmet anlayışımızı sürdürüyoruz.
-            </p>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center">
-                <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-                <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-                <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-                <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-                <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
-              </div>
-              <div className="text-gray-400">
-                4.9/5 - 2,500+ değerlendirme
-              </div>
-            </div>
-          </div>
-          
-          <div className="border-t border-gray-800 py-8 text-center text-gray-500 text-sm">
-            © 2023 TourTech. Tüm hakları saklıdır. 
-            <div className="mt-2">
-              <Link href="/terms" className="hover:text-white transition-colors mx-2">Kullanım Koşulları</Link>
-              <Link href="/privacy" className="hover:text-white transition-colors mx-2">Gizlilik Politikası</Link>
-              <Link href="/cookies" className="hover:text-white transition-colors mx-2">Çerez Politikası</Link>
-              <Link href="/contact" className="hover:text-white transition-colors mx-2">İletişim</Link>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 } 
