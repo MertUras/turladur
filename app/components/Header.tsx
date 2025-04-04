@@ -1,19 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import DealsPopup from "./DealsPopup";
+import { TagIcon, UserIcon, UserPlusIcon, XMarkIcon, ChevronDownIcon, MapIcon, BuildingOfficeIcon, GlobeAltIcon, SparklesIcon, InformationCircleIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [closingDropdown, setClosingDropdown] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [dealsOpen, setDealsOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const dropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sayfa kaydırıldığında header'ın görünümünü değiştir
   useEffect(() => {
@@ -32,6 +36,7 @@ export default function Header() {
   // Sayfa değiştiğinde dropdown ve menüyü kapat
   useEffect(() => {
     setActiveDropdown(null);
+    setClosingDropdown(null);
     setIsMenuOpen(false);
     setSearchOpen(false);
     setDealsOpen(false);
@@ -44,13 +49,29 @@ export default function Header() {
     }
   }, [searchOpen]);
 
-  const toggleDropdown = (name: string) => {
-    if (activeDropdown === name) {
-      setActiveDropdown(null);
+  // Mobil menüdeki dropdown tıklaması için mantığı düzenliyorum
+  const toggleDropdown = useCallback((dropdown: string, isMobile: boolean = false) => {
+    if (isMobile) {
+      // Mobil için mantık - kapanma sorununu çözüyoruz
+      if (dropdown === activeDropdown) {
+        // Aynı dropdown'a tekrar tıklandığında kapat
+        setActiveDropdown(null);
+      } else {
+        // Farklı dropdown'a tıklandığında, önceki kapanır ve yeni açılır
+        setActiveDropdown(dropdown);
+      }
     } else {
-      setActiveDropdown(name);
+      // Desktop için mevcut mantık
+      if (dropdown === activeDropdown) {
+        setActiveDropdown(null);
+      } else {
+        setActiveDropdown(dropdown);
+      }
     }
-  };
+
+    // Dropdown işlemi yapıldığında aramaları kapat
+    setSearchOpen(false);
+  }, [activeDropdown]);
 
   const toggleSearch = () => {
     setSearchOpen(!searchOpen);
@@ -59,8 +80,12 @@ export default function Header() {
   // Dışarı tıklandığında dropdown'ları kapat
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (activeDropdown && !(event.target as Element).closest('.dropdown-container')) {
-        setActiveDropdown(null);
+      // Desktop ve mobil dropdown'lar için dışarı tıklama kontrolü
+      if (activeDropdown) {
+        // Eğer tıklanan element dropdown container'ın içinde değilse kapat
+        if (!(event.target as Element).closest('.dropdown-container')) {
+          setActiveDropdown(null);
+        }
       }
     };
 
@@ -70,9 +95,25 @@ export default function Header() {
     };
   }, [activeDropdown]);
 
+  // Mobil menü dışına tıklandığında menüyü kapat
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isMenuOpen && mobileMenuRef.current && 
+          !mobileMenuRef.current.contains(event.target as Node) && 
+          !(event.target as Element).closest('.mobile-menu-button')) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
   return (
     <header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 backdrop-blur-sm ${
+      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 backdrop-blur-sm ${
         isScrolled 
           ? "bg-white/90 shadow-lg py-2" 
           : "bg-gradient-to-b from-black/50 to-transparent py-4"
@@ -192,18 +233,23 @@ export default function Header() {
               
               {activeDropdown === 'tours' && (
                 <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 p-1 z-50 animate-fadeIn">
-                  <Link href="/tour-operator" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                  <Link href="/tours" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
                     Tüm Turlar
                   </Link>
-                  <Link href="/tour-operator?duration=1" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    Günübirlik Turlar
+                  <Link href="/tour-operator" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                    Tur Operatörleri
                   </Link>
-                  <Link href="/tour-operator?duration=7" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    Haftalık Turlar
-                  </Link>
-                  <Link href="/tour-operator?featured=true" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    Öne Çıkan Turlar
-                  </Link>
+                  <div className="border-t border-gray-100 my-1 pt-1">
+                    <Link href="/tours?duration=1" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                      Günübirlik Turlar
+                    </Link>
+                    <Link href="/tours?duration=7" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                      Haftalık Turlar
+                    </Link>
+                    <Link href="/tours?featured=true" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                      Öne Çıkan Turlar
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -338,7 +384,7 @@ export default function Header() {
 
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)} 
-              className={`p-2 rounded-md ${
+              className={`p-2 rounded-md mobile-menu-button ${
                 isScrolled ? "text-gray-600 hover:bg-gray-100" : "text-white hover:bg-white/10"
               } transition-colors`}
               aria-label={isMenuOpen ? "Menüyü kapat" : "Menüyü aç"}
@@ -424,94 +470,242 @@ export default function Header() {
         </div>
       )}
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Simplified for better behavior */}
       {isMenuOpen && (
-        <div className="md:hidden absolute left-0 right-0 top-full bg-white shadow-xl rounded-b-lg z-40 max-h-[80vh] overflow-y-auto text-black">
-          <nav className="flex flex-col p-4 space-y-3">
-            <div className="border-b border-gray-100 pb-3">
-              <button className="w-full flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors" onClick={() => toggleDropdown('routes-mobile')}>
-                <span className="font-medium">Rotalar</span>
-                <svg className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'routes-mobile' ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
-                </svg>
-              </button>
-              
-              {activeDropdown === 'routes-mobile' && (
-                <div className="mt-2 pl-4 space-y-2">
-                  <Link href="/routes/1" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">İstanbul - Kapadokya</Link>
-                  <Link href="/routes/2" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Akdeniz Kıyıları</Link>
-                  <Link href="/routes/3" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Ege Kıyıları</Link>
-                  <Link href="/routes/4" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Kapadokya - Pamukkale</Link>
-                  <Link href="/routes" className="block p-2 text-blue-600 font-medium">Tüm rotalar</Link>
+        <div className="md:hidden fixed inset-0 z-50 flex h-full">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm" 
+            onClick={() => setIsMenuOpen(false)}
+          ></div>
+          
+          {/* Slide-in menu panel */}
+          <div 
+            ref={mobileMenuRef}
+            className="relative w-full max-w-xs ml-auto h-screen bg-white shadow-xl flex flex-col animate-slide-in-right z-10 overflow-y-auto"
+          >
+            {/* Header */}
+            <div className="sticky top-0 flex justify-between items-center px-4 py-3 border-b border-gray-100 bg-white z-20">
+              <div className="flex items-center">
+                <div className="relative h-8 w-8 mr-2 overflow-hidden rounded-lg">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-blue-400"></div>
+                  <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-sm">T</div>
                 </div>
-              )}
+                <span className="text-xl font-bold text-blue-700">TourTech</span>
+              </div>
+              <button
+                className="p-2 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <XMarkIcon className="w-6 h-6" />
+              </button>
             </div>
             
-            <div className="border-b border-gray-100 pb-3">
-              <button className="w-full flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors" onClick={() => toggleDropdown('hotels-mobile')}>
-                <span className="font-medium">Oteller</span>
-                <svg className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'hotels-mobile' ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
-                </svg>
-              </button>
-              
-              {activeDropdown === 'hotels-mobile' && (
-                <div className="mt-2 pl-4 space-y-2">
-                  <Link href="/hotels/luxury" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Lüks Oteller</Link>
-                  <Link href="/hotels/boutique" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Butik Oteller</Link>
-                  <Link href="/hotels/all-inclusive" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Her Şey Dahil</Link>
-                  <Link href="/hotels" className="block p-2 text-blue-600 font-medium">Tüm oteller</Link>
+            {/* Menu Items */}
+            <div className="flex-1 py-2 px-3">
+              {/* Rotalar Dropdown */}
+              <div className="py-2 dropdown-container">
+                <button 
+                  className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'routes-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                  onClick={() => toggleDropdown('routes-mobile', true)}
+                  aria-expanded={activeDropdown === 'routes-mobile'}
+                >
+                  <div className="flex items-center">
+                    <MapIcon className="w-5 h-5 mr-3" />
+                    <span className="font-medium">Rotalar</span>
+                  </div>
+                  <ChevronDownIcon 
+                    className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'routes-mobile' ? 'transform rotate-180' : ''}`} 
+                  />
+                </button>
+                
+                <div 
+                  className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'routes-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                >
+                  <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
+                    <Link href="/routes/1" className="block py-2 text-gray-600 hover:text-blue-700">
+                      İstanbul - Kapadokya
+                    </Link>
+                    <Link href="/routes/2" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Akdeniz Kıyıları
+                    </Link>
+                    <Link href="/routes/3" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Ege Kıyıları
+                    </Link>
+                    <Link href="/routes/4" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Kapadokya - Pamukkale
+                    </Link>
+                    <Link href="/routes" className="block py-2 text-blue-600 hover:text-blue-800 font-medium">
+                      Tüm rotaları gör
+                    </Link>
+                  </div>
                 </div>
-              )}
+              </div>
+              
+              {/* Oteller Dropdown */}
+              <div className="py-2 dropdown-container">
+                <button 
+                  className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'hotels-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                  onClick={() => toggleDropdown('hotels-mobile', true)}
+                  aria-expanded={activeDropdown === 'hotels-mobile'}
+                >
+                  <div className="flex items-center">
+                    <BuildingOfficeIcon className="w-5 h-5 mr-3" />
+                    <span className="font-medium">Oteller</span>
+                  </div>
+                  <ChevronDownIcon 
+                    className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'hotels-mobile' ? 'transform rotate-180' : ''}`} 
+                  />
+                </button>
+                
+                <div 
+                  className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'hotels-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                >
+                  <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
+                    <Link href="/hotel" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Tüm Oteller
+                    </Link>
+                    <Link href="/hotel?type=BOUTIQUE_HOTEL" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Butik Oteller
+                    </Link>
+                    <Link href="/hotel?type=RESORT" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Tatil Köyleri
+                    </Link>
+                    <Link href="/hotel?stars=5" className="block py-2 text-gray-600 hover:text-blue-700">
+                      5 Yıldızlı Oteller
+                    </Link>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Turlar Dropdown */}
+              <div className="py-2 dropdown-container">
+                <button 
+                  className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'tours-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                  onClick={() => toggleDropdown('tours-mobile', true)}
+                  aria-expanded={activeDropdown === 'tours-mobile'}
+                >
+                  <div className="flex items-center">
+                    <GlobeAltIcon className="w-5 h-5 mr-3" />
+                    <span className="font-medium">Turlar</span>
+                  </div>
+                  <ChevronDownIcon 
+                    className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'tours-mobile' ? 'transform rotate-180' : ''}`} 
+                  />
+                </button>
+                
+                <div 
+                  className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'tours-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                >
+                  <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
+                    <Link href="/tours" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Tüm Turlar
+                    </Link>
+                    <Link href="/tour-operator" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Tur Operatörleri
+                    </Link>
+                    <div className="pt-2 mt-2 border-t border-gray-200">
+                      <Link href="/tours?duration=1" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Günübirlik Turlar
+                      </Link>
+                      <Link href="/tours?duration=7" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Haftalık Turlar
+                      </Link>
+                      <Link href="/tours?featured=true" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Öne Çıkan Turlar
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Deneyimler Dropdown */}
+              <div className="py-2 dropdown-container">
+                <button 
+                  className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'experiences-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                  onClick={() => toggleDropdown('experiences-mobile', true)}
+                  aria-expanded={activeDropdown === 'experiences-mobile'}
+                >
+                  <div className="flex items-center">
+                    <SparklesIcon className="w-5 h-5 mr-3" />
+                    <span className="font-medium">Deneyimler</span>
+                  </div>
+                  <ChevronDownIcon 
+                    className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'experiences-mobile' ? 'transform rotate-180' : ''}`} 
+                  />
+                </button>
+                
+                <div 
+                  className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'experiences-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                >
+                  <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
+                    <Link href="/experience" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Tüm Deneyimler
+                    </Link>
+                    <Link href="/gastronomi" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Gastronomi
+                    </Link>
+                    <Link href="/kultur-turlari" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Kültür Turları
+                    </Link>
+                    <Link href="/macera-aktiviteleri" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Macera Aktiviteleri
+                    </Link>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Diğer Linkler */}
+              <div className="mt-2 border-t border-gray-100 pt-4">
+                <Link 
+                  href="/about" 
+                  className="flex items-center py-3 px-3 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  <InformationCircleIcon className="w-5 h-5 mr-3" />
+                  <span className="font-medium">Hakkımızda</span>
+                </Link>
+                
+                <Link 
+                  href="/contact" 
+                  className="flex items-center py-3 px-3 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  <EnvelopeIcon className="w-5 h-5 mr-3" />
+                  <span className="font-medium">İletişim</span>
+                </Link>
+              </div>
             </div>
             
-            <div className="border-b border-gray-100 pb-3">
-              <button className="w-full flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors" onClick={() => toggleDropdown('activities-mobile')}>
-                <span className="font-medium">Aktiviteler</span>
-                <svg className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'activities-mobile' ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
-                </svg>
-              </button>
-              
-              {activeDropdown === 'activities-mobile' && (
-                <div className="mt-2 pl-4 space-y-2">
-                  <Link href="/activities/tours" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Turlar</Link>
-                  <Link href="/activities/adventures" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Macera Aktiviteleri</Link>
-                  <Link href="/activities/cultural" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Kültürel Deneyimler</Link>
-                  <Link href="/activities" className="block p-2 text-blue-600 font-medium">Tüm aktiviteler</Link>
-                </div>
-              )}
-            </div>
-            
-            <div className="border-b border-gray-100 pb-3">
-              <button 
+            {/* Footer */}
+            <div className="border-t border-gray-100 py-4 px-4">
+              <button
                 onClick={() => {
                   setDealsOpen(true);
-                  setIsMenuOpen(false); // Close mobile menu
-                }} 
-                className="flex w-full justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  setIsMenuOpen(false);
+                }}
+                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center mb-3"
               >
-                <div className="flex items-center">
-                  <span className="font-medium">Fırsatlar</span>
-                  <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">
-                    Yeni
-                  </span>
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
+                <TagIcon className="w-5 h-5 mr-2" />
+                Fırsatlar
               </button>
+              
+              <div className="flex gap-3">
+                <Link 
+                  href="/login"
+                  className="flex-1 py-2.5 px-4 border border-gray-300 hover:bg-gray-50 text-gray-800 font-medium rounded-lg transition-colors text-center"
+                >
+                  Giriş Yap
+                </Link>
+                
+                <Link 
+                  href="/register"
+                  className="flex-1 py-2.5 px-4 bg-gray-800 hover:bg-gray-900 text-white font-medium rounded-lg transition-colors text-center"
+                >
+                  Üye Ol
+                </Link>
+              </div>
             </div>
             
-            <div className="flex flex-col space-y-2 pt-2">
-              <Link href="/login" className="w-full py-2.5 px-4 rounded-lg border border-blue-600 text-blue-600 font-medium text-sm text-center hover:bg-blue-50 transition-colors">
-                Giriş Yap
-              </Link>
-              <Link href="/register" className="w-full py-2.5 px-4 rounded-lg bg-blue-600 text-white font-medium text-sm text-center hover:bg-blue-700 transition-colors">
-                Kaydol
-              </Link>
-            </div>
-          </nav>
+          </div>
         </div>
       )}
 

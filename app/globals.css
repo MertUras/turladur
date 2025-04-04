@@ -1,18 +1,126 @@
 @import "tailwindcss";
 
 @layer base {
+  /* Font tanımlamaları */
+  :root {
+    --font-montserrat: 'Montserrat', sans-serif;
+    --font-poppins: 'Poppins', sans-serif;
+  }
+  
+  html {
+    font-family: var(--font-poppins);
+  }
+  
   body {
     @apply antialiased;
+    font-family: var(--font-poppins);
+    font-size: 16px;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-montserrat);
+    @apply font-bold;
+  }
+  
+  /* Responsive başlık boyutları */
+  h1 {
+    @apply text-3xl md:text-4xl lg:text-5xl;
+  }
+  
+  h2 {
+    @apply text-2xl md:text-3xl lg:text-4xl;
+  }
+  
+  h3 {
+    @apply text-xl md:text-2xl lg:text-3xl;
+  }
+  
+  h4 {
+    @apply text-lg md:text-xl;
+  }
+  
+  /* Paragraf ve metin boyutları - span için varsayılan boyutu koruma */
+  p, li, a, div {
+    @apply text-base leading-relaxed;
+  }
+  
+  /* span elementlerinin kendi boyutlarını koruması için özel stillendirilme */
+  span {
+    font-size: inherit;
+    line-height: inherit;
+  }
+  
+  /* Küçük metinler için özel sınıf */
+  .text-small {
+    @apply text-sm;
+  }
+  
+  /* Orta boy metinler için özel sınıf */
+  .text-medium {
+    @apply text-base;
+  }
+  
+  /* Büyük metinler için özel sınıf */
+  .text-large {
+    @apply text-lg;
   }
 }
 
 @layer components {
   .btn {
     @apply bg-blue-500 text-white px-4 py-2 rounded-md;
+    font-family: var(--font-montserrat);
+    @apply font-medium;
   }
   
   .container {
     @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Özel font sınıfları */
+  .font-heading {
+    font-family: var(--font-montserrat);
+  }
+  
+  .font-body {
+    font-family: var(--font-poppins);
+  }
+  
+  /* Turizm teması için özel yazı efektleri */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400;
+    font-size: inherit; /* Mevcut font boyutunu korur */
+  }
+  
+  .text-caption {
+    @apply text-sm text-gray-500 uppercase tracking-wider font-medium;
+    font-family: var(--font-montserrat);
+  }
+  
+  .text-feature {
+    @apply text-lg font-medium;
+  }
+  
+  /* Span boyutlarını koruyan özel sınıflar */
+  .span-inherit {
+    font-size: inherit;
+    line-height: inherit;
+  }
+  
+  .span-small {
+    @apply text-sm;
+  }
+  
+  .span-normal {
+    @apply text-base;
+  }
+  
+  .span-large {
+    @apply text-lg;
+  }
+  
+  .span-xl {
+    @apply text-xl;
   }
 }
 
@@ -43,6 +151,38 @@
 
 .animate-slide-up {
   animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Popup için slide in up animasyonu */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideInUp {
+  animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Popup için slide out down animasyonu */
+@keyframes slideOutDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+}
+
+.animate-slideOutDown {
+  animation: slideOutDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Popup için zoom animasyonu (yeni eklendi) */
@@ -529,4 +669,46 @@ body {
 .backface-hidden {
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+}
+
+/* Mobil menü için slide-in-right animasyonu */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Mobil menü dropdown geçişleri için */
+.mobile-menu-dropdown {
+  transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  will-change: max-height, opacity;
+  pointer-events: none;
+}
+
+.mobile-menu-dropdown > * {
+  pointer-events: auto;
+}
+
+/* Dropdown içeriği */
+.mobile-menu-dropdown > div {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.mobile-menu-dropdown:not([class*="max-h-0"]) > div {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.mobile-menu-dropdown[class*="max-h-0"] > div {
+  transform: translateY(-8px);
+  opacity: 0;
 }
