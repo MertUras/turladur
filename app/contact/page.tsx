@@ -71,7 +71,6 @@ const officeLocations = [
 export default function ContactPage() {
   return (
     <main>
-      <Header />
       
       {/* Hero Bölümü */}
       <div className="relative h-[400px] md:h-[500px] overflow-hidden">
@@ -376,7 +375,6 @@ export default function ContactPage() {
         </div>
       </div>
       
-      <Footer />
     </main>
   );
 } 

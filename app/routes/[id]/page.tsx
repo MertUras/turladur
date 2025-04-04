@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, use } from 'react';
+import React, { useState, use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { 
@@ -11,7 +11,12 @@ import {
   CurrencyDollarIcon,
   StarIcon,
   ArrowLeftIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  ShieldCheckIcon,
+  CloudIcon,
+  TruckIcon,
+  PhotoIcon,
+  TagIcon
 } from '@heroicons/react/24/outline';
 
 interface Tour {
@@ -267,11 +272,12 @@ interface ReservationFormData {
 
 export default function RouteDetailPage({ params }: PageProps) {
   const resolvedParams = use(params);
+  const routeId = resolvedParams.id as string;
   const [selectedTour, setSelectedTour] = useState<number | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showReservationModal, setShowReservationModal] = useState(false);
   const [reservationSuccess, setReservationSuccess] = useState(false);
-  const route = routeTours[resolvedParams.id];
+  const route = routeTours[routeId];
 
   const [formData, setFormData] = useState<ReservationFormData>({
     name: '',
@@ -313,470 +319,212 @@ export default function RouteDetailPage({ params }: PageProps) {
   };
 
   if (!route) {
-    return <div>Rota bulunamadı</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center p-8 max-w-md">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Rota bulunamadı</h1>
+          <p className="text-gray-600 mb-6">Aradığınız rota mevcut değil veya kaldırılmış olabilir.</p>
+          <Link
+            href="/routes"
+            className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all"
+          >
+            <ArrowLeftIcon className="w-5 h-5 mr-2" />
+            Rotalara Dön
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div className="relative h-[400px] sm:h-[500px]">
-          <Image
-            src={route.image}
-            alt={route.name}
-            fill
-          className="object-cover"
-            priority
-        />
-        <div className="absolute inset-0 bg-black/50"></div>
+      {/* Hero Section - Paralax Efekti İle */}
+      <div className="relative h-[500px] sm:h-[600px] bg-fixed bg-cover bg-center" 
+           style={{backgroundImage: `url(${route.image})`}}>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70"></div>
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center text-white px-4">
-            <Link href="/routes" className="inline-flex items-center text-white/90 hover:text-white mb-4">
-              <ArrowLeftIcon className="w-5 h-5 mr-1" />
-              Rotalara Dön
-            </Link>
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">{route.name}</h1>
-            <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto">{route.description}</p>
+          <div className="text-center text-white px-4 max-w-4xl mx-auto">
+            <div className="mb-6">
+              <Link href="/routes" className="inline-flex items-center text-white/80 hover:text-white text-sm font-medium py-1 px-3 rounded-full bg-white/10 backdrop-blur-sm transition-all">
+                <ArrowLeftIcon className="w-4 h-4 mr-1" />
+                Rotalara Dön
+              </Link>
+            </div>
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight">{route.name}</h1>
+            <p className="text-lg sm:text-xl text-white/90 max-w-3xl mx-auto mb-8">{route.description}</p>
+            <div className="inline-flex items-center space-x-2 text-sm text-white/80 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2">
+              <MapPinIcon className="w-4 h-4" />
+              <span>{route.location}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Hızlı Bilgiler */}
+      <div className="bg-white shadow-md relative -mt-12 max-w-5xl mx-auto rounded-xl overflow-hidden">
+        <div className="grid grid-cols-2 md:grid-cols-4">
+          <div className="p-6 border-r border-b md:border-b-0 border-gray-100 flex flex-col items-center text-center">
+            <ClockIcon className="w-8 h-8 text-blue-600 mb-3" />
+            <div className="text-sm text-gray-500 mb-1">Süre</div>
+            <div className="font-semibold text-gray-900">{route.duration}</div>
+          </div>
+          <div className="p-6 border-b md:border-b-0 md:border-r border-gray-100 flex flex-col items-center text-center">
+            <CalendarIcon className="w-8 h-8 text-blue-600 mb-3" />
+            <div className="text-sm text-gray-500 mb-1">En İyi Zaman</div>
+            <div className="font-semibold text-gray-900">{route.bestTimeToVisit}</div>
+          </div>
+          <div className="p-6 border-r border-gray-100 flex flex-col items-center text-center">
+            <CurrencyDollarIcon className="w-8 h-8 text-blue-600 mb-3" />
+            <div className="text-sm text-gray-500 mb-1">Fiyat Aralığı</div>
+            <div className="font-semibold text-gray-900">{route.priceRange}</div>
+          </div>
+          <div className="p-6 flex flex-col items-center text-center">
+            <UserGroupIcon className="w-8 h-8 text-blue-600 mb-3" />
+            <div className="text-sm text-gray-500 mb-1">Grup Büyüklüğü</div>
+            <div className="font-semibold text-gray-900">2-12 kişi</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Sol Kolon - Detaylar */}
           <div className="lg:col-span-2">
-            {/* Genel Bilgiler */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Genel Bilgiler</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="flex items-center">
-                  <ClockIcon className="w-6 h-6 text-blue-600 mr-3" />
-                  <div>
-                    <p className="text-sm text-gray-500">Süre</p>
-                    <p className="font-medium">{route.duration}</p>
+            {/* Gezilecek Yerler Kartları */}
+            <div className="mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 mb-8 flex items-center">
+                <span className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mr-3">
+                  <MapPinIcon className="w-6 h-6" />
+                </span>
+                Hakkında
+              </h2>
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden mb-8">
+                <div className="p-8">
+                  <div className="prose max-w-none">
+                    {route.longDescription.split('\n\n').map((paragraph, index) => (
+                      <p key={index} className="text-gray-600 mb-4 text-lg leading-relaxed">{paragraph}</p>
+                    ))}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                    <div className="bg-blue-50 rounded-xl p-5">
+                      <CloudIcon className="w-8 h-8 text-blue-600 mb-3" />
+                      <h3 className="font-semibold text-gray-900 mb-2">Hava Durumu</h3>
+                      <p className="text-gray-600 text-sm">{route.weather}</p>
+                    </div>
+                    <div className="bg-blue-50 rounded-xl p-5">
+                      <TruckIcon className="w-8 h-8 text-blue-600 mb-3" />
+                      <h3 className="font-semibold text-gray-900 mb-2">Ulaşım</h3>
+                      <p className="text-gray-600 text-sm">{route.transportation}</p>
+                    </div>
+                    <div className="bg-blue-50 rounded-xl p-5">
+                      <CalendarIcon className="w-8 h-8 text-blue-600 mb-3" />
+                      <h3 className="font-semibold text-gray-900 mb-2">Ziyaret İçin</h3>
+                      <p className="text-gray-600 text-sm">{route.bestTimeToVisit}</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center">
-                  <CalendarIcon className="w-6 h-6 text-blue-600 mr-3" />
-                  <div>
-                    <p className="text-sm text-gray-500">En İyi Ziyaret Zamanı</p>
-                    <p className="font-medium">{route.bestTimeToVisit}</p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <UserGroupIcon className="w-6 h-6 text-blue-600 mr-3" />
-                  <div>
-                    <p className="text-sm text-gray-500">Grup Büyüklüğü</p>
-                    <p className="font-medium">2-12 kişi</p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <CurrencyDollarIcon className="w-6 h-6 text-blue-600 mr-3" />
-                  <div>
-                    <p className="text-sm text-gray-500">Fiyat Aralığı</p>
-                    <p className="font-medium">{route.priceRange}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Detaylı Açıklama */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Detaylı Açıklama</h2>
-              <div className="prose max-w-none">
-                {route.longDescription.split('\n\n').map((paragraph, index) => (
-                  <p key={index} className="text-gray-600 mb-4">{paragraph}</p>
-                ))}
               </div>
             </div>
 
             {/* Tur Programı */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Tur Programı</h2>
-              <div className="space-y-6">
-                {route.itinerary.map((day) => (
-                  <div key={day.day} className="flex gap-4">
-                    <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
-                      {day.day}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{day.title}</h3>
-                      <p className="text-gray-600 mt-1">{day.description}</p>
+            <div className="mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 mb-8 flex items-center">
+                <span className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mr-3">
+                  <ClockIcon className="w-6 h-6" />
+                </span>
+                Tur Programı
+              </h2>
+              <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                <div className="p-8">
+                  <div className="relative">
+                    <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-blue-100"></div>
+                    <div className="space-y-8">
+                      {route.itinerary.map((day) => (
+                        <div key={day.day} className="relative flex gap-6">
+                          <div className="flex-shrink-0">
+                            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold z-10 relative">
+                              {day.day}
+                            </div>
+                          </div>
+                          <div className="bg-blue-50 rounded-xl p-6 flex-grow">
+                            <h3 className="font-bold text-xl text-gray-900 mb-2">{day.title}</h3>
+                            <p className="text-gray-600">{day.description}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
             </div>
 
             {/* Dahil Olanlar ve Dahil Olmayanlar */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Dahil Olanlar</h2>
-                <ul className="space-y-3">
-                  {route.included.map((item, index) => (
-                    <li key={index} className="flex items-center text-gray-600">
-                      <CheckCircleIcon className="w-5 h-5 text-green-500 mr-2" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Dahil Olmayanlar</h2>
-                <ul className="space-y-3">
-                  {route.notIncluded.map((item, index) => (
-                    <li key={index} className="flex items-center text-gray-600">
-                      <CheckCircleIcon className="w-5 h-5 text-red-500 mr-2" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+            <div className="mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 mb-8 flex items-center">
+                <span className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mr-3">
+                  <TagIcon className="w-6 h-6" />
+                </span>
+                Neler Dahil?
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="p-8">
+                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                      <span className="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center mr-2">
+                        <CheckCircleIcon className="w-5 h-5" />
+                      </span>
+                      Dahil Olanlar
+                    </h3>
+                    <ul className="space-y-4">
+                      {route.included.map((item, index) => (
+                        <li key={index} className="flex items-center text-gray-600">
+                          <span className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center mr-3">
+                            <CheckCircleIcon className="w-4 h-4" />
+                          </span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="p-8">
+                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                      <span className="w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center mr-2">
+                        <CheckCircleIcon className="w-5 h-5" />
+                      </span>
+                      Dahil Olmayanlar
+                    </h3>
+                    <ul className="space-y-4">
+                      {route.notIncluded.map((item, index) => (
+                        <li key={index} className="flex items-center text-gray-600">
+                          <span className="w-6 h-6 bg-red-100 text-red-600 rounded-full flex items-center justify-center mr-3">
+                            <CheckCircleIcon className="w-4 h-4" />
+                          </span>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Sağ Kolon - Rezervasyon Formu */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Rezervasyon Yap</h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Ad Soyad
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    E-posta
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Telefon
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
-                    Tarih
-                  </label>
-                  <input
-                    type="date"
-                    id="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="guests" className="block text-sm font-medium text-gray-700 mb-1">
-                    Kişi Sayısı
-                  </label>
-                  <select
-                    id="guests"
-                    value={formData.guests}
-                    onChange={(e) => setFormData({ ...formData, guests: parseInt(e.target.value) })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                      <option key={num} value={num}>
-                        {num} Kişi
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
-                    Mesajınız
-                  </label>
-                  <textarea
-                    id="message"
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  ></textarea>
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                >
-                  Rezervasyon Yap
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tours Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="space-y-12">
-          {Object.entries(route.categories).map(([category, tours]) => (
-            <div key={category}>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">{category}</h2>
-              <div className="space-y-8">
-                {tours.map((tour: Tour) => (
-                  <div key={tour.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                    <div className="relative h-64 md:h-96">
-                      <Image
-                        src={tour.image}
-                        alt={tour.company}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-6">
-                        <h3 className="text-2xl font-bold text-white mb-2">{tour.company}</h3>
-                        <p className="text-white/90 mb-4">{tour.description}</p>
-                        <div className="flex items-center space-x-4 text-white/80 text-sm">
-                          <span className="flex items-center">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {tour.duration}
-                          </span>
-                          <span className="flex items-center">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {tour.price}
-                          </span>
-                          <span className="flex items-center">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                            Max {tour.maxParticipants} kişi
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => (
-                              <svg
-                                key={i}
-                                className={`w-4 h-4 ${
-                                  i < Math.floor(tour.rating)
-                                    ? 'text-yellow-400'
-                                    : 'text-gray-300'
-                                }`}
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.363 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.363-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                            ))}
-                          </div>
-                          <span className="text-sm text-gray-600">({tour.reviews} değerlendirme)</span>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            tour.difficulty === 'Kolay' ? 'bg-green-100 text-green-800' :
-                            tour.difficulty === 'Orta' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {tour.difficulty}
-                          </span>
-                          <button
-                            onClick={() => handleReserveTour(tour.id)}
-                            className="text-blue-600 hover:text-blue-800 font-medium"
-                          >
-                            Turu Rezerve Et
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {tour.features.map((feature: string, index: number) => (
-                          <span
-                            key={index}
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                          >
-                            {feature}
-                          </span>
-                        ))}
-                      </div>
-
-                      {selectedTour === tour.id && (
-                        <div className="mt-6 space-y-6">
-                          {/* Galeri */}
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4">Galeri</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                              {tour.gallery.map((image: string, index: number) => (
-                                <div
-                                  key={index}
-                                  className="relative h-48 cursor-pointer"
-                                  onClick={() => setSelectedImage(image)}
-                                >
-                                  <Image
-                                    src={image}
-                                    alt={`${tour.company} - Görsel ${index + 1}`}
-                                    fill
-                                    className="object-cover rounded-lg hover:opacity-90 transition-opacity"
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Öne Çıkanlar */}
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Öne Çıkanlar</h3>
-                            <ul className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                              {tour.highlights.map((highlight: string, index: number) => (
-                                <li key={index} className="flex items-center text-gray-600">
-                                  <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                  </svg>
-                                  {highlight}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          {/* Dahil Olan Hizmetler */}
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Dahil Olan Hizmetler</h3>
-                            <ul className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                              {tour.included.map((item: string, index: number) => (
-                                <li key={index} className="flex items-center text-gray-600">
-                                  <svg className="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                  </svg>
-                                  {item}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          {/* Tur Programı */}
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Tur Programı</h3>
-                            <div className="space-y-4">
-                              {tour.schedule.map((day: { day: number; title: string; description: string }, index: number) => (
-                                <div key={index} className="flex items-start">
-                                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-semibold">
-                                    {day.day}
-                                  </div>
-                                  <div className="ml-4">
-                                    <h4 className="font-medium text-gray-900">{day.title}</h4>
-                                    <p className="text-gray-600">{day.description}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Konum ve Dil Bilgisi */}
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-900 mb-2">Konum</h3>
-                              <p className="text-gray-600">{tour.location}</p>
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-semibold text-gray-900 mb-2">Diller</h3>
-                              <div className="flex flex-wrap gap-2">
-                                {tour.languages.map((lang: string, index: number) => (
-                                  <span
-                                    key={index}
-                                    className="px-2 py-1 bg-gray-100 text-gray-800 rounded-md text-sm"
-                                  >
-                                    {lang}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden sticky top-6">
+              <div className="bg-blue-600 px-6 py-5">
+                <h2 className="text-xl font-bold text-white">Rezervasyon Yap</h2>
+                <p className="text-blue-100 text-sm mt-1">Hemen yerinizi ayırtın!</p>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Görsel Modal */}
-      {selectedImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-          <div className="relative max-w-4xl w-full">
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 text-white hover:text-gray-300"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <Image
-              src={selectedImage}
-              alt="Büyük görsel"
-              width={1200}
-              height={800}
-              className="rounded-lg"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Rezervasyon Modal */}
-      {showReservationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 relative">
-            <button
-              onClick={() => setShowReservationModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            {reservationSuccess ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                  </svg>
+              <div className="p-6">
+                <div className="flex items-center gap-3 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg mb-6">
+                  <ShieldCheckIcon className="w-5 h-5 text-blue-600" />
+                  <span>En İyi Fiyat Garantisi</span>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Rezervasyon Başarılı!</h3>
-                <p className="text-gray-600">Rezervasyonunuz alındı. En kısa sürede sizinle iletişime geçeceğiz.</p>
-              </div>
-            ) : (
-              <>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Rezervasyon Yap</h2>
+                
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -787,7 +535,7 @@ export default function RouteDetailPage({ params }: PageProps) {
                       id="name"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -800,7 +548,7 @@ export default function RouteDetailPage({ params }: PageProps) {
                       id="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -813,7 +561,7 @@ export default function RouteDetailPage({ params }: PageProps) {
                       id="phone"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -826,7 +574,7 @@ export default function RouteDetailPage({ params }: PageProps) {
                       id="date"
                       value={formData.date}
                       onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
@@ -838,7 +586,7 @@ export default function RouteDetailPage({ params }: PageProps) {
                       id="guests"
                       value={formData.guests}
                       onChange={(e) => setFormData({ ...formData, guests: parseInt(e.target.value) })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     >
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
@@ -857,18 +605,155 @@ export default function RouteDetailPage({ params }: PageProps) {
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       rows={3}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     ></textarea>
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                    className="w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center"
                   >
                     Rezervasyon Yap
                   </button>
                 </form>
-              </>
-            )}
+                
+                <div className="mt-6 text-center text-sm text-gray-500">
+                  Rezervasyon yaparken sorun yaşarsanız bize ulaşın
+                  <div className="text-gray-900 font-medium mt-1">+90 850 123 45 67</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Kategoriler ve Turlar */}
+      <div className="bg-gray-50 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Öne Çıkan Turlar</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              {route.name} bölgesinde en popüler turları keşfedin
+            </p>
+          </div>
+          
+          <div className="space-y-16">
+            {Object.entries(route.categories).map(([category, tours]) => (
+              <div key={category}>
+                <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center">
+                  <span className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mr-3">
+                    <PhotoIcon className="w-6 h-6" />
+                  </span>
+                  {category}
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {tours.map((tour: Tour) => (
+                    <div key={tour.id} className="bg-white rounded-2xl shadow-sm overflow-hidden group hover:shadow-md transition-all">
+                      <div className="relative h-64">
+                        <Image
+                          src={tour.image}
+                          alt={tour.company}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-700"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                        <div className="absolute bottom-0 left-0 right-0 p-6">
+                          <span className={`inline-block px-3 py-1 text-xs font-medium ${
+                            tour.difficulty === 'Kolay' ? 'bg-green-100 text-green-800' :
+                            tour.difficulty === 'Orta' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          } rounded-full mb-2`}>
+                            {tour.difficulty}
+                          </span>
+                          <h3 className="text-xl font-bold text-white mb-2">{tour.company}</h3>
+                          <div className="flex items-center text-white/80 text-sm">
+                            <div className="flex items-center mr-4">
+                              <ClockIcon className="w-4 h-4 mr-1" />
+                              {tour.duration}
+                            </div>
+                            <div className="flex items-center">
+                              <CurrencyDollarIcon className="w-4 h-4 mr-1" />
+                              {tour.price}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-6">
+                        <div className="flex items-center mb-3">
+                          <div className="flex items-center">
+                            {[...Array(5)].map((_, i) => (
+                              <StarIcon 
+                                key={i}
+                                className={`w-4 h-4 ${
+                                  i < Math.floor(tour.rating)
+                                    ? 'text-yellow-400 fill-yellow-400'
+                                    : 'text-gray-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-gray-600 ml-2">({tour.reviews} değerlendirme)</span>
+                        </div>
+                        
+                        <p className="text-gray-600 text-sm line-clamp-2 mb-4">{tour.description}</p>
+
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {tour.features.slice(0, 3).map((feature: string, index: number) => (
+                            <span
+                              key={index}
+                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            >
+                              {feature}
+                            </span>
+                          ))}
+                          {tour.features.length > 3 && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              +{tour.features.length - 3}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="flex space-x-3">
+                          <Link
+                            href={`/routes/${routeId}/tours/${tour.id}`}
+                            className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50"
+                          >
+                            Detaylar
+                          </Link>
+                          <Link
+                            href={`/routes/${routeId}/rezervasyon?tour=${tour.id}`}
+                            className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+                          >
+                            Rezervasyon
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      {reservationSuccess && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-8 max-w-md w-full">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircleIcon className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Rezervasyon Başarılı!</h3>
+              <p className="text-gray-600 mb-6">Rezervasyonunuz alındı. En kısa sürede sizinle iletişime geçeceğiz.</p>
+              <button
+                onClick={() => setReservationSuccess(false)}
+                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Tamam
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -192,18 +192,23 @@ export default function Header() {
               
               {activeDropdown === 'tours' && (
                 <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 p-1 z-50 animate-fadeIn">
-                  <Link href="/tour-operator" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                  <Link href="/tours" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
                     Tüm Turlar
                   </Link>
-                  <Link href="/tour-operator?duration=1" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    Günübirlik Turlar
+                  <Link href="/tour-operator" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                    Tur Operatörleri
                   </Link>
-                  <Link href="/tour-operator?duration=7" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    Haftalık Turlar
-                  </Link>
-                  <Link href="/tour-operator?featured=true" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    Öne Çıkan Turlar
-                  </Link>
+                  <div className="border-t border-gray-100 my-1 pt-1">
+                    <Link href="/tours?duration=1" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                      Günübirlik Turlar
+                    </Link>
+                    <Link href="/tours?duration=7" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                      Haftalık Turlar
+                    </Link>
+                    <Link href="/tours?featured=true" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                      Öne Çıkan Turlar
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -466,19 +471,23 @@ export default function Header() {
             </div>
             
             <div className="border-b border-gray-100 pb-3">
-              <button className="w-full flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors" onClick={() => toggleDropdown('activities-mobile')}>
-                <span className="font-medium">Aktiviteler</span>
-                <svg className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'activities-mobile' ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+              <button className="w-full flex justify-between items-center p-2 rounded-lg hover:bg-gray-50 transition-colors" onClick={() => toggleDropdown('tours-mobile')}>
+                <span className="font-medium">Turlar</span>
+                <svg className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'tours-mobile' ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
                 </svg>
               </button>
               
-              {activeDropdown === 'activities-mobile' && (
+              {activeDropdown === 'tours-mobile' && (
                 <div className="mt-2 pl-4 space-y-2">
-                  <Link href="/activities/tours" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Turlar</Link>
-                  <Link href="/activities/adventures" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Macera Aktiviteleri</Link>
-                  <Link href="/activities/cultural" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Kültürel Deneyimler</Link>
-                  <Link href="/activities" className="block p-2 text-blue-600 font-medium">Tüm aktiviteler</Link>
+                  <Link href="/tours" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Tüm Turlar</Link>
+                  <Link href="/tour-operator" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Tur Operatörleri</Link>
+                  <div className="mt-2">
+                    <div className="text-xs font-semibold text-gray-500 mb-1">Tur Tipleri</div>
+                    <Link href="/tours?duration=1" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Günübirlik Turlar</Link>
+                    <Link href="/tours?duration=7" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Haftalık Turlar</Link>
+                    <Link href="/tours?featured=true" className="block p-2 rounded-lg hover:bg-gray-50 transition-colors">Öne Çıkan Turlar</Link>
+                  </div>
                 </div>
               )}
             </div>

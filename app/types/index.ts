@@ -92,6 +92,11 @@ export interface TourOperator {
   createdAt: Date;
   updatedAt: Date;
   userId: string;
+  categories?: string[];
+  rating?: number;
+  certified?: boolean;
+  popularity?: number;
+  coverImage?: string;
 }
 
 // Tur tipleri
