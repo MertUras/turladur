@@ -18,33 +18,181 @@ import {
   CheckCircleIcon,
   UserIcon,
   Square2StackIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon as SolidStarIcon } from '@heroicons/react/24/solid';
+import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 
 // Dummy otel verileri
 const dummyHotels = [
   {
     id: '1',
-    name: 'Grand Hotel Istanbul',
-    shortDescription: 'Boğaz manzaralı lüks otel',
-    location: 'İstanbul, Türkiye',
+    name: 'Lüks Resort & Spa',
+    shortDescription: 'Deniz manzaralı lüks otel',
+    location: 'Antalya, Türkiye',
+    coordinates: { lat: 36.8841, lng: 30.7056 }, // Antalya koordinatları
     rating: 4.8,
-    reviewCount: 128,
+    reviewCount: 1245,
     price: 2500,
     oldPrice: 3000,
-    discount: 17,
-    image: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
-    features: ['Ücretsiz Wi-Fi', 'Havuz', 'Spa', 'Deniz Manzaralı', 'Her Şey Dahil'],
+    discount: 15,
+    image: 'https://images.unsplash.com/photo-1520250497591-112f8f6ca0b3',
+    features: ['Havuz', 'Spa', 'Restoran', 'Bar'],
     isBestSeller: true,
     stars: 5,
         images: [
-      'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
-      'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
-      'https://images.unsplash.com/photo-1571896349842-33c89424de2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2080&q=80',
-      'https://images.unsplash.com/photo-1582719508461-905c673771fd?ixlib=rb-4.0.3&auto=format&fit=crop&w=2025&q=80'
+      'https://images.unsplash.com/photo-1520250497591-112f8f6ca0b3',
+      'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb',
+      'https://images.unsplash.com/photo-1571896349842-33c89424de2d',
+      'https://images.unsplash.com/photo-1582719508461-905c673771fd'
     ],
-    description: `Grand Hotel Istanbul, Boğaz'ın muhteşem manzarasına hakim, lüks ve konforu bir araya getiren 5 yıldızlı bir oteldir. Modern mimarisi ve geleneksel Türk misafirperverliğini harmanlayan otelimiz, şehrin merkezinde konumlanmıştır.
+    description: `Lüks Resort & Spa, Antalya'nın en gözde bölgesinde, deniz manzarasına hakim, lüks ve konforu bir araya getiren 5 yıldızlı bir oteldir. Modern mimarisi ve geleneksel Türk misafirperverliğini harmanlayan otelimiz, şehrin merkezinde konumlanmıştır.
+
+    Özellikler:
+    • Deniz manzaralı odalar
+    • 24 saat oda servisi
+    • Spa ve wellness merkezi
+    • Açık ve kapalı yüzme havuzları
+    • Dünya mutfaklarından lezzetler sunan restoranlar
+    • Toplantı ve etkinlik salonları
+    • Fitness merkezi
+    • Ücretsiz Wi-Fi
+    • Valet park hizmeti`,
+    amenities: {
+      wifi: true,
+      pool: true,
+      spa: true,
+      restaurant: true,
+      gym: true,
+      parking: true,
+      roomService: true,
+      concierge: true,
+      laundry: true,
+      businessCenter: true
+    },
+    nearbyPlaces: {
+      airport: { name: 'Antalya Havalimanı', distance: '15 km', time: '20 dk' },
+      cityCenter: { name: 'Antalya Merkez', distance: '8 km', time: '15 dk' },
+      attractions: [
+        { name: 'Düden Şelalesi', distance: '5 km', time: '10 dk' },
+        { name: 'Kaleiçi', distance: '7 km', time: '12 dk' },
+        { name: 'Lara Plajı', distance: '2 km', time: '5 dk' }
+      ],
+      transport: {
+        shuttle: true,
+        taxi: true,
+        bus: true,
+        metro: false
+      }
+    },
+    services: {
+      reception: { available: true, hours: '24 saat' },
+      roomService: { available: true, hours: '07:00 - 23:00' },
+      laundry: { available: true, hours: '09:00 - 18:00', price: '₺50/çamaşır' },
+      parking: { available: true, type: 'Valet', price: '₺100/gün' },
+      wifi: { available: true, speed: '100 Mbps', coverage: 'Tüm otel' }
+    },
+    dining: {
+      breakfast: { hours: '07:00 - 11:00', type: 'Açık Büfe' },
+      restaurants: [
+        { name: 'Akdeniz Restoran', type: 'A la carte', hours: '12:00 - 23:00' },
+        { name: 'Pool Bar', type: 'Snack', hours: '10:00 - 18:00' }
+      ],
+      specialDiets: ['Vejetaryen', 'Vegan', 'Glutensiz']
+    },
+    spa: {
+      services: [
+        { name: 'Masaj', duration: '60 dk', price: '₺500' },
+        { name: 'Hamam', duration: '45 dk', price: '₺300' }
+      ],
+      hours: '09:00 - 21:00',
+      facilities: ['Sauna', 'Buhar Odası', 'Jakuzi']
+    },
+    meetings: {
+      rooms: [
+        { name: 'Toplantı Salonu A', capacity: 50, price: '₺1000/saat' },
+        { name: 'Toplantı Salonu B', capacity: 100, price: '₺2000/saat' }
+      ],
+      equipment: ['Projeksiyon', 'WiFi', 'Flipchart'],
+      catering: true
+    },
+    children: {
+      club: { available: true, hours: '10:00 - 18:00', age: '4-12' },
+      activities: ['Oyun Odası', 'Havuz', 'Animasyon'],
+      babysitting: { available: true, price: '₺100/saat' },
+      menu: true
+    },
+    specialRequests: {
+      accessibility: true,
+      pets: { allowed: false },
+      smoking: { areas: ['Teras', 'Bar'] },
+      specialDiets: true
+    },
+    policies: {
+      cancellation: {
+        freeUntil: '48 saat öncesi',
+        lateFee: '1 gecelik ücret'
+      },
+      earlyCheckout: '₺500',
+      roomChange: 'Ücretsiz (müsaitlik durumuna göre)',
+      guarantee: 'Kredi kartı gereklidir'
+    },
+    reviews: {
+      total: 1245,
+      average: 4.8,
+      distribution: {
+        5: 65,
+        4: 25,
+        3: 7,
+        2: 2,
+        1: 1
+      },
+      recent: [
+        {
+          user: 'Ahmet Y.',
+          rating: 5,
+          date: '2024-03-15',
+          comment: 'Harika bir deneyimdi. Özellikle spa hizmetleri çok iyiydi.',
+          photos: ['url1', 'url2']
+        }
+      ]
+    },
+    packages: [
+      {
+        name: 'Erken Rezervasyon',
+        discount: 20,
+        conditions: '3 ay öncesi rezervasyon'
+      },
+      {
+        name: 'Balayı Paketi',
+        includes: ['Romantik akşam yemeği', 'Spa seansı', 'Oda süsleme'],
+        price: '₺3500'
+      }
+    ]
+  },
+  {
+    id: '2',
+    name: 'Grand Palace Hotel',
+    shortDescription: 'Boğaz manzaralı lüks otel',
+    location: 'İstanbul, Türkiye',
+    coordinates: { lat: 41.0082, lng: 28.9784 }, // İstanbul koordinatları
+    rating: 4.9,
+    reviewCount: 2156,
+    price: 3200,
+    oldPrice: 4000,
+    discount: 20,
+    image: 'https://images.unsplash.com/photo-1520250497591-112f8f6ca0b3',
+    features: ['Havuz', 'Spa', 'Restoran', 'Bar', 'Fitness'],
+    isBestSeller: true,
+    stars: 5,
+    images: [
+      'https://images.unsplash.com/photo-1520250497591-112f8f6ca0b3',
+      'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb',
+      'https://images.unsplash.com/photo-1571896349842-33c89424de2d',
+      'https://images.unsplash.com/photo-1582719508461-905c673771fd'
+    ],
+    description: `Grand Palace Hotel, İstanbul Boğazı'nın muhteşem manzarasına hakim, lüks ve konforu bir araya getiren 5 yıldızlı bir oteldir. Modern mimarisi ve geleneksel Türk misafirperverliğini harmanlayan otelimiz, şehrin merkezinde konumlanmıştır.
 
     Özellikler:
     • Boğaz manzaralı odalar
@@ -67,6 +215,51 @@ const dummyHotels = [
       concierge: true,
       laundry: true,
       businessCenter: true
+    }
+  },
+  {
+    id: '3',
+    name: 'Beach Resort',
+    shortDescription: 'Deniz kenarında aile oteli',
+    location: 'Bodrum, Türkiye',
+    coordinates: { lat: 37.0344, lng: 27.4305 }, // Bodrum koordinatları
+    rating: 4.6,
+    reviewCount: 987,
+    price: 1800,
+    oldPrice: 2000,
+    discount: 10,
+    image: 'https://images.unsplash.com/photo-1520250497591-112f8f6ca0b3',
+    features: ['Havuz', 'Restoran', 'Bar', 'Çocuk Kulübü'],
+    isBestSeller: true,
+    stars: 4,
+    images: [
+      'https://images.unsplash.com/photo-1520250497591-112f8f6ca0b3',
+      'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb',
+      'https://images.unsplash.com/photo-1571896349842-33c89424de2d',
+      'https://images.unsplash.com/photo-1582719508461-905c673771fd'
+    ],
+    description: `Beach Resort, Bodrum'un en gözde plajında, deniz kenarında konumlanmış, aileler için ideal bir 4 yıldızlı oteldir. Modern mimarisi ve sıcak atmosferiyle misafirlerine unutulmaz bir tatil deneyimi sunar.
+
+    Özellikler:
+    • Deniz manzaralı odalar
+    • 24 saat oda servisi
+    • Çocuk kulübü
+    • Açık ve kapalı yüzme havuzları
+    • Restoran ve bar
+    • Animasyon programı
+    • Fitness merkezi
+    • Ücretsiz Wi-Fi
+    • Otopark`,
+    amenities: {
+      wifi: true,
+      pool: true,
+      restaurant: true,
+      gym: true,
+      parking: true,
+      roomService: true,
+      concierge: true,
+      laundry: true,
+      kidsClub: true
     }
   }
 ];
@@ -209,8 +402,165 @@ const getBedCount = (features: string[]): number => {
   return bedFeatures.length;
 };
 
-export default function HotelDetailPage({ params }: { params: { id: string } }) {
-  const hotel = dummyHotels.find(h => h.id === params.id);
+// Modal bileşeni için interface
+interface BookingModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  hotel: typeof dummyHotels[0];
+  formData: ReservationFormData;
+  setFormData: React.Dispatch<React.SetStateAction<ReservationFormData>>;
+  handleSubmit: (e: React.FormEvent) => void;
+  calculateTotalPrice: () => number;
+  selectedRoomType: RoomType | null;
+}
+
+// Modal bileşeni
+const BookingModal = ({ 
+  isOpen, 
+  onClose, 
+  hotel, 
+  formData, 
+  setFormData, 
+  handleSubmit,
+  calculateTotalPrice,
+  selectedRoomType
+}: BookingModalProps) => {
+  if (!isOpen) return null;
+
+  const price = selectedRoomType ? selectedRoomType.price : hotel.price;
+
+  return (
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/30 z-50 flex items-center justify-center">
+      <div className="bg-white rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto relative">
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
+        >
+          <XMarkIcon className="w-6 h-6" />
+        </button>
+        
+        <h2 className="text-xl font-bold text-gray-900 mb-6">Rezervasyon Yap</h2>
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Form içeriği */}
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Giriş Tarihi
+              </label>
+              <input
+                type="date"
+                value={formData.checkIn}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  setFormData(prev => ({
+                    ...prev,
+                    checkIn: newDate,
+                    checkOut: prev.checkOut && new Date(prev.checkOut) <= new Date(newDate) ? 
+                      new Date(new Date(newDate).getTime() + 86400000).toISOString().split('T')[0] : 
+                      prev.checkOut
+                  }));
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Çıkış Tarihi
+              </label>
+              <input
+                type="date"
+                value={formData.checkOut}
+                min={formData.checkIn ? new Date(new Date(formData.checkIn).getTime() + 86400000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, checkOut: e.target.value }));
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Misafir Sayısı
+              </label>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-500">Yetişkin</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={formData.adults}
+                    onChange={(e) => setFormData(prev => ({ ...prev, adults: parseInt(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500">Çocuk</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={formData.children}
+                    onChange={(e) => setFormData(prev => ({ ...prev, children: parseInt(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500">Bebek</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="2"
+                    value={formData.infants}
+                    onChange={(e) => setFormData(prev => ({ ...prev, infants: parseInt(e.target.value) }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Fiyat Özeti */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-gray-600">Gecelik</span>
+              <span className="text-lg font-semibold text-gray-900">₺{price}</span>
+            </div>
+            {formData.checkIn && formData.checkOut && (
+              <div className="flex justify-between items-center text-sm text-gray-600">
+                <span>Toplam Gece</span>
+                <span>{Math.ceil((new Date(formData.checkOut).getTime() - new Date(formData.checkIn).getTime()) / (1000 * 60 * 60 * 24))} gece</span>
+              </div>
+            )}
+            <div className="border-t border-gray-200 mt-2 pt-2">
+              <div className="flex justify-between items-center">
+                <span className="text-base font-medium text-gray-900">Toplam</span>
+                <span className="text-xl font-bold text-blue-600">₺{calculateTotalPrice()}</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          >
+            Rezervasyon Yap
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Ana bileşen içinde
+export default function HotelDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = React.use(params);
+  const hotel = dummyHotels.find(h => h.id === resolvedParams.id);
   const [showReservationModal, setShowReservationModal] = useState(false);
   const [reservationSuccess, setReservationSuccess] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -352,6 +702,13 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const mapContainerStyle = {
+    width: '100%',
+    height: '400px'
+  };
+
+  const center = hotel?.coordinates || { lat: 41.0082, lng: 28.9784 };
+
   if (!hotel) {
   return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -364,6 +721,22 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
         </div>
     );
   }
+
+  // Sabit buton
+  const FloatingBookButton = () => {
+    const price = selectedRoomType ? selectedRoomType.price : hotel.price;
+    
+    return (
+      <button
+        onClick={() => setShowReservationModal(true)}
+        className="fixed bottom-6 left-6 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg hover:bg-blue-700 transition-colors z-40 flex items-center gap-2"
+      >
+        <span className="font-semibold">₺{price}</span>
+        <span className="text-sm">/ gece</span>
+        <span className="bg-white/20 px-3 py-1 rounded-full text-sm">Rezervasyon Yap</span>
+      </button>
+    );
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -388,73 +761,450 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
               </div>
               
       {/* Otel Başlık */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex flex-col md:flex-row justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row justify-between gap-6">
           <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">{hotel.name}</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-3">{hotel.name}</h1>
             <div className="flex items-center gap-2 text-gray-600">
               <MapPinIcon className="w-5 h-5" />
-              <span>{hotel.location}</span>
+              <span className="text-base">{hotel.location}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
                 <div className="flex items-center">
                   {[...Array(hotel.stars)].map((_, i) => (
-                <SolidStarIcon key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+                <SolidStarIcon key={i} className="w-6 h-6 text-yellow-400 fill-current" />
                   ))}
                 </div>
-            <span className="text-sm text-gray-600">({hotel.reviewCount} değerlendirme)</span>
+            <span className="text-base text-gray-600">({hotel.reviewCount} değerlendirme)</span>
                     </div>
                   </div>
               </div>
 
       {/* Otel Görselleri */}
-      <div className="max-w-7xl mx-auto px-4 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="relative h-[400px] rounded-xl overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div 
+            className="relative h-[450px] rounded-xl overflow-hidden cursor-pointer group"
+            onClick={() => {
+              setSelectedRoomImages(hotel.images);
+              setCurrentImageIndex(0);
+              setSelectedRoomType(null);
+              setShowImagePopup(true);
+            }}
+          >
             <Image
               src={hotel.images[0]}
               alt={hotel.name}
               fill
-              className="object-cover"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
-            </div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             {hotel.images.slice(1).map((image, index) => (
-              <div key={index} className="relative h-[190px] rounded-xl overflow-hidden">
-                      <Image
-                        src={image}
+              <div 
+                key={index} 
+                className="relative h-[215px] rounded-xl overflow-hidden cursor-pointer group"
+                onClick={() => {
+                  setSelectedRoomImages(hotel.images);
+                  setCurrentImageIndex(index + 1);
+                  setSelectedRoomType(null);
+                  setShowImagePopup(true);
+                }}
+              >
+                <Image
+                  src={image}
                   alt={`${hotel.name} - Görsel ${index + 2}`}
-                        fill
-                  className="object-cover"
-                      />
-                    </div>
-                  ))}
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Otel Detayları */}
-      <div className="max-w-7xl mx-auto px-4 mb-8">
+      <div className="max-w-7xl mx-auto px-4 mb-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Sol Taraf - Detaylar */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Otel Hakkında</h2>
-              <p className="text-sm sm:text-base text-gray-600 whitespace-pre-line">{hotel.description}</p>
+          <div className="lg:col-span-2 space-y-8">
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Otel Hakkında</h2>
+              <p className="text-base sm:text-lg text-gray-600 leading-relaxed whitespace-pre-line">{hotel.description}</p>
               </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Özellikler</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Özellikler</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                 {Object.entries(hotel.amenities).map(([key, value]) => (
                   value && (
-                    <div key={key} className="flex items-center gap-2 text-sm text-gray-600">
-                      <SparklesIcon className="w-5 h-5 text-blue-500" />
+                    <div key={key} className="flex items-center gap-3 text-base text-gray-600">
+                      <SparklesIcon className="w-6 h-6 text-blue-500" />
                       <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
                   </div>
                   )
                 ))}
+              </div>
+                      </div>
+
+            {/* Yakın Yerler ve Ulaşım */}
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Yakın Yerler ve Ulaşım</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-700">Havaalanı</h3>
+                  <p className="text-base text-gray-600">
+                    {hotel?.nearbyPlaces?.airport?.name} - {hotel?.nearbyPlaces?.airport?.distance} ({hotel?.nearbyPlaces?.airport?.time})
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-700">Şehir Merkezi</h3>
+                  <p className="text-base text-gray-600">
+                    {hotel?.nearbyPlaces?.cityCenter?.name} - {hotel?.nearbyPlaces?.cityCenter?.distance} ({hotel?.nearbyPlaces?.cityCenter?.time})
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-4">Yakındaki Turistik Yerler</h3>
+                  <div className="space-y-3">
+                    {hotel?.nearbyPlaces?.attractions?.map((attraction, index) => (
+                      <p key={index} className="text-base text-gray-600">
+                        {attraction.name} - {attraction.distance} ({attraction.time})
+                      </p>
+                    ))}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-4">Ulaşım Seçenekleri</h3>
+                  <div className="flex gap-6">
+                    {hotel?.nearbyPlaces?.transport?.shuttle && (
+                      <span className="text-base text-gray-600">Servis</span>
+                    )}
+                    {hotel?.nearbyPlaces?.transport?.taxi && (
+                      <span className="text-base text-gray-600">Taksi</span>
+                    )}
+                    {hotel?.nearbyPlaces?.transport?.bus && (
+                      <span className="text-base text-gray-600">Otobüs</span>
+                    )}
+                    {hotel?.nearbyPlaces?.transport?.metro && (
+                      <span className="text-base text-gray-600">Metro</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Otel Hizmetleri */}
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Otel Hizmetleri</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-700">Resepsiyon</h3>
+                  <p className="text-base text-gray-600">{hotel?.services?.reception?.hours}</p>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-700">Oda Servisi</h3>
+                  <p className="text-base text-gray-600">{hotel?.services?.roomService?.hours}</p>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-700">Çamaşırhane</h3>
+                  <p className="text-base text-gray-600">{hotel?.services?.laundry?.hours} - {hotel?.services?.laundry?.price}</p>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-700">Otopark</h3>
+                  <p className="text-base text-gray-600">{hotel?.services?.parking?.type} - {hotel?.services?.parking?.price}</p>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="text-lg font-semibold text-gray-700">Wi-Fi</h3>
+                  <p className="text-base text-gray-600">{hotel?.services?.wifi?.speed} - {hotel?.services?.wifi?.coverage}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Restoran ve Bar */}
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Restoran ve Bar</h2>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700">Kahvaltı</h3>
+                  <p className="text-base text-gray-600">{hotel?.dining?.breakfast?.hours} - {hotel?.dining?.breakfast?.type}</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-4">Restoranlar</h3>
+                  <div className="space-y-4">
+                    {hotel?.dining?.restaurants?.map((restaurant, index) => (
+                      <div key={index} className="text-base text-gray-600">
+                        <p className="font-semibold">{restaurant.name}</p>
+                        <p>{restaurant.type} - {restaurant.hours}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700">Özel Diyet Seçenekleri</h3>
+                  <div className="flex gap-3 mt-2">
+                    {hotel?.dining?.specialDiets?.map((diet, index) => (
+                      <span key={index} className="text-base text-gray-600">{diet}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Spa ve Wellness */}
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Spa ve Wellness</h2>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-4">Hizmetler</h3>
+                  <div className="space-y-4">
+                    {hotel?.spa?.services?.map((service, index) => (
+                      <div key={index} className="text-base text-gray-600">
+                        <p className="font-semibold">{service.name}</p>
+                        <p>{service.duration} - {service.price}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700">Çalışma Saatleri</h3>
+                  <p className="text-base text-gray-600">{hotel?.spa?.hours}</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700">Tesisler</h3>
+                  <div className="flex gap-3 mt-2">
+                    {hotel?.spa?.facilities?.map((facility, index) => (
+                      <span key={index} className="text-base text-gray-600">{facility}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Toplantı ve Etkinlik Alanları */}
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Toplantı ve Etkinlik Alanları</h2>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-4">Salonlar</h3>
+                  <div className="space-y-4">
+                    {hotel?.meetings?.rooms?.map((room, index) => (
+                      <div key={index} className="text-base text-gray-600">
+                        <p className="font-semibold">{room.name}</p>
+                        <p>Kapasite: {room.capacity} kişi - {room.price}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700">Teknik Ekipman</h3>
+                  <div className="flex gap-3 mt-2">
+                    {hotel?.meetings?.equipment?.map((item, index) => (
+                      <span key={index} className="text-sm text-gray-600">{item}</span>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-700">Catering</h3>
+                  <p className="text-sm text-gray-600">{hotel?.meetings?.catering ? 'Mevcut' : 'Mevcut Değil'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Çocuk Hizmetleri */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Çocuk Hizmetleri</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h3 className="font-medium text-gray-700">Çocuk Kulübü</h3>
+                  <p className="text-sm text-gray-600">
+                    {hotel?.children?.club?.hours} ({hotel?.children?.club?.age} yaş)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-medium text-gray-700">Bebek Bakıcılığı</h3>
+                  <p className="text-sm text-gray-600">{hotel?.children?.babysitting?.price}</p>
+                </div>
+                <div className="col-span-2">
+                  <h3 className="font-medium text-gray-700 mb-2">Aktiviteler</h3>
+                  <div className="flex gap-2">
+                    {hotel?.children?.activities?.map((activity, index) => (
+                      <span key={index} className="text-sm text-gray-600">{activity}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="col-span-2">
+                  <h3 className="font-medium text-gray-700">Çocuk Menüsü</h3>
+                  <p className="text-sm text-gray-600">{hotel?.children?.menu ? 'Mevcut' : 'Mevcut Değil'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Özel İstekler */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Özel İstekler</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h3 className="font-medium text-gray-700">Engelli Erişimi</h3>
+                  <p className="text-sm text-gray-600">{hotel?.specialRequests?.accessibility ? 'Mevcut' : 'Mevcut Değil'}</p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-medium text-gray-700">Evcil Hayvan</h3>
+                  <p className="text-sm text-gray-600">{hotel?.specialRequests?.pets?.allowed ? 'İzin Veriliyor' : 'İzin Verilmiyor'}</p>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-medium text-gray-700">Sigara İçme Alanları</h3>
+                  <div className="flex gap-2">
+                    {hotel?.specialRequests?.smoking?.areas?.map((area, index) => (
+                      <span key={index} className="text-sm text-gray-600">{area}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-medium text-gray-700">Özel Diyetler</h3>
+                  <p className="text-sm text-gray-600">{hotel?.specialRequests?.specialDiets ? 'Mevcut' : 'Mevcut Değil'}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* İptal ve Değişiklik Politikaları */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">İptal ve Değişiklik Politikaları</h2>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-medium text-gray-700">İptal Politikası</h3>
+                  <p className="text-sm text-gray-600">
+                    Ücretsiz iptal: {hotel?.policies?.cancellation?.freeUntil}<br />
+                    Geç iptal ücreti: {hotel?.policies?.cancellation?.lateFee}
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-700">Erken Çıkış Ücreti</h3>
+                  <p className="text-sm text-gray-600">{hotel?.policies?.earlyCheckout}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-700">Oda Değişikliği</h3>
+                  <p className="text-sm text-gray-600">{hotel?.policies?.roomChange}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-gray-700">Rezervasyon Garantisi</h3>
+                  <p className="text-sm text-gray-600">{hotel?.policies?.guarantee}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Müşteri Yorumları */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Müşteri Yorumları</h2>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="text-center">
+                    <p className="text-4xl font-bold text-blue-600">{hotel?.reviews?.average}</p>
+                    <p className="text-sm text-gray-600">{hotel?.reviews?.total} yorum</p>
+                  </div>
+                  <div className="flex-1">
+                    {Object.entries(hotel?.reviews?.distribution || {}).map(([rating, percentage]) => (
+                      <div key={rating} className="flex items-center gap-2 mb-1">
+                        <span className="text-sm text-gray-600">{rating} yıldız</span>
+                        <div className="flex-1 h-2 bg-gray-200 rounded-full">
+                          <div 
+                            className="h-full bg-blue-600 rounded-full" 
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-sm text-gray-600">{percentage}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  {hotel?.reviews?.recent?.map((review, index) => (
+                    <div key={index} className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-medium text-gray-900">{review.user}</p>
+                          <p className="text-sm text-gray-600">{review.date}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <SolidStarIcon className="w-5 h-5 text-yellow-400" />
+                          <span className="text-gray-900">{review.rating}</span>
+                        </div>
+                      </div>
+                      <p className="text-gray-600">{review.comment}</p>
+                      {review.photos && review.photos.length > 0 && (
+                        <div className="flex gap-2 mt-2">
+                          {review.photos.map((photo, photoIndex) => {
+                            try {
+                              new URL(photo);
+                              return (
+                                <Image
+                                  key={photoIndex}
+                                  src={photo}
+                                  alt="Yorum fotoğrafı"
+                                  width={100}
+                                  height={100}
+                                  className="rounded-lg"
+                                />
+                              );
+                            } catch (e) {
+                              return null;
+                            }
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Özel Teklifler ve Paketler */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Özel Teklifler ve Paketler</h2>
+              <div className="space-y-4">
+                {hotel?.packages?.map((pkg, index) => (
+                  <div key={index} className="border rounded-lg p-4">
+                    <h3 className="font-medium text-gray-900 mb-2">{pkg.name}</h3>
+                    {pkg.discount && (
+                      <p className="text-sm text-gray-600">%{pkg.discount} indirim - {pkg.conditions}</p>
+                    )}
+                    {pkg.includes && (
+                      <div className="mt-2">
+                        <p className="text-sm font-medium text-gray-700">Dahil Olanlar:</p>
+                        <ul className="list-disc list-inside text-sm text-gray-600">
+                          {pkg.includes.map((item, itemIndex) => (
+                            <li key={itemIndex}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {pkg.price && (
+                      <p className="mt-2 text-sm font-medium text-gray-900">{pkg.price}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Harita */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-6">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Konum</h2>
+              <div className="relative h-[400px] rounded-lg overflow-hidden">
+                <LoadScript googleMapsApiKey="YOUR_GOOGLE_MAPS_API_KEY">
+                  <GoogleMap
+                    mapContainerStyle={mapContainerStyle}
+                    center={center}
+                    zoom={15}
+                  >
+                    <Marker position={center} />
+                  </GoogleMap>
+                </LoadScript>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
+                <MapPinIcon className="w-5 h-5" />
+                <span>{hotel?.location}</span>
               </div>
                       </div>
 
@@ -497,43 +1247,45 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
                     <div className="grid grid-cols-12 gap-6">
                       {/* Oda Görseli */}
                       <div className="col-span-4">
-                        <div className="grid grid-cols-1 gap-3">
-                          <div className="relative aspect-[4/3] h-48 rounded-lg overflow-hidden shadow-sm">
+                        <div className="grid grid-cols-1 gap-4">
+                          <div 
+                            className="relative aspect-[4/3] rounded-xl overflow-hidden group cursor-pointer"
+                            onClick={() => {
+                              setSelectedRoomImages(room.images);
+                              setCurrentImageIndex(0);
+                              setSelectedRoomType(room);
+                              setShowImagePopup(true);
+                            }}
+                          >
                             <Image
                               src={room.images[0]}
-                              alt={`${room.name} - Ana Görsel - ${room.description}`}
+                              alt={`${room.name} - Ana Görsel`}
                               fill
-                              className="object-cover hover:scale-105 transition-transform duration-300"
+                              className="object-cover transition-transform duration-300 group-hover:scale-105"
                             />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                           </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="grid grid-cols-2 gap-4">
                             {room.images.slice(1).map((image, index) => (
-                              <div key={index} className="relative aspect-[4/3] h-24 rounded-lg overflow-hidden shadow-sm group">
+                              <div 
+                                key={index} 
+                                className="relative aspect-[4/3] rounded-xl overflow-hidden group cursor-pointer"
+                                onClick={() => {
+                                  setSelectedRoomImages(room.images);
+                                  setCurrentImageIndex(index + 1);
+                                  setSelectedRoomType(room);
+                                  setShowImagePopup(true);
+                                }}
+                              >
                                 <Image
                                   src={image}
                                   alt={`${room.name} - ${index === 0 ? 'Yatak Odası' : index === 1 ? 'Banyo' : index === 2 ? 'Oturma Alanı' : 'Balkon'} Görseli`}
                                   fill
-                                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                  className="object-cover transition-transform duration-300 group-hover:scale-105"
                                 />
-                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                               </div>
                             ))}
-                          </div>
-                          <div className="flex justify-end mt-2">
-                            <button 
-                              onClick={() => {
-                                setSelectedRoomImages(room.images);
-                                setCurrentImageIndex(0);
-                                setSelectedRoomType(room);
-                                setShowImagePopup(true);
-                              }}
-                              className="bg-white/90 text-gray-700 px-4 py-2 rounded-full text-sm hover:bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 flex items-center gap-2"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              Tüm fotoğraflar
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -965,7 +1717,7 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
                 
       {/* Rezervasyon Modal */}
       {showReservationModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6 relative">
             <button
               onClick={() => setShowReservationModal(false)}
@@ -1070,7 +1822,7 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
             <div className="relative aspect-[16/9]">
               <Image
                 src={selectedRoomImages[currentImageIndex]}
-                alt={`${selectedRoomType?.name} - ${currentImageIndex === 0 ? 'Ana Görsel' : currentImageIndex === 1 ? 'Yatak Odası' : currentImageIndex === 2 ? 'Banyo' : currentImageIndex === 3 ? 'Oturma Alanı' : 'Balkon'} Görseli`}
+                alt={selectedRoomType ? `${selectedRoomType.name} - Görsel ${currentImageIndex + 1}` : `${hotel.name} - Görsel ${currentImageIndex + 1}`}
                 fill
                 className="object-contain"
               />
@@ -1091,36 +1843,42 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
                   </button>
                 </>
               )}
-                  </div>
+            </div>
             
-            {/* Oda Bilgileri */}
+            {/* Otel veya Oda Bilgileri */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 text-white">
               <div className="max-w-2xl">
-                <h3 className="text-xl font-semibold mb-2">{selectedRoomType?.name}</h3>
-                <div className="flex flex-wrap items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1">
-                    <UserIcon className="w-4 h-4" />
-                    <span>{selectedRoomType?.capacity} Kişilik</span>
-                </div>
-                  <div className="flex items-center gap-1">
-                    <Square2StackIcon className="w-4 h-4" />
-                    <span>{selectedRoomType?.size}m²</span>
-              </div>
-                  <div className="flex items-center gap-1">
-                    <span className="font-semibold">₺{selectedRoomType?.price.toLocaleString('tr-TR')}</span>
-                    <span className="text-sm">/ gece</span>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <p className="text-sm text-gray-200">{selectedRoomType?.description}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedRoomType?.features.map((feature, index) => (
-                      <span key={index} className="text-xs bg-white/10 px-2 py-1 rounded-full">
-                        {feature}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                <h3 className="text-xl font-semibold">
+                  {selectedRoomType ? selectedRoomType.name : hotel.name}
+                </h3>
+                {selectedRoomType && (
+                  <>
+                    <div className="flex flex-wrap items-center gap-4 text-sm mt-2">
+                      <div className="flex items-center gap-1">
+                        <UserIcon className="w-4 h-4" />
+                        <span>{selectedRoomType.capacity} Kişilik</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Square2StackIcon className="w-4 h-4" />
+                        <span>{selectedRoomType.size}m²</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="font-semibold">₺{selectedRoomType.price.toLocaleString('tr-TR')}</span>
+                        <span className="text-sm">/ gece</span>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-200">{selectedRoomType.description}</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {selectedRoomType.features.map((feature, index) => (
+                          <span key={index} className="text-xs bg-white/10 px-2 py-1 rounded-full">
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             
@@ -1134,9 +1892,9 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
                   }`}
                 />
               ))}
-                  </div>
-                </div>
-              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Alt Bilgi */}
@@ -1180,6 +1938,21 @@ export default function HotelDetailPage({ params }: { params: { id: string } }) 
           </div>
         </div>
       </div>
+
+      {/* Floating Buton */}
+      <FloatingBookButton />
+
+      {/* Modal */}
+      <BookingModal
+        isOpen={showReservationModal}
+        onClose={() => setShowReservationModal(false)}
+        hotel={hotel}
+        formData={formData}
+        setFormData={setFormData}
+        handleSubmit={handleSubmit}
+        calculateTotalPrice={calculateTotalPrice}
+        selectedRoomType={selectedRoomType}
+      />
     </div>
   );
 }

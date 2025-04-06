@@ -9,12 +9,14 @@ import {
   CreditCardIcon
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import { prisma } from '@/lib/prisma';
 import HotelFilters from './components/HotelFilters';
 import HotelCard from './components/HotelCard';
 import SearchBar from './components/SearchBar';
+import Pagination from './components/Pagination';
+import HotelList from './components/HotelList';
+import FeaturedHotels from './components/FeaturedHotels';
 
 // Otel ve ilgili tipler için arayüzler
 interface Hotel {
@@ -227,7 +229,7 @@ const dummyHotels: Hotel[] = [
     discount: 19,
     image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2080&q=80',
     features: ['Ücretsiz Wi-Fi', 'Havuz', 'Spa', 'Deniz Manzaralı', 'Bar'],
-    isBestSeller: false,
+    isBestSeller: true,
     stars: 4,
     checkInDate: '2024-06-10',
     checkOutDate: '2024-06-15',
@@ -269,7 +271,7 @@ const dummyHotels: Hotel[] = [
     discount: 20,
     image: 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2089&q=80',
     features: ['Ücretsiz Wi-Fi', 'Havuz', 'Marina Manzaralı', 'Bar', 'Fitness Merkezi'],
-    isBestSeller: false,
+    isBestSeller: true,
     stars: 4,
     checkInDate: '2024-08-15',
     checkOutDate: '2024-08-20',
@@ -277,105 +279,113 @@ const dummyHotels: Hotel[] = [
     roomType: 'Executive Oda',
     breakfast: true,
     cancellationPolicy: 'Kısmi İade'
+  },
+  {
+    id: '6',
+    name: 'Marmaris Beach Resort',
+    description: 'Ege\'nin en güzel koylarında tatil',
+    location: 'Marmaris, Türkiye',
+    rating: 4.7,
+    reviewCount: 92,
+    price: 1900,
+    oldPrice: 2300,
+    discount: 17,
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+    features: ['Ücretsiz Wi-Fi', 'Havuz', 'Aquapark', 'Deniz Manzaralı', 'Her Şey Dahil'],
+    isBestSeller: true,
+    stars: 5,
+    checkInDate: '2024-09-01',
+    checkOutDate: '2024-09-07',
+    type: 'Tatil Köyü',
+    roomType: 'Aile Odası',
+    breakfast: true,
+    cancellationPolicy: 'Ücretsiz İptal'
+  },
+  {
+    id: '7',
+    name: 'Alanya Palace Hotel',
+    description: 'Akdeniz\'in incisi Alanya\'da lüks konaklama',
+    location: 'Alanya, Türkiye',
+    rating: 4.6,
+    reviewCount: 78,
+    price: 1600,
+    oldPrice: 2000,
+    discount: 20,
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+    features: ['Ücretsiz Wi-Fi', 'Havuz', 'Spa', 'Deniz Manzaralı', 'Her Şey Dahil'],
+    isBestSeller: true,
+    stars: 5,
+    checkInDate: '2024-10-01',
+    checkOutDate: '2024-10-07',
+    type: 'Lüks Otel',
+    roomType: 'Deluxe Oda',
+    breakfast: true,
+    cancellationPolicy: 'Ücretsiz İptal'
+  },
+  {
+    id: '8',
+    name: 'Fethiye Hills Hotel',
+    description: 'Ölüdeniz manzaralı butik otel',
+    location: 'Fethiye, Türkiye',
+    rating: 4.4,
+    reviewCount: 65,
+    price: 1400,
+    oldPrice: 1700,
+    discount: 18,
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+    features: ['Ücretsiz Wi-Fi', 'Havuz', 'Deniz Manzaralı', 'Bar'],
+    isBestSeller: false,
+    stars: 4,
+    checkInDate: '2024-11-01',
+    checkOutDate: '2024-11-05',
+    type: 'Butik Otel',
+    roomType: 'Standart Oda',
+    breakfast: true,
+    cancellationPolicy: 'Kısmi İade'
+  },
+  {
+    id: '9',
+    name: 'Kusadasi Sea View',
+    description: 'Ege\'nin mavisi Kuşadası\'nda konaklama',
+    location: 'Kuşadası, Türkiye',
+    rating: 4.3,
+    reviewCount: 58,
+    price: 1300,
+    oldPrice: 1600,
+    discount: 19,
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+    features: ['Ücretsiz Wi-Fi', 'Havuz', 'Deniz Manzaralı', 'Bar'],
+    isBestSeller: false,
+    stars: 4,
+    checkInDate: '2024-12-01',
+    checkOutDate: '2024-12-05',
+    type: 'Butik Otel',
+    roomType: 'Standart Oda',
+    breakfast: true,
+    cancellationPolicy: 'Kısmi İade'
+  },
+  {
+    id: '10',
+    name: 'Pamukkale Thermal',
+    description: 'Termal sularla şifa bulun',
+    location: 'Pamukkale, Türkiye',
+    rating: 4.5,
+    reviewCount: 72,
+    price: 1500,
+    oldPrice: 1800,
+    discount: 17,
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+    features: ['Ücretsiz Wi-Fi', 'Termal Havuz', 'Spa', 'Sağlık Merkezi'],
+    isBestSeller: false,
+    stars: 4,
+    checkInDate: '2025-01-01',
+    checkOutDate: '2025-01-05',
+    type: 'Termal Otel',
+    roomType: 'Standart Oda',
+    breakfast: true,
+    cancellationPolicy: 'Kısmi İade'
   }
 ];
-
-// Veritabanından otelleri getir
-async function getHotels(): Promise<Hotel[]> {
-  try {
-    const hotels = await prisma.hotel.findMany({
-      include: {
-        rooms: {
-          orderBy: {
-            price: 'asc'
-          },
-          take: 1
-        },
-        reviews: {
-          include: {
-            user: true
-          }
-        }
-      }
-    });
-
-    return hotels.map((hotel: any) => {
-      // Ortalama puanı hesapla
-      const avgRating = hotel.reviews.length 
-        ? hotel.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / hotel.reviews.length 
-        : 0;
-      
-      // Özellikleri parse et
-      let amenities: string[] = [];
-      try {
-        if (typeof hotel.amenities === 'string') {
-          const parsedAmenities = JSON.parse(hotel.amenities as string);
-          if (typeof parsedAmenities === 'object' && !Array.isArray(parsedAmenities)) {
-            amenities = Object.keys(parsedAmenities).filter(key => parsedAmenities[key]);
-          } else if (Array.isArray(parsedAmenities)) {
-            amenities = parsedAmenities;
-          }
-        } else if (typeof hotel.amenities === 'object') {
-          if (Array.isArray(hotel.amenities)) {
-            amenities = hotel.amenities as string[];
-          } else {
-            const amenitiesObj = hotel.amenities as Record<string, boolean>;
-            amenities = Object.keys(amenitiesObj).filter(key => amenitiesObj[key]);
-          }
-        }
-      } catch (error) {
-        console.error('Amenities parsing error:', error);
-      }
-
-      // Resimleri parse et
-      let images: string[] = [];
-      try {
-        if (typeof hotel.images === 'string') {
-          const parsedImages = JSON.parse(hotel.images as string);
-          if (Array.isArray(parsedImages)) {
-            images = parsedImages;
-          }
-        } else if (Array.isArray(hotel.images)) {
-          images = hotel.images as string[];
-        }
-      } catch (error) {
-        console.error('Images parsing error:', error);
-      }
-
-      // En düşük oda fiyatını al
-      const lowestPrice = hotel.rooms.length > 0 ? hotel.rooms[0].price : 0;
-      
-      // Rastgele indirim (gerçek uygulamada bu veritabanından gelir)
-      const discount = Math.floor(Math.random() * 30) + 5; // %5 ile %35 arası
-      const oldPrice = Math.round(lowestPrice * (1 + discount / 100));
-
-      return {
-        id: hotel.id,
-        name: hotel.name,
-        description: hotel.description || '',
-        location: `${hotel.city || ''}, ${hotel.country || ''}`,
-        rating: parseFloat(avgRating.toFixed(1)),
-        reviewCount: hotel.reviews.length,
-        price: lowestPrice,
-        oldPrice: oldPrice,
-        discount: discount,
-        image: images.length > 0 ? images[0] : 'https://images.unsplash.com/photo-1566073771259-6a8506099945',
-        features: amenities.slice(0, 5),
-        isBestSeller: hotel.reviews.length > 10,
-        stars: hotel.stars || 3,
-        checkInDate: '',
-        checkOutDate: '',
-        type: '',
-        roomType: '',
-        breakfast: false,
-        cancellationPolicy: ''
-      };
-    });
-  } catch (error) {
-    console.error('Error fetching hotels:', error);
-    return [];
-  }
-}
 
 export const metadata: Metadata = {
   title: 'Oteller | TourTech',
@@ -384,6 +394,8 @@ export const metadata: Metadata = {
 
 export default async function HotelsPage() {
   const hotels = dummyHotels;
+  const featuredHotels = hotels.filter(hotel => hotel.isBestSeller);
+  const allHotels = hotels.filter(hotel => !hotel.isBestSeller);
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -412,6 +424,11 @@ export default async function HotelsPage() {
         <div className="bg-white rounded-xl shadow-xl p-4 sm:p-6 border border-gray-100">
           <SearchBar cities={cities} />
         </div>
+      </div>
+
+      {/* Öne Çıkan Oteller */}
+      <div className="max-w-7xl mx-auto px-4 mb-12">
+        <FeaturedHotels hotels={featuredHotels} featureIcons={featureIcons} />
       </div>
 
       {/* Avantajlar */}
@@ -447,48 +464,12 @@ export default async function HotelsPage() {
         </div>
       </div>
 
-      {/* Popüler Destinasyonlar */}
+      {/* Tüm Oteller */}
       <div className="max-w-7xl mx-auto px-4 mb-12">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Popüler Destinasyonlar</h2>
-          <Link href="/hotel/destinations" className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1">
-            Tümünü Gör
-            <ArrowUpRightIcon className="w-4 h-4" />
-          </Link>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Tüm Oteller</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {popularDestinations.map((destination) => (
-            <Link href={`/hotel/destinations/${destination.name.toLowerCase()}`} key={destination.name} className="group relative h-64 rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-              <Image
-                src={destination.image}
-                alt={destination.name}
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-              <div className="absolute bottom-0 left-0 p-6">
-                <h3 className="text-lg sm:text-xl font-bold text-white mb-1">{destination.name}</h3>
-                <p className="text-sm text-white/90">{destination.hotels} otel</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Otel Listesi */}
-      <div className="max-w-7xl mx-auto px-4 mb-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Öne Çıkan Oteller</h2>
-          <Link href="/hotel/all" className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1">
-            Tümünü Gör
-            <ArrowUpRightIcon className="w-4 h-4" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {hotels.map((hotel) => (
-            <HotelCard key={hotel.id} hotel={hotel} featureIcons={featureIcons} />
-          ))}
-        </div>
+        <HotelList hotels={allHotels} featureIcons={featureIcons} />
       </div>
 
       {/* Alt Bilgi Banner */}
