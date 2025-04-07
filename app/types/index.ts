@@ -110,12 +110,21 @@ export interface Tour {
   startDate?: Date;
   endDate?: Date;
   maxParticipants?: number;
+  currentParticipants?: number;
+  departureCity?: string;
+  region?: string;
+  transportation?: string;
+  period?: string;
   destinations: string; // JSON formatında
   inclusions: string; // JSON formatında
   exclusions: string; // JSON formatında
   itinerary?: string; // JSON formatında
   images: string; // JSON formatında
+  features: string; // JSON formatında
+  rating?: number;
+  reviews?: number;
   featured: boolean;
+  isJointTour?: boolean;
   createdAt: Date;
   updatedAt: Date;
   tourOperatorId: string;
