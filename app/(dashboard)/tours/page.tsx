@@ -884,7 +884,7 @@ export default function ToursPage() {
         </div>
 
         {/* Popüler Destinasyonlar */}
-        <div className="mb-20 mt-16">
+        <div className="mb-20">
           <div className="flex justify-between items-center mb-8">
             <div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Popüler Destinasyonlar</h2>
@@ -901,15 +901,45 @@ export default function ToursPage() {
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
-              { name: "İstanbul", image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?q=80&w=800&auto=format&fit=crop", count: 42 },
-              { name: "Kapadokya", image: "https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=800&auto=format&fit=crop", count: 28 },
-              { name: "Antalya", image: "https://images.unsplash.com/photo-1591804374401-9f6a7d0e0b1a?q=80&w=800&auto=format&fit=crop", count: 36 },
-              { name: "Pamukkale", image: "https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=800&auto=format&fit=crop", count: 18 },
-              { name: "Efes", image: "https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=800&auto=format&fit=crop", count: 15 },
-              { name: "Karadeniz", image: "https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=800&auto=format&fit=crop", count: 24 }
+              { 
+                name: "İstanbul", 
+                slug: "istanbul",
+                image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?q=80&w=800&auto=format&fit=crop", 
+                count: 42 
+              },
+              { 
+                name: "Kapadokya", 
+                slug: "kapadokya",
+                image: "https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=800&auto=format&fit=crop", 
+                count: 28 
+              },
+              { 
+                name: "Antalya", 
+                slug: "antalya",
+                image: "https://images.unsplash.com/photo-1591804374401-9f6a7d0e0b1a?q=80&w=800&auto=format&fit=crop", 
+                count: 36 
+              },
+              { 
+                name: "Pamukkale", 
+                slug: "pamukkale",
+                image: "https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=800&auto=format&fit=crop", 
+                count: 18 
+              },
+              { 
+                name: "Efes", 
+                slug: "efes",
+                image: "https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=800&auto=format&fit=crop", 
+                count: 15 
+              },
+              { 
+                name: "Karadeniz", 
+                slug: "karadeniz",
+                image: "https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=800&auto=format&fit=crop", 
+                count: 24 
+              }
             ].map((destination, index) => (
               <Link 
-                href={`/destination/${destination.name.toLowerCase()}`}
+                href={`/destinations/${destination.slug}`}
                 key={index}
                 className="group relative rounded-xl overflow-hidden aspect-square shadow-sm hover:shadow-md transition-all duration-300"
               >
