@@ -1,68 +1,80 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
-
-interface LiveCampaign {
-  id: number;
-  title: string;
-  expiresIn: string; // "2 saat kaldı" gibi
-  imageUrl?: string;
-}
+import { ClockIcon, FireIcon, TagIcon, SparklesIcon } from "@heroicons/react/24/outline";
 
 export default function LiveCampaigns() {
-  const [liveCampaigns, setLiveCampaigns] = useState<LiveCampaign[]>([]);
-
-  // Örnek: statik veri veya bir API’den fetch
-  useEffect(() => {
-    const data: LiveCampaign[] = [
-      {
-        id: 101,
-        title: "Son 2 Saat! %40 İndirim",
-        expiresIn: "2 saat içinde bitiyor",
-        imageUrl: "https://via.placeholder.com/300x200?text=Live+1",
-      },
-      {
-        id: 102,
-        title: "Hafta Sonu Fırsatı",
-        expiresIn: "Bugün 23:59'da bitiyor",
-        imageUrl: "https://via.placeholder.com/300x200?text=Live+2",
-      },
-    ];
-    setLiveCampaigns(data);
-
-    // Eğer gerçek bir API çağrısı yapmak isterseniz:
-    // fetch("/api/live-campaigns")
-    //   .then((res) => res.json())
-    //   .then((json) => setLiveCampaigns(json));
-  }, []);
+  const [campaigns, setCampaigns] = useState([
+    {
+      id: 1,
+      title: "Son 2 Saat! %40 İndirim",
+      description: "Son 2 Saat! %40 İndirim",
+      timeLeft: "2 saat içinde bitiyor",
+      image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=2070&auto=format&fit=crop",
+      label: "Acil Fırsat",
+      discount: "%40",
+    },
+    {
+      id: 2,
+      title: "Hafta Sonu Fırsatı",
+      description: "Hafta Sonu Fırsatı",
+      timeLeft: "Bugün 23:59'da bitiyor",
+      image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2070&auto=format&fit=crop",
+      label: "Hafta Sonu",
+      discount: "%30",
+    },
+  ]);
 
   return (
-    <section className="bg-blue-50 rounded-xl p-6">
-      <h2 className="text-xl font-semibold mb-4">Anlık Kampanyalar</h2>
-      <div className="flex flex-col sm:flex-row gap-6">
-        {liveCampaigns.map((campaign) => (
+    <div className="space-y-8">
+
+
+      {/* Kampanya Kartları */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {campaigns.map((campaign) => (
           <div
             key={campaign.id}
-            className="bg-white rounded-lg shadow-md overflow-hidden w-full sm:w-1/2"
+            className="bg-white rounded-2xl shadow-md overflow-hidden group hover:shadow-xl transition-all duration-300"
           >
-            <div className="relative h-40">
+            <div className="relative h-48">
               <Image
-                src={
-                  campaign.imageUrl ??
-                  "https://via.placeholder.com/300x200?text=Live+Campaign"
-                }
+                src={campaign.image}
                 alt={campaign.title}
                 fill
-                className="object-cover"
+                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
+              <div className="absolute top-4 right-4 flex flex-col gap-2">
+                <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
+                  {campaign.label}
+                </span>
+                <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
+                  {campaign.discount} İndirim
+                </span>
+              </div>
             </div>
-            <div className="p-4">
-              <h3 className="text-md font-medium">{campaign.title}</h3>
-              <p className="text-sm text-red-500 mt-1">{campaign.expiresIn}</p>
+
+            <div className="p-6">
+              <div className="space-y-2 mb-4">
+                <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                  {campaign.title}
+                </h3>
+                <p className="text-gray-600">{campaign.description}</p>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center text-red-500">
+                  <ClockIcon className="w-5 h-5 mr-2" />
+                  <span className="font-medium">{campaign.timeLeft}</span>
+                </div>
+                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                  Detayları Gör
+                </button>
+              </div>
             </div>
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
