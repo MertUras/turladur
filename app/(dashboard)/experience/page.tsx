@@ -485,80 +485,61 @@ export default function ExperiencesPage() {
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {filteredExperiences.map((experience) => (
-                                    <Link
-                                        key={experience.id}
-                                        href={`/experience/${experience.id}`}
-                                    className="group flex flex-col h-full rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
-                                    >
-                                    <div className="relative h-[200px] w-full overflow-hidden">
-                                            <Image
-                                                src={experience.imageUrl}
-                                                alt={experience.title}
-                                                fill
-                                            className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                <div 
+                                    key={experience.id}
+                                    className="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 flex flex-col"
+                                >
+                                    <div className="relative h-64">
+                                        <Image
+                                            src={experience.imageUrl}
+                                            alt={experience.title}
+                                            fill
+                                            className="object-cover"
                                         />
-                                        {/* Kategori etiketi */}
-                                        {experience.category && (
-                                            <div className="absolute top-4 left-4">
-                                                <span className="inline-flex items-center rounded-full bg-black/60 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-white capitalize">
-                                                    {experience.category}
-                                                </span>
+                                        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                                            <div className="flex items-center gap-1.5">
+                                                <Users className="w-4 h-4 text-blue-600" />
+                                                <span className="text-sm font-medium text-gray-800">%{experience.popularityRate} gezginin planında</span>
                                             </div>
-                                        )}
-                                            {experience.featured && (
-                                                <div className="absolute top-4 right-4">
-                                                    <span className="inline-flex items-center rounded-full bg-white/80 backdrop-blur-sm px-2.5 py-0.5 text-xs font-medium text-gray-700">
-                                                        %{experience.popularityRate} Gezginin Rotasında
-                                                    </span>
-                                                </div>
-                                            )}
-                                        {/* Fiyat etiketi */}
-                                        <div className="absolute bottom-4 right-4">
-                                            <span className="inline-flex items-center rounded-full bg-blue-500 px-3 py-1 text-sm font-medium text-white">
-                                                {experience.price} ₺
-                                            </span>
+                                        </div>
+                                        <div className="absolute top-4 left-4 bg-blue-600 px-3 py-1 rounded-full">
+                                            <span className="text-sm font-medium text-white">{experience.category || 'Tur'}</span>
                                         </div>
                                     </div>
-                                    <div className="p-4 flex flex-col flex-grow">
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-500 transition-colors">
-                                                {experience.title}
-                                            </h3>
-                                        <p className="text-sm text-gray-600 mb-3 flex-grow line-clamp-2">
-                                                {experience.description}
-                                            </p>
-                                        <div className="mt-auto space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center space-x-1 text-blue-500">
-                                                    <Star className="h-4 w-4 fill-current" />
-                                                    <span className="font-medium">{experience.rating}</span>
-                                                    <span className="text-gray-500 text-xs">({experience.reviewCount} değerlendirme)</span>
+                                    <div className="p-6 flex flex-col flex-grow">
+                                        <div className="flex-grow">
+                                            <h3 className="text-xl font-bold text-gray-900 mb-2">{experience.title}</h3>
+                                            <p className="text-gray-600 mb-4 line-clamp-2">{experience.description}</p>
+                                            <div className="flex flex-wrap gap-4 mb-4">
+                                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                    <Clock className="w-4 h-4" />
+                                                    <span>{experience.duration}</span>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center justify-between text-sm text-gray-500">
-                                                    <div className="flex items-center">
-                                                    <MapPin className="h-4 w-4 mr-1 text-gray-400" />
-                                                        <span>{experience.location}</span>
-                                                    </div>
-                                                    <div className="flex items-center">
-                                                    <Clock className="h-4 w-4 mr-1 text-gray-400" />
-                                                        <span>{experience.duration}</span>
+                                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                    <Users className="w-4 h-4" />
+                                                    <span>{experience.durationHours} Saat</span>
                                                 </div>
-                                            </div>
-                                            <div className="pt-3 border-t border-gray-100">
-                                                <div className="group-hover:text-blue-500 text-sm font-medium text-gray-600 flex items-center justify-between transition-colors">
-                                                    <span>Detayları Görüntüle</span>
-                                                    <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                    </svg>
-                                                </div>
+                                                <div className="flex items-center gap-2 text-sm text-gray-500">
+                                                    <MapPin className="w-4 h-4" />
+                                                    <span>{experience.location}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                    </Link>
-                                ))}
-                            </div>
+                                        <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
+                                            <span className="text-xl font-bold text-blue-600">₺{experience.price}</span>
+                                            <Link
+                                                href={`/experience/${experience.id}`}
+                                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                                            >
+                                                Rezervasyon
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     )}
 
                     {/* Popular Categories Section */}
