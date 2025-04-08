@@ -21,6 +21,7 @@ interface Experience {
     price?: number;
     category?: string;
     durationHours?: number;
+    experienceType?: string;
 }
 
 export default function ExperiencesPage() {
@@ -36,15 +37,28 @@ export default function ExperiencesPage() {
     const [maxDuration, setMaxDuration] = useState<number>(12);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const filterMenuRef = useRef<HTMLDivElement>(null);
+    const [selectedExperienceType, setSelectedExperienceType] = useState<string | null>(null);
 
     // Kategoriler
     const categories = [
-        { id: "all", name: "Tümü" },
-        { id: "nature", name: "Doğa" },
-        { id: "history", name: "Tarihi" },
-        { id: "beach", name: "Deniz" },
-        { id: "city", name: "Şehir" },
-        { id: "adventure", name: "Macera" }
+        { id: "tumu", name: "Tümü" },
+        { id: "doga", name: "Doğa" },
+        { id: "tarihi", name: "Tarihi" },
+        { id: "deniz", name: "Deniz" },
+        { id: "sehir", name: "Şehir" },
+        { id: "macera", name: "Macera" }
+    ];
+
+    // Deneyim Türleri
+    const experienceTypes = [
+        { id: "havacilik", name: "Havacılık" },
+        { id: "su-sporlari", name: "Su Sporları" },
+        { id: "doga-yuruyusu", name: "Doğa Yürüyüşü" },
+        { id: "su-alti", name: "Su Altı" },
+        { id: "kis-sporlari", name: "Kış Sporları" },
+        { id: "kultur", name: "Kültür" },
+        { id: "gastronomi", name: "Gastronomi" },
+        { id: "ekstrem", name: "Ekstrem" }
     ];
 
     // Fetch experiences from API or use demo data
@@ -68,7 +82,7 @@ export default function ExperiencesPage() {
                         reviewCount: 423,
                         popularityRate: 90,
                         price: 2500,
-                        category: "adventure"
+                        category: "macera"
                     },
                     {
                         id: 2,
@@ -84,7 +98,7 @@ export default function ExperiencesPage() {
                         reviewCount: 182,
                         popularityRate: 85,
                         price: 1200,
-                        category: "nature"
+                        category: "doga"
                     },
                     {
                         id: 3,
@@ -100,7 +114,7 @@ export default function ExperiencesPage() {
                         reviewCount: 128,
                         popularityRate: 95,
                         price: 800,
-                        category: "history"
+                        category: "tarihi"
                     },
                     {
                         id: 4,
@@ -116,7 +130,7 @@ export default function ExperiencesPage() {
                         reviewCount: 352,
                         popularityRate: 88,
                         price: 1500,
-                        category: "city"
+                        category: "sehir"
                     },
                     {
                         id: 5,
@@ -132,7 +146,7 @@ export default function ExperiencesPage() {
                         reviewCount: 276,
                         popularityRate: 82,
                         price: 950,
-                        category: "beach"
+                        category: "deniz"
                     },
                     {
                         id: 6,
@@ -148,7 +162,7 @@ export default function ExperiencesPage() {
                         reviewCount: 198,
                         popularityRate: 75,
                         price: 600,
-                        category: "history"
+                        category: "tarihi"
                     }
                 ];
                 
@@ -171,17 +185,19 @@ export default function ExperiencesPage() {
                               experience.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
                               experience.description.toLowerCase().includes(searchTerm.toLowerCase());
             
-            const matchesCategory = !selectedCategory || selectedCategory === "all" || experience.category === selectedCategory;
+            const matchesCategory = !selectedCategory || selectedCategory === "tumu" || experience.category === selectedCategory;
+            
+            const matchesExperienceType = !selectedExperienceType || experience.experienceType === selectedExperienceType;
             
             const matchesPrice = (!experience.price || (experience.price >= minPrice && experience.price <= maxPrice));
             
             const matchesDuration = (!experience.durationHours || experience.durationHours <= maxDuration);
             
-            return matchesSearch && matchesCategory && matchesPrice && matchesDuration;
+            return matchesSearch && matchesCategory && matchesExperienceType && matchesPrice && matchesDuration;
         });
         
         setFilteredExperiences(filtered);
-    }, [searchTerm, selectedCategory, experiences, minPrice, maxPrice, maxDuration]);
+    }, [searchTerm, selectedCategory, selectedExperienceType, experiences, minPrice, maxPrice, maxDuration]);
 
     // Filtre dışına tıklama kontrolü
     useEffect(() => {
@@ -215,9 +231,24 @@ export default function ExperiencesPage() {
     const resetFilters = () => {
         setSearchTerm("");
         setSelectedCategory(null);
+        setSelectedExperienceType(null);
         setMinPrice(0);
         setMaxPrice(5000);
         setMaxDuration(12);
+    };
+
+    const handleReservation = (category: string) => {
+        const categoryToExperienceType: { [key: string]: string } = {
+            'macera': 'ekstrem',
+            'tarihi': 'kultur',
+            'deniz': 'su-sporlari',
+            'doga': 'doga-yuruyusu',
+            'sehir': 'kultur',
+            'tumu': 'tumu'
+        };
+
+        const experienceType = categoryToExperienceType[category] || category;
+        router.push(`/tours?experienceType=${experienceType}`);
     };
 
     return (
@@ -302,15 +333,39 @@ export default function ExperiencesPage() {
                                                             key={category.id}
                                                             onClick={(e: React.MouseEvent) => {
                                                                 e.preventDefault();
-                                                                setSelectedCategory(category.id === "all" ? null : category.id);
+                                                                setSelectedCategory(category.id === "tumu" ? null : category.id);
                                                             }}
                                                             className={`px-4 py-2 rounded-full text-sm font-medium ${
-                                                                (category.id === "all" && !selectedCategory) || selectedCategory === category.id
+                                                                (category.id === "tumu" && !selectedCategory) || selectedCategory === category.id
                                                                     ? "bg-blue-500 text-white shadow-md hover:bg-blue-600"
                                                                     : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                                                             } transition-colors`}
                                                         >
                                                             {category.name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Deneyim Türü
+                                                </label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {experienceTypes.map(type => (
+                                                        <button
+                                                            key={type.id}
+                                                            onClick={(e: React.MouseEvent) => {
+                                                                e.preventDefault();
+                                                                setSelectedExperienceType(selectedExperienceType === type.id ? null : type.id);
+                                                            }}
+                                                            className={`px-4 py-2 rounded-full text-sm font-medium ${
+                                                                selectedExperienceType === type.id
+                                                                    ? "bg-blue-500 text-white shadow-md hover:bg-blue-600"
+                                                                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                                            } transition-colors`}
+                                                        >
+                                                            {type.name}
                                                         </button>
                                                     ))}
                                                 </div>
@@ -428,10 +483,10 @@ export default function ExperiencesPage() {
                                     key={category.id}
                                     onClick={(e: React.MouseEvent) => {
                                         e.preventDefault();
-                                        setSelectedCategory(category.id === "all" ? null : category.id);
+                                        setSelectedCategory(category.id === "tumu" ? null : category.id);
                                     }}
                                     className={`flex-none px-4 py-2 rounded-full text-sm font-medium ${
-                                        (category.id === "all" && !selectedCategory) || selectedCategory === category.id
+                                        (category.id === "tumu" && !selectedCategory) || selectedCategory === category.id
                                             ? "bg-blue-500 text-white shadow-md hover:bg-blue-600"
                                             : "bg-gray-100 text-gray-800 hover:bg-gray-200"
                                     } transition-colors`}
@@ -529,12 +584,12 @@ export default function ExperiencesPage() {
                                         </div>
                                         <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
                                             <span className="text-xl font-bold text-blue-600">₺{experience.price}</span>
-                                            <Link
-                                                href={`/experience/${experience.id}`}
+                                            <button
+                                                onClick={() => handleReservation(experience.category || 'tumu')}
                                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
                                             >
                                                 Rezervasyon
-                                            </Link>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -554,25 +609,25 @@ export default function ExperiencesPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {[
                                 { 
-                                    id: "nature", 
+                                    id: "doga", 
                                     name: "Doğa Turları", 
                                     image: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070&auto=format&fit=crop",
                                     count: 24
                                 },
                                 { 
-                                    id: "adventure", 
+                                    id: "macera", 
                                     name: "Macera Turları", 
                                     image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=2070&auto=format&fit=crop",
                                     count: 18
                                 },
                                 { 
-                                    id: "culture", 
+                                    id: "kultur", 
                                     name: "Kültür Turları", 
                                     image: "https://images.unsplash.com/photo-1639580636443-7e739c13bbde?q=80&w=2070&auto=format&fit=crop",
                                     count: 32
                                 },
                                 { 
-                                    id: "food", 
+                                    id: "gastronomi", 
                                     name: "Gastronomi Turları", 
                                     image: "https://images.unsplash.com/photo-1561758033-7e924f619b47?q=80&w=2070&auto=format&fit=crop",
                                     count: 12

@@ -31,7 +31,7 @@ const adventureActivities = [
     location: 'Kapadokya',
     planRate: '96',
     price: '4.500',
-    category: 'Hava'
+    category: 'Havacılık'
   },
   {
     title: 'Fethiye Yamaç Paraşütü',
@@ -42,7 +42,7 @@ const adventureActivities = [
     location: 'Fethiye',
     planRate: '94',
     price: '3.200',
-    category: 'Ekstrem'
+    category: 'Macera'
   },
   {
     title: 'Köprülü Kanyon Rafting',
@@ -53,7 +53,7 @@ const adventureActivities = [
     location: 'Antalya',
     planRate: '92',
     price: '1.200',
-    category: 'Su'
+    category: 'Su Sporları'
   },
   {
     title: 'Likya Yolu Trekking',
@@ -64,7 +64,7 @@ const adventureActivities = [
     location: 'Fethiye-Antalya',
     planRate: '89',
     price: '800',
-    category: 'Trekking'
+    category: 'Doğa Yürüyüşü'
   },
   {
     title: 'Kaş Dalış Deneyimi',
@@ -75,7 +75,7 @@ const adventureActivities = [
     location: 'Kaş',
     planRate: '91',
     price: '1.800',
-    category: 'Dalış'
+    category: 'Su Altı'
   },
   {
     title: 'Erciyes Kayak Turu',
@@ -86,7 +86,7 @@ const adventureActivities = [
     location: 'Kayseri',
     planRate: '93',
     price: '2.200',
-    category: 'Kış'
+    category: 'Kış Sporları'
   }
 ];
 

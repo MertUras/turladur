@@ -128,6 +128,7 @@ export interface Tour {
   createdAt: Date;
   updatedAt: Date;
   tourOperatorId: string;
+  experienceType?: string;
 }
 
 // Deneyim tipleri

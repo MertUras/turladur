@@ -22,6 +22,7 @@ import {
   ArrowDownWideNarrow,
   Loader2
 } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 interface Tour {
   id: string;
@@ -51,6 +52,7 @@ interface Tour {
   createdAt: Date;
   updatedAt: Date;
   tourOperatorId: string;
+  experienceType?: string;
 }
 
 interface FilterOptions {
@@ -65,10 +67,12 @@ interface FilterOptions {
   remainingDays: string | null;
   minPrice: number | null;
   maxPrice: number | null;
+  experienceType: string | null;
 }
 
 export default function ToursPage() {
   const searchParams = useSearchParams();
+  const experienceTypeParam = searchParams.get('experienceType');
   const durationParam = searchParams.get('duration');
   const featuredParam = searchParams.get('featured');
   
@@ -88,7 +92,8 @@ export default function ToursPage() {
     month: null,
     remainingDays: null,
     minPrice: null,
-    maxPrice: null
+    maxPrice: null,
+    experienceType: null
   });
 
   // Sayfalama ve gösterim seçenekleri
@@ -156,8 +161,43 @@ export default function ToursPage() {
     { period: 'Ağustos 2024', count: 4 }
   ];
 
+  // Deneyim Türleri
+  const experienceTypes = [
+    { type: "havacilik", name: "Havacılık", count: 8 },
+    { type: "su-sporlari", name: "Su Sporları", count: 12 },
+    { type: "doga-yuruyusu", name: "Doğa Yürüyüşü", count: 15 },
+    { type: "su-alti", name: "Su Altı", count: 6 },
+    { type: "kis-sporlari", name: "Kış Sporları", count: 10 },
+    { type: "kultur", name: "Kültür", count: 20 },
+    { type: "gastronomi", name: "Gastronomi", count: 14 },
+    { type: "ekstrem", name: "Ekstrem", count: 9 }
+  ];
+
   // Sayfalama seçenekleri
   const pageSizeOptions = [9, 18, 27, 36];
+
+  // URL'den gelen deneyim türü parametresini kontrol et ve filtre seçeneğini güncelle
+  useEffect(() => {
+    if (experienceTypeParam) {
+      const matchedType = experienceTypes.find(type => 
+        type.type === experienceTypeParam
+      );
+      if (matchedType) {
+        setFilterOptions(prev => ({
+          ...prev,
+          experienceType: matchedType.type
+        }));
+        
+        // Otomatik olarak filtre bölümüne scroll
+        const filterSection = document.getElementById('experience-filters');
+        if (filterSection) {
+          setTimeout(() => {
+            filterSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 500);
+        }
+      }
+    }
+  }, [experienceTypeParam]);
 
   useEffect(() => {
     // API isteği simülasyonu
@@ -196,6 +236,9 @@ export default function ToursPage() {
     if (filterOptions.featured) {
       filtered = filtered.filter(tour => tour.featured);
     }
+    if (filterOptions.experienceType) {
+      filtered = filtered.filter(tour => tour.experienceType === filterOptions.experienceType);
+    }
     
     // Sıralama
     switch (sortBy) {
@@ -213,7 +256,7 @@ export default function ToursPage() {
         break;
     }
     
-    setFilteredTours(filtered);
+    setFilteredTours(filtered as Tour[]);
   }, [filterOptions, sortBy]);
 
   // Filtreleri sıfırla
@@ -230,7 +273,8 @@ export default function ToursPage() {
       month: null,
       remainingDays: null,
       minPrice: null,
-      maxPrice: null
+      maxPrice: null,
+      experienceType: null
     });
     setSortBy("popular");
   };
@@ -718,6 +762,29 @@ export default function ToursPage() {
                         </button>
                       ))}
                     </div>
+                  </div>
+                </div>
+
+                {/* Deneyim Türü - YENİ EKLENEN */}
+                <div id="experience-filters">
+                  <h4 className="font-medium text-gray-900 mb-3">Deneyim Türü</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {experienceTypes.map((item) => (
+                      <button
+                        key={item.type}
+                        onClick={() => setFilterOptions({
+                          ...filterOptions,
+                          experienceType: filterOptions.experienceType === item.type ? null : item.type
+                        })}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          filterOptions.experienceType === item.type
+                            ? "bg-blue-600 text-white shadow-md hover:bg-blue-700"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {item.name} ({item.count})
+                      </button>
+                    ))}
                   </div>
                 </div>
 
