@@ -746,23 +746,23 @@ export default function TourOperatorsPage() {
                 <ul className="space-y-3">
                   <li className="flex items-start">
                     <CheckCircle className="w-5 h-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>Operatörün lisans ve sertifikalarını kontrol edin</span>
+                    <span className="text-black">Operatörün lisans ve sertifikalarını kontrol edin</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle className="w-5 h-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>Müşteri yorumlarını ve değerlendirmelerini inceleyin</span>
+                    <span className="text-black" >Müşteri yorumlarını ve değerlendirmelerini inceleyin</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle className="w-5 h-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>Sundukları hizmetlerin kapsamını araştırın</span>
+                    <span className="text-black">Sundukları hizmetlerin kapsamını araştırın</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle className="w-5 h-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>Fiyat-performans dengesini değerlendirin</span>
+                    <span className="text-black">Fiyat-performans dengesini değerlendirin</span>
                   </li>
                   <li className="flex items-start">
                     <CheckCircle className="w-5 h-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
-                    <span>Acil durum politikalarını ve iptal koşullarını öğrenin</span>
+                    <span className="text-black">Acil durum politikalarını ve iptal koşullarını öğrenin</span>
                   </li>
                 </ul>
               </div>
