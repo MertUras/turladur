@@ -435,14 +435,14 @@ export default function HotDeals() {
                   </span>
                 </div>
                 
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                <p className="text-sm text-gray-600 mb-4 line-clamp-2 h-[3.5rem] overflow-hidden">
                   {deal.description}
                 </p>
                 
                 {/* Fiyat ve Bilgiler */}
-                <div className="flex items-baseline justify-between mb-4">
-                  <div>
-                    <span className="text-gray-500 text-sm line-through">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="space-y-1">
+                    <span className="text-gray-500 text-sm line-through block">
                       {formatPrice(deal.originalPrice)}
                     </span>
                     <div className="text-red-600 font-bold text-xl">
@@ -451,8 +451,8 @@ export default function HotDeals() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col items-end">
-                    <div className="flex items-center text-xs text-orange-800 bg-orange-50 px-2 py-1 rounded mb-1">
+                  <div className="flex flex-col items-end space-y-1">
+                    <div className="flex items-center text-xs text-orange-800 bg-orange-50 px-2 py-1 rounded">
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                       </svg>
@@ -471,7 +471,7 @@ export default function HotDeals() {
                 <div className="mb-4">
                   <div className="text-xs text-gray-600 mb-1 flex justify-between">
                     <span>Doluluk Oranı</span>
-                    <span className="font-medium">{Math.min(90, 100 - (deal.remainingSpots / 20) * 100).toFixed(0)}%</span>
+                    <span className="font-medium">{Math.max(0, Math.min(100, Math.round((20 - deal.remainingSpots) / 20 * 100)))}%</span>
                   </div>
                   <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div 
@@ -480,7 +480,7 @@ export default function HotDeals() {
                           ? 'bg-gradient-to-r from-red-500 to-orange-500 animate-pulse' 
                           : 'bg-gradient-to-r from-blue-500 to-cyan-500'
                       }`}
-                      style={{ width: `${Math.min(90, 100 - (deal.remainingSpots / 20) * 100)}%` }}
+                      style={{ width: `${Math.max(0, Math.min(100, Math.round((20 - deal.remainingSpots) / 20 * 100)))}%` }}
                     ></div>
                   </div>
                 </div>

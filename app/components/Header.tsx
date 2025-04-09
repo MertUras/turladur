@@ -16,6 +16,7 @@ export default function Header() {
   const [dealsOpen, setDealsOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const dropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -111,6 +112,22 @@ export default function Header() {
     };
   }, [isMenuOpen]);
 
+  // Arama dışına tıklandığında kapat
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchOpen && searchRef.current && 
+          !searchRef.current.contains(event.target as Node) && 
+          !(event.target as Element).closest('.search-button')) {
+        setSearchOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [searchOpen]);
+
   return (
     <header 
       className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 backdrop-blur-sm ${
@@ -141,8 +158,10 @@ export default function Header() {
             <div className="relative group dropdown-container">
               <button 
                 className={`px-3 py-2 rounded-md font-medium text-sm flex items-center ${
-                  isScrolled ? "text-gray-700 hover:text-blue-700" : "text-white hover:text-blue-100"
-                } transition-colors duration-300`}
+                  isScrolled 
+                    ? "text-blue-600 hover:text-blue-800 hover:bg-blue-50" 
+                    : "text-blue-100 hover:text-white hover:bg-white/10"
+                } transition-all duration-300`}
                 onClick={() => toggleDropdown('routes')}
                 aria-expanded={activeDropdown === 'routes'}
               >
@@ -156,29 +175,22 @@ export default function Header() {
                 </svg>
               </button>
               {activeDropdown === 'routes' && (
-                <div className="absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-xl p-4 grid grid-cols-2 gap-2 z-50 border border-gray-100 transform transition-all opacity-100 scale-100">
-                  <Link href="/routes/1" className="p-2 rounded-lg hover:bg-blue-50 flex flex-col transition-colors">
-                    <span className="font-medium text-gray-900">İstanbul - Kapadokya</span>
-                    <span className="text-xs text-gray-500">30 tur</span>
+                <div className="absolute left-0 mt-2 w-56 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 p-2 z-50 animate-fadeIn">
+                  <Link href="/routes" className="block px-4 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-md transition-all duration-200">
+                    Tüm Rotalar
                   </Link>
-                  <Link href="/routes/2" className="p-2 rounded-lg hover:bg-blue-50 flex flex-col transition-colors">
-                    <span className="font-medium text-gray-900">Akdeniz Kıyıları</span>
-                    <span className="text-xs text-gray-500">25 tur</span>
-                  </Link>
-                  <Link href="/routes/3" className="p-2 rounded-lg hover:bg-blue-50 flex flex-col transition-colors">
-                    <span className="font-medium text-gray-900">Ege Kıyıları</span>
-                    <span className="text-xs text-gray-500">20 tur</span>
-                  </Link>
-                  <Link href="/routes/4" className="p-2 rounded-lg hover:bg-blue-50 flex flex-col transition-colors">
-                    <span className="font-medium text-gray-900">Kapadokya - Pamukkale</span>
-                    <span className="text-xs text-gray-500">18 tur</span>
-                  </Link>
-                  <div className="col-span-2 mt-2 pt-2 border-t border-gray-100">
-                    <Link href="/routes" className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center justify-center">
-                      Tüm rotaları gör
-                      <svg className="ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"></path>
-                      </svg>
+                  <div className="border-t border-gray-100 my-2 pt-2">
+                    <Link href="/routes/1" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      İstanbul - Kapadokya
+                    </Link>
+                    <Link href="/routes/2" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      Akdeniz Kıyıları
+                    </Link>
+                    <Link href="/routes/3" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      Ege Kıyıları
+                    </Link>
+                    <Link href="/routes/4" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      Kapadokya - Pamukkale
                     </Link>
                   </div>
                 </div>
@@ -188,8 +200,10 @@ export default function Header() {
             <div className="relative group dropdown-container">
               <button 
                 onClick={() => toggleDropdown('hotels')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isScrolled ? "text-gray-700 hover:bg-gray-50" : "text-white hover:bg-white/10"
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                  isScrolled 
+                    ? "text-blue-600 hover:text-blue-800 hover:bg-blue-50" 
+                    : "text-blue-100 hover:text-white hover:bg-white/10"
                 } flex items-center`}
               >
                 Oteller
@@ -200,19 +214,21 @@ export default function Header() {
               </button>
               
               {activeDropdown === 'hotels' && (
-                <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 p-1 z-50 animate-fadeIn">
-                  <Link href="/hotel" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                <div className="absolute left-0 mt-2 w-56 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 p-2 z-50 animate-fadeIn">
+                  <Link href="/hotel" className="block px-4 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-md transition-all duration-200">
                     Tüm Oteller
                   </Link>
-                  <Link href="/hotel?type=BOUTIQUE_HOTEL" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    Butik Oteller
-                  </Link>
-                  <Link href="/hotel?type=RESORT" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    Tatil Köyleri
-                  </Link>
-                  <Link href="/hotel?stars=5" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    5 Yıldızlı Oteller
-                  </Link>
+                  <div className="border-t border-gray-100 my-2 pt-2">
+                    <Link href="/hotel?type=BOUTIQUE_HOTEL" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      Butik Oteller
+                    </Link>
+                    <Link href="/hotel?type=RESORT" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      Tatil Köyleri
+                    </Link>
+                    <Link href="/hotel?stars=5" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      5 Yıldızlı Oteller
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -220,8 +236,10 @@ export default function Header() {
             <div className="relative group dropdown-container">
               <button 
                 onClick={() => toggleDropdown('tours')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isScrolled ? "text-gray-700 hover:bg-gray-50" : "text-white hover:bg-white/10"
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                  isScrolled 
+                    ? "text-blue-600 hover:text-blue-800 hover:bg-blue-50" 
+                    : "text-blue-100 hover:text-white hover:bg-white/10"
                 } flex items-center`}
               >
                 Turlar
@@ -232,21 +250,21 @@ export default function Header() {
               </button>
               
               {activeDropdown === 'tours' && (
-                <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 p-1 z-50 animate-fadeIn">
-                  <Link href="/tours" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                <div className="absolute left-0 mt-2 w-56 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 p-2 z-50 animate-fadeIn">
+                  <Link href="/tours" className="block px-4 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-md transition-all duration-200">
                     Tüm Turlar
                   </Link>
-                  <Link href="/tour-operator" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    Tur Operatörleri
-                  </Link>
-                  <div className="border-t border-gray-100 my-1 pt-1">
-                    <Link href="/tours?duration=1" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                  <div className="border-t border-gray-100 my-2 pt-2">
+                    <Link href="/tour-operator" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      Tur Operatörleri
+                    </Link>
+                    <Link href="/tours?duration=1" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
                       Günübirlik Turlar
                     </Link>
-                    <Link href="/tours?duration=7" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                    <Link href="/tours?duration=7" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
                       Haftalık Turlar
                     </Link>
-                    <Link href="/tours?featured=true" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                    <Link href="/tours?featured=true" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
                       Öne Çıkan Turlar
                     </Link>
                   </div>
@@ -257,8 +275,10 @@ export default function Header() {
             <div className="relative group dropdown-container">
               <button 
                 onClick={() => toggleDropdown('experiences')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isScrolled ? "text-gray-700 hover:bg-gray-50" : "text-white hover:bg-white/10"
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                  isScrolled 
+                    ? "text-blue-600 hover:text-blue-800 hover:bg-blue-50" 
+                    : "text-blue-100 hover:text-white hover:bg-white/10"
                 } flex items-center`}
               >
                 Deneyimler
@@ -269,19 +289,21 @@ export default function Header() {
               </button>
               
               {activeDropdown === 'experiences' && (
-                <div className="absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 p-1 z-50 animate-fadeIn">
-                  <Link href="/experience" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
+                <div className="absolute left-0 mt-2 w-56 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 p-2 z-50 animate-fadeIn">
+                  <Link href="/experience" className="block px-4 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-md transition-all duration-200">
                     Tüm Deneyimler
                   </Link>
-                  <Link href="/gastronomi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    Gastronomi
-                  </Link>
-                  <Link href="/kultur-turlari" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    Kültür Turları
-                  </Link>
-                  <Link href="/macera-aktiviteleri" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors duration-150">
-                    Macera Aktiviteleri
-                  </Link>
+                  <div className="border-t border-gray-100 my-2 pt-2">
+                    <Link href="/gastronomi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      Gastronomi
+                    </Link>
+                    <Link href="/kultur-turlari" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      Kültür Turları
+                    </Link>
+                    <Link href="/macera-aktiviteleri" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      Macera Aktiviteleri
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
@@ -405,7 +427,10 @@ export default function Header() {
 
       {/* Search Overlay */}
       {searchOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1 px-4 transition-all duration-300 ease-in-out z-50">
+        <div 
+          ref={searchRef}
+          className="absolute left-0 right-0 top-full mt-1 px-4 transition-all duration-300 ease-in-out z-50"
+        >
           <div className={`mx-auto max-w-3xl bg-white rounded-xl shadow-2xl overflow-hidden transition-all duration-300 transform ${searchOpen ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
             <div className="relative">
               <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -523,21 +548,23 @@ export default function Header() {
                   className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'routes-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
                 >
                   <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
-                    <Link href="/routes/1" className="block py-2 text-gray-600 hover:text-blue-700">
-                      İstanbul - Kapadokya
+                    <Link href="/routes" className="block py-2 text-gray-600 hover:text-blue-700">
+                      Tüm Rotalar
                     </Link>
-                    <Link href="/routes/2" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Akdeniz Kıyıları
-                    </Link>
-                    <Link href="/routes/3" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Ege Kıyıları
-                    </Link>
-                    <Link href="/routes/4" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Kapadokya - Pamukkale
-                    </Link>
-                    <Link href="/routes" className="block py-2 text-blue-600 hover:text-blue-800 font-medium">
-                      Tüm rotaları gör
-                    </Link>
+                    <div className="pt-2 mt-2 border-t border-gray-200">
+                      <Link href="/routes/1" className="block py-2 text-gray-600 hover:text-blue-700">
+                        İstanbul - Kapadokya
+                      </Link>
+                      <Link href="/routes/2" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Akdeniz Kıyıları
+                      </Link>
+                      <Link href="/routes/3" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Ege Kıyıları
+                      </Link>
+                      <Link href="/routes/4" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Kapadokya - Pamukkale
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
