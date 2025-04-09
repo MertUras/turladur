@@ -17,6 +17,7 @@ import SearchBar from './components/SearchBar';
 import Pagination from './components/Pagination';
 import HotelList from './components/HotelList';
 import FeaturedHotels from './components/FeaturedHotels';
+import SimpleHotelCard from './components/SimpleHotelCard';
 
 // Otel ve ilgili tipler için arayüzler
 interface Hotel {
@@ -384,6 +385,48 @@ const dummyHotels: Hotel[] = [
     roomType: 'Standart Oda',
     breakfast: true,
     cancellationPolicy: 'Kısmi İade'
+  },
+  {
+    id: '11',
+    name: 'Rize Tea Garden Hotel',
+    description: 'Çay bahçeleri arasında huzurlu konaklama',
+    location: 'Rize, Türkiye',
+    rating: 4.4,
+    reviewCount: 65,
+    price: 1200,
+    oldPrice: 1500,
+    discount: 20,
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+    features: ['Ücretsiz Wi-Fi', 'Çay Bahçesi', 'Doğa Manzarası', 'Restoran'],
+    isBestSeller: false,
+    stars: 4,
+    checkInDate: '2025-02-01',
+    checkOutDate: '2025-02-05',
+    type: 'Butik Otel',
+    roomType: 'Standart Oda',
+    breakfast: true,
+    cancellationPolicy: 'Ücretsiz İptal'
+  },
+  {
+    id: '12',
+    name: 'Trabzon Uzungöl Resort',
+    description: 'Uzungöl manzaralı lüks konaklama',
+    location: 'Trabzon, Türkiye',
+    rating: 4.7,
+    reviewCount: 88,
+    price: 1800,
+    oldPrice: 2200,
+    discount: 18,
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+    features: ['Ücretsiz Wi-Fi', 'Göl Manzarası', 'Spa', 'Restoran', 'Bar'],
+    isBestSeller: true,
+    stars: 5,
+    checkInDate: '2025-03-01',
+    checkOutDate: '2025-03-05',
+    type: 'Lüks Otel',
+    roomType: 'Deluxe Oda',
+    breakfast: true,
+    cancellationPolicy: 'Ücretsiz İptal'
   }
 ];
 
@@ -464,12 +507,65 @@ export default async function HotelsPage() {
         </div>
       </div>
 
-      {/* Tüm Oteller */}
+      {/* Oteller - İlk Bölüm */}
       <div className="max-w-7xl mx-auto px-4 mb-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Tüm Oteller</h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {hotels.slice(0, 8).map((hotel) => (
+            <SimpleHotelCard key={hotel.id} hotel={hotel} />
+          ))}
         </div>
-        <HotelList hotels={allHotels} featureIcons={featureIcons} />
+      </div>
+
+      {/* Popüler Şehirler */}
+      <div className="max-w-7xl mx-auto px-4 mb-12">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Popüler Şehirler</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {cities.slice(1, 7).map((city) => (
+            <Link 
+              key={city.id}
+              href={`/hotel?city=${city.id}`}
+              className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow text-center"
+            >
+              <div className="text-lg font-semibold text-gray-900">{city.label}</div>
+              <div className="text-sm text-gray-500">{city.count} otel</div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Oteller - İkinci Bölüm */}
+      <div className="max-w-7xl mx-auto px-4 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {hotels.slice(8, 16).map((hotel) => (
+            <SimpleHotelCard key={hotel.id} hotel={hotel} />
+          ))}
+        </div>
+      </div>
+
+      {/* Popüler Filtreler */}
+      <div className="max-w-7xl mx-auto px-4 mb-12">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Popüler Filtreler</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          {popularFilters.map((filter) => (
+            <Link 
+              key={filter.id}
+              href={`/hotel?filter=${filter.id}`}
+              className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow text-center"
+            >
+              <div className="text-lg font-semibold text-gray-900">{filter.label}</div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Oteller - Son Bölüm */}
+      <div className="max-w-7xl mx-auto px-4 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {hotels.slice(16).map((hotel) => (
+            <SimpleHotelCard key={hotel.id} hotel={hotel} />
+          ))}
+        </div>
       </div>
 
       {/* Alt Bilgi Banner */}

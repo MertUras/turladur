@@ -4,48 +4,40 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { 
-  MapPinIcon, 
-  HeartIcon as HeartIconOutline,
-  StarIcon as StarIconOutline,
+  BuildingOfficeIcon, 
+  ChevronDownIcon,
+  ArrowUpRightIcon,
+  ShieldCheckIcon,
+  CreditCardIcon,
+  FunnelIcon,
+  XMarkIcon,
   CalendarIcon,
-  ChevronDownIcon
+  MinusIcon,
+  PlusIcon,
+  StarIcon,
+  MapPinIcon,
+  WifiIcon,
+  SunIcon,
+  TvIcon,
+  KeyIcon,
+  BellIcon,
+  HeartIcon,
+  ShoppingBagIcon,
+  GiftIcon,
+  SparklesIcon,
+  FireIcon,
+  BoltIcon,
+  RocketLaunchIcon,
+  TrophyIcon,
+  StarIcon as StarIconSolid
 } from '@heroicons/react/24/outline';
 import { 
-  StarIcon as StarIconSolid,
   HeartIcon as HeartIconSolid,
-  FireIcon as FireIconSolid,
-  SparklesIcon as SparklesIconSolid,
   CheckBadgeIcon as CheckBadgeIconSolid
 } from '@heroicons/react/24/solid';
 import { useState } from 'react';
 import FeatureIcon from './FeatureIcon';
-
-interface Hotel {
-  id: string;
-  name: string;
-  description: string;
-  location: string;
-  rating: number;
-  reviewCount: number;
-  price: number;
-  oldPrice: number;
-  discount: number;
-  image: string;
-  features: string[];
-  isBestSeller?: boolean;
-  promotion?: string;
-  stars: number;
-  checkInDate?: string;
-  checkOutDate?: string;
-  type: string;
-  breakfast: boolean;
-  cancellationPolicy: string;
-}
-
-interface FeatureIconInfo {
-  feature: string;
-  iconType: string;
-}
+import { Hotel, FeatureIconInfo } from '@/types/hotel';
 
 interface HotelCardProps {
   hotel: Hotel;
@@ -54,18 +46,6 @@ interface HotelCardProps {
 
 export default function HotelCard({ hotel, featureIcons }: HotelCardProps) {
   const [isFavorite, setIsFavorite] = useState(false);
-  const [showFeatures, setShowFeatures] = useState(false);
-
-  // Tarihleri formatla
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('tr-TR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
 
   // Gece sayısını hesapla
   const calculateNights = () => {
@@ -83,122 +63,151 @@ export default function HotelCard({ hotel, featureIcons }: HotelCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
-      <div className="relative">
-        <Image
-          src={hotel.image}
-          alt={hotel.name}
-          width={400}
-          height={250}
-          className="w-full h-48 object-cover"
-        />
-        <div className="absolute top-3 left-3 flex flex-wrap gap-2">
-          {hotel.isBestSeller && (
-            <div className="bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
-              En Çok Satan
-            </div>
-          )}
-          <div className="bg-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
-            {hotel.type}
+    <Link href={`/hotel/${hotel.id}`} className="group">
+      <div className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden h-full flex flex-col">
+        {/* Resim */}
+        <div className="relative h-72 overflow-hidden">
+          <Image
+            src={hotel.image}
+            alt={hotel.name}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-110"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+          
+          {/* Üst Etiketler */}
+          <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+            {hotel.isBestSeller && (
+              <div className="bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                Çok Satan
+              </div>
+            )}
+            {hotel.discount > 0 && (
+              <div className="bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full">
+                %{hotel.discount} İndirim
+              </div>
+            )}
           </div>
-          {hotel.breakfast && (
-            <div className="bg-orange-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-              Kahvaltı Dahil
-            </div>
-          )}
-          {hotel.cancellationPolicy === 'Ücretsiz İptal' && (
-            <div className="bg-purple-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
-              Ücretsiz İptal
-            </div>
-          )}
-          {hotel.discount > 20 && (
-            <div className="bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-full">
-              Süper Fırsat
-            </div>
-          )}
-        </div>
-        <button
-          onClick={() => setIsFavorite(!isFavorite)}
-          className="absolute top-3 right-3 p-2 bg-white/90 rounded-full hover:bg-white transition-colors"
-        >
-          {isFavorite ? (
-            <HeartIconSolid className="w-5 h-5 text-red-500" />
-          ) : (
-            <HeartIconOutline className="w-5 h-5 text-gray-600" />
-          )}
-        </button>
-      </div>
 
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">{hotel.name}</h3>
-            <div className="flex items-center gap-1 text-sm text-gray-600">
-              <MapPinIcon className="w-4 h-4" />
-              <span>{hotel.location}</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <StarIconSolid className="w-5 h-5 text-yellow-400" />
-            <span className="font-semibold text-gray-900">{hotel.rating}</span>
-            <span className="text-sm text-gray-500">({hotel.reviewCount})</span>
-          </div>
-        </div>
+          {/* Favori Butonu */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              setIsFavorite(!isFavorite);
+            }}
+            className="absolute top-4 right-4 p-2 bg-white/90 rounded-full hover:bg-white transition-colors z-10"
+          >
+            {isFavorite ? (
+              <HeartIconSolid className="h-5 w-5 text-red-500" />
+            ) : (
+              <HeartIcon className="h-5 w-5 text-gray-600" />
+            )}
+          </button>
 
-        {/* Tarih ve Fiyat Bilgileri */}
-        <div className="mb-3 p-3 bg-blue-50 rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-sm text-blue-700">
-              <CalendarIcon className="w-4 h-4" />
-              <span>
-                {hotel.checkInDate ? formatDate(hotel.checkInDate) : 'Giriş Tarihi'} - 
-                {hotel.checkOutDate ? formatDate(hotel.checkOutDate) : 'Çıkış Tarihi'}
-              </span>
-            </div>
-            <div className="text-sm text-blue-700">
-              {calculateNights()} Gece
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="text-right">
-              <div className="text-sm text-gray-500 line-through">₺{hotel.oldPrice}</div>
-              <div className="text-lg font-bold text-blue-600">₺{hotel.price}</div>
-              <div className="text-xs text-green-600">%{hotel.discount} indirim</div>
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-500">Toplam</div>
-              <div className="text-lg font-bold text-blue-600">₺{calculateTotalPrice()}</div>
-              <div className="text-xs text-gray-500">/ {calculateNights()} gece</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Özellikler */}
-        <div className="mb-3">
-          <div className="flex flex-wrap gap-2">
-            {hotel.features.map((feature, index) => {
-              const iconInfo = featureIcons.find(fi => fi.feature === feature);
-              return (
-                <div 
-                  key={index} 
-                  className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-full border border-gray-200"
-                >
-                  {iconInfo && <FeatureIcon type={iconInfo.iconType} className="w-3.5 h-3.5" />}
-                  <span>{feature}</span>
+          {/* Alt Bilgiler */}
+          <div className="absolute bottom-4 left-4 right-4 z-10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex">
+                  {[...Array(hotel.stars)].map((_, i) => (
+                    <StarIconSolid key={i} className="h-4 w-4 text-yellow-400" />
+                  ))}
                 </div>
-              );
-            })}
+                <span className="text-white text-sm font-medium">
+                  {hotel.rating} ({hotel.reviewCount})
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-white text-sm font-medium">
+                  {calculateNights()} gece • {hotel.guests || 2} kişi
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Rezervasyon Butonu */}
-        <Link 
-          href={`/hotel/${hotel.id}`}
-          className="block w-full bg-blue-600 text-white text-center py-2 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-        >
-          Rezervasyon Yap
-        </Link>
+        {/* İçerik */}
+        <div className="p-4 flex-1 flex flex-col">
+          {/* Başlık ve Konum */}
+          <div className="mb-3">
+            <div className="flex justify-between items-start">
+              <h3 className="text-lg font-bold text-gray-900 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                {hotel.name}
+              </h3>
+              <div className="flex items-center gap-1 text-gray-600 text-sm">
+                <MapPinIcon className="h-3.5 w-3.5" />
+                <span className="font-medium">{hotel.location}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Özellikler */}
+          <div className="mb-3">
+            <div className="flex flex-wrap gap-1.5">
+              {hotel.features.slice(0, 3).map((feature) => {
+                const iconInfo = featureIcons.find((fi) => fi.feature === feature);
+                return (
+                  <span
+                    key={feature}
+                    className="inline-flex items-center gap-1 bg-gray-50 text-gray-700 text-xs px-2 py-1 rounded-full font-medium border border-gray-100"
+                  >
+                    {iconInfo?.iconType === 'wifi' && <WifiIcon className="h-3 w-3 text-blue-500" />}
+                    {iconInfo?.iconType === 'breakfast' && <SunIcon className="h-3 w-3 text-yellow-500" />}
+                    {iconInfo?.iconType === 'pool' && <SparklesIcon className="h-3 w-3 text-blue-400" />}
+                    {iconInfo?.iconType === 'spa' && <FireIcon className="h-3 w-3 text-pink-500" />}
+                    {iconInfo?.iconType === 'parking' && <KeyIcon className="h-3 w-3 text-gray-500" />}
+                    {iconInfo?.iconType === 'restaurant' && <GiftIcon className="h-3 w-3 text-red-500" />}
+                    {iconInfo?.iconType === 'sea-view' && <SunIcon className="h-3 w-3 text-blue-400" />}
+                    {iconInfo?.iconType === 'garden' && <SparklesIcon className="h-3 w-3 text-green-500" />}
+                    {iconInfo?.iconType === 'lake-view' && <SunIcon className="h-3 w-3 text-blue-400" />}
+                    {iconInfo?.iconType === 'cancel' && <XMarkIcon className="h-3 w-3 text-green-500" />}
+                    {feature}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Fiyat ve Rezervasyon */}
+          <div className="mt-auto pt-3 border-t border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-right">
+                {hotel.oldPrice ? (
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-xs line-through">₺{hotel.oldPrice}</span>
+                      <span className="text-red-500 text-xs font-medium bg-red-50 px-2 py-0.5 rounded-full">%{hotel.discount} indirim</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xl font-bold text-red-500">₺{hotel.price}</span>
+                      <span className="text-gray-500 text-xs">/gece</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xl font-bold text-blue-600">₺{hotel.price}</span>
+                    <span className="text-gray-500 text-xs">/gece</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-gray-600">
+                <span className="font-medium">Toplam: </span>
+                <span className="font-bold text-blue-600">₺{calculateTotalPrice()}</span>
+              </div>
+              <div className="flex gap-2">
+                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium py-1.5 px-3 rounded-lg transition-colors duration-200">
+                  Detay Gör
+                </button>
+                <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md text-sm">
+                  Rezervasyon
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 } 

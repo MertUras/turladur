@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   MagnifyingGlassIcon, 
   MapPinIcon, 
@@ -24,6 +25,7 @@ interface SearchBarProps {
 }
 
 export default function SearchBar({ cities }: SearchBarProps) {
+  const router = useRouter();
   const [selectedCity, setSelectedCity] = useState('all');
   const [checkInDate, setCheckInDate] = useState('');
   const [checkOutDate, setCheckOutDate] = useState('');
@@ -48,12 +50,19 @@ export default function SearchBar({ cities }: SearchBarProps) {
     : today;
 
   // Arama işlemi
-  const handleSearch = () => {
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
-    // Burada arama işlemi yapılacak
-    console.log('Arama yapılıyor:', { selectedCity, checkInDate, checkOutDate, guestCount });
     
-    // Simüle edilmiş yükleme
+    const params = new URLSearchParams();
+    if (selectedCity !== 'all') params.set('city', selectedCity);
+    if (checkInDate) params.set('checkIn', checkInDate);
+    if (checkOutDate) params.set('checkOut', checkOutDate);
+    if (guestCount > 2) params.set('guests', guestCount.toString());
+    
+    router.push(`/hotel/search?${params.toString()}`);
+    
+    // Arama işlemi tamamlandıktan sonra loading durumunu sıfırla
     setTimeout(() => {
       setIsLoading(false);
     }, 1000);

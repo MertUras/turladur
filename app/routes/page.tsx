@@ -323,16 +323,16 @@ export default function RoutesPage() {
               <Link
                 key={route.id}
                 href={`/routes/${route.id}`}
-                className="group bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                className="group bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                <div className="relative h-64">
+                <div className="relative h-64 overflow-hidden">
                   <Image
                     src={route.image}
                     alt={route.name}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent group-hover:opacity-90 transition-opacity">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent">
                     <div className="absolute bottom-4 left-4">
                       <div className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-medium">
                         {route.tourCount} tur
