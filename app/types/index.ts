@@ -1,5 +1,18 @@
 // Kullanıcı tipleri
 export type UserRole = 'USER' | 'HOTEL_ADMIN' | 'AGENCY_ADMIN' | 'TOUR_OPERATOR' | 'EXPERIENCE_PROVIDER' | 'ADMIN';
+// types/env.d.ts
+
+declare namespace NodeJS {
+  interface ProcessEnv {
+    SMTP_USER: string;
+    SMTP_PASS: string;
+    EMAIL_TO: string;
+    EMAIL_PORT?: string;
+    EMAIL_HOST?: string;
+    EMAIL_SECURE?: string;
+    DATABASE_URL?: string;
+  }
+}
 
 export interface User {
   id: string;

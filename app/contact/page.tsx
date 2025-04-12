@@ -1,4 +1,6 @@
-import React from 'react';
+import ContactForm from '../components/ContactForm';
+
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Metadata } from 'next';
@@ -73,9 +75,10 @@ const officeLocations = [
 ];
 
 export default function ContactPage() {
+  
   return (
     <main>
-      
+
       {/* Hero Bölümü */}
       <div className="relative bg-gray-50 py-24 overflow-hidden">
         <div className="absolute top-0 right-0 w-1/2 h-full hidden lg:block">
@@ -90,7 +93,7 @@ export default function ContactPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-gray-50 via-transparent to-transparent"></div>
           </div>
         </div>
-        
+
         <div className="container mx-auto px-4 relative">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <div className="py-12">
@@ -98,14 +101,14 @@ export default function ContactPage() {
                 <BuildingOffice2Icon className="w-4 h-4 mr-2" />
                 Kurumsal İletişim
               </div>
-              
+
               <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight font-heading">
                 Sizinle <span className="text-gradient span-inherit">İletişimde</span> Olmaktan Memnuniyet Duyarız
               </h1>
               <p className="text-xl text-gray-600 mb-10 leading-relaxed max-w-xl font-body">
                 TourTech olarak değerli müşterilerimize ve iş ortaklarımıza profesyonel hizmet sunmaktayız. Sorularınız ve talepleriniz için bizimle iletişime geçebilirsiniz.
               </p>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-10">
                 <div className="flex items-center p-4 bg-white rounded-lg shadow-sm border border-gray-100">
                   <div className="flex-shrink-0 mr-4">
@@ -118,7 +121,7 @@ export default function ContactPage() {
                     <p className="text-lg font-semibold text-gray-900">+90 850 123 45 67</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center p-4 bg-white rounded-lg shadow-sm border border-gray-100">
                   <div className="flex-shrink-0 mr-4">
                     <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -131,16 +134,16 @@ export default function ContactPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex flex-wrap gap-4">
-                <a 
+                <a
                   href="#contactForm"
                   className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-md inline-flex items-center"
                 >
                   <UserIcon className="w-5 h-5 mr-2" />
                   İletişim Formu
                 </a>
-                <a 
+                <a
                   href="#offices"
                   className="px-6 py-3 bg-white hover:bg-gray-50 text-blue-600 font-medium rounded-lg transition-colors shadow-sm border border-gray-200 inline-flex items-center"
                 >
@@ -162,9 +165,9 @@ export default function ContactPage() {
               Size en uygun iletişim kanalını seçerek bizimle bağlantı kurabilirsiniz. Profesyonel ekibimiz sorularınızı yanıtlamak için hazır.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
+
             {/* Müşteri Hizmetleri */}
             <div className="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 flex flex-col h-full">
               <div className="rounded-xl bg-blue-50 p-4 inline-block mb-6">
@@ -183,7 +186,7 @@ export default function ContactPage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Rezervasyon */}
             <div className="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 flex flex-col h-full">
               <div className="rounded-xl bg-green-50 p-4 inline-block mb-6">
@@ -202,7 +205,7 @@ export default function ContactPage() {
                 </div>
               </div>
             </div>
-            
+
             {/* İş Ortaklığı */}
             <div className="bg-white rounded-xl p-8 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 flex flex-col h-full">
               <div className="rounded-xl bg-purple-50 p-4 inline-block mb-6">
@@ -221,11 +224,11 @@ export default function ContactPage() {
                 </div>
               </div>
             </div>
-            
+
           </div>
         </div>
       </div>
-      
+
       {/* İletişim Formu ve Harita */}
       <div id="contactForm" className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
@@ -239,11 +242,13 @@ export default function ContactPage() {
               Aşağıdaki formu doldurarak bizimle iletişime geçebilirsiniz. Uzman ekibimiz en kısa sürede size dönüş yapacaktır.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-16">
             {/* Form */}
             <div className="bg-white rounded-xl p-8 shadow-xl lg:col-span-3">
-              <form className="space-y-6">
+
+              <ContactForm></ContactForm>
+              {/* <form className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">Ad Soyad</label>
@@ -251,7 +256,7 @@ export default function ContactPage() {
                       type="text"
                       id="name"
                       name="name"
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black transition-colors"
                       placeholder="Ad Soyad"
                       required
                     />
@@ -262,13 +267,13 @@ export default function ContactPage() {
                       type="email"
                       id="email"
                       name="email"
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black transition-colors"
                       placeholder="email@example.com"
                       required
                     />
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">Telefon</label>
@@ -276,7 +281,7 @@ export default function ContactPage() {
                       type="tel"
                       id="phone"
                       name="phone"
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black transition-colors"
                       placeholder="+90 5XX XXX XX XX"
                     />
                   </div>
@@ -285,7 +290,7 @@ export default function ContactPage() {
                     <select
                       id="subject"
                       name="subject"
-                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black transition-colors"
                       required
                     >
                       <option value="">Konu Seçiniz</option>
@@ -297,19 +302,19 @@ export default function ContactPage() {
                     </select>
                   </div>
                 </div>
-                
+
                 <div>
                   <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">Mesajınız</label>
                   <textarea
                     id="message"
                     name="message"
                     rows={6}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black transition-colors"
                     placeholder="Mesajınızı detaylı bir şekilde yazınız..."
                     required
                   ></textarea>
                 </div>
-                
+
                 <div className="flex items-start">
                   <input
                     id="privacy"
@@ -326,7 +331,7 @@ export default function ContactPage() {
                     <span className="span-inherit"> okudum ve kabul ediyorum.</span>
                   </label>
                 </div>
-                
+
                 <button
                   type="submit"
                   className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-md flex items-center justify-center"
@@ -334,9 +339,9 @@ export default function ContactPage() {
                   <EnvelopeIcon className="w-5 h-5 mr-2" />
                   Mesajı Gönder
                 </button>
-              </form>
+              </form> */}
             </div>
-            
+
             {/* İletişim Bilgileri ve Harita */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-xl p-8 shadow-lg mb-8">
@@ -360,16 +365,16 @@ export default function ContactPage() {
                   </div>
                 </div>
               </div>
-            
+
               {/* Harita */}
               <div className="rounded-xl overflow-hidden shadow-lg h-[300px] relative">
-                <iframe 
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3008.2589461255607!2d29.004343316232286!3d41.07661201791399!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14cab63f6f4a844b%3A0x41e8e7a9ca36f0f3!2sLevent%2C%20B%C3%BCy%C3%BCkdere%20Cd.%20201%2C%2034394%20%C5%9Ei%C5%9Fli%2F%C4%B0stanbul!5e0!3m2!1str!2str!4v1615376568447!5m2!1str!2str" 
-                  width="100%" 
-                  height="100%" 
-                  style={{ border: 0 }} 
-                  allowFullScreen 
-                  loading="lazy" 
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3008.2589461255607!2d29.004343316232286!3d41.07661201791399!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14cab63f6f4a844b%3A0x41e8e7a9ca36f0f3!2sLevent%2C%20B%C3%BCy%C3%BCkdere%20Cd.%20201%2C%2034394%20%C5%9Ei%C5%9Fli%2F%C4%B0stanbul!5e0!3m2!1str!2str!4v1615376568447!5m2!1str!2str"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
                   referrerPolicy="no-referrer-when-downgrade"
                   title="TourTech İstanbul Ofisi"
                   className="absolute inset-0"
@@ -379,7 +384,7 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Ofisler */}
       <div id="offices" className="py-20 bg-white">
         <div className="container mx-auto px-4">
@@ -393,7 +398,7 @@ export default function ContactPage() {
               Türkiye'nin farklı şehirlerindeki TourTech ofisleri, profesyonel ekibimizle hizmetinizdedir. Size en yakın ofisimizi ziyaret edebilirsiniz.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {officeLocations.map((office, index) => (
               <div key={index} className="bg-white rounded-xl p-6 hover:scale-[1.02] transition-all duration-300 border border-gray-100 shadow-md hover:shadow-lg">
@@ -425,7 +430,7 @@ export default function ContactPage() {
                   </div>
                 </div>
                 <div className="mt-6 pt-4 border-t border-gray-100">
-                  <a 
+                  <a
                     href={`https://maps.google.com/?q=${encodeURIComponent(office.address)}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -438,7 +443,7 @@ export default function ContactPage() {
               </div>
             ))}
           </div>
-          
+
           <div className="mt-16 bg-blue-50 rounded-xl p-8 shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between">
               <div className="mb-6 md:mb-0">
@@ -458,7 +463,7 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
-      
+
       {/* SSS */}
       <div className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
@@ -472,7 +477,7 @@ export default function ContactPage() {
               Seyahat ve rezervasyon süreçlerinizle ilgili en çok sorulan soruların yanıtlarını burada bulabilirsiniz.
             </p>
           </div>
-          
+
           <div className="max-w-3xl mx-auto">
             <div className="space-y-4">
               {faqData.map((faq, index) => (
@@ -493,10 +498,10 @@ export default function ContactPage() {
                 </div>
               ))}
             </div>
-            
+
             <div className="mt-12 text-center">
               <p className="text-gray-600 mb-6">Aradığınız sorunun cevabını bulamadınız mı?</p>
-              <a 
+              <a
                 href="#contactForm"
                 className="inline-flex items-center px-6 py-3 bg-white hover:bg-gray-50 text-blue-600 font-medium rounded-lg transition-colors shadow-sm border border-gray-200"
               >
@@ -507,7 +512,7 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
-      
+
       {/* CTA */}
       <div className="py-20 bg-blue-600">
         <div className="container mx-auto px-4 text-center">
@@ -527,7 +532,7 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
-      
+
     </main>
   );
 } 
