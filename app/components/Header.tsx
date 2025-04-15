@@ -501,13 +501,13 @@ export default function Header() {
           >
             {/* Header */}
             <div className="sticky top-0 flex justify-between items-center px-4 py-3 border-b border-gray-100 bg-white z-20">
-              <div className="flex items-center">
+              <Link href="/" className="flex items-center">
                 <div className="relative h-8 w-8 mr-2 overflow-hidden rounded-lg">
                   <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-blue-400"></div>
                   <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-sm">T</div>
                 </div>
                 <span className="text-xl font-bold text-blue-700">TourTech</span>
-              </div>
+              </Link>
               <button
                 className="p-2 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100"
                 onClick={() => setIsMenuOpen(false)}
