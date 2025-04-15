@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { ArrowRightIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -15,31 +18,24 @@ export default function RegisterPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [error, setError] = useState('');
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [passwordMessage, setPasswordMessage] = useState('');
 
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
 
-  useEffect(() => {
-    // Şifre gücünü değerlendirme
-    if (formData.password) {
+    // Şifre gücünü kontrol et
+    if (name === 'password') {
       let strength = 0;
-      
-      // Şifre uzunluğu kontrolü
-      if (formData.password.length >= 8) strength += 1;
-      
-      // Büyük/küçük harf kontrolü
-      if (/[A-Z]/.test(formData.password) && /[a-z]/.test(formData.password)) strength += 1;
-      
-      // Sayı kontrolü
-      if (/[0-9]/.test(formData.password)) strength += 1;
-      
-      // Özel karakter kontrolü
-      if (/[^A-Za-z0-9]/.test(formData.password)) strength += 1;
+      if (value.length >= 8) strength += 1;
+      if (/[A-Z]/.test(value)) strength += 1;
+      if (/[0-9]/.test(value)) strength += 1;
+      if (/[^A-Za-z0-9]/.test(value)) strength += 1;
       
       setPasswordStrength(strength);
       
@@ -59,40 +55,64 @@ export default function RegisterPage() {
         case 4:
           setPasswordMessage('Güçlü');
           break;
-        default:
-          setPasswordMessage('');
       }
-    } else {
-      setPasswordStrength(0);
-      setPasswordMessage('');
     }
-  }, [formData.password]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     
     if (formData.password !== formData.confirmPassword) {
-      alert('Şifreler eşleşmiyor');
+      setError('Şifreler eşleşmiyor');
+      return;
+    }
+    
+    if (passwordStrength < 2) {
+      setError('Lütfen daha güçlü bir şifre seçin');
       return;
     }
     
     setLoading(true);
     
-    // TODO: Implement registration logic
-    console.log('Register attempt with:', formData);
-    
-    // Simüle edilmiş API isteği
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Kayıt işlemi başarısız oldu');
+      }
+
+      // Kayıt başarılı, otomatik giriş yap
+      const result = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        throw new Error(result.error);
+      }
+
+      // Başarılı giriş, ana sayfaya yönlendir
+      router.push('/');
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -180,6 +200,12 @@ export default function RegisterPage() {
               </Link>
             </p>
           </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
 
           {/* Form */}
           <form 

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import { ArrowRightIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 
 export default function LoginPage() {
@@ -10,7 +12,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
@@ -20,14 +24,27 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     
-    // TODO: Implement login logic
-    console.log('Login attempt with:', { email, password });
-    
-    // Simüle edilmiş API isteği
-    setTimeout(() => {
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError('Geçersiz e-posta veya şifre');
+        setLoading(false);
+        return;
+      }
+
+      router.push('/');
+      router.refresh();
+    } catch (error) {
+      setError('Bir hata oluştu. Lütfen tekrar deneyin.');
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -64,6 +81,12 @@ export default function LoginPage() {
             className="mt-8 space-y-6 transform transition-all duration-500" 
             onSubmit={handleSubmit}
           >
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+            
             <div className="space-y-5">
               <div className="relative">
                 <label 

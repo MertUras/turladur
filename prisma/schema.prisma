@@ -6,6 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -32,6 +33,8 @@ model User {
   experiences   Experience[]
   bookings      Booking[]
   reviews       Review[]
+  posts         Post[]
+  comments      Comment[]
 
   @@map("users")
 }
@@ -318,4 +321,56 @@ model CompanyInfo {
   description String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// Post modeli
+model Post {
+  id          String    @id @default(cuid())
+  title       String
+  content     String    @db.Text
+  slug        String    @unique
+  image       String?
+  published   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // İlişkiler
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  categories  Category[]
+  comments    Comment[]
+
+  @@map("posts")
+}
+
+// Kategori modeli
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // İlişkiler
+  posts       Post[]
+
+  @@map("categories")
+}
+
+// Yorum modeli
+model Comment {
+  id          String    @id @default(cuid())
+  content     String    @db.Text
+  approved    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // İlişkiler
+  postId      String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
 }

@@ -5,7 +5,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import DealsPopup from "./DealsPopup";
-import { TagIcon, UserIcon, UserPlusIcon, XMarkIcon, ChevronDownIcon, MapIcon, BuildingOfficeIcon, GlobeAltIcon, SparklesIcon, InformationCircleIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
+import { TagIcon, UserIcon, UserPlusIcon, XMarkIcon, ChevronDownIcon, MapIcon, BuildingOfficeIcon, GlobeAltIcon, SparklesIcon, InformationCircleIcon, EnvelopeIcon, Bars3Icon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -19,6 +20,7 @@ export default function Header() {
   const searchRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const dropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const { data: session, status } = useSession();
 
   // Sayfa kaydırıldığında header'ın görünümünü değiştir
   useEffect(() => {
@@ -154,8 +156,8 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
-            <div className="relative group dropdown-container">
+          <nav className="hidden lg:flex items-center space-x-1">
+            <div className="relative group">
               <button 
                 className={`px-3 py-2 rounded-md font-medium text-sm flex items-center ${
                   isScrolled 
@@ -163,16 +165,9 @@ export default function Header() {
                     : "text-blue-100 hover:text-white hover:bg-white/10"
                 } transition-all duration-300`}
                 onClick={() => toggleDropdown('routes')}
-                aria-expanded={activeDropdown === 'routes'}
               >
                 Rotalar
-                <svg 
-                  className={`ml-1 w-4 h-4 transition-transform duration-200 ${activeDropdown === 'routes' ? 'rotate-180' : ''}`} 
-                  fill="currentColor" 
-                  viewBox="0 0 20 20"
-                >
-                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
-                </svg>
+                <ChevronDownIcon className={`ml-1 w-4 h-4 transition-transform duration-200 ${activeDropdown === 'routes' ? 'rotate-180' : ''}`} />
               </button>
               {activeDropdown === 'routes' && (
                 <div className="absolute left-0 mt-2 w-56 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 p-2 z-50 animate-fadeIn">
@@ -353,45 +348,88 @@ export default function Header() {
               } transition-colors duration-300 relative`}
               aria-label="Aramayı aç"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-              </svg>
-              {!searchOpen && (
-                <span className={`absolute inset-0 flex items-center justify-center ${
-                  isScrolled ? "text-gray-700" : "text-white"
-                } opacity-0 transition-opacity duration-300 group-hover:opacity-100`}>
-                  <span className="sr-only">Ara</span>
-                </span>
-              )}
+              <MagnifyingGlassIcon className="w-5 h-5" />
             </button>
           </nav>
 
           {/* Desktop Search and Auth Buttons */}
-          <div className="hidden md:flex items-center space-x-2">
-            <Link 
-              href="/login" 
-              className={`px-4 py-2 rounded-md text-sm font-medium border transition-all duration-300 ${
-                isScrolled 
-                  ? "text-blue-700 border-blue-700 hover:bg-blue-50" 
-                  : "text-white border-white hover:bg-white/10"
-              }`}
-            >
-              Giriş Yap
-            </Link>
-            <Link 
-              href="/register" 
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
-                isScrolled 
-                  ? "bg-blue-700 text-white hover:bg-blue-800" 
-                  : "bg-white text-blue-700 hover:bg-gray-100"
-              }`}
-            >
-              Kaydol
-            </Link>
+          <div className="hidden lg:flex items-center space-x-2">
+            {status === "authenticated" ? (
+              <div className="relative group">
+                <button 
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                    isScrolled 
+                      ? "text-gray-700 hover:bg-gray-100" 
+                      : "text-white hover:bg-white/10"
+                  }`}
+                  onClick={() => toggleDropdown('profile')}
+                >
+                  {session.user?.image ? (
+                    <Image
+                      src={session.user.image}
+                      alt={session.user.name || "Profil"}
+                      width={32}
+                      height={32}
+                      className="rounded-full"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white">
+                      {session.user?.name?.[0] || "U"}
+                    </div>
+                  )}
+                  <span className="hidden md:block">{session.user?.name}</span>
+                  <ChevronDownIcon className={`w-4 h-4 transition-transform duration-200 ${activeDropdown === 'profile' ? 'rotate-180' : ''}`} />
+                </button>
+
+                {activeDropdown === 'profile' && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 p-2 z-50 animate-fadeIn">
+                    <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      Profilim
+                    </Link>
+                    <Link href="/bookings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                      Rezervasyonlarım
+                    </Link>
+                    <div className="border-t border-gray-100 my-2"></div>
+                    <button
+                      onClick={() => {
+                        signOut({ callbackUrl: '/' });
+                        setActiveDropdown(null);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-all duration-200"
+                    >
+                      Çıkış Yap
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link 
+                  href="/login" 
+                  className={`px-4 py-2 rounded-md text-sm font-medium border transition-all duration-300 ${
+                    isScrolled 
+                      ? "text-blue-700 border-blue-700 hover:bg-blue-50" 
+                      : "text-white border-white hover:bg-white/10"
+                  }`}
+                >
+                  Giriş Yap
+                </Link>
+                <Link 
+                  href="/register" 
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                    isScrolled 
+                      ? "bg-blue-700 text-white hover:bg-blue-800" 
+                      : "bg-white text-blue-700 hover:bg-gray-100"
+                  }`}
+                >
+                  Kaydol
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center space-x-1">
+          <div className="flex lg:hidden items-center space-x-2">
             <button 
               onClick={toggleSearch} 
               className={`p-2 rounded-full ${
@@ -399,26 +437,20 @@ export default function Header() {
               } transition-colors`}
               aria-label="Aramayı aç"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-              </svg>
+              <MagnifyingGlassIcon className="w-5 h-5" />
             </button>
 
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)} 
-              className={`p-2 rounded-md mobile-menu-button ${
+              className={`p-2 rounded-md ${
                 isScrolled ? "text-gray-600 hover:bg-gray-100" : "text-white hover:bg-white/10"
               } transition-colors`}
               aria-label={isMenuOpen ? "Menüyü kapat" : "Menüyü aç"}
             >
               {isMenuOpen ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
+                <XMarkIcon className="w-6 h-6" />
               ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
+                <Bars3Icon className="w-6 h-6" />
               )}
             </button>
           </div>
@@ -427,84 +459,42 @@ export default function Header() {
 
       {/* Search Overlay */}
       {searchOpen && (
-        <div 
-          ref={searchRef}
-          className="absolute left-0 right-0 top-full mt-1 px-4 transition-all duration-300 ease-in-out z-50"
-        >
-          <div className={`mx-auto max-w-3xl bg-white rounded-xl shadow-2xl overflow-hidden transition-all duration-300 transform ${searchOpen ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}`}>
-            <div className="relative">
-              <svg className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-              </svg>
+        <div className="fixed inset-0 z-50">
+          <div 
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm" 
+            onClick={() => setSearchOpen(false)}
+          ></div>
+          
+          <div 
+            ref={searchRef}
+            className="relative max-w-2xl mx-auto mt-20 bg-white rounded-lg shadow-xl p-4 animate-fadeIn"
+          >
+            <div className="flex items-center">
               <input
-                type="text"
-                placeholder="Otel, şehir veya aktivite ara..."
-                className="w-full py-4 pl-12 pr-16 text-gray-700 focus:outline-none focus:ring-0 text-base"
                 ref={searchInputRef}
+                type="text"
+                placeholder="Ara..."
+                className="flex-1 px-4 py-2 text-gray-900 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <button 
-                onClick={toggleSearch}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              <button
+                onClick={() => setSearchOpen(false)}
+                className="ml-2 p-2 text-gray-500 hover:text-gray-700"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
+                <XMarkIcon className="w-5 h-5" />
               </button>
-            </div>
-            
-            <div className="border-t border-gray-100 p-4">
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="text-sm font-medium text-gray-500">Popüler Aramalar</h4>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <button className="flex items-center text-left p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="p-1.5 rounded-full bg-gray-100 mr-3">
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                  </div>
-                  <span className="text-gray-800 text-sm">İstanbul'da 5 yıldızlı oteller</span>
-                </button>
-                <button className="flex items-center text-left p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="p-1.5 rounded-full bg-gray-100 mr-3">
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                  </div>
-                  <span className="text-gray-800 text-sm">Kapadokya balon turu</span>
-                </button>
-                <button className="flex items-center text-left p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="p-1.5 rounded-full bg-gray-100 mr-3">
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                  </div>
-                  <span className="text-gray-800 text-sm">Antalya tekne turu</span>
-                </button>
-                <button className="flex items-center text-left p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="p-1.5 rounded-full bg-gray-100 mr-3">
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                  </div>
-                  <span className="text-gray-800 text-sm">Pamukkale termal otel</span>
-                </button>
-              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Mobile Menu - Simplified for better behavior */}
+      {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex h-full">
-          {/* Backdrop */}
+        <div className="lg:hidden fixed inset-0 z-50">
           <div 
             className="absolute inset-0 bg-black/30 backdrop-blur-sm" 
             onClick={() => setIsMenuOpen(false)}
           ></div>
           
-          {/* Slide-in menu panel */}
           <div 
             ref={mobileMenuRef}
             className="relative w-full max-w-xs ml-auto h-screen bg-white shadow-xl flex flex-col animate-slide-in-right z-10 overflow-y-auto"
@@ -528,210 +518,246 @@ export default function Header() {
             
             {/* Menu Items */}
             <div className="flex-1 py-2 px-3">
-              {/* Rotalar Dropdown */}
-              <div className="py-2 dropdown-container">
-                <button 
-                  className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'routes-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
-                  onClick={() => toggleDropdown('routes-mobile', true)}
-                  aria-expanded={activeDropdown === 'routes-mobile'}
-                >
-                  <div className="flex items-center">
-                    <MapIcon className="w-5 h-5 mr-3" />
-                    <span className="font-medium">Rotalar</span>
+              {status === "authenticated" && (
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg mb-4">
+                  {session.user?.image ? (
+                    <Image
+                      src={session.user.image}
+                      alt={session.user.name || "Profil"}
+                      width={40}
+                      height={40}
+                      className="rounded-full"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white">
+                      {session.user?.name?.[0] || "U"}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-medium text-gray-900">{session.user?.name}</p>
+                    <p className="text-sm text-gray-500">{session.user?.email}</p>
                   </div>
-                  <ChevronDownIcon 
-                    className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'routes-mobile' ? 'transform rotate-180' : ''}`} 
-                  />
-                </button>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                {/* Rotalar Dropdown */}
+                <div className="py-2 dropdown-container">
+                  <button 
+                    className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'routes-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                    onClick={() => toggleDropdown('routes-mobile', true)}
+                  >
+                    <div className="flex items-center">
+                      <MapIcon className="w-5 h-5 mr-3" />
+                      <span className="font-medium">Rotalar</span>
+                    </div>
+                    <ChevronDownIcon 
+                      className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'routes-mobile' ? 'transform rotate-180' : ''}`} 
+                    />
+                  </button>
+                  
+                  <div 
+                    className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'routes-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                  >
+                    <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
+                      <Link href="/routes" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Tüm Rotalar
+                      </Link>
+                      <div className="pt-2 mt-2 border-t border-gray-200">
+                        <Link href="/routes/1" className="block py-2 text-gray-600 hover:text-blue-700">
+                          İstanbul - Kapadokya
+                        </Link>
+                        <Link href="/routes/2" className="block py-2 text-gray-600 hover:text-blue-700">
+                          Akdeniz Kıyıları
+                        </Link>
+                        <Link href="/routes/3" className="block py-2 text-gray-600 hover:text-blue-700">
+                          Ege Kıyıları
+                        </Link>
+                        <Link href="/routes/4" className="block py-2 text-gray-600 hover:text-blue-700">
+                          Kapadokya - Pamukkale
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 
-                <div 
-                  className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'routes-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
-                >
-                  <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
-                    <Link href="/routes" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Tüm Rotalar
-                    </Link>
-                    <div className="pt-2 mt-2 border-t border-gray-200">
-                      <Link href="/routes/1" className="block py-2 text-gray-600 hover:text-blue-700">
-                        İstanbul - Kapadokya
+                {/* Oteller Dropdown */}
+                <div className="py-2 dropdown-container">
+                  <button 
+                    className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'hotels-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                    onClick={() => toggleDropdown('hotels-mobile', true)}
+                  >
+                    <div className="flex items-center">
+                      <BuildingOfficeIcon className="w-5 h-5 mr-3" />
+                      <span className="font-medium">Oteller</span>
+                    </div>
+                    <ChevronDownIcon 
+                      className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'hotels-mobile' ? 'transform rotate-180' : ''}`} 
+                    />
+                  </button>
+                  
+                  <div 
+                    className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'hotels-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                  >
+                    <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
+                      <Link href="/hotel" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Tüm Oteller
                       </Link>
-                      <Link href="/routes/2" className="block py-2 text-gray-600 hover:text-blue-700">
-                        Akdeniz Kıyıları
+                      <Link href="/hotel?type=BOUTIQUE_HOTEL" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Butik Oteller
                       </Link>
-                      <Link href="/routes/3" className="block py-2 text-gray-600 hover:text-blue-700">
-                        Ege Kıyıları
+                      <Link href="/hotel?type=RESORT" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Tatil Köyleri
                       </Link>
-                      <Link href="/routes/4" className="block py-2 text-gray-600 hover:text-blue-700">
-                        Kapadokya - Pamukkale
+                      <Link href="/hotel?stars=5" className="block py-2 text-gray-600 hover:text-blue-700">
+                        5 Yıldızlı Oteller
                       </Link>
                     </div>
                   </div>
                 </div>
-              </div>
-              
-              {/* Oteller Dropdown */}
-              <div className="py-2 dropdown-container">
-                <button 
-                  className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'hotels-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
-                  onClick={() => toggleDropdown('hotels-mobile', true)}
-                  aria-expanded={activeDropdown === 'hotels-mobile'}
-                >
-                  <div className="flex items-center">
-                    <BuildingOfficeIcon className="w-5 h-5 mr-3" />
-                    <span className="font-medium">Oteller</span>
-                  </div>
-                  <ChevronDownIcon 
-                    className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'hotels-mobile' ? 'transform rotate-180' : ''}`} 
-                  />
-                </button>
                 
-                <div 
-                  className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'hotels-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
-                >
-                  <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
-                    <Link href="/hotel" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Tüm Oteller
-                    </Link>
-                    <Link href="/hotel?type=BOUTIQUE_HOTEL" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Butik Oteller
-                    </Link>
-                    <Link href="/hotel?type=RESORT" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Tatil Köyleri
-                    </Link>
-                    <Link href="/hotel?stars=5" className="block py-2 text-gray-600 hover:text-blue-700">
-                      5 Yıldızlı Oteller
-                    </Link>
+                {/* Turlar Dropdown */}
+                <div className="py-2 dropdown-container">
+                  <button 
+                    className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'tours-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                    onClick={() => toggleDropdown('tours-mobile', true)}
+                  >
+                    <div className="flex items-center">
+                      <GlobeAltIcon className="w-5 h-5 mr-3" />
+                      <span className="font-medium">Turlar</span>
+                    </div>
+                    <ChevronDownIcon 
+                      className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'tours-mobile' ? 'transform rotate-180' : ''}`} 
+                    />
+                  </button>
+                  
+                  <div 
+                    className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'tours-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                  >
+                    <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
+                      <Link href="/tours" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Tüm Turlar
+                      </Link>
+                      <Link href="/tour-operator" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Tur Operatörleri
+                      </Link>
+                      <div className="pt-2 mt-2 border-t border-gray-200">
+                        <Link href="/tours?duration=1" className="block py-2 text-gray-600 hover:text-blue-700">
+                          Günübirlik Turlar
+                        </Link>
+                        <Link href="/tours?duration=7" className="block py-2 text-gray-600 hover:text-blue-700">
+                          Haftalık Turlar
+                        </Link>
+                        <Link href="/tours?featured=true" className="block py-2 text-gray-600 hover:text-blue-700">
+                          Öne Çıkan Turlar
+                        </Link>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              {/* Turlar Dropdown */}
-              <div className="py-2 dropdown-container">
-                <button 
-                  className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'tours-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
-                  onClick={() => toggleDropdown('tours-mobile', true)}
-                  aria-expanded={activeDropdown === 'tours-mobile'}
-                >
-                  <div className="flex items-center">
-                    <GlobeAltIcon className="w-5 h-5 mr-3" />
-                    <span className="font-medium">Turlar</span>
-                  </div>
-                  <ChevronDownIcon 
-                    className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'tours-mobile' ? 'transform rotate-180' : ''}`} 
-                  />
-                </button>
                 
-                <div 
-                  className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'tours-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
-                >
-                  <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
-                    <Link href="/tours" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Tüm Turlar
-                    </Link>
-                    <Link href="/tour-operator" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Tur Operatörleri
-                    </Link>
-                    <div className="pt-2 mt-2 border-t border-gray-200">
-                      <Link href="/tours?duration=1" className="block py-2 text-gray-600 hover:text-blue-700">
-                        Günübirlik Turlar
+                {/* Deneyimler Dropdown */}
+                <div className="py-2 dropdown-container">
+                  <button 
+                    className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'experiences-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                    onClick={() => toggleDropdown('experiences-mobile', true)}
+                  >
+                    <div className="flex items-center">
+                      <SparklesIcon className="w-5 h-5 mr-3" />
+                      <span className="font-medium">Deneyimler</span>
+                    </div>
+                    <ChevronDownIcon 
+                      className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'experiences-mobile' ? 'transform rotate-180' : ''}`} 
+                    />
+                  </button>
+                  
+                  <div 
+                    className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'experiences-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                  >
+                    <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
+                      <Link href="/experience" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Tüm Deneyimler
                       </Link>
-                      <Link href="/tours?duration=7" className="block py-2 text-gray-600 hover:text-blue-700">
-                        Haftalık Turlar
+                      <Link href="/gastronomi" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Gastronomi
                       </Link>
-                      <Link href="/tours?featured=true" className="block py-2 text-gray-600 hover:text-blue-700">
-                        Öne Çıkan Turlar
+                      <Link href="/kultur-turlari" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Kültür Turları
+                      </Link>
+                      <Link href="/macera-aktiviteleri" className="block py-2 text-gray-600 hover:text-blue-700">
+                        Macera Aktiviteleri
                       </Link>
                     </div>
                   </div>
                 </div>
-              </div>
-              
-              {/* Deneyimler Dropdown */}
-              <div className="py-2 dropdown-container">
-                <button 
-                  className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'experiences-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
-                  onClick={() => toggleDropdown('experiences-mobile', true)}
-                  aria-expanded={activeDropdown === 'experiences-mobile'}
-                >
-                  <div className="flex items-center">
-                    <SparklesIcon className="w-5 h-5 mr-3" />
-                    <span className="font-medium">Deneyimler</span>
-                  </div>
-                  <ChevronDownIcon 
-                    className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'experiences-mobile' ? 'transform rotate-180' : ''}`} 
-                  />
-                </button>
                 
-                <div 
-                  className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'experiences-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
-                >
-                  <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
-                    <Link href="/experience" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Tüm Deneyimler
-                    </Link>
-                    <Link href="/gastronomi" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Gastronomi
-                    </Link>
-                    <Link href="/kultur-turlari" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Kültür Turları
-                    </Link>
-                    <Link href="/macera-aktiviteleri" className="block py-2 text-gray-600 hover:text-blue-700">
-                      Macera Aktiviteleri
-                    </Link>
-                  </div>
+                {/* Diğer Linkler */}
+                <div className="mt-2 border-t border-gray-100 pt-4">
+                  <Link 
+                    href="/about" 
+                    className="flex items-center py-3 px-3 rounded-lg text-gray-700 hover:bg-gray-50"
+                  >
+                    <InformationCircleIcon className="w-5 h-5 mr-3" />
+                    <span className="font-medium">Hakkımızda</span>
+                  </Link>
+                  
+                  <Link 
+                    href="/contact" 
+                    className="flex items-center py-3 px-3 rounded-lg text-gray-700 hover:bg-gray-50"
+                  >
+                    <EnvelopeIcon className="w-5 h-5 mr-3" />
+                    <span className="font-medium">İletişim</span>
+                  </Link>
                 </div>
-              </div>
-              
-              {/* Diğer Linkler */}
-              <div className="mt-2 border-t border-gray-100 pt-4">
-                <Link 
-                  href="/about" 
-                  className="flex items-center py-3 px-3 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  <InformationCircleIcon className="w-5 h-5 mr-3" />
-                  <span className="font-medium">Hakkımızda</span>
-                </Link>
-                
-                <Link 
-                  href="/contact" 
-                  className="flex items-center py-3 px-3 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  <EnvelopeIcon className="w-5 h-5 mr-3" />
-                  <span className="font-medium">İletişim</span>
-                </Link>
               </div>
             </div>
             
             {/* Footer */}
             <div className="border-t border-gray-100 py-4 px-4">
-              <button
-                onClick={() => {
-                  setDealsOpen(true);
-                  setIsMenuOpen(false);
-                }}
-                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center mb-3"
-              >
-                <TagIcon className="w-5 h-5 mr-2" />
-                Fırsatlar
-              </button>
-              
-              <div className="flex gap-3">
-                <Link 
-                  href="/login"
-                  className="flex-1 py-2.5 px-4 border border-gray-300 hover:bg-gray-50 text-gray-800 font-medium rounded-lg transition-colors text-center"
-                >
-                  Giriş Yap
-                </Link>
-                
-                <Link 
-                  href="/register"
-                  className="flex-1 py-2.5 px-4 bg-gray-800 hover:bg-gray-900 text-white font-medium rounded-lg transition-colors text-center"
-                >
-                  Üye Ol
-                </Link>
-              </div>
+              {status === "authenticated" ? (
+                <div className="space-y-3">
+                  <Link 
+                    href="/profile"
+                    className="block w-full py-2.5 px-4 border border-gray-300 hover:bg-gray-50 text-gray-800 font-medium rounded-lg transition-colors text-center"
+                  >
+                    Profilim
+                  </Link>
+                  
+                  <Link 
+                    href="/bookings"
+                    className="block w-full py-2.5 px-4 border border-gray-300 hover:bg-gray-50 text-gray-800 font-medium rounded-lg transition-colors text-center"
+                  >
+                    Rezervasyonlarım
+                  </Link>
+                  
+                  <button
+                    onClick={() => {
+                      signOut({ callbackUrl: '/' });
+                      setActiveDropdown(null);
+                    }}
+                    className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-center"
+                  >
+                    Çıkış Yap
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <Link 
+                    href="/login"
+                    className="flex-1 py-2.5 px-4 border border-gray-300 hover:bg-gray-50 text-gray-800 font-medium rounded-lg transition-colors text-center"
+                  >
+                    Giriş Yap
+                  </Link>
+                  
+                  <Link 
+                    href="/register"
+                    className="flex-1 py-2.5 px-4 bg-gray-800 hover:bg-gray-900 text-white font-medium rounded-lg transition-colors text-center"
+                  >
+                    Üye Ol
+                  </Link>
+                </div>
+              )}
             </div>
-            
           </div>
         </div>
       )}
