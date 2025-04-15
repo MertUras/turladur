@@ -85,8 +85,9 @@ export default function Header() {
     const handleClickOutside = (event: MouseEvent) => {
       // Desktop ve mobil dropdown'lar için dışarı tıklama kontrolü
       if (activeDropdown) {
-        // Eğer tıklanan element dropdown container'ın içinde değilse kapat
-        if (!(event.target as Element).closest('.dropdown-container')) {
+        // Eğer tıklanan element dropdown container'ın içinde değilse ve bir link değilse kapat
+        if (!(event.target as Element).closest('.dropdown-container') && 
+            !(event.target as Element).closest('a')) {
           setActiveDropdown(null);
         }
       }
@@ -103,7 +104,8 @@ export default function Header() {
     const handleClickOutside = (event: MouseEvent) => {
       if (isMenuOpen && mobileMenuRef.current && 
           !mobileMenuRef.current.contains(event.target as Node) && 
-          !(event.target as Element).closest('.mobile-menu-button')) {
+          !(event.target as Element).closest('.mobile-menu-button') &&
+          !(event.target as Element).closest('a')) {
         setIsMenuOpen(false);
       }
     };
@@ -382,7 +384,7 @@ export default function Header() {
                 </button>
 
                 {activeDropdown === 'profile' && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 p-2 z-50 animate-fadeIn">
+                  <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 p-2 z-50 animate-fadeIn dropdown-container">
                     <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
                       Profilim
                     </Link>

@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function LoginPage() {
       const result = await signIn('credentials', {
         email,
         password,
+        remember: rememberMe,
         redirect: false,
       });
 
@@ -160,6 +162,8 @@ export default function LoginPage() {
                 id="remember-me"
                 name="remember-me"
                 type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors duration-200"
               />
               <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
