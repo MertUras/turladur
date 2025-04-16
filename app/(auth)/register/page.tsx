@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { ArrowRightIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import { isAuthenticated, validatePassword } from '@/lib/auth/index';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -21,6 +23,14 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [passwordMessage, setPasswordMessage] = useState('');
+
+  useEffect(() => {
+    // Kullanıcı oturum açtıysa ana sayfaya yönlendir
+    if (isAuthenticated(status)) {
+      router.push('/');
+      router.refresh();
+    }
+  }, [status, router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -105,9 +115,7 @@ export default function RegisterPage() {
         throw new Error(result.error);
       }
 
-      // Başarılı giriş, ana sayfaya yönlendir
-      router.push('/');
-      router.refresh();
+      // Başarılı giriş, useSession hook'u ile otomatik olarak yönlendirilecek
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bir hata oluştu');
     } finally {
@@ -115,6 +123,11 @@ export default function RegisterPage() {
     }
   };
 
+  // Kullanıcı zaten giriş yaptıysa register sayfasını gösterme
+  if (isAuthenticated(status)) {
+    return null; // veya bir yükleme ekranı gösterilebilir
+  }
+  
   return (
     <div className="min-h-screen flex">
       {/* Sol taraftaki görsel alanı */}

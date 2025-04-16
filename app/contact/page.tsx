@@ -1,9 +1,9 @@
+'use client'
 import ContactForm from '../components/ContactForm';
 
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Metadata } from 'next';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import {
@@ -19,11 +19,6 @@ import {
   QuestionMarkCircleIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
-
-export const metadata: Metadata = {
-  title: 'İletişim | TourTech - Profesyonel Seyahat Deneyimi',
-  description: 'TourTech ile iletişime geçin. Sorunlarınız, önerileriniz veya rezervasyonlarınız için bize ulaşın. 7/24 müşteri hizmetleri desteği.',
-};
 
 // SSS verileri
 const faqData = [
