@@ -5,6 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { UserCircleIcon, KeyIcon, BellIcon, CreditCardIcon, CameraIcon, ShieldCheckIcon, UserGroupIcon, ChartBarIcon, GiftIcon, QuestionMarkCircleIcon, CalendarIcon, HeartIcon, BuildingOfficeIcon, TicketIcon, MapPinIcon, ClockIcon, TrashIcon, StarIcon, FunnelIcon, ArrowsUpDownIcon, PlusIcon, EllipsisVerticalIcon, ArrowPathIcon, UsersIcon, MapPinIcon as LocationMarkerIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
+import { useSession } from 'next-auth/react';
+
 
 interface Booking {
   id: number;
@@ -107,6 +109,8 @@ const validateCVV = (cvv: string): boolean => {
 };
 
 export default function ProfilePage() {
+  const { data: session } = useSession();
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [bookingTab, setBookingTab] = useState('upcoming');
@@ -284,6 +288,17 @@ export default function ProfilePage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  
+  useEffect(() => {
+    if (session?.user) {
+      setUser({
+        name: session.user.name || '',
+        email: session.user.email || ''
+      });
+    }
+  }, [session]);
+
 
   // Kartların süresini kontrol et
   useEffect(() => {
@@ -568,12 +583,13 @@ export default function ProfilePage() {
                         <CameraIcon className="h-7 w-7 text-white" />
                       </button>
                     </div>
-                    <h2 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">Ahmet Yılmaz</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">ahmet@example.com</p>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{user?.name || 'İsimsiz Kullanıcı'}</h2>
+                    <p className="text-gray-600 dark:text-gray-400">{user?.email}</p>
                     <div className="mt-2 flex items-center space-x-2 text-sm text-green-600 dark:text-green-400">
                       <ShieldCheckIcon className="h-4 w-4" />
                       <span>Doğrulanmış Hesap</span>
                     </div>
+                    
 
                     {/* Kullanıcı istatistikleri */}
                     <div className="mt-6 w-full grid grid-cols-3 gap-2 text-center border-t border-gray-100 dark:border-gray-700 pt-6">
@@ -780,7 +796,7 @@ export default function ProfilePage() {
                         <input
                           type="text"
                           id="firstName"
-                          defaultValue="Ahmet"
+                          defaultValue={user?.name || ''}
                           disabled={!isEditing}
                           className={`mt-1 block w-full rounded-xl border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white
                           ${isEditing 
@@ -795,7 +811,7 @@ export default function ProfilePage() {
                         <input
                           type="text"
                           id="lastName"
-                          defaultValue="Yılmaz"
+                          defaultValue={user?.name || ''}
                           disabled={!isEditing}
                           className={`mt-1 block w-full rounded-xl border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white
                           ${isEditing 
@@ -813,7 +829,7 @@ export default function ProfilePage() {
                         <input
                           type="email"
                           id="email"
-                          defaultValue="ahmet@example.com"
+                          defaultValue={user?.email || ''}
                           disabled={!isEditing}
                           className={`mt-1 block w-full rounded-xl border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white pl-12
                           ${isEditing 
@@ -1748,7 +1764,7 @@ export default function ProfilePage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <h3 className="text-2xl font-bold">TourTech Elit Üye</h3>
-                            <p className="text-blue-100">Ahmet Yılmaz</p>
+                            <p className="text-blue-100">{user?.name || 'İsimsiz Kullanıcı'}</p>
                           </div>
                           <div className="h-16 w-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
                             <GiftIcon className="h-8 w-8 text-white" />
