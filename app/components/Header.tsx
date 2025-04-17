@@ -15,12 +15,19 @@ export default function Header() {
   const [closingDropdown, setClosingDropdown] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [dealsOpen, setDealsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const dropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { data: session, status } = useSession();
+
+  // Client-side kontrolü için mounted state'i
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   // Sayfa kaydırıldığında header'ın görünümünü değiştir
   useEffect(() => {
@@ -54,22 +61,13 @@ export default function Header() {
 
   // Mobil menüdeki dropdown tıklaması için mantığı düzenliyorum
   const toggleDropdown = useCallback((dropdown: string, isMobile: boolean = false) => {
-    if (isMobile) {
-      // Mobil için mantık - kapanma sorununu çözüyoruz
-      if (dropdown === activeDropdown) {
-        // Aynı dropdown'a tekrar tıklandığında kapat
-        setActiveDropdown(null);
-      } else {
-        // Farklı dropdown'a tıklandığında, önceki kapanır ve yeni açılır
-        setActiveDropdown(dropdown);
-      }
+    // Hem mobil hem desktop için aynı mantık
+    if (dropdown === activeDropdown) {
+      // Aynı dropdown'a tekrar tıklandığında kapat
+      setActiveDropdown(null);
     } else {
-      // Desktop için mevcut mantık
-      if (dropdown === activeDropdown) {
-        setActiveDropdown(null);
-      } else {
-        setActiveDropdown(dropdown);
-      }
+      // Farklı dropdown'a tıklandığında, önceki kapanır ve yeni açılır
+      setActiveDropdown(dropdown);
     }
 
     // Dropdown işlemi yapıldığında aramaları kapat
@@ -131,6 +129,13 @@ export default function Header() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [searchOpen]);
+
+  // Fırsatlar popup'ını açmak için güçlendirilmiş fonksiyon
+  const openDealsPopup = useCallback(() => {
+    if (mounted) {
+      setDealsOpen(true);
+    }
+  }, [mounted]);
 
   return (
     <header 
@@ -257,7 +262,7 @@ export default function Header() {
 
             {/* Deals button */}
             <button 
-              onClick={() => setDealsOpen(true)}
+              onClick={openDealsPopup}
               className={`ml-2 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center ${
                 isScrolled 
                   ? "bg-blue-600 text-white hover:bg-blue-700" 
@@ -289,7 +294,7 @@ export default function Header() {
           {/* Desktop Search and Auth Buttons */}
           <div className="hidden lg:flex items-center space-x-2">
             {status === "authenticated" ? (
-              <div className="relative group">
+              <div className="relative group dropdown-container">
                 <button 
                   className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
                     isScrolled 
@@ -585,7 +590,7 @@ export default function Header() {
                 </Link>
 
                 <button 
-                  onClick={() => setDealsOpen(true)}
+                  onClick={openDealsPopup}
                   className="w-full flex items-center py-3 px-3 text-gray-700 hover:bg-gray-50 rounded-lg"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-3">
@@ -625,6 +630,9 @@ export default function Header() {
           </div>
         </div>
       )}
+
+      {/* DealsPopup bileşenini ekleyelim */}
+      {mounted && <DealsPopup isOpen={dealsOpen} onClose={() => setDealsOpen(false)} />}
     </header>
   );
 }

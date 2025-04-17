@@ -36,11 +36,18 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+  
   const router = useRouter();
   
+  // Client-side render kontrolü
   useEffect(() => {
     setMounted(true);
-    return () => setMounted(false);
+    setPortalContainer(document.body);
+    return () => {
+      setMounted(false);
+      setPortalContainer(null);
+    };
   }, []);
   
   // Focus handling when popup opens
@@ -239,7 +246,8 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
   const displayedDeals = showAll ? filteredDeals : filteredDeals.slice(0, 6);
   const hasMoreDeals = filteredDeals.length > 6;
   
-  if (!isOpen || !mounted) return null;
+  // Eğer component açık değilse veya client-side'da render edilmemişse hiçbir şey gösterme
+  if (!isOpen || !mounted || !portalContainer) return null;
 
   const popupContent = (
     <div 
@@ -442,5 +450,11 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
     </div>
   );
 
-  return createPortal(<FocusTrap focusTrapOptions={{ initialFocus: false }}>{popupContent}</FocusTrap>, document.body);
+  // Client-side render kontrolü için createPortal'ı şartlı olarak kullanıyoruz
+  return createPortal(
+    <FocusTrap focusTrapOptions={{ initialFocus: false }}>
+      {popupContent}
+    </FocusTrap>,
+    portalContainer
+  );
 } 
