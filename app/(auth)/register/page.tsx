@@ -129,7 +129,7 @@ export default function RegisterPage() {
   }
   
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex pt-18">
       {/* Sol taraftaki görsel alanı */}
       <div className="hidden lg:block lg:w-1/2 relative">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 to-indigo-800/90 z-10"></div>
