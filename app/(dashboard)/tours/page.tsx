@@ -109,8 +109,9 @@ export default function ToursPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredTours, setFilteredTours] = useState<Tour[]>([]);
-  const [sortBy, setSortBy] = useState('popular'); // popular, price-low, price-high, duration
+  const [sortBy, setSortBy] = useState('popular');
   const [showFilters, setShowFilters] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
     departureCity: null,
     region: null,
@@ -759,194 +760,53 @@ export default function ToursPage() {
 
       <div className="container mx-auto px-4 py-12">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Tur Listesi */}
-          <div className="lg:w-3/4">
-            {/* Başlık ve Filtreler */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex flex-col gap-2">
-                <h1 className="text-2xl font-bold text-gray-900">Tüm Turlar</h1>
-                <div className="h-1 w-16 bg-blue-600"></div>
-              </div>
-              {/* Aktif Filtreler */}
-              {Object.values(filterOptions).some(value => value !== null && value !== false) && (
-                <div className="bg-white rounded-xl shadow-sm p-2 flex-1">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 flex-1 flex-wrap">
-                      <span className="text-sm font-medium text-gray-600">Aktif Filtreler:</span>
-                      {Object.entries(filterOptions).map(([key, value]) => {
-                        if (!value || key === 'priceRange' || value === false) return null;
-                        
-                        let displayValue = value;
-                        if (Array.isArray(value)) {
-                          if (key === 'dateRange') {
-                            const [start, end] = value;
-                            if (!start && !end) return null;
-                            displayValue = `${start?.toLocaleDateString('tr-TR') || ''} - ${end?.toLocaleDateString('tr-TR') || ''}`;
-                          } else if (value.length === 0) return null;
-                        }
-                        
-                        return (
-                          <div key={key} className="flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full">
-                            <span className="text-sm text-gray-600">{displayValue}</span>
+          {/* Mobil Filtre Butonu */}
+          <div className="lg:hidden mb-4">
                             <button
-                              onClick={() => {
-                                if (Array.isArray(value)) {
-                                  setFilterOptions({...filterOptions, [key]: []});
-                                } else {
-                                  setFilterOptions({...filterOptions, [key]: null});
-                                }
-                              }}
-                              className="text-gray-500 hover:text-gray-700"
-                            >
-                              <X className="h-3 w-3" />
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="w-full flex items-center justify-center gap-2 bg-white py-3 px-4 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+            >
+              <Filter className="h-5 w-5 text-blue-600" />
+              <span className="font-medium text-gray-900">Filtreler</span>
+              <span className="ml-auto text-sm text-gray-500">
+                {Object.values(filterOptions).filter(v => v !== null && v !== false).length} aktif
+              </span>
                             </button>
-                      </div>
-                    );
-                  })}
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-600">Sırala:</span>
-                        <select 
-                          className="text-sm border rounded-md px-2 py-1 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          value={sortBy}
-                          onChange={(e) => handleSortChange(e.target.value)}
-                        >
-                          {sortOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-600">Sayfa Başına:</span>
-                        <select 
-                          className="text-sm border rounded-md px-2 py-1 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          value={itemsPerPage}
-                          onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                        >
-                          {pageSizeOptions.map((size) => (
-                            <option key={size} value={size}>
-                              {size} Tur
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            {/* Tur Listesi */}
-            {loading ? (
-              <LoadingSkeleton />
-            ) : filteredTours.length === 0 ? (
-              <NoResults />
-            ) : (
-              <>
-                <div className="mb-4 flex justify-between items-center">
-                  <h2 className="text-base font-medium text-gray-700">
-                    <span className="text-blue-600 font-semibold">{totalItems}</span> tur arasından <span className="text-blue-600 font-semibold">{currentTours.length}</span> tanesi gösteriliyor
-                  </h2>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {currentTours.map((tour) => (
-                    <TourCard key={tour.id} tour={tour} />
-                  ))}
-                </div>
-                
-                {/* Sayfalama ve Bilgi */}
-                <div className="mt-8 flex flex-col items-center gap-4">
-                  {/* Sayfa Numaraları */}
-                  {totalPages > 1 && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="p-2 border rounded-md hover:bg-gray-100 disabled:opacity-50 text-gray-700"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                      
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                        <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          className={`w-10 h-10 rounded-md ${
-                            currentPage === page
-                              ? 'bg-blue-600 text-white'
-                              : 'border hover:bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                      
-                      <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="p-2 border rounded-md hover:bg-gray-100 disabled:opacity-50 text-gray-700"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
+          {/* Overlay */}
+          {isFilterOpen && (
+            <div 
+              className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+              onClick={() => setIsFilterOpen(false)}
+            />
+          )}
 
-                  {/* Sayfa Başına Gösterim Seçeneği */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Sayfa Başına:</span>
-                    <select 
-                      className="text-sm border rounded-md px-2 py-1 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      value={itemsPerPage}
-                      onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                    >
-                      {pageSizeOptions.map((size) => (
-                        <option key={size} value={size}>
-                          {size} Tur
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Sayfalama Bilgisi */}
-                  <div className="text-sm text-gray-600">
-                    {totalItems > 0 ? (
-                      <>
-                        Toplam <span className="font-semibold text-gray-800">{totalItems}</span> tur arasından{' '}
-                        <span className="font-semibold text-gray-800">{startIndex + 1}-{endIndex}</span> arası gösteriliyor
-                      </>
-                    ) : (
-                      <span className="text-gray-500">Gösterilecek tur bulunamadı</span>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-          {/* Filtreler */}
-          <div className="lg:w-1/4">
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden sticky top-24">
+          {/* Yandan Açılır Filtre Menüsü */}
+          <div className={`
+            fixed inset-y-0 right-0 w-full lg:w-80 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50
+            ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}
+            lg:relative lg:translate-x-0 lg:shadow-none
+          `}>
+            <div className="h-full flex flex-col">
               <div className="bg-gray-50 border-b border-gray-100 py-4 px-6 flex justify-between items-center">
                 <h3 className="font-bold text-gray-900 flex items-center">
                   <Filter className="h-5 w-5 mr-2 text-blue-600" />
                   Filtreler
                 </h3>
+                <div className="flex items-center gap-2">
                 <button 
-                  onClick={resetFilters}
-                  className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                    onClick={() => setIsFilterOpen(false)}
+                    className="lg:hidden text-gray-500 hover:text-gray-700"
                 >
-                  <X className="h-4 w-4 mr-1" />
-                  Filtreleri Temizle
+                    <X className="h-5 w-5" />
                 </button>
+                </div>
               </div>
               
-              <div className="p-6 space-y-6">
+              <div className="flex-1 overflow-y-auto p-6">
+                {/* Mevcut filtre içeriği */}
+                <div className="space-y-6">
                 {/* Kalkış Noktası */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-3">Kalkış Noktası</h4>
@@ -1342,316 +1202,206 @@ export default function ToursPage() {
                       </div>
                     </div>
                   </details>
-                </div>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Sabit Filtreleme Butonları */}
-        <div className="fixed bottom-6 left-6 z-50 flex flex-col gap-2">
-          <button
-            onClick={() => {
-              setLoading(true);
-              setTimeout(() => setLoading(false), 500);
-            }}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium py-1.5 px-3 rounded-md transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg"
-          >
-            <Search className="h-3 w-3 mr-1.5" />
-            Turları Filtrele
-          </button>
-          <button
-            onClick={resetFilters}
-            className="bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 text-sm font-medium py-1.5 px-3 rounded-md transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg"
-          >
-            <X className="h-3 w-3 mr-1.5" />
-            Filtreleri Temizle
-          </button>
-        </div>
 
-        {/* Popüler Destinasyonlar */}
-        <div className="mt-20 mb-20">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">Popüler Destinasyonlar</h2>
-              <p className="text-gray-600">En çok tercih edilen tatil bölgelerini keşfedin</p>
             </div>
-            <Link 
-              href="/destinations"
-              className="px-4 py-2 text-blue-600 hover:text-blue-800 font-medium inline-flex items-center hover:underline"
-            >
-              Tümünü gör
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </Link>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[
-              { 
-                name: "İstanbul", 
-                slug: "istanbul",
-                image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?q=80&w=800&auto=format&fit=crop", 
-                count: 42 
-              },
-              { 
-                name: "Kapadokya", 
-                slug: "kapadokya",
-                image: "https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=800&auto=format&fit=crop", 
-                count: 28 
-              },
-              { 
-                name: "Antalya", 
-                slug: "antalya",
-                image: "https://images.unsplash.com/photo-1591804374401-9f6a7d0e0b1a?q=80&w=800&auto=format&fit=crop", 
-                count: 36 
-              },
-              { 
-                name: "Pamukkale", 
-                slug: "pamukkale",
-                image: "https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=800&auto=format&fit=crop", 
-                count: 18 
-              },
-              { 
-                name: "Efes", 
-                slug: "efes",
-                image: "https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=800&auto=format&fit=crop", 
-                count: 15 
-              },
-              { 
-                name: "Karadeniz", 
-                slug: "karadeniz",
-                image: "https://images.unsplash.com/photo-1586611292717-f828b167408c?q=80&w=800&auto=format&fit=crop", 
-                count: 24 
-              }
-            ].map((destination, index) => (
-              <Link 
-                href={`/destinations/${destination.slug}`}
-                key={index}
-                className="group relative rounded-xl overflow-hidden aspect-square shadow-sm hover:shadow-md transition-all duration-300"
-              >
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10"></div>
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors z-10"></div>
-                <div className="relative w-full h-full">
-                  <Image
-                    src={destination.image}
-                    alt={destination.name}
-                    fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-700"
-                    priority={index < 2}
-                  />
+          {/* Tur Listesi */}
+          <div className="flex-1">
+            {/* Başlık ve Filtreler */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-2xl font-bold text-gray-900">Tüm Turlar</h1>
+                <div className="h-1 w-16 bg-blue-600"></div>
+              </div>
+              {/* Aktif Filtreler */}
+              {Object.values(filterOptions).some(value => value !== null && value !== false) && (
+                <div className="bg-white rounded-xl shadow-sm p-2 flex-1">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 flex-1 flex-wrap">
+                      <span className="text-sm font-medium text-gray-600">Aktif Filtreler:</span>
+                      {Object.entries(filterOptions).map(([key, value]) => {
+                        if (!value || key === 'priceRange' || value === false) return null;
+                        
+                        let displayValue = value;
+                        if (Array.isArray(value)) {
+                          if (key === 'dateRange') {
+                            const [start, end] = value;
+                            if (!start && !end) return null;
+                            displayValue = `${start?.toLocaleDateString('tr-TR') || ''} - ${end?.toLocaleDateString('tr-TR') || ''}`;
+                          } else if (value.length === 0) return null;
+                        }
+                        
+                        return (
+                          <div key={key} className="flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full">
+                            <span className="text-sm text-gray-600">{displayValue}</span>
+                            <button
+                              onClick={() => {
+                                if (Array.isArray(value)) {
+                                  setFilterOptions({...filterOptions, [key]: []});
+                                } else {
+                                  setFilterOptions({...filterOptions, [key]: null});
+                                }
+                              }}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
                 </div>
-                <div className="absolute bottom-3 left-3 right-3 z-20 text-white">
-                  <h3 className="font-bold mb-1">{destination.name}</h3>
-                  <div className="text-xs font-medium text-white/90">{destination.count} tur</div>
+                    );
+                  })}
                 </div>
-              </Link>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-600">Sırala:</span>
+                        <select 
+                          className="text-sm border rounded-md px-2 py-1 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          value={sortBy}
+                          onChange={(e) => handleSortChange(e.target.value)}
+                        >
+                          {sortOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
             ))}
+                        </select>
           </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-600">Sayfa Başına:</span>
+                        <select 
+                          className="text-sm border rounded-md px-2 py-1 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          value={itemsPerPage}
+                          onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                        >
+                          {pageSizeOptions.map((size) => (
+                            <option key={size} value={size}>
+                              {size} Tur
+                            </option>
+                          ))}
+                        </select>
         </div>
-        
-        {/* Turlarınızı Planlama Rehberi */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 md:p-12 mb-20">
-          <div className="flex flex-col md:flex-row gap-12">
-            <div className="md:w-1/2">
-              <div className="inline-flex items-center bg-blue-100 text-blue-800 rounded-full py-1 px-3 text-xs font-medium mb-4">
-                TurlaDur Rehberi
               </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">Turlarınızı Planlarken Dikkat Edilmesi Gerekenler</h2>
-              <p className="text-gray-700 mb-6">
-                Mükemmel bir tur deneyimi için önceden planlamanın önemi büyüktür. 
-                Rehberimiz, tur seçiminden rezervasyona kadar tüm süreçte size yardımcı olacak 
-                bilgiler içerir.
-              </p>
-              
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className="bg-blue-100 rounded-full p-2 mr-4 mt-0.5">
-                    <Calendar className="h-5 w-5 text-blue-700" />
                   </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 mb-1">Doğru Zamanı Seçin</h3>
-                    <p className="text-gray-600 text-sm">
-                      Her destinasyonun en ideal ziyaret dönemi farklıdır. Seçtiğiniz destinasyonun iklim 
-                      koşullarına ve yoğun turist dönemlerine dikkat edin.
-                    </p>
                   </div>
+              )}
+                </div>
+            {/* Tur Listesi */}
+            {loading ? (
+              <LoadingSkeleton />
+            ) : filteredTours.length === 0 ? (
+              <NoResults />
+            ) : (
+              <>
+                <div className="mb-4 flex justify-between items-center">
+                  <h2 className="text-base font-medium text-gray-700">
+                    <span className="text-blue-600 font-semibold">{totalItems}</span> tur arasından <span className="text-blue-600 font-semibold">{currentTours.length}</span> tanesi gösteriliyor
+                  </h2>
                 </div>
                 
-                <div className="flex items-start">
-                  <div className="bg-green-100 rounded-full p-2 mr-4 mt-0.5">
-                    <Users className="h-5 w-5 text-green-700" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 mb-1">Grup Büyüklüğü</h3>
-                    <p className="text-gray-600 text-sm">
-                      Küçük grup turları daha kişisel bir deneyim sunarken, büyük gruplar genellikle daha 
-                      ekonomiktir. Tercihlerinize uygun grup büyüklüğünü seçin.
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start">
-                  <div className="bg-amber-100 rounded-full p-2 mr-4 mt-0.5">
-                    <Star className="h-5 w-5 text-amber-700" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 mb-1">Yorumları İnceleyin</h3>
-                    <p className="text-gray-600 text-sm">
-                      Önceki katılımcıların deneyimleri, tur kalitesi hakkında değerli bilgiler sunar. 
-                      Rezervasyon yapmadan önce mutlaka yorumları inceleyin.
-                    </p>
-                  </div>
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {currentTours.map((tour) => (
+                    <TourCard key={tour.id} tour={tour} />
+                  ))}
               </div>
               
-              <Link 
-                href="/planning-guide"
-                className="inline-flex items-center text-blue-700 font-medium mt-6 hover:text-blue-800 hover:underline"
-              >
-                Detaylı rehberi görüntüle
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Link>
-            </div>
-            
-            <div className="md:w-1/2 relative">
-              <div className="relative h-96 rounded-xl overflow-hidden shadow-lg">
-                <Image
-                  src="/images/planning-guide.jpg"
-                  alt="Tur planlama rehberi"
-                  fill
-                  className="object-cover"
-                />
-                
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-                
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <div className="bg-white/90 backdrop-blur-sm rounded-xl p-4 shadow-lg">
-                    <div className="flex items-center mb-3">
-                      <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center mr-3">
-                        <Check className="h-5 w-5 text-white" />
-                      </div>
-                      <h3 className="font-bold text-gray-900">Özel Tur Danışmanlığı</h3>
-                    </div>
-                    <p className="text-gray-700 text-sm mb-3">
-                      Tur planlama konusunda uzman danışmanlarımızdan ücretsiz yardım alın.
-                    </p>
-                    <Link 
-                      href="/contact"
-                      className="inline-flex items-center justify-center w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                {/* Sayfalama ve Bilgi */}
+                <div className="mt-8 flex flex-col items-center gap-4">
+                  {/* Sayfa Numaraları */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="p-2 border rounded-md hover:bg-gray-100 disabled:opacity-50 text-gray-700"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`w-10 h-10 rounded-md ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'border hover:bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                      
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="p-2 border rounded-md hover:bg-gray-100 disabled:opacity-50 text-gray-700"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                  </div>
+                  )}
+
+                  {/* Sayfa Başına Gösterim Seçeneği */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600">Sayfa Başına:</span>
+                    <select 
+                      className="text-sm border rounded-md px-2 py-1 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      value={itemsPerPage}
+                      onChange={(e) => handlePageSizeChange(Number(e.target.value))}
                     >
-                      Danışmana Bağlan
-                    </Link>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="absolute -bottom-6 -right-6 h-32 w-32 bg-yellow-400 rounded-2xl -z-10 hidden md:block"></div>
-              <div className="absolute -top-6 -left-6 h-24 w-24 bg-blue-200 rounded-full -z-10 hidden md:block"></div>
+                      {pageSizeOptions.map((size) => (
+                        <option key={size} value={size}>
+                          {size} Tur
+                        </option>
+                      ))}
+                    </select>
+        </div>
+        
+                  {/* Sayfalama Bilgisi */}
+                  <div className="text-sm text-gray-600">
+                    {totalItems > 0 ? (
+                      <>
+                        Toplam <span className="font-semibold text-gray-800">{totalItems}</span> tur arasından{' '}
+                        <span className="font-semibold text-gray-800">{startIndex + 1}-{endIndex}</span> arası gösteriliyor
+                      </>
+                    ) : (
+                      <span className="text-gray-500">Gösterilecek tur bulunamadı</span>
+                    )}
             </div>
+          </div>
+              </>
+            )}
+              </div>
           </div>
         </div>
         
-        {/* Sık Sorulan Sorular */}
-        <div className="mb-20">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <div className="inline-flex items-center bg-blue-100 text-blue-800 rounded-full py-1 px-3 text-xs font-medium mb-4">
-              MERAK EDİLENLER
-            </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">Sık Sorulan Sorular</h2>
-            <p className="text-gray-600">
-              Tur rezervasyonları ve seyahat planlaması hakkında en çok sorulan sorulara yanıtlar
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-            {[
-              { 
-                question: "Rezervasyon iptali durumunda iade politikamız nedir?", 
-                answer: "Tur başlangıcından 30 gün öncesine kadar yapılan iptallerde tam iade, 15-29 gün arasında %70 iade, 7-14 gün arasında %50 iade yapılmaktadır. Son 7 gün içerisindeki iptallerde iade yapılamamaktadır. Detaylı bilgi için 'İptal ve İade Koşulları' sayfamızı inceleyebilirsiniz."
-              },
-              { 
-                question: "Tur fiyatlarına neler dahildir?", 
-                answer: "Tur fiyatlarına genellikle ulaşım, konaklama, belirtilen öğünler ve tur programında yer alan aktiviteler dahildir. Her turun içeriği farklılık gösterebileceği için tur detay sayfasında 'Fiyata Dahil Olan Hizmetler' bölümünü incelemenizi öneririz."
-              },
-              { 
-                question: "Çocuklar için yaş sınırlaması veya indirim var mı?", 
-                answer: "Turların çoğunda 0-6 yaş grubu çocuklar için %50'ye varan indirimler, 7-12 yaş arası çocuklar için %30 indirim uygulanmaktadır. Bazı turlar için yaş sınırlaması olabilir, tur detaylarını incelemenizi öneririz."
-              },
-              { 
-                question: "Özel turlar düzenliyor musunuz?", 
-                answer: "Evet, özel grup ve kurumsal turlar düzenliyoruz. Kendi rotanızı belirleyebilir veya mevcut turlarımızı özel grup olarak düzenleyebilirsiniz. Özel tur talepleriniz için 'İletişim' sayfamızdan bize ulaşabilirsiniz."
-              },
-              { 
-                question: "Tur sırasında rehberler hangi dillerde hizmet veriyor?", 
-                answer: "Tur rehberlerimiz genellikle Türkçe ve İngilizce dillerinde hizmet vermektedir. Bazı turlarda Almanca, Fransızca, İspanyolca, Rusça gibi dil seçenekleri de bulunmaktadır. Tur detay sayfasında dil bilgisi belirtilmektedir."
-              },
-              { 
-                question: "Online ödeme güvenli mi?", 
-                answer: "Tüm ödeme işlemleri SSL sertifikalı güvenli ödeme altyapısı üzerinden gerçekleştirilmektedir. Kredi kartı bilgileriniz hiçbir şekilde sistemimizde saklanmaz ve 3D Secure ödeme sistemi ile maksimum güvenlik sağlanır."
-              }
-            ].map((faq, index) => (
-              <div key={index} className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-                <h3 className="text-gray-900 font-bold text-lg mb-3">{faq.question}</h3>
-                <p className="text-gray-600">{faq.answer}</p>
-              </div>
-            ))}
-          </div>
-          
-          <div className="text-center mt-10">
-            <Link 
-              href="/faq"
-              className="inline-flex items-center text-blue-700 font-medium hover:text-blue-800 hover:underline"
-            >
-              Tüm sık sorulan soruları görüntüle
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </Link>
-          </div>
-        </div>
-        
-        {/* Abone Ol Bölümü */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 md:p-12 mb-12">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex flex-col md:flex-row md:items-center gap-8">
-              <div className="md:w-2/3">
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-                  Özel Fırsatlar ve İndirimleri Kaçırmayın
-                </h2>
-                <p className="text-blue-100 mb-4">
-                  E-bültenimize abone olun, yeni turlar ve özel indirimlerden ilk siz haberdar olun. 
-                  Ayrıca, abone olan herkese ilk turlarında kullanabilecekleri %10 indirim kuponu hediye!
-                </p>
-                <div className="flex">
-                  <input
-                    type="email"
-                    placeholder="E-posta adresiniz"
-                    className="flex-1 py-3 px-4 rounded-l-lg border-0 focus:ring-2 focus:ring-white/20 text-gray-700"
-                  />
+      {/* Sabit Filtreleme Butonları */}
+      <div className="fixed bottom-6 left-6 z-50 flex flex-col gap-2">
                   <button
-                    className="bg-white text-blue-700 hover:bg-blue-50 font-medium px-6 py-3 rounded-r-lg transition-colors"
+          onClick={() => {
+            setLoading(true);
+            setTimeout(() => setLoading(false), 500);
+          }}
+          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium py-1.5 px-3 rounded-md transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg"
+        >
+          <Search className="h-3 w-3 mr-1.5" />
+          Turları Filtrele
+        </button>
+        <button
+          onClick={resetFilters}
+          className="bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 text-sm font-medium py-1.5 px-3 rounded-md transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg"
                   >
-                    Abone Ol
+          <X className="h-3 w-3 mr-1.5" />
+          Filtreleri Temizle
                   </button>
-                </div>
-                <div className="mt-3 text-sm text-blue-100">
-                  Kişisel verileriniz, e-bülten gönderimi amacıyla KVKK'ya uygun şekilde işlenecektir.
-                </div>
-              </div>
-              <div className="md:w-1/3 flex justify-center">
-                <div className="w-32 h-32 relative">
-                  <div className="absolute inset-0 bg-white/20 backdrop-blur-md rounded-full animate-ping opacity-75" style={{ animationDuration: '3s' }}></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="bg-white/20 backdrop-blur-md rounded-full p-6">
-                      <div className="text-white text-center">
-                        <div className="font-bold text-3xl">%10</div>
-                        <div className="text-xs font-medium">İNDİRİM</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
