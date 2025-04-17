@@ -695,7 +695,7 @@ export default function ToursPage() {
               En İyi Tur Deneyimleri
             </div>
             <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight">
-              Türkiye'nin En İyi Turları
+              Türkiye'nin <span className="text-orange-400">En İyi</span> Turları
             </h1>
             <p className="text-lg text-blue-100 md:px-8 mb-8">
               Profesyonel rehberler eşliğinde, en iyi tur operatörlerinin özenle hazırladığı tur paketleri ile unutulmaz deneyimler yaşayın.
