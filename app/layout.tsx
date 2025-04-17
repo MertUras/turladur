@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import { Montserrat, Poppins } from "next/font/google";
 import "./globals.css";
-import Header from "./components/Header";
-import Footer from "./components/Footer";
-import { SessionProvider } from "next-auth/react";
-import { headers } from "next/headers";
 import AuthProvider from "../components/providers/AuthProvider";
 import ChatWidgetWrapper from "./components/ChatWidgetWrapper";
 import { ThemeProvider } from "./providers/theme-provider";
@@ -42,9 +38,7 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <Header />
             <main className="flex-grow">{children}</main>
-            <Footer />
             <ChatWidgetWrapper />
           </ThemeProvider>
         </AuthProvider>

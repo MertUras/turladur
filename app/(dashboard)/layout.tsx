@@ -7,19 +7,22 @@ import Footer from "../components/Footer";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "TurlaDur",
-    description: "TurlaDur - Türkiye'nin En İyi Tur Deneyimleri",
+    title: "TourTech - Dashboard",
+    description: "TourTech - Türkiye'nin En İyi Tur Deneyimleri",
 };
 
-export default function RootLayout({
+export default function DashboardLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
     return (
         <div className="min-h-screen flex flex-col">
-
-            <main className="flex-grow">{children}</main>
+            <Header />
+            <main className="flex-grow">
+                {children}
+            </main>
+            <Footer />
         </div>
     );
 } 

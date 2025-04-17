@@ -4,33 +4,16 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { signIn, useSession } from 'next-auth/react';
-import { ArrowRightIcon, LockClosedIcon } from '@heroicons/react/24/outline';
-import { isAuthenticated } from '@/lib/auth/index';
+import { ArrowRightIcon, LockClosedIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 
-export default function LoginPage() {
+export default function PartnerLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [mounted, setMounted] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
-  const { data: session, status } = useSession();
-
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-
-  useEffect(() => {
-    // Kullanıcı oturum açtıysa ana sayfaya yönlendir
-    if (isAuthenticated(status)) {
-      router.push('/');
-      router.refresh();
-    }
-  }, [status, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,73 +21,60 @@ export default function LoginPage() {
     setError('');
     
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        remember: rememberMe,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setError('Geçersiz e-posta veya şifre');
+      // Burada partner girişi için API çağrısı yapılacak
+      // Örnek olarak setTimeout ile simüle ediyoruz
+      setTimeout(() => {
+        // Giriş başarılı varsayalım ve dashboard'a yönlendirelim
         setLoading(false);
-        return;
-      }
+        router.push('/partner-dashboard');
+      }, 2000);
 
-      // Başarılı giriş, ana sayfaya yönlendirilecek
-      // useSession hook'u ile otomatik olarak yönlendirilecek
     } catch (error) {
       setError('Bir hata oluştu. Lütfen tekrar deneyin.');
       setLoading(false);
     }
   };
 
-  // Kullanıcı zaten giriş yaptıysa login sayfasını gösterme
-  if (isAuthenticated(status)) {
-    return null; // veya bir yükleme ekranı gösterilebilir
-  }
-
   return (
-    <div className="min-h-screen flex pt-18">
+    <div className="min-h-screen flex">
       {/* Sol taraftaki görsel alanı */}
       <div className="hidden lg:block lg:w-1/2 relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/90 to-indigo-800/90 z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/90 to-purple-800/90 z-10"></div>
         <Image
-          src="https://images.unsplash.com/photo-1580541631950-7282082b53ce?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
-          alt="Tatil Manzarası"
+          src="https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+          alt="Partner İş Ortağı"
           fill
           className="object-cover"
         />
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 p-10 text-center">
           <div className="max-w-md">
-            <h2 className="text-4xl font-bold text-white mb-6">Tekrar Hoş Geldiniz</h2>
+            <h2 className="text-4xl font-bold text-white mb-6">İş Ortağı Portalına Hoş Geldiniz</h2>
             <p className="text-lg text-white/90 mb-8">
-              TourTech ile yeni deneyimler keşfedin ve unutulmaz anılar biriktirin. 
-              Hesabınıza giriş yaparak özel tekliflerden ve indirimlerden hemen yararlanmaya başlayın.
+              TourTech Partner portalı ile tüm işlemlerinizi kolayca yönetin, rezervasyonları takip edin ve gelirlerinizi artırın.
             </p>
             
             <div className="space-y-4 mt-8">
               <div className="flex items-start bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/10 text-left">
                 <div className="bg-white/20 p-2 rounded-lg mr-4 mt-1">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-white font-medium">Özel Fiyatlandırma</h3>
-                  <p className="text-white/70 text-sm">Üyelere özel fiyatlar ve kampanyalar</p>
+                  <h3 className="text-white font-medium">Rezervasyon Yönetimi</h3>
+                  <p className="text-white/70 text-sm">Tüm rezervasyonları tek bir yerden kolayca yönetin</p>
                 </div>
               </div>
               
               <div className="flex items-start bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/10 text-left">
                 <div className="bg-white/20 p-2 rounded-lg mr-4 mt-1">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-white font-medium">Kişiselleştirilmiş Deneyim</h3>
-                  <p className="text-white/70 text-sm">Tercihlerinize göre özel öneriler</p>
+                  <h3 className="text-white font-medium">Gelişmiş Raporlama</h3>
+                  <p className="text-white/70 text-sm">Detaylı performans analizleri ve finansal raporlar</p>
                 </div>
               </div>
             </div>
@@ -117,24 +87,19 @@ export default function LoginPage() {
         <div className="w-full max-w-md space-y-8 transform transition-all duration-500 ease-in-out">
           {/* Logo ve Başlık */}
           <div className="text-center">
-            <Link href="/" className="inline-block">
-              <div className="flex items-center justify-center">
-                <div className="h-12 w-12 bg-gradient-to-tr from-blue-600 to-blue-400 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-lg">
-                  T
-                </div>
-                <h2 className="ml-2 text-3xl font-bold text-gray-900">TourTech</h2>
-              </div>
-            </Link>
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900 transition-all duration-300 ease-in-out">
-              Hesabınıza Giriş Yapın
+            <div className="inline-block bg-indigo-100 p-3 rounded-full mb-4">
+              <BuildingOfficeIcon className="h-10 w-10 text-indigo-700" />
+            </div>
+            <h2 className="text-3xl font-extrabold text-gray-900 transition-all duration-300 ease-in-out">
+              Partner Girişi
             </h2>
             <p className="mt-2 text-base text-gray-600">
-              Veya{' '}
+              Partner hesabınız yok mu?{' '}
               <Link 
-                href="/register" 
-                className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200 hover:underline"
+                href="/partner-register" 
+                className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors duration-200 hover:underline"
               >
-                yeni bir hesap oluşturun
+                Hemen kayıt olun
               </Link>
             </p>
           </div>
@@ -161,7 +126,7 @@ export default function LoginPage() {
                 >
                   E-posta Adresi
                 </label>
-                <div className="relative rounded-xl focus-within:ring focus-within:ring-blue-300 transition-all duration-200 group">
+                <div className="relative rounded-xl focus-within:ring focus-within:ring-indigo-300 transition-all duration-200 group">
                   <input
                     id="email"
                     name="email"
@@ -170,8 +135,8 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full px-4 py-3.5 border border-gray-300 rounded-xl text-gray-900 transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-0 sm:text-sm bg-gray-50 group-hover:bg-white"
-                    placeholder="ornek@email.com"
+                    className="block w-full px-4 py-3.5 border border-gray-300 rounded-xl text-gray-900 transition-all duration-200 focus:border-indigo-500 focus:outline-none focus:ring-0 sm:text-sm bg-gray-50 group-hover:bg-white"
+                    placeholder="partner@sirketiniz.com"
                   />
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -186,11 +151,11 @@ export default function LoginPage() {
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                     Şifre
                   </label>
-                  <Link href="/forgot-password" className="text-sm font-medium text-blue-600 hover:text-blue-500 hover:underline transition-colors duration-200">
+                  <Link href="/partner-forgot-password" className="text-sm font-medium text-indigo-600 hover:text-indigo-500 hover:underline transition-colors duration-200">
                     Şifrenizi mi unuttunuz?
                   </Link>
                 </div>
-                <div className="relative rounded-xl focus-within:ring focus-within:ring-blue-300 transition-all duration-200 group">
+                <div className="relative rounded-xl focus-within:ring focus-within:ring-indigo-300 transition-all duration-200 group">
                   <input
                     id="password"
                     name="password"
@@ -199,7 +164,7 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full px-4 py-3.5 border border-gray-300 rounded-xl text-gray-900 transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-0 sm:text-sm bg-gray-50 group-hover:bg-white"
+                    className="block w-full px-4 py-3.5 border border-gray-300 rounded-xl text-gray-900 transition-all duration-200 focus:border-indigo-500 focus:outline-none focus:ring-0 sm:text-sm bg-gray-50 group-hover:bg-white"
                     placeholder="••••••••"
                   />
                   <div 
@@ -229,7 +194,7 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded transition-colors duration-200"
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded transition-colors duration-200"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
                   Beni hatırla
@@ -241,7 +206,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                className="group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
               >
                 {loading ? (
                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -249,65 +214,20 @@ export default function LoginPage() {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                 ) : (
-                  <LockClosedIcon className="absolute left-3 h-5 w-5 text-blue-100 group-hover:text-white transition-colors duration-200" aria-hidden="true" />
+                  <LockClosedIcon className="absolute left-3 h-5 w-5 text-indigo-100 group-hover:text-white transition-colors duration-200" aria-hidden="true" />
                 )}
                 {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
                 {!loading && (
-                  <ArrowRightIcon className="ml-2 -mr-1 h-4 w-4 text-blue-100 group-hover:text-white group-hover:translate-x-1 transition-transform duration-200" />
+                  <ArrowRightIcon className="ml-2 -mr-1 h-4 w-4 text-indigo-100 group-hover:text-white group-hover:translate-x-1 transition-transform duration-200" />
                 )}
               </button>
             </div>
           </form>
 
-          {/* Sosyal Giriş Butonları */}
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Veya şununla devam et</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => signIn('google', { callbackUrl: '/' })}
-                className="w-full inline-flex justify-center py-3 px-4 rounded-xl border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-700 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow"
-              >
-                <svg className="w-5 h-5 mr-2 text-blue-600" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
-                </svg>
-                Google 
-              </button>
-
-              <button
-                type="button"
-                onClick={() => signIn('facebook', { callbackUrl: '/' })}
-                className="w-full inline-flex justify-center py-3 px-4 rounded-xl border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-700 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow"
-              >
-                <svg className="w-5 h-5 mr-2 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                </svg>
-                Facebook
-              </button>
-            </div>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-500">
+              Bir sorun mu yaşıyorsunuz? <a href="mailto:support@tourtech.com" className="font-medium text-indigo-600 hover:text-indigo-500">Destek ekibimizle iletişime geçin</a>
+            </p>
           </div>
         </div>
       </div>

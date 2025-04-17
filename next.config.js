@@ -15,6 +15,12 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'source.unsplash.com',
+        pathname: '/**',
+        port: '',
+      },
+      {
+        protocol: 'https',
         hostname: 'randomuser.me',
         pathname: '/**',
       },
@@ -44,7 +50,7 @@ const nextConfig = {
         pathname: '/**',
       }
     ],
-    domains: ['images.unsplash.com'],
+    domains: ['images.unsplash.com', 'source.unsplash.com'],
   },
   webpack: (config, { isServer }) => {
     // Node modüllerini client-side transpilation'dan hariç tut

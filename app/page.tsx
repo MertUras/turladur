@@ -14,6 +14,7 @@ import Destinations from './components/Destinations';
 export default async function Home() {
   return (
     <main>
+      <Header />
       <Hero />
       <HotDeals />
       <Destinations />
@@ -24,6 +25,7 @@ export default async function Home() {
       <Partners />
       <CTA />
       <MobileOfferPopup />
+      <Footer />
     </main>
   );
 }
