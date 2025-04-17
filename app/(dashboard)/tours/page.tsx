@@ -1454,7 +1454,7 @@ export default function ToursPage() {
           <div className="flex flex-col md:flex-row gap-12">
             <div className="md:w-1/2">
               <div className="inline-flex items-center bg-blue-100 text-blue-800 rounded-full py-1 px-3 text-xs font-medium mb-4">
-                TourTech Rehberi
+                TurlaDur Rehberi
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">Turlarınızı Planlarken Dikkat Edilmesi Gerekenler</h2>
               <p className="text-gray-700 mb-6">

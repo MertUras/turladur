@@ -210,7 +210,7 @@ export default function Partners() {
             Özel Fırsatlar ve İş Ortakları
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            TourTech olarak sektörün önde gelen kurumlarıyla yaptığımız işbirlikleri sayesinde sizlere özel indirimler ve ayrıcalıklar sunuyoruz
+            TurlaDur olarak sektörün önde gelen kurumlarıyla yaptığımız işbirlikleri sayesinde sizlere özel indirimler ve ayrıcalıklar sunuyoruz
           </p>
         </div>
 

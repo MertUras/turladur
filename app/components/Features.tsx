@@ -105,7 +105,7 @@ export default function Features() {
             ÖZELLİKLERİMİZ
           </span>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-500">
-            Neden TourTech?
+            Neden TurlaDur?
           </h2>
           <p className="text-gray-600 max-w-3xl mx-auto text-lg">
             Turizm ekosisteminin tüm bileşenlerini tek bir platformda buluşturuyoruz.

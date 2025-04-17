@@ -1763,7 +1763,7 @@ export default function ProfilePage() {
                       <div className="p-6 text-white">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-2xl font-bold">TourTech Elit Üye</h3>
+                            <h3 className="text-2xl font-bold">TurlaDur Elit Üye</h3>
                             <p className="text-blue-100">{user?.name || 'İsimsiz Kullanıcı'}</p>
                           </div>
                           <div className="h-16 w-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
@@ -2157,8 +2157,8 @@ export default function ProfilePage() {
                           </div>
                           <h4 className="font-medium text-gray-900 dark:text-white mb-1">E-posta</h4>
                           <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Sorularınız için bize yazın</p>
-                          <a href="mailto:destek@tourtech.com" className="text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline">
-                            destek@tourtech.com
+                          <a href="mailto:destek@turladur.com" className="text-blue-600 dark:text-blue-400 text-sm font-medium hover:underline">
+                            destek@turladur.com
                           </a>
                         </div>
                         

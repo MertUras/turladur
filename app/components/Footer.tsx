@@ -30,10 +30,10 @@ export default function Footer({ className = "" }: FooterProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-2.25-1.313M21 7.5v2.25m0-2.25-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3 2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75 2.25-1.313M12 21.75V19.5m0 2.25-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25" />
                 </svg>
               </div>
-              <span className="text-xl font-bold">TourTech</span>
+              <span className="text-xl font-bold">TurlaDur</span>
             </div>
             <p className="text-gray-400 mb-4">
-              TourTech ile dünyanın en güzel destinasyonlarını keşfedin. Seyahatlerinizi planlamanın en kolay ve en uygun fiyatlı yolu.
+              TurlaDur ile dünyanın en güzel destinasyonlarını keşfedin. Seyahatlerinizi planlamanın en kolay ve en uygun fiyatlı yolu.
             </p>
             <div className="flex space-x-4 mb-8">
               <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" 
@@ -240,7 +240,7 @@ export default function Footer({ className = "" }: FooterProps) {
         {/* Orta kısım - Abonelik */}
         <div className="border-t border-gray-800 pt-8 pb-10">
           <div className="max-w-xl mx-auto text-center">
-            <h4 className="text-lg font-bold mb-2">TourTech Bültenine Abone Olun</h4>
+            <h4 className="text-lg font-bold mb-2">TurlaDur Bültenine Abone Olun</h4>
             <p className="text-gray-400 mb-4">En güncel seyahat haberleri ve özel fırsatları almak için kayıt olun</p>
             
             <form className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto">
@@ -263,7 +263,7 @@ export default function Footer({ className = "" }: FooterProps) {
         <div className="border-t border-gray-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="text-gray-500 text-sm mb-4 md:mb-0">
-              © {currentYear} TourTech. Tüm hakları saklıdır.
+              © {currentYear} TurlaDur. Tüm hakları saklıdır.
             </div>
             
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm">

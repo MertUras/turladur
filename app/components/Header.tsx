@@ -144,16 +144,19 @@ export default function Header() {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center group">
-            <div className="relative h-10 w-10 mr-2 overflow-hidden rounded-lg transition-transform duration-300 group-hover:scale-105">
-              <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-blue-400 opacity-90 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-lg">
-                <span className="transform transition-transform duration-300 group-hover:scale-110">T</span>
-              </div>
+            <div className="relative h-10 w-10 mr-2">
+              <Image
+                src="/images/logo.png"
+                alt="TurlaDur Logo"
+                width={40}
+                height={40}
+                className="transition-transform duration-300 group-hover:scale-105"
+              />
             </div>
             <span className={`text-2xl font-bold ${
-              isScrolled ? "text-blue-700" : "text-white"
+              isScrolled ? "text-blue-700" : "text-orange-500"
             } transition-all duration-300`}>
-              TourTech
+              TurlaDur
             </span>
           </Link>
 
@@ -504,11 +507,16 @@ export default function Header() {
             {/* Header */}
             <div className="sticky top-0 flex justify-between items-center px-4 py-3 border-b border-gray-100 bg-white z-20">
               <Link href="/" className="flex items-center">
-                <div className="relative h-8 w-8 mr-2 overflow-hidden rounded-lg">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-blue-400"></div>
-                  <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-sm">T</div>
+                <div className="relative h-8 w-8 mr-2">
+                  <Image
+                    src="/images/logo.png"
+                    alt="TurlaDur Logo"
+                    width={32}
+                    height={32}
+                    className="transition-transform duration-300"
+                  />
                 </div>
-                <span className="text-xl font-bold text-blue-700">TourTech</span>
+                <span className="text-xl font-bold text-blue-700">TurlaDur</span>
               </Link>
               <button
                 className="p-2 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100"
@@ -692,83 +700,11 @@ export default function Header() {
                     </div>
                   </div>
                 </div>
-                
-                {/* Diğer Linkler */}
-                <div className="mt-2 border-t border-gray-100 pt-4">
-                  <Link 
-                    href="/about" 
-                    className="flex items-center py-3 px-3 rounded-lg text-gray-700 hover:bg-gray-50"
-                  >
-                    <InformationCircleIcon className="w-5 h-5 mr-3" />
-                    <span className="font-medium">Hakkımızda</span>
-                  </Link>
-                  
-                  <Link 
-                    href="/contact" 
-                    className="flex items-center py-3 px-3 rounded-lg text-gray-700 hover:bg-gray-50"
-                  >
-                    <EnvelopeIcon className="w-5 h-5 mr-3" />
-                    <span className="font-medium">İletişim</span>
-                  </Link>
-                </div>
               </div>
-            </div>
-            
-            {/* Footer */}
-            <div className="border-t border-gray-100 py-4 px-4">
-              {status === "authenticated" ? (
-                <div className="space-y-3">
-                  <Link 
-                    href="/profile"
-                    className="block w-full py-2.5 px-4 border border-gray-300 hover:bg-gray-50 text-gray-800 font-medium rounded-lg transition-colors text-center"
-                  >
-                    Profilim
-                  </Link>
-                  
-                  <Link 
-                    href="/bookings"
-                    className="block w-full py-2.5 px-4 border border-gray-300 hover:bg-gray-50 text-gray-800 font-medium rounded-lg transition-colors text-center"
-                  >
-                    Rezervasyonlarım
-                  </Link>
-                  
-                  <button
-                    onClick={() => {
-                      signOut({ callbackUrl: '/' });
-                      setActiveDropdown(null);
-                    }}
-                    className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-center"
-                  >
-                    Çıkış Yap
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-3">
-                  <Link 
-                    href="/login"
-                    className="flex-1 py-2.5 px-4 border border-gray-300 hover:bg-gray-50 text-gray-800 font-medium rounded-lg transition-colors text-center"
-                  >
-                    Giriş Yap
-                  </Link>
-                  
-                  <Link 
-                    href="/register"
-                    className="flex-1 py-2.5 px-4 bg-gray-800 hover:bg-gray-900 text-white font-medium rounded-lg transition-colors text-center"
-                  >
-                    Üye Ol
-                  </Link>
-                </div>
-              )}
             </div>
           </div>
         </div>
       )}
-
-      {/* Deals Popup */}
-      <DealsPopup 
-        isOpen={dealsOpen} 
-        onClose={() => setDealsOpen(false)} 
-      />
     </header>
   );
-} 
+}

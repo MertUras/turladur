@@ -424,7 +424,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
                 Size Özel Avantajlar
               </h4>
               <p className="text-gray-600 text-sm mt-1">
-                TourTech üyeleri tüm fırsatlardan öncelikli olarak yararlanır
+                TurlaDur üyeleri tüm fırsatlardan öncelikli olarak yararlanır
               </p>
             </div>
             
