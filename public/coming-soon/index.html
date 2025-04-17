@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TourTech - Yakında Sizlerle</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <img src="../images/logo.svg" alt="TourTech Logo" onerror="this.src='../globe.svg'">
+            </div>
+        </header>
+        
+        <main>
+            <h1>Çok Yakında Hizmetinizdeyiz</h1>
+            <p class="description">TourTech ile turizm sektöründe dönüşüm başlıyor. Yakında tüm hizmetlerimizle sizlerle olacağız.</p>
+            
+            <div class="countdown">
+                <div class="countdown-item">
+                    <span id="days">00</span>
+                    <span class="label">Gün</span>
+                </div>
+                <div class="countdown-item">
+                    <span id="hours">00</span>
+                    <span class="label">Saat</span>
+                </div>
+                <div class="countdown-item">
+                    <span id="minutes">00</span>
+                    <span class="label">Dakika</span>
+                </div>
+                <div class="countdown-item">
+                    <span id="seconds">00</span>
+                    <span class="label">Saniye</span>
+                </div>
+            </div>
+            
+            <div class="subscribe">
+                <h2>Haberdar Olmak İçin Abone Olun</h2>
+                <form id="subscribe-form">
+                    <input type="email" placeholder="E-posta adresiniz" required>
+                    <button type="submit">Abone Ol</button>
+                </form>
+                <p class="thank-you" id="thank-you">Abone olduğunuz için teşekkürler! Gelişmelerden haberdar edeceğiz.</p>
+            </div>
+        </main>
+        
+        <footer>
+            <div class="social-links">
+                <a href="#" class="social-link"><img src="images/social/instagram.svg" alt="Instagram"></a>
+                <a href="#" class="social-link"><img src="images/social/twitter.svg" alt="Twitter"></a>
+                <a href="#" class="social-link"><img src="images/social/facebook.svg" alt="Facebook"></a>
+                <a href="#" class="social-link"><img src="images/social/linkedin.svg" alt="LinkedIn"></a>
+            </div>
+            <p>&copy; 2024 TourTech. Tüm hakları saklıdır.</p>
+        </footer>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html> 

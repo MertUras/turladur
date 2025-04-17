@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { ArrowRightIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import { isAuthenticated } from '@/lib/auth/index';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -16,11 +17,20 @@ export default function LoginPage() {
   const [mounted, setMounted] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  useEffect(() => {
+    // Kullanıcı oturum açtıysa ana sayfaya yönlendir
+    if (isAuthenticated(status)) {
+      router.push('/');
+      router.refresh();
+    }
+  }, [status, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,13 +51,18 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/');
-      router.refresh();
+      // Başarılı giriş, ana sayfaya yönlendirilecek
+      // useSession hook'u ile otomatik olarak yönlendirilecek
     } catch (error) {
       setError('Bir hata oluştu. Lütfen tekrar deneyin.');
       setLoading(false);
     }
   };
+
+  // Kullanıcı zaten giriş yaptıysa login sayfasını gösterme
+  if (isAuthenticated(status)) {
+    return null; // veya bir yükleme ekranı gösterilebilir
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -207,6 +222,7 @@ export default function LoginPage() {
             <div className="mt-6 grid grid-cols-2 gap-3">
               <button
                 type="button"
+                onClick={() => signIn('google', { callbackUrl: '/' })}
                 className="w-full inline-flex justify-center py-3 px-4 rounded-xl border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-700 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow"
               >
                 <svg className="w-5 h-5 mr-2 text-blue-600" viewBox="0 0 24 24">
@@ -232,6 +248,7 @@ export default function LoginPage() {
 
               <button
                 type="button"
+                onClick={() => signIn('facebook', { callbackUrl: '/' })}
                 className="w-full inline-flex justify-center py-3 px-4 rounded-xl border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-700 hover:border-blue-400 transition-all duration-200 shadow-sm hover:shadow"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-900" viewBox="0 0 320 512">
@@ -248,31 +265,39 @@ export default function LoginPage() {
       <div className="hidden lg:block lg:w-1/2 relative">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/90 to-indigo-700/90 z-10"></div>
         <Image
-          src="https://images.unsplash.com/photo-1534536281715-e28d76689b4d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+          src="https://images.unsplash.com/photo-1600058644438-05c98a179fc4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
           alt="Tatil Manzarası"
           fill
           className="object-cover"
         />
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 p-10 text-center">
           <div className="max-w-md">
-            <h2 className="text-4xl font-bold text-white mb-6">Seyahat Deneyimini Dönüştür</h2>
+            <h2 className="text-4xl font-bold text-white mb-6">Hemen Giriş Yapın ve Keşfedin</h2>
             <p className="text-lg text-white/90 mb-8">
-              TourTech ile en iyi tatil fırsatlarını yakalayın, unutulmaz deneyimler yaşayın ve seyahat planlamayı kolaylaştırın.
+              TourTech ile mükemmel seyahat deneyimlerinizi planlayın ve unutulmaz anılar biriktirin.
             </p>
-            <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/10 shadow-xl">
-              <div className="text-sm text-white/80 italic mb-2">Üyelerimizden</div>
-              <div className="text-white font-medium">
-                "TourTech sayesinde hayalimdeki tatili gerçekleştirdim. Kolay rezervasyon süreci ve harika öneriler için teşekkürler!"
-              </div>
-              <div className="mt-4 flex items-center justify-center">
-                <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/50">
-                  <Image src="https://randomuser.me/api/portraits/women/42.jpg" alt="Kullanıcı" width={32} height={32} />
-                </div>
-                <div className="ml-2 text-white">
-                  <div className="text-sm font-semibold">Ayşe Y.</div>
-                  <div className="text-xs text-white/70">İzmir</div>
-                </div>
-              </div>
+            <div className="bg-white/10 backdrop-blur-sm p-6 rounded-xl border border-white/20">
+              <h3 className="text-xl font-semibold text-white mb-2">Üye Avantajları</h3>
+              <ul className="space-y-3 text-left">
+                <li className="flex items-center text-white/90">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Özel fiyatlar ve kampanyalar
+                </li>
+                <li className="flex items-center text-white/90">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Hızlı rezervasyon imkanı
+                </li>
+                <li className="flex items-center text-white/90">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Üyelere özel turlar ve etkinlikler
+                </li>
+              </ul>
             </div>
           </div>
         </div>

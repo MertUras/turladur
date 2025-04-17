@@ -46,6 +46,26 @@ const nextConfig = {
     ],
     domains: ['images.unsplash.com'],
   },
+  webpack: (config, { isServer }) => {
+    // Node modüllerini client-side transpilation'dan hariç tut
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: require.resolve('crypto-browserify'),
+      };
+    }
+    
+    // node: protokolü ile başlayan modüllerin yüklemesini es geç
+    config.module.rules.push({
+      test: /node:/,
+      loader: 'ignore-loader',
+    });
+    
+    return config;
+  },
 }
 
 module.exports = nextConfig; 

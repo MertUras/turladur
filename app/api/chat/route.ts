@@ -38,203 +38,366 @@ const responses: Record<string, string> = {
 
   "bagaj": "Tur tiplerine göre bagaj limitlerimiz değişmektedir. Genel olarak kişi başı 1 büyük valiz ve 1 el bagajına izin verilmektedir. Daha detaylı bilgi için rezervasyon esnasında müşteri temsilcilerimiz size yardımcı olacaktır.",
 
-  "vize": "Yurt dışı turlarımız için vize gereksinimleri ülkelere göre değişmektedir. Rezervasyon sırasında vize işlemleri konusunda size bilgi verilecektir. Ayrıca, ekstra bir ücret karşılığında vize danışmanlık hizmeti de sunmaktayız."
+  "vize": "Yurt dışı turlarımız için vize gereksinimleri ülkelere göre değişmektedir. Rezervasyon sırasında vize işlemleri konusunda size bilgi verilecektir. Ayrıca, ekstra bir ücret karşılığında vize danışmanlık hizmeti de sunmaktayız.",
+  
+  "indirim": "TourTech'te müşterilerimize çeşitli indirim fırsatları sunuyoruz:\n\n• Erken rezervasyon: %20'ye varan indirimler\n• Grup indirimleri: 6+ kişilik gruplarda kişi başı %15 indirim\n• Düzenli müşteri indirimi: İkinci ve sonraki rezervasyonlarda %10 indirim\n• Sezon dışı dönem indirimleri: Belirli dönemlerde %25'e varan indirimler\n\nAyrıca sosyal medya hesaplarımızı takip ederek özel kampanyalardan haberdar olabilirsiniz.",
+  
+  "belge": "Tura katılım için genellikle geçerli bir kimlik belgesi (nüfus cüzdanı, ehliyet veya pasaport) yeterlidir. Yurt dışı turlarında ise geçerli pasaport ve gerekli durumlarda vize istenebilmektedir. Bazı özel etkinlikler için ek belgeler talep edilebilir, bu durumda rezervasyon aşamasında bilgilendirileceksiniz.",
+  
+  "sürpriz": "Evet, özel günler için sürpriz organizasyonlar düzenliyoruz! Doğum günü, evlilik yıldönümü, nişan gibi özel günlerinizde size özel hatıralar oluşturmak için rehberlerimiz ve otel ekibiyle koordineli çalışmaktayız. Rezervasyon sırasında özel bir organizasyon talebiniz varsa lütfen belirtiniz.",
+  
+  "hava": "Tur bölgelerimizin hava durumları sezonlara göre değişiklik göstermektedir. Turdan yaklaşık 1 hafta önce sizinle iletişime geçerek, hava durumu ve buna göre hazırlanmanız gereken eşyalar konusunda bilgilendirme yapmaktayız. Ayrıca her tur için mevsim koşullarına uygun hazırlık önerilerimiz bulunmaktadır."
+};
+
+// Sık sorulan sorular ve bağlantıları - Kullanıcıya sunulacak öneriler için
+const faq = [
+  { id: 'fiyat', question: 'Turların fiyatları ne kadar?' },
+  { id: 'rezervasyon', question: 'Nasıl rezervasyon yapabilirim?' },
+  { id: 'iptal', question: 'İptal politikanız nedir?' },
+  { id: 'indirim', question: 'İndirim fırsatlarınız var mı?' },
+  { id: 'konaklama', question: 'Konaklama tesisleriniz nasıl?' },
+  { id: 'çocuk', question: 'Çocuklar için uygun mu?' },
+  { id: 'popüler', question: 'En popüler turlarınız hangileri?' },
+  { id: 'rehber', question: 'Rehberleriniz hakkında bilgi alabilir miyim?' }
+];
+
+// Destinasyon bilgileri - Belirli destinasyonlar hakkında detaylı bilgi
+const destinations = {
+  "kapadokya": "Kapadokya, peri bacaları, sıcak hava balon turları ve yeraltı şehirleriyle ünlü eşsiz bir bölgedir. Turlarımızda Göreme Açık Hava Müzesi, Derinkuyu Yeraltı Şehri, Uçhisar Kalesi ve gün doğumunda balon turlarını deneyimleyebilirsiniz. Bölge UNESCO Dünya Mirası Listesi'nde yer almaktadır.",
+  "fethiye": "Fethiye, turkuaz renkli koyları, Ölüdeniz'i ve eşsiz doğasıyla Türkiye'nin en gözde tatil destinasyonlarındandır. Burada Saklıkent Kanyonu, Ölüdeniz Plajı, Kelebekler Vadisi ve Kayaköy Antik Kenti'ni gezebilir, yamaç paraşütü ve tekne turları gibi aktivitelere katılabilirsiniz.",
+  "pamukkale": "Pamukkale, bembeyaz travertenleri ve antik Hierapolis harabeleriyle ünlüdür. UNESCO Dünya Mirası Listesi'nde yer alan bu eşsiz doğa harikasında termal sularda yüzebilir, antik tiyatroyu ziyaret edebilir ve travertenlerin muhteşem manzarasının tadını çıkarabilirsiniz.",
+  "istanbul": "İstanbul, iki kıtayı birleştiren, tarihi ve kültürel zenginlikleriyle dünyaca ünlü bir metropoldür. Ayasofya, Topkapı Sarayı, Sultanahmet Camii, Kapalıçarşı gibi önemli tarihi mekânların yanı sıra, Boğaz turu ve lezzet turlarıyla bu şehrin tüm güzelliklerini keşfedebilirsiniz.",
+  "antalya": "Antalya, muhteşem plajları, antik kentleri ve lüks tatil köyleriyle Türkiye'nin turizm cennetidir. Konyaaltı ve Lara plajları, Aspendos Antik Tiyatrosu, Kaleiçi, Düden Şelalesi ve Olympos Antik Kenti bölgenin en çok ziyaret edilen yerleri arasındadır."
 };
 
 // Yanıt vermek için varsayılan mesaj
 const defaultResponse = "Sorunuz için teşekkürler! Şu anda bu konu hakkında detaylı bilgi veremiyorum, ancak müşteri temsilcilerimizden biri en kısa sürede size yardımcı olacaktır. Başka bir konuda yardımcı olabilir miyim?";
 
+// Türkçe karakterleri normalize eden yardımcı fonksiyon
+function normalizeTurkishText(text: string): string {
+  return text.toLowerCase()
+    .replace(/İ/g, 'i')
+    .replace(/I/g, 'ı')
+    .replace(/Ş/g, 'ş')
+    .replace(/Ğ/g, 'ğ')
+    .replace(/Ü/g, 'ü')
+    .replace(/Ö/g, 'ö')
+    .replace(/Ç/g, 'ç')
+    .trim();
+}
+
+// Konuşma bağlamını takip etmek için basit bellek
+const conversations = new Map<string, {
+  context: string,
+  lastInteraction: Date,
+  messageCount: number,
+  lastTopic?: string,
+  suggestedQuestions?: {id: string, question: string}[]
+}>();
+
+// Kullanıcının mesajını analiz eden yardımcı fonksiyon
+function analyzeMessage(message: string, userId: string = 'default') {
+  // Türkçe karakterleri düzgün şekilde normalize et
+  const normalizedMessage = normalizeTurkishText(message);
+  
+  // Kullanıcı bağlamını al veya oluştur
+  let userContext = conversations.get(userId);
+  if (!userContext) {
+    userContext = {
+      context: '',
+      lastInteraction: new Date(),
+      messageCount: 0
+    };
+    conversations.set(userId, userContext);
+  }
+  
+  // Mesaj sayısını ve son etkileşim zamanını güncelle
+  userContext.messageCount++;
+  userContext.lastInteraction = new Date();
+  
+  // Konuşma bağlamını güncelle
+  if (userContext.lastTopic) {
+    userContext.context += `Son konu: ${userContext.lastTopic}. `;
+  }
+  
+  // Destinasyon kontrolü
+  for (const [dest, info] of Object.entries(destinations)) {
+    if (normalizedMessage.includes(normalizeTurkishText(dest))) {
+      userContext.lastTopic = dest;
+      return {
+        message: info,
+        suggestedQuestions: [
+          { id: 'tur_' + dest, question: `${dest.charAt(0).toUpperCase() + dest.slice(1)} turları ne kadar?` },
+          { id: 'aktivite_' + dest, question: `${dest.charAt(0).toUpperCase() + dest.slice(1)}'da neler yapılabilir?` }
+        ]
+      };
+    }
+  }
+
+  // Hızlı yanıt kontrolü
+  const quickResponseTexts = [
+    {text: "fiyatlar hakkında bilgi", key: "fiyat"},
+    {text: "rezervasyon nasıl yapılır", key: "rezervasyon"},
+    {text: "iptal politikası", key: "iptal"},
+    {text: "ödeme seçenekleri", key: "ödeme"},
+    {text: "iletişim bilgileri", key: "iletişim"},
+    {text: "tur tarihleri", key: "tarih"},
+    {text: "konaklama seçenekleri", key: "konaklama"},
+    {text: "çocuklar için uygunluk", key: "çocuk"},
+    {text: "indirim fırsatları", key: "indirim"},
+    {text: "gerekli belgeler", key: "belge"},
+    {text: "sürpriz organizasyon", key: "sürpriz"},
+    {text: "hava durumu", key: "hava"}
+  ];
+
+  // Hızlı yanıt için tam metin kontrolü (Türkçe karakter duyarlılığı olmadan)
+  for (const item of quickResponseTexts) {
+    const normalizedText = normalizeTurkishText(item.text);
+    if (normalizedMessage === normalizedText) {
+      userContext.lastTopic = item.key;
+      
+      // İlgili sorular öner
+      let suggestedQuestions;
+      
+      if (item.key === "fiyat") {
+        suggestedQuestions = [
+          { id: 'indirim', question: 'İndirim fırsatlarınız var mı?' },
+          { id: 'ödeme', question: 'Hangi ödeme yöntemlerini kabul ediyorsunuz?' }
+        ];
+      } else if (item.key === "rezervasyon") {
+        suggestedQuestions = [
+          { id: 'iptal', question: 'İptal politikanız nedir?' },
+          { id: 'belge', question: 'Rezervasyon için hangi belgeler gerekli?' }
+        ];
+      } else {
+        // Rastgele 2 soru öner
+        suggestedQuestions = faq
+          .filter(q => q.id !== item.key)
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 2);
+      }
+      
+      return {
+        message: responses[item.key],
+        suggestedQuestions
+      };
+    }
+  }
+
+  // Kullanıcının daha önce sorduğu soru ile ilgili takip sorusu olabilir mi?
+  if (userContext.lastTopic && normalizedMessage.length < 15 && 
+      (normalizedMessage.includes("evet") || 
+       normalizedMessage.includes("hayir") || 
+       normalizedMessage.includes("detay") || 
+       normalizedMessage.includes("daha") || 
+       normalizedMessage.includes("baska"))) {
+    // Önceki konuyla ilgili takip sorusu
+    const lastTopic = userContext.lastTopic;
+    
+    if (responses[lastTopic]) {
+      // Konu hakkında daha fazla sorular öner
+      let relatedQuestions;
+      
+      if (lastTopic === "fiyat") {
+        relatedQuestions = [
+          { id: 'indirim', question: 'İndirim fırsatlarınız var mı?' },
+          { id: 'rezervasyon', question: 'Nasıl rezervasyon yapabilirim?' }
+        ];
+      } else if (lastTopic === "rezervasyon") {
+        relatedQuestions = [
+          { id: 'iptal', question: 'İptal politikanız nedir?' },
+          { id: 'ödeme', question: 'Hangi ödeme yöntemlerini kabul ediyorsunuz?' }
+        ];
+      } else {
+        // Rastgele 2 soru öner
+        relatedQuestions = faq
+          .filter(q => q.id !== lastTopic)
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 2);
+      }
+      
+      return {
+        message: `${responses[lastTopic]}\n\nBaşka bir sorunuz var mı?`,
+        suggestedQuestions: relatedQuestions
+      };
+    }
+  }
+
+  // Anahtar kelime tabanlı yanıtlar - Türkçe karakter duyarlılığı olmadan
+  const keywords = [
+    { terms: ["fiyat", "ucret", "ne kadar", "tutar", "para", "butce", "pahali", "ucuz"], key: "fiyat" },
+    { terms: ["rezervasyon", "yer ayir", "nasil rezervasyon", "yer ayirtmak", "kayit"], key: "rezervasyon" },
+    { terms: ["iptal", "iptal politikasi", "vazgec", "iade", "geri odeme"], key: "iptal" },
+    { terms: ["odeme", "kredi karti", "havale", "taksit", "nakit", "para", "odeme yontemi"], key: "ödeme" },
+    { terms: ["iletisim", "telefon", "adres", "numara", "mail", "e-posta", "ulasmak"], key: "iletişim" },
+    { terms: ["tarih", "ne zaman", "hangi gun", "takvim", "ay", "yil", "tarihler"], key: "tarih" },
+    { terms: ["merhaba", "merhabalar", "hello", "selam ver", "basla"], key: "merhaba" },
+    { terms: ["selam", "selamlar", "hi", "hey", "herkese merhaba"], key: "selam" },
+    { terms: ["tesekkur", "tesekkurler", "sagol", "sagolun", "tesekkur ederim"], key: "teşekkür" },
+    { terms: ["konaklama", "otel", "hotel", "nerede kalicaz", "kalacak yer", "pansiyon"], key: "konaklama" },
+    { terms: ["cocuk", "bebek", "infant", "aile", "yas siniri", "cocuklar"], key: "çocuk" },
+    { terms: ["ulasim", "transfer", "arac", "otobus", "nasil gidecegiz", "yolculuk"], key: "ulaşım" },
+    { terms: ["guvenlik", "emniyet", "guvenli mi", "tehlike", "risk", "onlem"], key: "güvenlik" },
+    { terms: ["rehber", "tur lideri", "guide", "eslik", "bilgi veren"], key: "rehber" },
+    { terms: ["yemek", "yiyecek", "icecek", "ogun", "kahvalti", "aksam yemegi", "menu"], key: "yemek" },
+    { terms: ["internet", "wifi", "wi-fi", "baglanti", "online", "erisim"], key: "internet" },
+    { terms: ["populer", "en iyi", "tavsiye", "oneri", "trend", "tercih"], key: "popüler" },
+    { terms: ["bagaj", "valiz", "canta", "esya", "yanima ne almaliyim"], key: "bagaj" },
+    { terms: ["vize", "pasaport", "kimlik", "seyahat belgesi", "evrak"], key: "vize" },
+    { terms: ["indirim", "kampanya", "promosyon", "kupon", "avantaj"], key: "indirim" },
+    { terms: ["belge", "dokuman", "gerekli evraklar", "yanimda ne getirmeli"], key: "belge" },
+    { terms: ["surpriz", "organizasyon", "kutlama", "dogum gunu", "ozel gun", "evlilik teklifi"], key: "sürpriz" },
+    { terms: ["hava", "hava durumu", "mevsim", "iklim", "yagmur", "sicaklik", "soguk"], key: "hava" }
+  ];
+
+  // Tam eşleşme kontrolü - Türkçe karakter duyarlılığı olmadan
+  for (const item of keywords) {
+    if (item.terms.some(term => {
+      const normalizedTerm = normalizeTurkishText(term);
+      return normalizedMessage.includes(normalizedTerm);
+    })) {
+      userContext.lastTopic = item.key;
+      
+      // İlgili sorular öner
+      let suggestedQuestions;
+      
+      if (item.key === "fiyat") {
+        suggestedQuestions = [
+          { id: 'indirim', question: 'İndirim fırsatlarınız var mı?' },
+          { id: 'ödeme', question: 'Hangi ödeme yöntemlerini kabul ediyorsunuz?' }
+        ];
+      } else if (item.key === "rezervasyon") {
+        suggestedQuestions = [
+          { id: 'iptal', question: 'İptal politikanız nedir?' },
+          { id: 'belge', question: 'Rezervasyon için hangi belgeler gerekli?' }
+        ];
+      } else {
+        // Rastgele 2 soru öner
+        suggestedQuestions = faq
+          .filter(q => q.id !== item.key)
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 2);
+      }
+      
+      return {
+        message: responses[item.key],
+        suggestedQuestions
+      };
+    }
+  }
+  
+  // Hiçbir eşleşme bulunamadıysa
+  if (userContext.messageCount <= 2) {
+    // Yeni kullanıcı için genel bilgi ve kılavuz
+    return {
+      message: "Size en iyi şekilde yardımcı olabilmem için turlar, fiyatlar, rezervasyon veya destinasyonlar hakkında spesifik sorular sorabilirsiniz. Kapadokya, İstanbul, Pamukkale, Fethiye gibi destinasyonlarımız hakkında bilgi almak ister misiniz?",
+      suggestedQuestions: faq.slice(0, 4) // İlk 4 SSS'yi göster
+    };
+  }
+  
+  return {
+    message: defaultResponse,
+    suggestedQuestions: faq
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 3) // Rastgele 3 soru öner
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { message } = await request.json();
+    const { message, userId = 'default' } = await request.json();
+    console.log("Gelen mesaj:", message);
     
-    // Mesaj içeriğine göre yanıt verme
-    let response = defaultResponse;
-    
-    // Basit anahtar kelime kontrolü
-    const lowercaseMessage = message.toLowerCase().trim();
-
-    // Hızlı yanıtların tam metninin kontrolü - Önce bunu kontrol edelim
-    const quickResponseTexts = [
-      {text: "fiyatlar hakkında bilgi", key: "fiyat"},
-      {text: "rezervasyon nasıl yapılır", key: "rezervasyon"},
-      {text: "iptal politikası", key: "iptal"},
-      {text: "ödeme seçenekleri", key: "ödeme"},
-      {text: "iletişim bilgileri", key: "iletişim"},
-      {text: "tur tarihleri", key: "tarih"},
-      {text: "konaklama seçenekleri", key: "konaklama"},
-      {text: "çocuklar için uygunluk", key: "çocuk"}
-    ];
-
-    // Hızlı yanıt düğmelerinden birinin tam metni ile eşleşme kontrolü
-    const exactMatch = quickResponseTexts.find(item => 
-      lowercaseMessage === item.text.toLowerCase());
-    
-    if (exactMatch) {
-      console.log("Hızlı yanıt eşleşmesi bulundu:", exactMatch.key);
-      return NextResponse.json({
-        message: responses[exactMatch.key],
-        timestamp: new Date().toISOString(),
-      });
-    }
-    
-    // İptal politikası için özel kontrol - çeşitli varyasyonlarla eşleşecek şekilde
-    if (lowercaseMessage.includes("iptal politikası") || 
-        lowercaseMessage.includes("iptal politika") ||
-        lowercaseMessage.includes("iade politika") ||
-        lowercaseMessage.includes("iptal şartları") ||
-        lowercaseMessage.includes("iptal koşulları") ||
-        lowercaseMessage === "iptal" ||
-        lowercaseMessage === "iptal politikası" ||
-        lowercaseMessage === "iptaller" ||
-        lowercaseMessage === "tur iptal" ||
-        lowercaseMessage === "iade" ||
-        (lowercaseMessage.includes("iptal") && lowercaseMessage.length < 20)) {
-      console.log("İptal politikası sorgusu yakalandı:", lowercaseMessage);
+    // Türkçe karakter düzeltmelerini içeren özel kontrol
+    // İptal politikası sorgusu için özel kontrol
+    if (message.toLowerCase().includes("iptal") || 
+        message.replace(/İ/g, "i").toLowerCase().includes("iptal") ||
+        message.includes("İptal") ||
+        message.includes("İptal politikası") || 
+        message.includes("iptal politikası") ||
+        message === "İptal Politikası") {
+      console.log("İptal politikası sorgusu tespit edildi");
       return NextResponse.json({ 
         message: responses["iptal"],
-        timestamp: new Date().toISOString(),
+        suggestedQuestions: [
+          { id: 'rezervasyon', question: 'Nasıl rezervasyon yapabilirim?' },
+          { id: 'ödeme', question: 'Ödeme seçenekleri nelerdir?' }
+        ],
+        timestamp: new Date().toISOString()
       });
     }
-
-    // Fiyat sorguları için özel kontrol
-    if (lowercaseMessage === "fiyat" || 
-        lowercaseMessage === "fiyatlar" ||
-        lowercaseMessage === "fiyatlar hakkında" ||
-        lowercaseMessage === "fiyatlar hakkında bilgi" ||
-        lowercaseMessage.includes("fiyat") && lowercaseMessage.length < 25) {
-      console.log("Fiyat sorgusu yakalandı:", lowercaseMessage);
-      return NextResponse.json({
-        message: responses["fiyat"],
-        timestamp: new Date().toISOString(),
+    
+    // İndirim fırsatları sorgusu için özel kontrol
+    if (message.toLowerCase().includes("indirim") || 
+        message.replace(/İ/g, "i").toLowerCase().includes("indirim") ||
+        message.includes("İndirim") ||
+        message.includes("İndirim fırsatları") ||
+        message.includes("indirim fırsatları") ||
+        message === "İndirim fırsatları var mı?") {
+      console.log("İndirim fırsatları sorgusu tespit edildi");
+      return NextResponse.json({ 
+        message: responses["indirim"],
+        suggestedQuestions: [
+          { id: 'rezervasyon', question: 'Nasıl rezervasyon yapabilirim?' },
+          { id: 'fiyat', question: 'Turların fiyatları ne kadar?' }
+        ],
+        timestamp: new Date().toISOString()
       });
     }
-
-    // Rezervasyon sorguları için özel kontrol
-    if (lowercaseMessage === "rezervasyon" || 
-        lowercaseMessage === "rezervasyon nasıl yapılır" ||
-        lowercaseMessage.includes("rezervasyon nasıl") ||
-        (lowercaseMessage.includes("rezervasyon") && lowercaseMessage.length < 30)) {
-      console.log("Rezervasyon sorgusu yakalandı:", lowercaseMessage);
-      return NextResponse.json({
-        message: responses["rezervasyon"],
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    // Ödeme sorguları için özel kontrol
-    if (lowercaseMessage === "ödeme" || 
-        lowercaseMessage === "ödeme seçenekleri" ||
-        lowercaseMessage.includes("ödeme seçenek") ||
-        (lowercaseMessage.includes("ödeme") && lowercaseMessage.length < 25)) {
-      console.log("Ödeme sorgusu yakalandı:", lowercaseMessage);
-      return NextResponse.json({
-        message: responses["ödeme"],
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    // İletişim sorguları için özel kontrol
-    if (lowercaseMessage === "iletişim" || 
-        lowercaseMessage === "iletişim bilgileri" ||
-        lowercaseMessage.includes("iletişim bilgi") ||
-        (lowercaseMessage.includes("iletişim") && lowercaseMessage.length < 25)) {
-      console.log("İletişim sorgusu yakalandı:", lowercaseMessage);
-      return NextResponse.json({
-        message: responses["iletişim"],
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    // Tur tarihleri sorguları için özel kontrol
-    if (lowercaseMessage === "tur tarihleri" || 
-        lowercaseMessage === "tarihler" ||
-        lowercaseMessage.includes("tur tarih") ||
-        (lowercaseMessage.includes("tarih") && lowercaseMessage.includes("tur"))) {
-      console.log("Tur tarihleri sorgusu yakalandı:", lowercaseMessage);
-      return NextResponse.json({
-        message: responses["tarih"],
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    // Konaklama sorguları için özel kontrol
-    if (lowercaseMessage === "konaklama" || 
-        lowercaseMessage === "konaklama seçenekleri" ||
-        lowercaseMessage.includes("konaklama seçenek") ||
-        (lowercaseMessage.includes("konaklama") && lowercaseMessage.length < 30)) {
-      console.log("Konaklama sorgusu yakalandı:", lowercaseMessage);
-      return NextResponse.json({
-        message: responses["konaklama"],
-        timestamp: new Date().toISOString(),
-      });
-    }
-
-    // Çocuk sorguları için özel kontrol
-    if (lowercaseMessage === "çocuklar için uygunluk" || 
-        lowercaseMessage.includes("çocuk") && lowercaseMessage.includes("uygun") ||
-        (lowercaseMessage.includes("çocuk") && lowercaseMessage.length < 25)) {
-      console.log("Çocuk sorgusu yakalandı:", lowercaseMessage);
-      return NextResponse.json({
+    
+    // Çocuklar için uygunluk sorgusu için özel kontrol
+    if (message.toLowerCase().includes("çocuk") || 
+        message.replace(/Ç/g, "c").toLowerCase().includes("cocuk") ||
+        message.includes("Çocuk") ||
+        message.includes("Çocuklar için uygunluk") ||
+        message.includes("çocuklar için uygunluk")) {
+      console.log("Çocuklar için uygunluk sorgusu tespit edildi");
+      return NextResponse.json({ 
         message: responses["çocuk"],
-        timestamp: new Date().toISOString(),
+        suggestedQuestions: [
+          { id: 'fiyat', question: 'Çocuk indirimleri ne kadar?' },
+          { id: 'konaklama', question: 'Konaklama tesisleriniz nasıl?' }
+        ],
+        timestamp: new Date().toISOString()
       });
     }
     
-    // Anahtar kelimeleri kontrol et - Eğer özel kontrollerden geçemediyse buraya düşecek
-    const keywords = [
-      { terms: ["fiyat", "ücret", "ne kadar", "tutar", "para", "bütçe", "pahalı", "ucuz"], key: "fiyat" },
-      { terms: ["rezervasyon", "yer ayır", "nasıl rezervasyon", "yer ayırtmak", "kayıt"], key: "rezervasyon" },
-      { terms: ["iptal", "iptal politikası", "vazgeç", "iade", "geri ödeme", "iptal politika", "iptal koşul", "iptal şart", "iptal edilir", "iptal etmek", "iptal nedir", "iptal durumunda", "iptal olur", "iptal edilebilir", "iptal hakkında"], key: "iptal" },
-      { terms: ["ödeme", "kredi kartı", "havale", "taksit", "nakit", "para", "ödeme yöntemi"], key: "ödeme" },
-      { terms: ["iletişim", "telefon", "adres", "numara", "mail", "e-posta", "ulaşmak"], key: "iletişim" },
-      { terms: ["tarih", "ne zaman", "hangi gün", "takvim", "ay", "yıl", "tarihler"], key: "tarih" },
-      { terms: ["merhaba", "merhabalar", "hello", "selam ver", "başla"], key: "merhaba" },
-      { terms: ["selam", "selamlar", "hi", "hey", "herkese merhaba"], key: "selam" },
-      { terms: ["teşekkür", "teşekkürler", "sağol", "sağolun", "teşekkür ederim"], key: "teşekkür" },
-      { terms: ["konaklama", "otel", "hotel", "nerede kalıcaz", "kalacak yer", "pansiyon"], key: "konaklama" },
-      { terms: ["çocuk", "bebek", "infant", "aile", "yaş sınırı", "çocuklar"], key: "çocuk" },
-      { terms: ["ulaşım", "transfer", "araç", "otobüs", "nasıl gideceğiz", "yolculuk"], key: "ulaşım" },
-      { terms: ["güvenlik", "emniyet", "güvenli mi", "tehlike", "risk", "önlem"], key: "güvenlik" },
-      { terms: ["rehber", "tur lideri", "guide", "eşlik", "bilgi veren"], key: "rehber" },
-      { terms: ["yemek", "yiyecek", "içecek", "öğün", "kahvaltı", "akşam yemeği", "menü"], key: "yemek" },
-      { terms: ["internet", "wifi", "wi-fi", "bağlantı", "online", "erişim"], key: "internet" },
-      { terms: ["popüler", "en iyi", "tavsiye", "öneri", "trend", "tercih"], key: "popüler" },
-      { terms: ["bagaj", "valiz", "çanta", "eşya", "yanıma ne almalıyım"], key: "bagaj" },
-      { terms: ["vize", "pasaport", "kimlik", "seyahat belgesi", "evrak"], key: "vize" }
-    ];
+    // Doğrudan sorgu görüntüleme için
+    const specificQueries = {
+      "Fiyatlar hakkında bilgi": "fiyat",
+      "Rezervasyon nasıl yapılır": "rezervasyon",
+      "İptal politikası": "iptal",
+      "Ödeme seçenekleri": "ödeme",
+      "İletişim bilgileri": "iletişim",
+      "Tur tarihleri": "tarih",
+      "Konaklama seçenekleri": "konaklama",
+      "Çocuklar için uygunluk": "çocuk",
+      "En popüler turları göster": "popüler"
+    };
     
-    // Tam eşleşme kontrolü
-    for (const item of keywords) {
-      if (item.terms.some(term => lowercaseMessage.includes(term))) {
-        response = responses[item.key];
-        break;
+    // Tam metin karşılaştırması
+    for (const [query, key] of Object.entries(specificQueries)) {
+      if (message.trim() === query || message.replace(/İ/g, "i").replace(/Ç/g, "c").trim().toLowerCase() === query.replace(/İ/g, "i").replace(/Ç/g, "c").toLowerCase()) {
+        console.log(`Tam metin eşleşmesi: "${query}" -> "${key}"`);
+        return NextResponse.json({ 
+          message: responses[key],
+          suggestedQuestions: faq
+            .filter(q => q.id !== key)
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 2),
+          timestamp: new Date().toISOString()
+        });
       }
     }
     
-    // Hiçbir eşleşme yoksa, anlamlı bir mesaj vereceğiz
-    if (response === defaultResponse) {
-      // Diğer akıllı kontroller
-      if (lowercaseMessage.includes('iptal') || lowercaseMessage.includes('iade')) {
-        response = responses['iptal'];
-      }
-      else if (lowercaseMessage.includes('tur') && 
-         (lowercaseMessage.includes('en iyi') || lowercaseMessage.includes('popüler'))) {
-        response = responses['popüler'];
-      } 
-      else if (lowercaseMessage.includes('yardım') || lowercaseMessage.includes('yardımcı')) {
-        response = "Size nasıl yardımcı olabilirim? 😊 Fiyatlar, rezervasyon, popüler turlar veya başka bir konu hakkında bilgi almak isterseniz sorabilirsiniz.";
-      }
-      else if (lowercaseMessage.length < 10) {
-        response = "Daha detaylı bir soru sorarsanız size daha iyi yardımcı olabilirim. Tur, rezervasyon, fiyatlar veya başka bir konu hakkında bilgi almak ister misiniz?";
-      }
-    }
+    // Yukarıdaki kontrollerde eşleşme olmazsa normal analiz fonksiyonuna geç
+    console.log("Normal analiz fonksiyonuna geçiliyor...");
+    const analysis = analyzeMessage(message, userId);
     
-    // API yanıt gecikme simülasyonu (gerçek bir API'de bu kaldırılmalı)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    // Yanıt ver
     return NextResponse.json({ 
-      message: response,
+      message: analysis.message,
+      suggestedQuestions: analysis.suggestedQuestions || [],
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -244,4 +407,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
