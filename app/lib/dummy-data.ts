@@ -7,7 +7,8 @@ import {
   Tour, 
   Experience, 
   Booking,
-  Review
+  Review,
+  Activity
 } from '../types';
 
 // Dummy kullanıcılar
@@ -40,7 +41,7 @@ export const dummyUsers: User[] = [
     id: '4',
     name: 'Zeynep Çelik',
     email: 'zeynep@example.com',
-    role: 'EXPERIENCE_PROVIDER',
+    role: 'ACTIVITY_PROVIDER',
     createdAt: new Date('2023-01-04'),
     updatedAt: new Date('2023-01-04'),
   },
@@ -1033,5 +1034,59 @@ export const dummyReviews: Review[] = [
     updatedAt: new Date('2023-08-07'),
     userId: '5',
     experienceId: '2',
+  },
+];
+
+// Dummy aktiviteler
+export const dummyActivities: Activity[] = [
+  {
+    id: '1',
+    name: 'Türk Mutfağı Workshop',
+    description: 'Geleneksel Türk yemeklerini öğrenin ve pişirin',
+    category: 'Yemek',
+    duration: 4, // saat
+    price: 800,
+    discount: 0,
+    location: 'Eminönü Mutfak Atölyesi',
+    city: 'İstanbul',
+    country: 'Türkiye',
+    latitude: 41.0082,
+    longitude: 28.9784,
+    maxParticipants: 10,
+    inclusions: JSON.stringify(['Malzemeler', 'Önlük', 'Yemek', 'İçecek']),
+    exclusions: JSON.stringify(['Ulaşım']),
+    images: JSON.stringify([
+      'https://images.unsplash.com/photo-1605522561233-768ad7a8fabf',
+      'https://images.unsplash.com/photo-1583032015879-e5022cb87c3b',
+    ]),
+    featured: true,
+    createdAt: new Date('2023-02-15'),
+    updatedAt: new Date('2023-02-15'),
+    activityId: '1',
+  },
+  {
+    id: '2',
+    name: 'Kapadokya Balon Turu',
+    description: 'Güneş doğarken Kapadokya\'nın eşsiz manzarasını havadan görün',
+    category: 'Macera',
+    duration: 3, // saat
+    price: 2500,
+    discount: 0,
+    location: 'Göreme Balon Kalkış Alanı',
+    city: 'Nevşehir',
+    country: 'Türkiye',
+    latitude: 38.6431,
+    longitude: 34.8307,
+    maxParticipants: 16,
+    inclusions: JSON.stringify(['Balon Uçuşu', 'Kahvaltı', 'Şampanya Seremonisi', 'Sertifika']),
+    exclusions: JSON.stringify(['Ulaşım', 'Konaklama']),
+    images: JSON.stringify([
+      'https://images.unsplash.com/photo-1516738901171-8eb4fc13bd20',
+      'https://images.unsplash.com/photo-1569530593440-e48dc137f7d0',
+    ]),
+    featured: true,
+    createdAt: new Date('2023-02-20'),
+    updatedAt: new Date('2023-02-20'),
+    activityId: '2',
   },
 ]; 

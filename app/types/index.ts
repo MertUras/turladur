@@ -1,5 +1,5 @@
 // Kullanıcı tipleri
-export type UserRole = 'USER' | 'HOTEL_ADMIN' | 'AGENCY_ADMIN' | 'TOUR_OPERATOR' | 'EXPERIENCE_PROVIDER' | 'ADMIN';
+export type UserRole = 'USER' | 'HOTEL_ADMIN' | 'AGENCY_ADMIN' | 'TOUR_OPERATOR' | 'ACTIVITY_PROVIDER' | 'ADMIN';
 // types/env.d.ts
 
 declare namespace NodeJS {
@@ -144,8 +144,8 @@ export interface Tour {
   experienceType?: string;
 }
 
-// Deneyim tipleri
-export interface Experience {
+// Aktiviteler tipleri
+export interface Activity {
   id: string;
   name: string;
   description?: string;
@@ -166,6 +166,7 @@ export interface Experience {
   createdAt: Date;
   updatedAt: Date;
   providerId: string;
+  activityId?: string;
 }
 
 // Rezervasyon tipleri
