@@ -30,14 +30,17 @@ export default function ExperiencesPage() {
     const [experiences, setExperiences] = useState<Experience[]>([]);
     const [filteredExperiences, setFilteredExperiences] = useState<Experience[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-    const [showFilters, setShowFilters] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
     const [minPrice, setMinPrice] = useState<number>(0);
     const [maxPrice, setMaxPrice] = useState<number>(5000);
     const [maxDuration, setMaxDuration] = useState<number>(12);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const filterMenuRef = useRef<HTMLDivElement>(null);
-    const [selectedExperienceType, setSelectedExperienceType] = useState<string | null>(null);
+    const [selectedExperienceType, setSelectedExperienceType] = useState<string | undefined>(undefined);
+    const [selectedCity, setSelectedCity] = useState<string | undefined>(undefined);
+    const [selectedProgram, setSelectedProgram] = useState<string | undefined>(undefined);
+    const [openFilter, setOpenFilter] = useState<string | null>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Kategoriler
     const categories = [
@@ -51,14 +54,14 @@ export default function ExperiencesPage() {
 
     // Deneyim Türleri
     const experienceTypes = [
-        { id: "havacilik", name: "Havacılık" },
-        { id: "su-sporlari", name: "Su Sporları" },
-        { id: "doga-yuruyusu", name: "Doğa Yürüyüşü" },
-        { id: "su-alti", name: "Su Altı" },
-        { id: "kis-sporlari", name: "Kış Sporları" },
-        { id: "kultur", name: "Kültür" },
-        { id: "gastronomi", name: "Gastronomi" },
-        { id: "ekstrem", name: "Ekstrem" }
+        { id: "balon-turu", name: "Balon Turu" },
+        { id: "helikopter-turu", name: "Helikopter Turu" },
+        { id: "jetski", name: "Jetski" },
+        { id: "parasailing", name: "Parasailing" },
+        { id: "atv-safari", name: "ATV Safari" },
+        { id: "tekne-turu", name: "Tekne Turu" },
+        { id: "dalis", name: "Dalış" },
+        { id: "zipline", name: "Zipline" }
     ];
 
     // Fetch experiences from API or use demo data
@@ -199,20 +202,6 @@ export default function ExperiencesPage() {
         setFilteredExperiences(filtered);
     }, [searchTerm, selectedCategory, selectedExperienceType, experiences, minPrice, maxPrice, maxDuration]);
 
-    // Filtre dışına tıklama kontrolü
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node) && showFilters) {
-                setShowFilters(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [showFilters]);
-
     // Scroll handlers
     const scrollLeft = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -230,8 +219,9 @@ export default function ExperiencesPage() {
 
     const resetFilters = () => {
         setSearchTerm("");
-        setSelectedCategory(null);
-        setSelectedExperienceType(null);
+        setSelectedCategory(undefined);
+        setSelectedExperienceType(undefined);
+        setSelectedCity(undefined);
         setMinPrice(0);
         setMaxPrice(5000);
         setMaxDuration(12);
@@ -251,10 +241,34 @@ export default function ExperiencesPage() {
         router.push(`/tours?experienceType=${experienceType}`);
     };
 
+    const handleCityChange = (value: string | undefined) => {
+        setSelectedCity(value === 'all' ? undefined : value);
+    };
+
+    const handleProgramChange = (value: string | undefined) => {
+        setSelectedProgram(value === 'all' ? undefined : value);
+    };
+
+    const handleCategoryChange = (value: string | undefined) => {
+        setSelectedCategory(value === 'all' ? undefined : value);
+    };
+
+    // Click outside handler for dropdowns
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setOpenFilter(null);
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     return (
         <>
             {/* Hero Section - Enhanced */}
-            <section className="relative w-full h-[600px] overflow-hidden">
+            <section className="relative w-full h-[600px]">
                 <Image
                     src="https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?q=80&w=2070&auto=format&fit=crop"
                     alt="Türkiye Seyahat Deneyimleri"
@@ -262,7 +276,7 @@ export default function ExperiencesPage() {
                     className="object-cover"
                     priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/20" />
+                <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/20 pointer-events-none" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <div className="w-full max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8">
                         <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl text-center">
@@ -273,197 +287,184 @@ export default function ExperiencesPage() {
                         </p>
                         
                         {/* Search Section */}
-                        <div className="mt-10 relative max-w-3xl mx-auto">
-                            <div className="bg-white/95 backdrop-blur-sm shadow-xl rounded-xl overflow-hidden">
-                                <div className="flex flex-col md:flex-row">
-                                    <div className="flex-grow p-4 relative">
-                                        <div className="flex items-center">
-                                            <Search className="h-5 w-5 text-gray-400 absolute left-4" />
+                        <div className="mt-10 relative max-w-5xl mx-auto" ref={dropdownRef} style={{ zIndex: 50 }}>
+                            <div className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl overflow-visible border border-gray-100">
+                                <div className="p-3">
+                                    <div className="flex items-center gap-3">
+                                        {/* Search Input */}
+                                        <div className="relative flex-1 min-w-[200px]">
+                                            <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                                             <input
                                                 type="text"
-                                                placeholder="Nereye gitmek istersiniz?"
-                                                className="w-full pl-10 pr-4 py-3 text-black rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                placeholder="Hangi aktiviteyi arıyorsunuz?"
+                                                className="w-full pl-9 pr-3 py-2.5 text-sm text-gray-600 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50/50"
                                                 value={searchTerm}
                                                 onChange={(e) => setSearchTerm(e.target.value)}
                                                 onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
                                             />
                                         </div>
-                                    </div>
-                                    <button 
-                                        className="flex items-center bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 font-medium hover:from-blue-600 hover:to-blue-700 md:rounded-l-none md:rounded-r-xl transition-all duration-300"
-                                        onClick={(e: React.MouseEvent) => {
-                                            e.preventDefault();
-                                            setShowFilters(!showFilters);
-                                        }}
-                                    >
-                                        <Filter className="w-5 h-5 mr-2" />
-                                        {showFilters ? "Filtreleri Gizle" : "Filtreleri Göster"}
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            {/* Portal tarzı filtre menüsü */}
-                            {showFilters && (
-                                <div className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm flex items-center justify-center">
-                                    <div 
-                                        ref={filterMenuRef}
-                                        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden transform transition-all"
-                                    >
-                                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                                            <h3 className="text-lg font-semibold text-gray-900">Filtreleme Seçenekleri</h3>
-                                            <button 
-                                                className="text-gray-500 hover:text-gray-700"
-                                                onClick={(e: React.MouseEvent) => {
-                                                    e.preventDefault();
-                                                    setShowFilters(false);
-                                                }}
+
+                                        {/* Experience Types Dropdown */}
+                                        <div className="relative w-[180px]">
+                                            <button
+                                                onClick={() => setOpenFilter(openFilter === 'activities' ? null : 'activities')}
+                                                className="w-full flex items-center justify-between pl-9 pr-3 py-2.5 text-sm text-gray-600 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50/50"
                                             >
-                                                <X className="w-5 h-5" />
+                                                <span>{selectedExperienceType ? experienceTypes.find(t => t.id === selectedExperienceType)?.name : 'Tüm Aktiviteler'}</span>
+                                                <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${openFilter === 'activities' ? 'rotate-[270deg]' : 'rotate-90'}`} />
                                             </button>
-                                        </div>
-                                        
-                                        <div className="p-6 space-y-6">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Kategori
-                                                </label>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {categories.map(category => (
+                                            <Filter className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                            
+                                            {openFilter === 'activities' && (
+                                                <div className="absolute top-[calc(100%+4px)] left-0 w-full py-1 bg-white rounded-xl shadow-lg border border-gray-100" style={{ zIndex: 51 }}>
+                                                    <div className="max-h-[240px] overflow-y-auto custom-scrollbar">
+                                                        <style jsx>{`
+                                                            .custom-scrollbar::-webkit-scrollbar {
+                                                                width: 6px;
+                                                            }
+                                                            .custom-scrollbar::-webkit-scrollbar-track {
+                                                                background: transparent;
+                                                            }
+                                                            .custom-scrollbar::-webkit-scrollbar-thumb {
+                                                                background-color: #E2E8F0;
+                                                                border-radius: 20px;
+                                                            }
+                                                            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                                                                background-color: #CBD5E1;
+                                                            }
+                                                            .custom-scrollbar {
+                                                                scrollbar-width: thin;
+                                                                scrollbar-color: #E2E8F0 transparent;
+                                                            }
+                                                        `}</style>
                                                         <button
-                                                            key={category.id}
-                                                            onClick={(e: React.MouseEvent) => {
-                                                                e.preventDefault();
-                                                                setSelectedCategory(category.id === "tumu" ? null : category.id);
+                                                            onClick={() => {
+                                                                setSelectedExperienceType(undefined);
+                                                                setOpenFilter(null);
                                                             }}
-                                                            className={`px-4 py-2 rounded-full text-sm font-medium ${
-                                                                (category.id === "tumu" && !selectedCategory) || selectedCategory === category.id
-                                                                    ? "bg-blue-500 text-white shadow-md hover:bg-blue-600"
-                                                                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                                                            } transition-colors`}
+                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-gray-600"
                                                         >
-                                                            {category.name}
+                                                            Tüm Aktiviteler
                                                         </button>
-                                                    ))}
+                                                        {experienceTypes.map(type => (
+                                                            <button
+                                                                key={type.id}
+                                                                onClick={() => {
+                                                                    setSelectedExperienceType(type.id);
+                                                                    setOpenFilter(null);
+                                                                }}
+                                                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-gray-600"
+                                                            >
+                                                                {type.name}
+                                                            </button>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
+                                        </div>
+
+                                        {/* Cities Dropdown */}
+                                        <div className="relative w-[160px]">
+                                            <button
+                                                onClick={() => setOpenFilter(openFilter === 'cities' ? null : 'cities')}
+                                                className="w-full flex items-center justify-between pl-9 pr-3 py-2.5 text-sm text-gray-600 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50/50"
+                                            >
+                                                <span>{selectedCity ? selectedCity.charAt(0).toUpperCase() + selectedCity.slice(1) : 'Tüm Şehirler'}</span>
+                                                <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${openFilter === 'cities' ? 'rotate-[270deg]' : 'rotate-90'}`} />
+                                            </button>
+                                            <MapPin className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                                             
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Deneyim Türü
-                                                </label>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {experienceTypes.map(type => (
+                                            {openFilter === 'cities' && (
+                                                <div className="absolute top-[calc(100%+4px)] left-0 w-full py-1 bg-white rounded-xl shadow-lg border border-gray-100" style={{ zIndex: 51 }}>
+                                                    <div className="max-h-[240px] overflow-y-auto custom-scrollbar">
+                                                        <style jsx>{`
+                                                            .custom-scrollbar::-webkit-scrollbar {
+                                                                width: 6px;
+                                                            }
+                                                            .custom-scrollbar::-webkit-scrollbar-track {
+                                                                background: transparent;
+                                                            }
+                                                            .custom-scrollbar::-webkit-scrollbar-thumb {
+                                                                background-color: #E2E8F0;
+                                                                border-radius: 20px;
+                                                            }
+                                                            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                                                                background-color: #CBD5E1;
+                                                            }
+                                                            .custom-scrollbar {
+                                                                scrollbar-width: thin;
+                                                                scrollbar-color: #E2E8F0 transparent;
+                                                            }
+                                                        `}</style>
                                                         <button
-                                                            key={type.id}
-                                                            onClick={(e: React.MouseEvent) => {
-                                                                e.preventDefault();
-                                                                setSelectedExperienceType(selectedExperienceType === type.id ? null : type.id);
+                                                            onClick={() => {
+                                                                setSelectedCity(undefined);
+                                                                setOpenFilter(null);
                                                             }}
-                                                            className={`px-4 py-2 rounded-full text-sm font-medium ${
-                                                                selectedExperienceType === type.id
-                                                                    ? "bg-blue-500 text-white shadow-md hover:bg-blue-600"
-                                                                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                                                            } transition-colors`}
+                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-gray-600"
                                                         >
-                                                            {type.name}
+                                                            Tüm Şehirler
                                                         </button>
-                                                    ))}
+                                                        {["İstanbul", "Antalya", "Muğla", "Nevşehir", "İzmir", "Aydın", "Bodrum"].map(city => (
+                                                            <button
+                                                                key={city}
+                                                                onClick={() => {
+                                                                    setSelectedCity(city.toLowerCase());
+                                                                    setOpenFilter(null);
+                                                                }}
+                                                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-gray-600"
+                                                            >
+                                                                {city}
+                                                            </button>
+                                                        ))}
+                                                    </div>
                                                 </div>
+                                            )}
+                                        </div>
+
+                                        {/* Price Range Inputs */}
+                                        <div className="flex items-center gap-2">
+                                            <div className="relative w-[100px]">
+                                                <input 
+                                                    type="number"
+                                                    placeholder="Min ₺"
+                                                    className="w-full pl-9 pr-2 py-2.5 text-sm text-gray-600 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50/50"
+                                                    value={minPrice || ""}
+                                                    onChange={(e) => setMinPrice(Number(e.target.value))}
+                                                    min="0"
+                                                />
+                                                <Wallet className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                                             </div>
-                                            
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Fiyat Aralığı
-                                                </label>
-                                                <div className="flex items-center space-x-3">
-                                                    <div className="relative flex-grow">
-                                                        <Wallet className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                                        <input 
-                                                            type="number"
-                                                            placeholder="Min. Fiyat"
-                                                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-black"
-                                                            value={minPrice}
-                                                            onChange={(e) => setMinPrice(Number(e.target.value))}
-                                                            min="0"
-                                                        />
-                                                    </div>
-                                                    <span className="text-gray-500">-</span>
-                                                    <div className="relative flex-grow">
-                                                        <Wallet className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                                        <input 
-                                                            type="number"
-                                                            placeholder="Max. Fiyat"
-                                                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-black"
-                                                            value={maxPrice}
-                                                            onChange={(e) => setMaxPrice(Number(e.target.value))}
-                                                            min={minPrice}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Maksimum Süre: {maxDuration} saat
-                                                </label>
-                                                <div className="relative">
-                                                    <div className="flex items-center">
-                                                        <Timer className="h-5 w-5 text-gray-400 mr-3" />
-                                                        <input
-                                                            type="range"
-                                                            min="1" 
-                                                            max="24"
-                                                            step="1"
-                                                            value={maxDuration}
-                                                            onChange={(e) => setMaxDuration(Number(e.target.value))}
-                                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                                                        />
-                                                    </div>
-                                                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                                                        <span>1 saat</span>
-                                                        <span>12 saat</span>
-                                                        <span>24 saat</span>
-                                                    </div>
-                                                </div>
+                                            <span className="text-gray-400">-</span>
+                                            <div className="relative w-[100px]">
+                                                <input 
+                                                    type="number"
+                                                    placeholder="Max ₺"
+                                                    className="w-full pl-9 pr-2 py-2.5 text-sm text-gray-600 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50/50"
+                                                    value={maxPrice || ""}
+                                                    onChange={(e) => setMaxPrice(Number(e.target.value))}
+                                                    min={minPrice}
+                                                />
+                                                <Wallet className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                                             </div>
                                         </div>
-                                        
-                                        <div className="flex justify-between items-center px-6 py-4 border-t border-gray-200 bg-gray-50">
+
+                                        {/* Reset Filters Button - Only show when filters are active */}
+                                        {(searchTerm || selectedExperienceType || selectedCity || minPrice > 0 || maxPrice < 5000) && (
                                             <button 
-                                                className="text-gray-500 hover:text-gray-700 text-sm font-medium flex items-center"
+                                                className="flex items-center justify-center h-[38px] px-4 text-gray-500 hover:text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-100 transition-all border border-gray-200 whitespace-nowrap bg-gray-50/50"
                                                 onClick={(e: React.MouseEvent) => {
                                                     e.preventDefault();
                                                     resetFilters();
+                                                    setOpenFilter(null);
                                                 }}
                                             >
-                                                <X className="w-4 h-4 mr-1" />
-                                                Filtreleri Temizle
+                                                <X className="w-4 h-4 mr-1.5" /> Temizle
                                             </button>
-                                            <div className="flex space-x-3">
-                                                <button 
-                                                    className="text-gray-700 border border-gray-300 hover:bg-gray-100 px-4 py-2 rounded-lg transition-colors"
-                                                    onClick={(e: React.MouseEvent) => {
-                                                        e.preventDefault();
-                                                        setShowFilters(false);
-                                                    }}
-                                                >
-                                                    İptal
-                                                </button>
-                                                <button 
-                                                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center"
-                                                    onClick={(e: React.MouseEvent) => {
-                                                        e.preventDefault();
-                                                        setShowFilters(false);
-                                                    }}
-                                                >
-                                                    Sonuçları Göster
-                                                    <ChevronRight className="w-4 h-4 ml-1" />
-                                                </button>
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -483,7 +484,7 @@ export default function ExperiencesPage() {
                                     key={category.id}
                                     onClick={(e: React.MouseEvent) => {
                                         e.preventDefault();
-                                        setSelectedCategory(category.id === "tumu" ? null : category.id);
+                                        setSelectedCategory(category.id === "tumu" ? undefined : category.id);
                                     }}
                                     className={`flex-none px-4 py-2 rounded-full text-sm font-medium ${
                                         (category.id === "tumu" && !selectedCategory) || selectedCategory === category.id
