@@ -16,14 +16,14 @@ export default async function Home() {
     <main>
       <Header />
       <Hero />
-      <HotDeals />
       <Destinations />
+      <CTA />
+      <HotDeals />
       <Stats />
-      <FeaturedHotels />
+      {/*<FeaturedHotels />*/}
       <Testimonials />
       <Newsletter />
-      <Partners />
-      <CTA />
+      {/*<Partners />*/}
       <MobileOfferPopup />
       <Footer />
     </main>
