@@ -545,7 +545,8 @@ export default function ActivitiesPage() {
                             {filteredActivities.map((experience) => (
                                 <div 
                                     key={experience.id}
-                                    className="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 flex flex-col"
+                                    className="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100 hover:shadow-xl transition-all transform hover:-translate-y-1 flex flex-col cursor-pointer"
+                                    onClick={() => router.push(`/activities/${experience.id}`)}
                                 >
                                     <div className="relative h-64">
                                         <Image
@@ -586,7 +587,10 @@ export default function ActivitiesPage() {
                                         <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
                                             <span className="text-xl font-bold text-blue-600">₺{experience.price}</span>
                                             <button
-                                                onClick={() => handleReservation(experience.category || 'tumu')}
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // Kartın tıklama eventini engellemek için
+                                                    router.push(`/activities/${experience.id}`);
+                                                }}
                                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
                                             >
                                                 Rezervasyon
@@ -634,12 +638,18 @@ export default function ActivitiesPage() {
                                     count: 12
                                 }
                             ].map(category => (
-                            <button
+                                <button
                                     key={category.id}
                                     className="group relative overflow-hidden rounded-xl h-60 shadow-md"
                                     onClick={(e: React.MouseEvent) => {
                                         e.preventDefault();
-                                        setSelectedCategory(category.id);
+                                        // Kategoriye göre ilk aktiviteyi bul ve ona yönlendir
+                                        const firstActivityInCategory = activities.find(act => act.category === category.id);
+                                        if (firstActivityInCategory) {
+                                            router.push(`/activities/${firstActivityInCategory.id}`);
+                                        } else {
+                                            setSelectedCategory(category.id);
+                                        }
                                     }}
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10" />
