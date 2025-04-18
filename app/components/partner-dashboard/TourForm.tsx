@@ -1,6 +1,12 @@
-import { useState, useEffect } from 'react';
-import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import React, { useState, useEffect } from 'react';
+import { PhotoIcon, XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
+import { useDropzone, FileWithPath } from 'react-dropzone';
+
+interface ImageFile {
+  file: File | FileWithPath;
+  preview: string;
+}
 
 export interface TourFormData {
   title: string;
@@ -9,7 +15,7 @@ export interface TourFormData {
   location: string;
   duration: string;
   maxParticipants: number;
-  images: string[];
+  images: ImageFile[];
   includes: string[];
   excludes: string[];
   itinerary: { title: string; description: string }[];
@@ -20,6 +26,7 @@ interface TourFormProps {
   initialData?: Partial<TourFormData>;
   onSubmit: (data: TourFormData) => void;
   isSubmitting?: boolean;
+  currentStep?: 'basic' | 'details';
 }
 
 const defaultFormData: TourFormData = {
@@ -36,11 +43,43 @@ const defaultFormData: TourFormData = {
   status: 'draft'
 };
 
-export default function TourForm({ initialData, onSubmit, isSubmitting = false }: TourFormProps) {
+export default function TourForm({ initialData, onSubmit, isSubmitting = false, currentStep = 'basic' }: TourFormProps) {
   const [formData, setFormData] = useState<TourFormData>({ ...defaultFormData, ...initialData });
   const [newInclude, setNewInclude] = useState('');
   const [newExclude, setNewExclude] = useState('');
   const [errors, setErrors] = useState<Partial<Record<keyof TourFormData, string>>>({});
+
+  const handleImagesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      const newImages = Array.from(files).map(file => ({
+        file,
+        preview: URL.createObjectURL(file)
+      }));
+
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, ...newImages]
+      }));
+    }
+  };
+
+  const { getRootProps, getInputProps } = useDropzone({
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif']
+    },
+    onDrop: (acceptedFiles) => {
+      const newImages = acceptedFiles.map(file => ({
+        file,
+        preview: URL.createObjectURL(file)
+      }));
+      
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, ...newImages]
+      }));
+    }
+  });
 
   // Form değişikliklerini yönet
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -127,12 +166,18 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false }
   const handleAddImage = () => {
     // Demo için rasgele bir resim URL'i ekliyoruz
     const randomId = Math.floor(Math.random() * 1000);
-    const placeholderImage = `https://source.unsplash.com/random/800x600/?travel&sig=${randomId}`;
+    const placeholderUrl = `https://source.unsplash.com/random/800x600/?travel&sig=${randomId}`;
     
-    setFormData(prev => ({
-      ...prev,
-      images: [...prev.images, placeholderImage]
-    }));
+    // Sadece demo amaçlı olarak bir Blob oluşturup dosya gibi davranıyoruz
+    fetch(placeholderUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const file = new File([blob], `demo-image-${randomId}.jpg`, { type: 'image/jpeg' });
+        setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, { file, preview: placeholderUrl }]
+        }));
+      });
   };
 
   const handleRemoveImage = (index: number) => {
@@ -169,176 +214,140 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false }
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Temel Bilgiler */}
-      <div className="bg-white shadow-sm rounded-lg p-6 border border-gray-100">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Tur Bilgileri</h2>
-        
-        <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-          {/* Tur Adı */}
-          <div className="sm:col-span-4">
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-              Tur Adı
+      {currentStep === 'basic' && (
+        <div className="space-y-6">
+          <div>
+            <label htmlFor="title" className="mb-2 block text-sm font-medium text-gray-900">
+              Tur Başlığı <span className="text-red-500">*</span>
             </label>
-            <div className="mt-1">
-              <input
-                type="text"
-                name="title"
-                id="title"
-                value={formData.title}
-                onChange={handleChange}
-                className={`shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.title ? 'border-red-300' : ''}`}
-              />
-              {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
-            </div>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              className={`block w-full rounded-lg border ${errors.title ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+              placeholder="Muhteşem Kapadokya Turu"
+            />
+            {errors.title && <p className="mt-2 text-sm text-red-600">{errors.title}</p>}
           </div>
 
-          {/* Fiyat */}
-          <div className="sm:col-span-2">
-            <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-              Fiyat (₺)
+          <div>
+            <label htmlFor="description" className="mb-2 block text-sm font-medium text-gray-900">
+              Açıklama <span className="text-red-500">*</span>
             </label>
-            <div className="mt-1">
-              <input
-                type="text"
-                name="price"
-                id="price"
-                value={formData.price}
-                onChange={handleChange}
-                placeholder="1500"
-                className={`shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.price ? 'border-red-300' : ''}`}
-              />
-              {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
-            </div>
+            <textarea
+              id="description"
+              name="description"
+              rows={4}
+              value={formData.description}
+              onChange={handleChange}
+              className={`block w-full rounded-lg border ${errors.description ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+              placeholder="Turunuzu detaylı bir şekilde açıklayın..."
+            />
+            {errors.description && <p className="mt-2 text-sm text-red-600">{errors.description}</p>}
           </div>
 
-          {/* Konum */}
-          <div className="sm:col-span-3">
-            <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-              Konum
-            </label>
-            <div className="mt-1">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <label htmlFor="price" className="mb-2 block text-sm font-medium text-gray-900">
+                Fiyat (₺) <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <span className="text-gray-500">₺</span>
+                </div>
+                <input
+                  type="number"
+                  id="price"
+                  name="price"
+                  value={formData.price || ''}
+                  onChange={handleChange}
+                  className={`block w-full rounded-lg border ${errors.price ? 'border-red-500' : 'border-gray-300'} pl-8 pr-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+                  placeholder="1500"
+                  min="0"
+                />
+              </div>
+              {errors.price && <p className="mt-2 text-sm text-red-600">{errors.price}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="location" className="mb-2 block text-sm font-medium text-gray-900">
+                Konum <span className="text-red-500">*</span>
+              </label>
               <input
                 type="text"
-                name="location"
                 id="location"
+                name="location"
                 value={formData.location}
                 onChange={handleChange}
-                placeholder="Kapadokya, Nevşehir"
-                className={`shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.location ? 'border-red-300' : ''}`}
+                className={`block w-full rounded-lg border ${errors.location ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+                placeholder="İstanbul"
               />
-              {errors.location && <p className="mt-1 text-sm text-red-600">{errors.location}</p>}
+              {errors.location && <p className="mt-2 text-sm text-red-600">{errors.location}</p>}
             </div>
           </div>
 
-          {/* Süre */}
-          <div className="sm:col-span-2">
-            <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
-              Süre
-            </label>
-            <div className="mt-1">
-              <input
-                type="text"
-                name="duration"
-                id="duration"
-                value={formData.duration}
-                onChange={handleChange}
-                placeholder="2 gün 1 gece"
-                className={`shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.duration ? 'border-red-300' : ''}`}
-              />
-              {errors.duration && <p className="mt-1 text-sm text-red-600">{errors.duration}</p>}
-            </div>
-          </div>
-
-          {/* Katılımcı Sayısı */}
-          <div className="sm:col-span-1">
-            <label htmlFor="maxParticipants" className="block text-sm font-medium text-gray-700">
-              Maksimum Kişi
-            </label>
-            <div className="mt-1">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <label htmlFor="duration" className="mb-2 block text-sm font-medium text-gray-900">
+                Süre (Saat) <span className="text-red-500">*</span>
+              </label>
               <input
                 type="number"
-                name="maxParticipants"
-                id="maxParticipants"
+                id="duration"
+                name="duration"
+                value={formData.duration || ''}
+                onChange={handleChange}
+                className={`block w-full rounded-lg border ${errors.duration ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+                placeholder="8"
                 min="1"
-                value={formData.maxParticipants}
-                onChange={handleNumberChange}
-                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
               />
+              {errors.duration && <p className="mt-2 text-sm text-red-600">{errors.duration}</p>}
             </div>
-          </div>
 
-          {/* Açıklama */}
-          <div className="sm:col-span-6">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-              Açıklama
-            </label>
-            <div className="mt-1">
-              <textarea
-                id="description"
-                name="description"
-                rows={3}
-                value={formData.description}
+            <div>
+              <label htmlFor="maxParticipants" className="mb-2 block text-sm font-medium text-gray-900">
+                Maksimum Katılımcı <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                id="maxParticipants"
+                name="maxParticipants"
+                value={formData.maxParticipants || ''}
                 onChange={handleChange}
-                className={`shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md ${errors.description ? 'border-red-300' : ''}`}
+                className={`block w-full rounded-lg border ${errors.maxParticipants ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+                placeholder="20"
+                min="1"
               />
-              {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
+              {errors.maxParticipants && <p className="mt-2 text-sm text-red-600">{errors.maxParticipants}</p>}
             </div>
-            <p className="mt-1 text-sm text-gray-500">
-              Turunuzun detaylı açıklamasını yazın.
-            </p>
           </div>
 
-          {/* Durum */}
-          <div className="sm:col-span-2">
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-              Durum
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-900">
+              Tur Resimleri <span className="text-red-500">*</span>
             </label>
-            <div className="mt-1">
-              <select
-                id="status"
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-              >
-                <option value="draft">Taslak</option>
-                <option value="active">Aktif</option>
-                <option value="archived">Arşivlenmiş</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Resimler */}
-      <div className="bg-white shadow-sm rounded-lg p-6 border border-gray-100">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Tur Resimleri</h2>
-        
-        <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-          <div className="sm:col-span-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-700">Resimler</h3>
-                <p className="text-xs text-gray-500">JPG, PNG veya GIF, maksimum 10MB</p>
+            <div
+              {...getRootProps()}
+              className={`cursor-pointer rounded-lg border-2 border-dashed ${errors.images ? 'border-red-500' : 'border-gray-300'} px-6 py-8 text-center hover:bg-gray-50`}
+            >
+              <input {...getInputProps()} />
+              <div className="flex flex-col items-center justify-center space-y-2">
+                <PhotoIcon className="h-12 w-12 text-gray-400" />
+                <p className="text-sm text-gray-600">Resim yüklemek için tıklayın veya sürükleyin</p>
+                <p className="text-xs text-gray-500">PNG, JPG, GIF dosyaları, 10MB'a kadar</p>
               </div>
-              <button
-                type="button"
-                onClick={handleAddImage}
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                <PhotoIcon className="h-4 w-4 mr-1" />
-                Resim Ekle
-              </button>
             </div>
+            {errors.images && <p className="mt-2 text-sm text-red-600">{errors.images}</p>}
             
-            {errors.images && <p className="mt-1 text-sm text-red-600">{errors.images}</p>}
-            
-            {formData.images.length > 0 ? (
-              <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            {formData.images.length > 0 && (
+              <div className="mt-5 grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                 {formData.images.map((image, index) => (
                   <div key={index} className="relative group">
-                    <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-md bg-gray-200 relative">
+                    <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200 relative">
                       <Image
-                        src={image}
+                        src={image.preview}
                         alt={`Tour image ${index + 1}`}
                         fill
                         className="object-cover"
@@ -347,7 +356,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false }
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(index)}
-                        className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <XMarkIcon className="h-4 w-4 text-gray-500" />
                       </button>
@@ -355,167 +364,163 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false }
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="mt-3 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                <div className="space-y-1 text-center">
-                  <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
-                  <div className="text-sm text-gray-600">
-                    <p>Yüklemek için resim seçin veya sürükleyin</p>
-                  </div>
-                </div>
-              </div>
             )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Dahil Olanlar & Olmayanlar */}
-      <div className="bg-white shadow-sm rounded-lg p-6 border border-gray-100">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Dahil Olanlar & Olmayanlar</h2>
-        
-        <div className="grid grid-cols-1 gap-y-6 gap-x-8 sm:grid-cols-2">
-          {/* Dahil Olanlar */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-700">Dahil Olanlar</h3>
-            <div className="mt-2">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={newInclude}
-                  onChange={(e) => setNewInclude(e.target.value)}
-                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  placeholder="Örn. Profesyonel rehberlik"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddInclude}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Ekle
-                </button>
-              </div>
-              <div className="mt-2 space-y-2">
-                {formData.includes.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-md text-sm">
-                    <span>{item}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveInclude(index)}
-                      className="text-gray-400 hover:text-gray-500"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Dahil Olmayanlar */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-700">Dahil Olmayanlar</h3>
-            <div className="mt-2">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={newExclude}
-                  onChange={(e) => setNewExclude(e.target.value)}
-                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  placeholder="Örn. Kişisel harcamalar"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddExclude}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Ekle
-                </button>
-              </div>
-              <div className="mt-2 space-y-2">
-                {formData.excludes.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-md text-sm">
-                    <span>{item}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveExclude(index)}
-                      className="text-gray-400 hover:text-gray-500"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Program (Itinerary) */}
-      <div className="bg-white shadow-sm rounded-lg p-6 border border-gray-100">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-medium text-gray-900">Tur Programı</h2>
-          <button
-            type="button"
-            onClick={handleAddItineraryDay}
-            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Gün Ekle
-          </button>
-        </div>
-        
-        <div className="space-y-6">
-          {formData.itinerary.map((day, index) => (
-            <div key={index} className="border border-gray-100 rounded-md p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-full sm:w-1/3 mr-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Başlık
-                  </label>
-                  <input
-                    type="text"
-                    value={day.title}
-                    onChange={(e) => handleItineraryChange(index, 'title', e.target.value)}
-                    className="mt-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveItineraryDay(index)}
-                  className="text-gray-400 hover:text-gray-500"
-                  disabled={formData.itinerary.length === 1}
-                >
-                  <XMarkIcon className="h-5 w-5" />
-                </button>
-              </div>
+      {/* Detaylar Bölümü */}
+      {currentStep === 'details' && (
+        <>
+          {/* Dahil Olanlar & Olmayanlar */}
+          <div className="bg-white shadow-sm rounded-lg p-8 border border-gray-100">
+            <h2 className="text-lg font-medium text-gray-900 mb-5">Dahil Olanlar & Olmayanlar</h2>
+            
+            <div className="grid grid-cols-1 gap-y-8 gap-x-8 sm:grid-cols-2">
+              {/* Dahil Olanlar */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Açıklama
-                </label>
-                <textarea
-                  rows={3}
-                  value={day.description}
-                  onChange={(e) => handleItineraryChange(index, 'description', e.target.value)}
-                  className="mt-1 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                  placeholder="Bu günün programını detaylı anlatın..."
-                />
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Dahil Olanlar</h3>
+                <div className="mt-2">
+                  <div className="flex space-x-3">
+                    <input
+                      type="text"
+                      value={newInclude}
+                      onChange={(e) => setNewInclude(e.target.value)}
+                      className="shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg"
+                      placeholder="Örn. Profesyonel rehberlik"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddInclude}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Ekle
+                    </button>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {formData.includes.map((item, index) => (
+                      <div key={index} className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg text-sm">
+                        <span>{item}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveInclude(index)}
+                          className="text-gray-400 hover:text-gray-500"
+                        >
+                          <XMarkIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Dahil Olmayanlar */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Dahil Olmayanlar</h3>
+                <div className="mt-2">
+                  <div className="flex space-x-3">
+                    <input
+                      type="text"
+                      value={newExclude}
+                      onChange={(e) => setNewExclude(e.target.value)}
+                      className="shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg"
+                      placeholder="Örn. Kişisel harcamalar"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddExclude}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      Ekle
+                    </button>
+                  </div>
+                  <div className="mt-4 space-y-3">
+                    {formData.excludes.map((item, index) => (
+                      <div key={index} className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg text-sm">
+                        <span>{item}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveExclude(index)}
+                          className="text-gray-400 hover:text-gray-500"
+                        >
+                          <XMarkIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
+
+          {/* Program (Itinerary) */}
+          <div className="bg-white shadow-sm rounded-lg p-8 border border-gray-100 mt-8">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-medium text-gray-900">Tur Programı</h2>
+              <button
+                type="button"
+                onClick={handleAddItineraryDay}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Gün Ekle
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {formData.itinerary.map((day, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-full sm:w-1/3 mr-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                        Başlık
+                      </label>
+                      <input
+                        type="text"
+                        value={day.title}
+                        onChange={(e) => handleItineraryChange(index, 'title', e.target.value)}
+                        className="mt-1 shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveItineraryDay(index)}
+                      className="text-gray-400 hover:text-gray-500"
+                      disabled={formData.itinerary.length === 1}
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Açıklama
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={day.description}
+                      onChange={(e) => handleItineraryChange(index, 'description', e.target.value)}
+                      className="mt-1 shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg"
+                      placeholder="Bu günün programını detaylı anlatın..."
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Form Gönderme */}
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-4">
         <button
           type="button"
-          className="px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-3"
+          className="px-5 py-2.5 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-4"
         >
           İptal
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          className="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
         </button>

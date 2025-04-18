@@ -16,7 +16,7 @@ export default function PartnerNavbar() {
                         <div className="relative h-10 w-10 mr-2">
                             <Image
                                 src="/images/logo.png"
-                                alt="TourTech Partner"
+                                alt="Turladur Partner"
                                 width={40}
                                 height={40}
                                 className="transition-transform duration-300 group-hover:scale-105"
@@ -24,7 +24,7 @@ export default function PartnerNavbar() {
                         </div>
                         <div className="flex flex-col">
                             <span className="text-xl font-bold text-white transition-all duration-300">
-                                TourTech
+                                TurlaDur
                             </span>
                             <span className="text-xs text-indigo-200">Partner Portal</span>
                         </div>

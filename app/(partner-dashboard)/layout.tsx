@@ -19,29 +19,33 @@ import {
   ChatBubbleLeftEllipsisIcon,
   ShieldCheckIcon,
   QuestionMarkCircleIcon,
-  BellIcon
+  BellIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 
 interface SidebarLink {
   name: string;
   href: string;
   icon: React.ElementType;
+  description?: string;
 }
 
 const sidebarLinks: SidebarLink[] = [
-  { name: 'Ana Sayfa', href: '/partner-dashboard', icon: HomeIcon },
-  { name: 'Turlarım', href: '/partner-dashboard/tours', icon: BriefcaseIcon },
-  { name: 'Rezervasyonlar', href: '/partner-dashboard/reservations', icon: CalendarIcon },
-  { name: 'Müşteriler', href: '/partner-dashboard/customers', icon: UsersIcon },
-  { name: 'Finansal Durum', href: '/partner-dashboard/financials', icon: CurrencyDollarIcon },
-  { name: 'Raporlar', href: '/partner-dashboard/reports', icon: ChartBarIcon },
-  { name: 'Yorumlar', href: '/partner-dashboard/reviews', icon: ChatBubbleLeftEllipsisIcon },
-  { name: 'Ayarlar', href: '/partner-dashboard/settings', icon: CogIcon },
-  { name: 'Yardım', href: '/partner-dashboard/help', icon: QuestionMarkCircleIcon },
+  { name: 'Ana Sayfa', href: '/partner-dashboard', icon: HomeIcon, description: 'Genel istatistikler ve özet' },
+  { name: 'Turlarım', href: '/partner-dashboard/tours', icon: BriefcaseIcon, description: 'Tur listesi ve yönetimi' },
+  { name: 'Rezervasyonlar', href: '/partner-dashboard/reservations', icon: CalendarIcon, description: 'Rezervasyon yönetimi' },
+  { name: 'Müşteriler', href: '/partner-dashboard/customers', icon: UsersIcon, description: 'Müşteri bilgileri' },
+  { name: 'Finansal Durum', href: '/partner-dashboard/financials', icon: CurrencyDollarIcon, description: 'Gelir ve ödemeler' },
+  { name: 'Raporlar', href: '/partner-dashboard/reports', icon: ChartBarIcon, description: 'Performans raporları' },
+  { name: 'Yorumlar', href: '/partner-dashboard/reviews', icon: ChatBubbleLeftEllipsisIcon, description: 'Müşteri değerlendirmeleri' },
+  { name: 'Ayarlar', href: '/partner-dashboard/settings', icon: CogIcon, description: 'Hesap ayarları' },
+  { name: 'Yardım', href: '/partner-dashboard/help', icon: QuestionMarkCircleIcon, description: 'Destek ve yardım' },
 ];
 
 export default function PartnerDashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const pathname = usePathname();
   
   // Mobil cihazlarda menü açıldığında sayfanın kaydırılmasını engelle
@@ -57,8 +61,42 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
     };
   }, [sidebarOpen]);
 
+  // ESC tuşuyla menüleri kapat
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSidebarOpen(false);
+        setShowProfileMenu(false);
+        setShowNotifications(false);
+      }
+    };
+    
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, []);
+
+  // Dışarı tıklanınca açık menüleri kapat
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (showProfileMenu || showNotifications) {
+        const target = e.target as HTMLElement;
+        if (!target.closest('[data-dropdown]')) {
+          setShowProfileMenu(false);
+          setShowNotifications(false);
+        }
+      }
+    };
+    
+    document.addEventListener('click', handleOutsideClick);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+    };
+  }, [showProfileMenu, showNotifications]);
+
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="h-screen flex bg-gray-50">
       {/* Mobil menü arkaplanı */}
       {sidebarOpen && (
         <div 
@@ -69,41 +107,62 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-72 transform transition duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
+        fixed inset-y-0 left-0 z-50 w-64 transform transition duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        bg-gradient-to-b from-indigo-900 to-indigo-800
+        bg-white border-r border-gray-200
       `}>
-        <div className="flex items-center justify-between h-20 px-6 bg-indigo-950">
+        <div className="flex items-center justify-between h-16 px-4">
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
-              <BuildingOfficeIcon className="h-8 w-8 text-indigo-300" />
-              <span className="ml-3 text-xl font-semibold text-white">TourTech</span>
+              <div className="h-8 w-8 text-white rounded-md flex items-center justify-center">
+                <Image src="/images/logo.png" alt="TurlaDur Logo" width={32} height={32} />
+              </div>
+              <span className="ml-2.5 text-lg font-semibold text-gray-900">TurlaDur</span>
             </div>
           </div>
           <button
             type="button"
-            className="lg:hidden text-gray-300 hover:text-white"
+            className="lg:hidden text-gray-500 hover:text-gray-700"
             onClick={() => setSidebarOpen(false)}
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
-        <div className="flex-1 flex flex-col overflow-y-auto pt-5 px-3 pb-4">
+        
+        <div className="px-4 pt-3">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
+            </div>
+            <input 
+              type="text" 
+              placeholder="Ara..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+        
+        <div className="flex-1 flex flex-col overflow-y-auto pt-5 pb-4">
           <div className="px-4 mb-6">
-            <div className="flex items-center p-3 bg-indigo-800/50 rounded-xl">
+            <div className="flex items-center p-3 bg-blue-50 rounded-lg">
               <div className="flex-shrink-0">
-                <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold">
+                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold">
                   PT
                 </div>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-white">Partner Test</p>
-                <p className="text-xs text-indigo-300">Yönetici</p>
+                <p className="text-sm font-medium text-gray-900">Partner Test</p>
+                <p className="text-xs text-gray-500">Yönetici</p>
               </div>
             </div>
           </div>
-          <nav className="space-y-1.5 px-3 flex-1">
-            {sidebarLinks.map((item) => {
+          
+          <div className="px-4 mb-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Ana Menü</h3>
+          </div>
+          
+          <nav className="space-y-1 px-3 flex-1">
+            {sidebarLinks.slice(0, 7).map((item) => {
               const isActive = pathname === item.href;
               
               return (
@@ -111,43 +170,64 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
                   key={item.name}
                   href={item.href}
                   className={`
-                    group flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-200
+                    group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-150
                     ${isActive 
-                      ? 'bg-indigo-700 text-white' 
-                      : 'text-indigo-100 hover:bg-indigo-800/60 hover:text-white'}
+                      ? 'bg-blue-50 text-blue-700' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}
                   `}
                 >
                   <item.icon 
                     className={`
-                      mr-3 h-5 w-5 transition-colors duration-200
-                      ${isActive ? 'text-indigo-200' : 'text-indigo-400 group-hover:text-indigo-200'}
+                      mr-3 h-5 w-5 transition-colors duration-150
+                      ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'}
                     `} 
                   />
-                  {item.name}
+                  <span className="truncate">{item.name}</span>
                 </Link>
               );
             })}
           </nav>
-          <div className="px-3 mt-6">
-            <div className="px-4 py-3 bg-indigo-800/30 rounded-lg">
-              <div className="flex items-center">
-                <ShieldCheckIcon className="h-6 w-6 text-indigo-400" />
-                <span className="ml-3 text-sm font-medium text-indigo-100">Partner Güvenlik</span>
-              </div>
-              <p className="mt-2 text-xs text-indigo-300">Hesabınızı daha güvenli hale getirmek için güvenlik ayarlarınızı güncelleyin.</p>
-              <button className="mt-3 w-full px-3 py-1.5 bg-indigo-700 text-xs font-medium text-white rounded-md hover:bg-indigo-600 transition-colors">
-                Ayarları Düzenle
-              </button>
-            </div>
+          
+          <div className="px-4 mt-6 mb-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Diğer</h3>
           </div>
-          <div className="p-3 mt-6">
-            <Link
-              href="/"
-              className="group flex items-center px-4 py-3 text-sm font-medium rounded-lg text-indigo-100 hover:bg-indigo-800/60 hover:text-white transition-colors duration-200"
-            >
-              <ArrowLeftOnRectangleIcon className="mr-3 h-5 w-5 text-indigo-400 group-hover:text-indigo-200" />
-              Çıkış Yap
-            </Link>
+          
+          <nav className="space-y-1 px-3">
+            {sidebarLinks.slice(7).map((item) => {
+              const isActive = pathname === item.href;
+              
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`
+                    group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors duration-150
+                    ${isActive 
+                      ? 'bg-blue-50 text-blue-700' 
+                      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}
+                  `}
+                >
+                  <item.icon 
+                    className={`
+                      mr-3 h-5 w-5 transition-colors duration-150
+                      ${isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-500'}
+                    `} 
+                  />
+                  <span className="truncate">{item.name}</span>
+                </Link>
+              );
+            })}
+          </nav>
+          
+          <div className="px-3 mt-6">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="flex">
+                <ShieldCheckIcon className="h-6 w-6 text-blue-600" />
+                <span className="ml-2 text-sm font-medium text-gray-900">Premium</span>
+                <span className="ml-1.5 px-1.5 py-0.5 bg-blue-100 text-blue-800 text-xs font-semibold rounded">Aktif</span>
+              </div>
+              <p className="mt-1 text-xs text-gray-600">Premium özellikleriniz aktif durumda. Tüm avantajlardan yararlanabilirsiniz.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -155,34 +235,158 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
       {/* Ana içerik */}
       <div className="flex flex-col flex-1 overflow-hidden">
         <header className="bg-white shadow-sm border-b border-gray-200">
-          <div className="flex h-16 items-center justify-between px-6">
-            <button
-              type="button"
-              className="lg:hidden text-gray-500 focus:outline-none"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Bars3Icon className="h-6 w-6" />
-            </button>
+          <div className="flex h-16 items-center justify-between px-4 md:px-6">
+            <div className="flex items-center lg:hidden">
+              <button
+                type="button"
+                className="text-gray-500 focus:outline-none hover:text-gray-700"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Bars3Icon className="h-6 w-6" />
+              </button>
+            </div>
             
             <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-800 hidden sm:block">
+              <h1 className="text-lg font-semibold text-gray-900 hidden sm:block">
                 {sidebarLinks.find(link => link.href === pathname)?.name || 'Partner Dashboard'}
               </h1>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <button className="p-1.5 text-gray-500 rounded-full hover:text-gray-700 hover:bg-gray-100 focus:outline-none">
-                <BellIcon className="h-6 w-6" />
-              </button>
-              <button className="p-1.5 text-gray-500 rounded-full hover:text-gray-700 hover:bg-gray-100 focus:outline-none">
+            <div className="flex items-center space-x-1">
+              <div className="relative hidden md:block mr-3">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="Ara..."
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div className="relative" data-dropdown>
+                <button 
+                  className="p-1.5 text-gray-600 rounded-lg hover:text-gray-900 hover:bg-gray-100 focus:outline-none relative"
+                  onClick={() => {
+                    setShowNotifications(!showNotifications);
+                    setShowProfileMenu(false);
+                  }}
+                >
+                  <BellIcon className="h-6 w-6" />
+                  <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
+                </button>
+                
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 origin-top-right">
+                    <div className="p-3 border-b border-gray-200 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-gray-900">Bildirimler</h3>
+                      <button className="text-xs text-blue-600 hover:text-blue-800">Tümünü Okundu İşaretle</button>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto">
+                      <div className="py-2 px-4 border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <div className="flex">
+                          <div className="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                            <CalendarIcon className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm text-gray-900 font-medium">Yeni Rezervasyon</p>
+                            <p className="text-xs text-gray-500">İstanbul Turu için yeni bir rezervasyon aldınız.</p>
+                            <p className="text-xs text-gray-400 mt-1">12 dk önce</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="py-2 px-4 border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                        <div className="flex">
+                          <div className="h-9 w-9 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                            <ChatBubbleLeftEllipsisIcon className="h-5 w-5 text-yellow-600" />
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm text-gray-900 font-medium">Yeni Yorum</p>
+                            <p className="text-xs text-gray-500">Kapadokya Turu için yeni bir yorum aldınız.</p>
+                            <p className="text-xs text-gray-400 mt-1">3 saat önce</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="py-2 px-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex">
+                          <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                            <CurrencyDollarIcon className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm text-gray-900 font-medium">Ödeme Alındı</p>
+                            <p className="text-xs text-gray-500">250₺ tutarında ödeme hesabınıza aktarıldı.</p>
+                            <p className="text-xs text-gray-400 mt-1">1 gün önce</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-2 border-t border-gray-200">
+                      <button className="w-full py-2 px-3 text-sm text-center text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                        Tüm Bildirimleri Gör
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <button className="p-1.5 text-gray-600 rounded-lg hover:text-gray-900 hover:bg-gray-100 focus:outline-none">
                 <QuestionMarkCircleIcon className="h-6 w-6" />
               </button>
+              
+              <div className="relative ml-1" data-dropdown>
+                <button 
+                  className="flex items-center text-gray-600 hover:text-gray-900 focus:outline-none"
+                  onClick={() => {
+                    setShowProfileMenu(!showProfileMenu);
+                    setShowNotifications(false);
+                  }}
+                >
+                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold mr-1">
+                    PT
+                  </div>
+                  <span className="hidden md:block text-sm font-medium">Partner Test</span>
+                  <svg className="h-5 w-5 ml-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                
+                {showProfileMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50 origin-top-right">
+                    <div className="p-3 border-b border-gray-200">
+                      <p className="text-sm font-medium text-gray-900">Partner Test</p>
+                      <p className="text-xs text-gray-500">partner@turladur.com</p>
+                    </div>
+                    <div className="py-1">
+                      <Link href="/partner-dashboard/settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        Profil ve Ayarlar
+                      </Link>
+                      <Link href="/partner-dashboard/financials" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        Ödemeler
+                      </Link>
+                      <Link href="/partner-dashboard/help" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        Yardım ve Destek
+                      </Link>
+                    </div>
+                    <div className="py-1 border-t border-gray-200">
+                      <Link 
+                        href="/" 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <div className="flex items-center">
+                          <ArrowLeftOnRectangleIcon className="h-4 w-4 mr-2 text-gray-500" />
+                          Çıkış Yap
+                        </div>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto bg-gray-50">
-          <div className="py-8 px-6">
+          <div className="py-6 px-4 sm:px-6 lg:px-8">
             {children}
           </div>
         </main>

@@ -1,10 +1,11 @@
 ---
 description: 
 globs: 
+alwaysApply: false
 ---
-# TourTech – Kapsamlı Turizm Ekosistem Platformu
+# TurlaDur – Kapsamlı Turizm Ekosistem Platformu
 
-TourTech, Türkiye’nin turizm sektöründeki tüm paydaşları (küçük oteller, pansiyonlar, acenteler, tur operatörleri, yerel deneyim sağlayıcıları) tek bir dijital ekosistemde buluşturan, veri odaklı ve ölçeklenebilir bir platformdur. Başlangıç aşamasında Türkiye’de pilot bölgelerde uygulanarak, sonrasında Akdeniz bölgesindeki benzer turizm dinamiklerine sahip ülkelere (Yunanistan, İspanya, İtalya, Hırvatistan, Fas, Mısır vb.) açılma potansiyeline sahiptir.
+TurlaDur, Türkiye’nin turizm sektöründeki tüm paydaşları (küçük oteller, pansiyonlar, acenteler, tur operatörleri, yerel deneyim sağlayıcıları) tek bir dijital ekosistemde buluşturan, veri odaklı ve ölçeklenebilir bir platformdur. Başlangıç aşamasında Türkiye’de pilot bölgelerde uygulanarak, sonrasında Akdeniz bölgesindeki benzer turizm dinamiklerine sahip ülkelere (Yunanistan, İspanya, İtalya, Hırvatistan, Fas, Mısır vb.) açılma potansiyeline sahiptir.
 
 ---
 

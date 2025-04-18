@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { CalendarIcon, UsersIcon, ClockIcon, MapPinIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, UsersIcon, ClockIcon, MapPinIcon, PencilIcon, TrashIcon, StarIcon } from '@heroicons/react/24/outline';
+import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 
 export interface TourCardProps {
   id: string;
@@ -15,6 +16,7 @@ export interface TourCardProps {
   reservationCount?: number;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  listView?: boolean;
 }
 
 export default function TourCard({
@@ -29,58 +31,174 @@ export default function TourCard({
   rating,
   reservationCount,
   onEdit,
-  onDelete
+  onDelete,
+  listView = false
 }: TourCardProps) {
-  const statusColors = {
-    active: 'bg-green-50 text-green-700',
-    draft: 'bg-amber-50 text-amber-700',
-    archived: 'bg-gray-100 text-gray-700'
-  };
-  
-  const statusText = {
-    active: 'Aktif',
-    draft: 'Taslak',
-    archived: 'Arşivlenmiş'
+  const statusConfig = {
+    active: { 
+      bg: 'bg-emerald-50',
+      text: 'text-emerald-700',
+      label: 'Aktif'
+    },
+    draft: { 
+      bg: 'bg-amber-50',
+      text: 'text-amber-700',
+      label: 'Taslak'
+    },
+    archived: { 
+      bg: 'bg-gray-100',
+      text: 'text-gray-600',
+      label: 'Arşivlenmiş'
+    }
   };
 
+  const { bg, text, label } = statusConfig[status];
+
+  // Liste görünümü için kart tasarımı
+  if (listView) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group transition-all hover:shadow-md p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
+          <div className="relative sm:w-48 sm:h-32 mb-4 sm:mb-0 overflow-hidden rounded-lg">
+            <Image 
+              src={imageUrl} 
+              alt={title}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 768px) 100%, 192px"
+            />
+            <div className="absolute top-2 right-2">
+              <span className={`${bg} ${text} px-2 py-0.5 text-xs font-medium rounded-full`}>
+                {label}
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-semibold text-gray-800 line-clamp-1 mb-1 group-hover:text-indigo-700 transition-colors">{title}</h3>
+            
+            <div className="mb-2 flex items-baseline">
+              <span className="text-lg font-bold text-indigo-600">{price}</span>
+              <span className="text-xs text-gray-500 ml-1">/kişi</span>
+            </div>
+            
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mb-2 text-xs">
+              <div className="flex items-center text-gray-600">
+                <MapPinIcon className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
+                <span className="truncate">{location}</span>
+              </div>
+              <div className="flex items-center text-gray-600">
+                <ClockIcon className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
+                <span>{duration}</span>
+              </div>
+              <div className="flex items-center text-gray-600">
+                <UsersIcon className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
+                <span>Maks. {maxParticipants} kişi</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+              <div className="flex items-center space-x-4">
+                {rating && (
+                  <div className="flex items-center">
+                    <div className="flex items-center">
+                      {[...Array(5)].map((_, i) => (
+                        i < Math.floor(rating) 
+                          ? <StarIconSolid key={i} className="w-3 h-3 text-amber-400" /> 
+                          : i < rating 
+                            ? <div key={i} className="relative w-3 h-3">
+                                <StarIconSolid className="absolute w-3 h-3 text-amber-400 overflow-hidden" style={{ clipPath: `inset(0 ${100 - ((rating - Math.floor(rating)) * 100)}% 0 0)` }} />
+                                <StarIcon className="w-3 h-3 text-gray-300" />
+                              </div>
+                            : <StarIcon key={i} className="w-3 h-3 text-gray-300" />
+                      ))}
+                    </div>
+                    <span className="ml-1 text-xs font-medium text-gray-600">{rating.toFixed(1)}</span>
+                  </div>
+                )}
+                
+                {reservationCount && (
+                  <div className="flex items-center text-xs text-gray-600">
+                    <CalendarIcon className="h-3 w-3 text-gray-400 mr-1 flex-shrink-0" />
+                    <span>{reservationCount} rezervasyon</span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Link 
+                  href={`/partner-dashboard/tours/${id}`}
+                  className="inline-flex items-center px-2.5 py-1 border border-gray-200 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                >
+                  Detaylar
+                </Link>
+                
+                {onEdit && (
+                  <button 
+                    onClick={() => onEdit(id)}
+                    className="inline-flex items-center p-1.5 border border-gray-200 text-xs rounded-lg text-gray-600 bg-white hover:bg-gray-50 hover:text-indigo-600 transition-colors"
+                    aria-label="Düzenle"
+                  >
+                    <PencilIcon className="h-3 w-3" />
+                  </button>
+                )}
+                
+                {onDelete && (
+                  <button 
+                    onClick={() => onDelete(id)}
+                    className="inline-flex items-center p-1.5 border border-gray-200 text-xs rounded-lg text-gray-600 bg-white hover:bg-gray-50 hover:text-red-600 transition-colors"
+                    aria-label="Sil"
+                  >
+                    <TrashIcon className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal grid görünümü
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden group transition-all hover:shadow-md">
       <div className="relative">
         <div className="aspect-[16/9] relative overflow-hidden">
           <Image 
             src={imageUrl} 
             alt={title}
             fill
-            className="object-cover transition-transform hover:scale-105"
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
         </div>
         <div className="absolute top-3 right-3">
-          <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${statusColors[status]}`}>
-            {statusText[status]}
+          <span className={`${bg} ${text} px-2.5 py-1 text-xs font-medium rounded-full`}>
+            {label}
           </span>
         </div>
       </div>
       
       <div className="p-5">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+        <h3 className="text-base font-semibold text-gray-800 line-clamp-1 mb-2 group-hover:text-indigo-700 transition-colors">{title}</h3>
         
         <div className="mb-3 flex items-baseline">
-          <span className="text-2xl font-bold text-indigo-600">{price}</span>
-          <span className="text-sm text-gray-500 ml-1">/kişi</span>
+          <span className="text-xl font-bold text-indigo-600">{price}</span>
+          <span className="text-xs text-gray-500 ml-1">/kişi</span>
         </div>
         
         <div className="space-y-2 mb-4">
           <div className="flex items-center text-sm text-gray-600">
-            <MapPinIcon className="h-4 w-4 text-gray-400 mr-1.5" />
-            <span>{location}</span>
+            <MapPinIcon className="h-3.5 w-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
+            <span className="truncate">{location}</span>
           </div>
           <div className="flex items-center text-sm text-gray-600">
-            <ClockIcon className="h-4 w-4 text-gray-400 mr-1.5" />
+            <ClockIcon className="h-3.5 w-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
             <span>{duration}</span>
           </div>
           <div className="flex items-center text-sm text-gray-600">
-            <UsersIcon className="h-4 w-4 text-gray-400 mr-1.5" />
+            <UsersIcon className="h-3.5 w-3.5 text-gray-400 mr-1.5 flex-shrink-0" />
             <span>Maks. {maxParticipants} kişi</span>
           </div>
         </div>
@@ -91,23 +209,23 @@ export default function TourCard({
               <div className="flex items-center">
                 <div className="flex items-center">
                   {[...Array(5)].map((_, i) => (
-                    <svg 
-                      key={i} 
-                      className={`w-4 h-4 ${i < rating ? 'text-yellow-400' : 'text-gray-300'}`}
-                      fill="currentColor" 
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
+                    i < Math.floor(rating) 
+                      ? <StarIconSolid key={i} className="w-3.5 h-3.5 text-amber-400" /> 
+                      : i < rating 
+                        ? <div key={i} className="relative w-3.5 h-3.5">
+                            <StarIconSolid className="absolute w-3.5 h-3.5 text-amber-400 overflow-hidden" style={{ clipPath: `inset(0 ${100 - ((rating - Math.floor(rating)) * 100)}% 0 0)` }} />
+                            <StarIcon className="w-3.5 h-3.5 text-gray-300" />
+                          </div>
+                        : <StarIcon key={i} className="w-3.5 h-3.5 text-gray-300" />
                   ))}
                 </div>
-                <span className="ml-1 text-sm text-gray-600">{rating.toFixed(1)}</span>
+                <span className="ml-1 text-xs font-medium text-gray-600">{rating.toFixed(1)}</span>
               </div>
             )}
             
             {reservationCount && (
-              <div className="flex items-center text-sm text-gray-600">
-                <CalendarIcon className="h-4 w-4 text-gray-400 mr-1" />
+              <div className="flex items-center text-xs text-gray-600">
+                <CalendarIcon className="h-3.5 w-3.5 text-gray-400 mr-1 flex-shrink-0" />
                 <span>{reservationCount} rezervasyon</span>
               </div>
             )}
@@ -117,7 +235,7 @@ export default function TourCard({
         <div className="mt-4 flex justify-between">
           <Link 
             href={`/partner-dashboard/tours/${id}`}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            className="inline-flex items-center px-3 py-1.5 border border-gray-200 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
           >
             Detaylar
           </Link>
@@ -126,18 +244,20 @@ export default function TourCard({
             {onEdit && (
               <button 
                 onClick={() => onEdit(id)}
-                className="inline-flex items-center p-2 border border-gray-300 text-sm rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="inline-flex items-center p-1.5 border border-gray-200 text-xs rounded-lg text-gray-600 bg-white hover:bg-gray-50 hover:text-indigo-600 transition-colors"
+                aria-label="Düzenle"
               >
-                <PencilIcon className="h-4 w-4" />
+                <PencilIcon className="h-3.5 w-3.5" />
               </button>
             )}
             
             {onDelete && (
               <button 
                 onClick={() => onDelete(id)}
-                className="inline-flex items-center p-2 border border-gray-300 text-sm rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="inline-flex items-center p-1.5 border border-gray-200 text-xs rounded-lg text-gray-600 bg-white hover:bg-gray-50 hover:text-red-600 transition-colors"
+                aria-label="Sil"
               >
-                <TrashIcon className="h-4 w-4" />
+                <TrashIcon className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
