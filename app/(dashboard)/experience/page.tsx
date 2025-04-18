@@ -585,12 +585,12 @@ export default function ExperiencesPage() {
                                         </div>
                                         <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
                                             <span className="text-xl font-bold text-blue-600">₺{experience.price}</span>
-                                            <button
-                                                onClick={() => handleReservation(experience.category || 'tumu')}
+                                            <Link
+                                                href={`/experience/${experience.id}`}
                                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
                                             >
                                                 Rezervasyon
-                                            </button>
+                                            </Link>
                                         </div>
                                     </div>
                                 </div>
