@@ -5,11 +5,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
-  ArrowRightIcon,
-  UserPlusIcon,
+  ArrowRightIcon as ArrowRightIconSolid,
+  UserPlusIcon as UserPlusIconSolid,
+  ChevronRightIcon as ChevronRightIconSolid,
+  ChevronLeftIcon as ChevronLeftIconSolid,
+  CheckIcon as CheckIconSolid,
+  ExclamationCircleIcon as ExclamationCircleIconSolid,
   BuildingOfficeIcon,
-  ChevronRightIcon,
-  ChevronLeftIcon,
   EnvelopeIcon,
   PhoneIcon,
   UserCircleIcon,
@@ -18,8 +20,9 @@ import {
   EyeIcon,
   EyeSlashIcon,
   XMarkIcon,
-  CheckIcon,
-  ExclamationCircleIcon
+  UsersIcon,
+  ChartPieIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 
 export default function PartnerRegisterPage() {
@@ -135,57 +138,62 @@ export default function PartnerRegisterPage() {
     }
   };
   
-  const inputClass = "block w-full rounded-lg border border-gray-300 py-3 px-4 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-200 ease-in-out shadow-sm focus:bg-indigo-50/30";
-  const inputIconClass = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
-  const inputIcon = "h-5 w-5 text-gray-400";
+  const baseInputClass = "block w-full rounded-lg border text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-offset-0 sm:text-sm transition duration-200 ease-in-out shadow-sm focus:bg-white";
+  const inputPaddingClass = "py-2.5 px-4";
+  const inputIconPaddingClass = "pl-9 pr-4";
+  const normalBorderClass = "border-neutral-300 focus:border-sky-500 focus:ring-sky-300";
+  const errorBorderClass = "border-red-300 focus:border-red-500 focus:ring-red-300";
+  const successBorderClass = "border-emerald-500 focus:border-emerald-500 focus:ring-emerald-300";
+  const inputIconClass = "absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none";
+  const inputIconSvgClass = "h-4 w-4 text-neutral-400";
+  const labelClass = "block text-xs font-medium text-neutral-700 mb-1.5";
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="min-h-screen flex bg-neutral-50">
       <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
         <Image
           src="https://images.unsplash.com/photo-1600880292203-757bb62b4baf?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
           alt="İş Ortaklığı Büyüme"
-          layout="fill"
-          objectFit="cover"
+          fill
+          className="object-cover"
           priority
-          className="absolute inset-0 scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-tl from-indigo-900/90 via-indigo-800/85 to-blue-700/80 z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-sky-700/90 via-blue-800/85 to-sky-900/90 z-10"></div>
         
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 p-12 text-center">
           <div className="max-w-lg">
-            <h2 className="text-4xl xl:text-5xl font-extrabold text-white mb-5 leading-tight tracking-tight">
-              TurlaDur İş Ortağı Olun
+            <h2 className="text-4xl xl:text-5xl font-bold text-white mb-5 leading-tight tracking-normal">
+              TourTech İş Ortağı Olun
             </h2>
-            <p className="text-lg text-indigo-100/90 mb-10">
-              İşletmenizi daha geniş kitlelere ulaştırın, rezervasyonlarınızı artırın ve TurlaDur ailesinin bir parçası olun.
+            <p className="text-lg text-sky-100/90 mb-10 font-light">
+              İşletmenizi daha geniş kitlelere ulaştırın, rezervasyonlarınızı artırın ve TourTech ailesinin bir parçası olun.
             </p>
             
-            <div className="space-y-5">
+            <div className="space-y-4">
               {[ 
-                { icon: (props:any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-3.741-1.5a3 3 0 0 0-3.741 1.5M15 11.678a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 12.75a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9Zm0 0H8.25m4.125 0a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 0H15.75m-3.75 0a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Z" /></svg>,
+                { icon: UsersIcon,
                   title: "Geniş Müşteri Ağı",
                   desc: "Platformumuzdaki binlerce potansiyel müşteriye ulaşın."
                 },
-                { icon: (props:any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" /></svg>,
+                { icon: ChartPieIcon,
                   title: "Gelirlerinizi Artırın",
                   desc: "Kolay yönetim paneli ile iş hacminizi ve kazancınızı yükseltin."
                 },
-                { icon: (props:any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" /></svg>,
+                { icon: ShieldCheckIcon,
                   title: "Güvenilir Platform",
                   desc: "Güvenli ödeme altyapısı ve 7/24 partner desteği."
                 }
               ].map((feature, index) => (
                 <div 
                     key={index} 
-                    className="group flex items-start bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/15 text-left shadow-sm transition-all duration-300 ease-in-out hover:bg-white/20 hover:border-white/25 hover:scale-[1.02]"
+                    className="group flex items-start bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/15 text-left shadow-sm transition-all duration-200 ease-out hover:bg-white/15 hover:border-white/25"
                 >
-                  <div className="bg-gradient-to-br from-white/30 to-white/10 p-3 rounded-lg mr-4 mt-0.5 flex-shrink-0 shadow">
-                    <feature.icon className="h-6 w-6 text-white opacity-90 group-hover:opacity-100" />
+                  <div className="bg-white/20 p-2.5 rounded-lg mr-4 mt-0.5 flex-shrink-0 shadow-sm">
+                    <feature.icon className="h-5 w-5 text-white opacity-90" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-base mb-0.5 group-hover:text-white">{feature.title}</h3>
-                    <p className="text-indigo-100/80 text-sm leading-snug group-hover:text-indigo-100/90">{feature.desc}</p>
+                    <h3 className="text-white font-semibold text-sm mb-0.5">{feature.title}</h3>
+                    <p className="text-sky-100/80 text-xs leading-snug">{feature.desc}</p>
                   </div>
                 </div>
               ))}
@@ -196,52 +204,57 @@ export default function PartnerRegisterPage() {
       
       <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-6 sm:p-12 lg:p-16">
         <div className="w-full max-w-md">
-          <div className="mb-8 text-center"> 
-            <Link href="/" className="inline-block mb-5">
-               <span className="text-3xl font-bold text-gray-900">TurlaDur <span className="text-indigo-600">Partner</span></span>
+          <div className="mb-8 text-center lg:text-left">
+            <Link href="/" className="inline-flex items-center mb-5 group">
+                <div className="mr-2.5 flex-shrink-0">
+                  <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-blue-600 rounded-lg flex items-center justify-center shadow group-hover:scale-105 transition-transform duration-200">
+                      <BuildingOfficeIcon className="w-4 h-4 text-white" />
+                   </div>
+                 </div>
+                 <span className="text-xl font-semibold text-neutral-800 group-hover:text-sky-700 transition-colors">TourTech <span className="text-sky-600">Partner</span></span>
             </Link>
-            <h2 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">
+            <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 mb-3 tracking-tight">
               İş Ortağı Hesabı Oluşturun
             </h2>
-             <div className="flex items-center justify-center space-x-4 mt-4">
-                 <div className={`flex items-center ${currentStep === 1 ? 'text-indigo-600' : 'text-gray-400'}`}>
-                     <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${currentStep === 1 ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300'} text-sm font-semibold ${currentStep === 1 ? 'text-white' : 'text-gray-500'} mr-2 transition-colors duration-300`}>1</div>
-                     <span className={`${currentStep === 1 ? 'font-medium' : ''} text-sm transition-colors duration-300`}>İşletme Bilgileri</span>
+             <div className="flex items-center justify-center space-x-3 mt-4">
+                 <div className={`flex items-center ${currentStep === 1 ? 'text-sky-600' : 'text-neutral-400'}`}>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center border-2 ${currentStep >= 1 ? 'border-sky-600' : 'border-neutral-300'} ${currentStep === 1 ? 'bg-sky-600 text-white' : 'bg-white text-neutral-500'} text-xs font-semibold mr-1.5 transition-colors duration-300`}>1</div>
+                      <span className={`${currentStep === 1 ? 'font-semibold' : 'font-normal'} text-xs transition-colors duration-300`}>İşletme Bilgileri</span>
                  </div>
-                 <div className="flex-1 h-0.5 bg-gray-200"></div>
-                 <div className={`flex items-center ${currentStep === 2 ? 'text-indigo-600' : 'text-gray-400'}`}>
-                     <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${currentStep === 2 ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300'} text-sm font-semibold ${currentStep === 2 ? 'text-white' : 'text-gray-500'} mr-2 transition-colors duration-300`}>2</div>
-                     <span className={`${currentStep === 2 ? 'font-medium' : ''} text-sm transition-colors duration-300`}>Hesap Bilgileri</span>
-                 </div>
-             </div>
+                  <div className={`flex-1 h-[1px] ${currentStep > 1 ? 'bg-sky-500' : 'bg-neutral-200'}`}></div>
+                  <div className={`flex items-center ${currentStep === 2 ? 'text-sky-600' : 'text-neutral-400'}`}>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center border-2 ${currentStep >= 2 ? 'border-sky-600' : 'border-neutral-300'} ${currentStep === 2 ? 'bg-sky-600 text-white' : 'bg-white text-neutral-500'} text-xs font-semibold mr-1.5 transition-colors duration-300`}>2</div>
+                      <span className={`${currentStep === 2 ? 'font-semibold' : 'font-normal'} text-xs transition-colors duration-300`}>Hesap Bilgileri</span>
+                  </div>
+              </div>
           </div>
 
           {error && (
-            <div className="mb-4 flex items-start bg-red-50 border-l-4 border-red-400 text-red-800 px-4 py-3 rounded-md text-sm shadow-sm">
-              <ExclamationCircleIcon className="w-5 h-5 mr-2.5 text-red-500 flex-shrink-0 mt-0.5"/>
-              <span className="leading-tight flex-1">{error}</span>
+            <div className="mb-5 flex items-start bg-red-50/80 border border-red-200/80 text-red-800 px-4 py-3 rounded-lg text-xs shadow-sm">
+              <ExclamationCircleIconSolid className="w-4 h-4 mr-2 text-red-500 flex-shrink-0 mt-0.5"/>
+              <span className="leading-tight flex-1 -mt-0.5">{error}</span>
               <button 
                 onClick={() => setError('')} 
-                className="ml-2 text-red-400 hover:text-red-600 transition-colors"
+                className="ml-2 -mr-1 p-0.5 text-red-400 hover:text-red-600 transition-colors rounded-full hover:bg-red-100/70"
                 aria-label="Hata mesajını kapat"
               >
-                <XMarkIcon className="h-4 w-4" />
+                <XMarkIcon className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
 
           <form 
-            className="space-y-5 mt-6" 
+            className="space-y-4 mt-6"
             onSubmit={handleSubmit}
           >
             <div className={`${currentStep === 1 ? 'block' : 'hidden'} space-y-4 animate-fadeIn`}> 
               <div>
-                <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label htmlFor="companyName" className={labelClass}>
                   Şirket Adı
                 </label>
                 <div className="relative">
                    <div className={inputIconClass}>
-                       <BuildingOfficeIcon className={inputIcon} />
+                       <BuildingOfficeIcon className={inputIconSvgClass} />
                    </div>
                     <input
                       id="companyName"
@@ -251,19 +264,19 @@ export default function PartnerRegisterPage() {
                       required={currentStep === 1}
                       value={formData.companyName}
                       onChange={handleChange}
-                      className={`${inputClass} pl-11`}
+                      className={`${baseInputClass} ${inputPaddingClass} ${inputIconPaddingClass} ${normalBorderClass}`}
                       placeholder="ABC Turizm Ltd. Şti."
                     />
                  </div>
               </div>
               
               <div>
-                <label htmlFor="companyType" className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label htmlFor="companyType" className={labelClass}>
                   İşletme Türü
                 </label>
                 <div className="relative">
                    <div className={inputIconClass}>
-                       <TagIcon className={inputIcon} />
+                       <TagIcon className={inputIconSvgClass} />
                    </div>
                     <select
                       id="companyType"
@@ -271,7 +284,7 @@ export default function PartnerRegisterPage() {
                       required={currentStep === 1}
                       value={formData.companyType}
                       onChange={handleChange}
-                      className={`${inputClass} pl-11 appearance-none pr-10`} 
+                      className={`${baseInputClass} ${inputPaddingClass} ${inputIconPaddingClass} ${normalBorderClass} appearance-none pr-10 bg-white`}
                     >
                       <option value="" disabled>İşletme türünü seçin...</option>
                       <option value="hotel">Otel</option>
@@ -282,20 +295,20 @@ export default function PartnerRegisterPage() {
                       <option value="transport">Ulaşım (Transfer vb.)</option>
                       <option value="other">Diğer</option>
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3.5 text-gray-400">
-                      <ChevronRightIcon className="h-5 w-5 rotate-90" />
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-neutral-400">
+                      <ChevronRightIconSolid className="h-5 w-5 rotate-90 text-neutral-500" />
                     </div>
                  </div>
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label htmlFor="contactName" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label htmlFor="contactName" className={labelClass}>
                       Yetkili Kişi
                     </label>
                     <div className="relative">
                        <div className={inputIconClass}>
-                           <UserCircleIcon className={inputIcon} />
+                           <UserCircleIcon className={inputIconSvgClass} />
                        </div>
                         <input
                             id="contactName"
@@ -305,19 +318,19 @@ export default function PartnerRegisterPage() {
                             required={currentStep === 1}
                             value={formData.contactName}
                             onChange={handleChange}
-                            className={`${inputClass} pl-11`}
+                            className={`${baseInputClass} ${inputPaddingClass} ${inputIconPaddingClass} ${normalBorderClass}`}
                             placeholder="Ad Soyad"
                         />
                      </div>
                  </div>
                 
                  <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1.5">
+                    <label htmlFor="phone" className={labelClass}>
                       Yetkili Telefon
                     </label>
                     <div className="relative">
                        <div className={inputIconClass}>
-                           <PhoneIcon className={inputIcon} />
+                           <PhoneIcon className={inputIconSvgClass} />
                        </div>
                         <input
                             id="phone"
@@ -327,7 +340,7 @@ export default function PartnerRegisterPage() {
                             required={currentStep === 1}
                             value={formData.phone}
                             onChange={handleChange}
-                            className={`${inputClass} pl-11`}
+                            className={`${baseInputClass} ${inputPaddingClass} ${inputIconPaddingClass} ${normalBorderClass}`}
                             placeholder="(5XX) XXX XX XX"
                         />
                     </div>
@@ -335,12 +348,12 @@ export default function PartnerRegisterPage() {
               </div>
               
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label htmlFor="email" className={labelClass}>
                   Yetkili E-posta
                 </label>
                  <div className="relative">
                    <div className={inputIconClass}>
-                       <EnvelopeIcon className={inputIcon} />
+                       <EnvelopeIcon className={inputIconSvgClass} />
                    </div>
                     <input
                       id="email"
@@ -350,7 +363,7 @@ export default function PartnerRegisterPage() {
                       required={currentStep === 1}
                       value={formData.email}
                       onChange={handleChange}
-                      className={`${inputClass} pl-11`}
+                      className={`${baseInputClass} ${inputPaddingClass} ${inputIconPaddingClass} ${normalBorderClass}`}
                       placeholder="yetkili@sirketiniz.com"
                     />
                  </div>
@@ -359,12 +372,12 @@ export default function PartnerRegisterPage() {
 
             <div className={`${currentStep === 2 ? 'block' : 'hidden'} space-y-4 animate-fadeIn`}>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label htmlFor="password" className={labelClass}>
                   Yönetici Şifresi
                 </label>
                  <div className="relative">
                    <div className={inputIconClass}>
-                       <LockClosedIcon className={inputIcon} />
+                       <LockClosedIcon className={inputIconSvgClass} />
                    </div>
                     <input
                       id="password"
@@ -374,13 +387,13 @@ export default function PartnerRegisterPage() {
                       required={currentStep === 2}
                       value={formData.password}
                       onChange={handleChange}
-                      className={`${inputClass} pl-11 pr-10`}
+                      className={`${baseInputClass} ${inputPaddingClass} ${inputIconPaddingClass} ${normalBorderClass} pr-10`}
                       placeholder="••••••••"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-neutral-400 hover:text-neutral-600 transition-colors rounded-r-lg"
                       aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"}
                     >
                       {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
@@ -388,20 +401,20 @@ export default function PartnerRegisterPage() {
                  </div>
                  {formData.password && (
                     <div className="mt-2 space-y-1">
-                        <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <div className="w-full h-1 bg-neutral-200 rounded-full overflow-hidden">
                             <div 
-                            className={`h-full rounded-full transition-all duration-300 ease-in-out ${ 
+                            className={`h-full rounded-full transition-all duration-300 ease-out ${ 
                                 passwordStrength === 0 ? 'w-0' :
-                                passwordStrength === 1 ? 'bg-red-500' :
-                                passwordStrength === 2 ? 'bg-orange-500' :
-                                passwordStrength === 3 ? 'bg-yellow-500' :
-                                passwordStrength === 4 ? 'bg-lime-500' :
-                                'bg-green-500' 
+                                passwordStrength === 1 ? 'bg-rose-500' :
+                                passwordStrength === 2 ? 'bg-amber-500' :
+                                passwordStrength === 3 ? 'bg-amber-500' :
+                                passwordStrength === 4 ? 'bg-emerald-500' :
+                                'bg-emerald-500' 
                             }`}
                             style={{ width: `${passwordStrength * 20}%` }}
                             ></div>
                         </div>
-                        <p className={`text-xs ${passwordStrength < 3 ? 'text-red-600' : passwordStrength < 5 ? 'text-orange-600' : 'text-green-600'}`}>
+                        <p className={`text-xs font-medium ${passwordStrength < 3 ? 'text-rose-600' : passwordStrength < 5 ? 'text-amber-600' : 'text-emerald-600'}`}>
                             {passwordMessage}
                         </p>
                     </div>
@@ -409,12 +422,12 @@ export default function PartnerRegisterPage() {
               </div>
               
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label htmlFor="confirmPassword" className={labelClass}>
                   Şifre Tekrar
                 </label>
                  <div className="relative">
                     <div className={inputIconClass}>
-                       <LockClosedIcon className={inputIcon} />
+                       <LockClosedIcon className={inputIconSvgClass} />
                    </div>
                     <input
                       id="confirmPassword"
@@ -424,27 +437,27 @@ export default function PartnerRegisterPage() {
                       required={currentStep === 2}
                       value={formData.confirmPassword}
                       onChange={handleChange}
-                      className={`${inputClass} pl-11 pr-10 ${ 
+                      className={`${baseInputClass} ${inputPaddingClass} ${inputIconPaddingClass} pr-10 ${ 
                         formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword
-                          ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                          ? errorBorderClass
                           : formData.password && formData.confirmPassword && formData.password === formData.confirmPassword
-                          ? 'border-green-500 focus:border-green-500 focus:ring-green-500'
-                          : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+                          ? successBorderClass
+                          : normalBorderClass
                       }`}
                       placeholder="••••••••"
                     />
                     {formData.password && formData.confirmPassword && (
                         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                         {formData.password === formData.confirmPassword ? (
-                            <CheckIcon className="h-5 w-5 text-green-500" />
+                            <CheckIconSolid className="h-5 w-5 text-emerald-500" />
                         ) : (
-                            <XMarkIcon className="h-5 w-5 text-red-500" />
+                            <XMarkIcon className="h-5 w-5 text-rose-500" />
                         )}
                         </div>
                     )}
                  </div>
                 {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                  <p className="mt-1 text-xs text-red-600">Şifreler eşleşmiyor</p>
+                  <p className="mt-1 text-xs text-rose-600">Şifreler eşleşmiyor</p>
                 )}
               </div>
 
@@ -457,13 +470,13 @@ export default function PartnerRegisterPage() {
                       required={currentStep === 2}
                       checked={formData.termsAccepted}
                       onChange={handleChange}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0"
+                      className="h-3.5 w-3.5 rounded border-neutral-300 text-sky-600 focus:ring-sky-500 focus:ring-offset-0"
                     />
                 </div>
-                <div className="ml-3 text-sm">
-                    <label htmlFor="termsAccepted" className="text-gray-600 leading-snug">
-                        <Link href="/partner-terms" target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline transition-colors duration-150">İş Ortağı Sözleşmesi</Link>
-                        'ni ve <Link href="/partner-privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline transition-colors duration-150">Gizlilik Politikası</Link>'nı okudum ve kabul ediyorum.
+                <div className="ml-2.5 text-xs">
+                    <label htmlFor="termsAccepted" className="text-neutral-600 leading-snug">
+                        <Link href="/partner-terms" target="_blank" rel="noopener noreferrer" className="font-medium text-sky-600 hover:text-sky-800 hover:underline underline-offset-2 transition-colors duration-150">İş Ortağı Sözleşmesi</Link>
+                        'ni ve <Link href="/partner-privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-sky-600 hover:text-sky-800 hover:underline underline-offset-2 transition-colors duration-150">Gizlilik Politikası</Link>'nı okudum ve kabul ediyorum.
                     </label>
                 </div>
               </div>
@@ -474,15 +487,15 @@ export default function PartnerRegisterPage() {
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="inline-flex items-center justify-center py-2.5 px-5 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 shadow-sm"
+                  className="inline-flex items-center justify-center py-2 px-4 rounded-lg border border-neutral-300 bg-white text-xs font-medium text-neutral-700 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors duration-200 shadow-sm"
                 >
-                  <ChevronLeftIcon className="h-4 w-4 mr-1.5" />
+                  <ChevronLeftIconSolid className="h-4 w-4 mr-1.5" />
                   Geri
                 </button>
               ) : (
                 <Link
                   href="/partner-login"
-                  className="inline-flex items-center justify-center py-2.5 px-5 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 shadow-sm"
+                  className="inline-flex items-center justify-center py-2 px-4 rounded-lg border border-neutral-300 bg-white text-xs font-medium text-neutral-700 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors duration-200 shadow-sm"
                 >
                   Giriş Yap
                 </Link>
@@ -493,16 +506,16 @@ export default function PartnerRegisterPage() {
                   type="button"
                   onClick={nextStep}
                   disabled={!isStepOneComplete()}
-                  className="group inline-flex items-center justify-center py-2.5 px-5 border border-transparent rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98]"
+                  className="group inline-flex items-center justify-center py-2 px-4 border border-transparent rounded-lg text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all duration-200 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98]"
                 >
                   İleri
-                  <ChevronRightIcon className="h-4 w-4 ml-1.5 group-hover:translate-x-1 transition-transform duration-200" />
+                  <ChevronRightIconSolid className="h-4 w-4 ml-1.5 group-hover:translate-x-1 transition-transform duration-200" />
                 </button>
               ) : (
                 <button
                   type="submit"
                   disabled={loading || !isStepTwoComplete()}
-                  className="group relative inline-flex items-center justify-center py-2.5 px-5 border border-transparent rounded-lg text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] min-h-[42px]"
+                  className="group relative inline-flex items-center justify-center py-2 px-4 border border-transparent rounded-lg text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all duration-200 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] min-h-[36px]"
                 >
                   {loading ? (
                     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -511,7 +524,7 @@ export default function PartnerRegisterPage() {
                     </svg>
                   ) : (
                     <>
-                      <UserPlusIcon className="h-5 w-5 mr-1.5" />
+                      <UserPlusIconSolid className="h-5 w-5 mr-1.5" />
                       Hesap Oluştur
                     </>
                   )}
@@ -520,9 +533,9 @@ export default function PartnerRegisterPage() {
             </div>
           </form>
 
-          <div className="text-center pt-4">
-            <p className="text-sm text-gray-500">
-              Sorularınız mı var? <a href="mailto:partners@turladur.com" className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline transition-colors duration-150">Destek ile iletişime geçin</a>
+          <div className="text-center pt-6">
+            <p className="text-xs text-neutral-500">
+              Sorularınız mı var? <a href="mailto:partners@tourtech.com" className="font-medium text-sky-600 hover:text-sky-800 hover:underline underline-offset-2 transition-colors duration-150">Destek ile iletişime geçin</a>
             </p>
           </div>
         </div>

@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, MapPin, Clock, ChevronLeft, ChevronRight, Search, Star, Filter, Calendar, Users, X, Wallet, Timer, ChevronDown, SlidersHorizontal, Trash2, ArrowUpDown, Plus } from "lucide-react";
+import { Loader2, MapPin, Clock, ChevronLeft, ChevronRight, Search, Star, Filter, Calendar, Users, X, Wallet, Timer, ChevronDown, SlidersHorizontal, Trash2, ArrowUpDown, Plus, CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Experience {
     id: number;
@@ -69,6 +70,7 @@ export default function ActivitiesPage() {
     // --- UI States --- 
     const [isFilterMenuOpen, setIsFilterMenuOpen] = useState(false);
     const filterMenuRef = useRef<HTMLDivElement>(null);
+    const [showAllCategories, setShowAllCategories] = useState(false);
 
     // --- Countdown State --- 
     const [targetDate] = useState(new Date(new Date().getTime() + 21 * 24 * 60 * 60 * 1000 + 18 * 60 * 60 * 1000 + 45 * 60 * 1000 + 37 * 1000));
@@ -80,8 +82,11 @@ export default function ActivitiesPage() {
         { id: "doga", name: "Doğa" },
         { id: "tarihi", name: "Tarihi" },
         { id: "deniz", name: "Deniz" },
-        { id: "sehir", name: "Şehir" },
-        { id: "macera", name: "Macera" }
+        { id: "kultur", name: "Kültür" },
+        { id: "macera", name: "Macera" },
+        { id: "gastronomi", name: "Gastronomi" },
+        { id: "spor", name: "Spor" },
+        { id: "eglence", name: "Eğlence" }
     ];
 
     // Aktivite Türleri
@@ -125,7 +130,7 @@ export default function ActivitiesPage() {
                         id: 1,
                         title: "Kapadokya Balon Turu",
                         description: "Eşsiz peri bacaları manzarasında unutulmaz bir balon deneyimi yaşayın",
-                        imageUrl: "https://images.unsplash.com/photo-1641128324972-af3212f0f6bd?q=80&w=2070&auto=format&fit=crop",
+                        imageUrl: "https://images.unsplash.com/photo-1641128324972-af3ef285b470?q=80&w=2070&auto=format&fit=crop",
                         featured: true,
                         createdAt: new Date().toISOString(),
                         location: "Kapadokya",
@@ -219,6 +224,40 @@ export default function ActivitiesPage() {
                         popularityRate: 75,
                         price: 600,
                         category: "tarihi"
+                    },
+                    {
+                        id: 7,
+                        title: "Fethiye Yamaç Paraşütü",
+                        description: "Ölüdeniz manzarasında heyecan dolu bir yamaç paraşütü deneyimi.",
+                        imageUrl: "https://images.unsplash.com/photo-1605539090181-d5d631629db1?q=80&w=2070&auto=format&fit=crop",
+                        featured: true,
+                        createdAt: new Date().toISOString(),
+                        location: "Muğla",
+                        duration: "2 saat",
+                        durationHours: 2,
+                        rating: 4.9,
+                        reviewCount: 512,
+                        popularityRate: 96,
+                        price: 3500,
+                        category: "macera",
+                        experienceType: "parasailing"
+                    },
+                    {
+                        id: 8,
+                        title: "Antalya Jeep Safari",
+                        description: "Toros Dağları'nda macera dolu bir jeep safari turu.",
+                        imageUrl: "https://images.unsplash.com/photo-1580654712642-f1643c51794a?q=80&w=2070&auto=format&fit=crop",
+                        featured: false,
+                        createdAt: new Date().toISOString(),
+                        location: "Antalya",
+                        duration: "7 saat",
+                        durationHours: 7,
+                        rating: 4.6,
+                        reviewCount: 215,
+                        popularityRate: 80,
+                        price: 850,
+                        category: "macera",
+                        experienceType: "atv-safari"
                     }
                 ];
                 setActivities(demoExperiences);
@@ -363,23 +402,28 @@ export default function ActivitiesPage() {
 
     // Skeleton component
     const ActivityCardSkeleton = () => (
-        <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 animate-pulse">
-            <div className="relative h-56 bg-gray-200"></div>
+        <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-neutral-100/80 animate-pulse">
+            <div className="relative h-56 bg-neutral-200"></div>
             <div className="p-5">
-                <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-1.5"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <div className="h-6 bg-gray-200 rounded w-1/4"></div>
-                    <div className="h-8 bg-gray-200 rounded-lg w-1/3"></div>
+                <div className="h-6 bg-neutral-200 rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-neutral-200 rounded w-1/2 mb-1.5"></div>
+                <div className="h-4 bg-neutral-200 rounded w-1/3 mb-4"></div>
+                <div className="flex items-center justify-between pt-4 border-t border-neutral-100/80">
+                    <div className="h-6 bg-neutral-200 rounded w-1/4"></div>
+                    <div className="h-8 bg-neutral-200 rounded-lg w-1/3"></div>
                 </div>
             </div>
         </div>
     );
 
+    // Helper function to generate city options
+    const cities = useMemo(() => [
+        "İstanbul", "Ankara", "İzmir", "Bursa", "Adana", "Antalya", "Konya", "Kayseri", "Eskişehir", "Kırıkkale", "Kırşehir", "Kızılcahamam", "Malatya", "Manisa", "Mardin", "Mersin", "Muğla", "Muş", "Nevşehir", "Ordu", "Rize", "Sakarya", "Samsun", "Şanlıurfa", "Siirt", "Sivas", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Şırnak", "Uşak", "Van", "Yozgat", "Zonguldak"
+    ], []);
+
     return (
         <>
-            {/* Hero Section - Refined */}
+            {/* Hero Section - Stil Güncellendi */}
             <section className="relative w-full h-[550px] md:h-[600px]">
                 <Image
                     src="https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?q=80&w=2070&auto=format&fit=crop"
@@ -388,27 +432,27 @@ export default function ActivitiesPage() {
                     className="object-cover"
                     priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/20 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-br from-sky-700/70 via-blue-800/60 to-sky-900/70 pointer-events-none" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
                     <div className="w-full max-w-4xl text-center mb-8">
-                        <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-                            <span className="block text-blue-400">Bölgenin</span> <span className="block text-orange-400">En İyi</span> <span className="block text-blue-400">Aktiviteleri</span>
+                        <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                            Unutulmaz <span className="text-sky-300">Deneyimler</span> Keşfedin
                         </h1>
-                        <p className="mt-6 text-xl text-white max-w-3xl mx-auto">
-                            Bulunduğunuz bölgedeki en popüler ve eğlenceli aktiviteleri keşfedin.
+                        <p className="mt-4 text-lg text-sky-100/90 max-w-3xl mx-auto font-light">
+                            Türkiye'nin dört bir yanındaki en popüler turları ve aktiviteleri bulun.
                         </p>
                     </div>
                         
-                    {/* Refined Search Section */}
+                    {/* Arama/Filtre Çubuğu Güncellendi */}
                     <div className="relative z-10 w-full max-w-4xl mx-auto">
-                        <div className="bg-white/95 backdrop-blur-sm rounded-full shadow-xl p-2 flex items-center gap-2">
+                        <div className="bg-white/95 backdrop-blur-sm rounded-full shadow-xl p-1.5 flex items-center gap-1.5">
                             {/* Search Input */}
-                            <div className="flex-1 relative pl-4 pr-2 flex items-center">
-                                <Search className="h-5 w-5 text-gray-500 mr-3 flex-shrink-0" />
+                            <div className="flex-1 relative pl-3 pr-2 flex items-center">
+                                <Search className="h-4 w-4 text-neutral-400 mr-2.5 flex-shrink-0" />
                                 <input
                                     type="text"
                                     placeholder="Aktivite, şehir veya açıklama ara..."
-                                    className="w-full py-3 text-base text-gray-900 placeholder-gray-500 focus:outline-none bg-transparent"
+                                    className="w-full py-2.5 text-sm text-neutral-900 placeholder-neutral-500 focus:outline-none bg-transparent"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -418,24 +462,28 @@ export default function ActivitiesPage() {
                             <div className="relative" ref={filterMenuRef}>
                                 <button 
                                     onClick={() => setIsFilterMenuOpen(!isFilterMenuOpen)}
-                                    className={`flex items-center gap-2 px-4 py-3 rounded-full text-sm font-medium transition-colors ${isFilterMenuOpen || activeFilters.length > 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                                    className={`flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-xs font-semibold transition-colors ${isFilterMenuOpen || activeFilters.length > 0 ? 'bg-sky-100/80 text-sky-700' : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'}`}
                                 >
-                                    <SlidersHorizontal className="h-4 w-4" />
+                                    <SlidersHorizontal className="h-3.5 w-3.5" />
                                     <span>Filtrele</span>
                                     {activeFilters.length > 0 && (
-                                        <span className="ml-1 bg-blue-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">{activeFilters.length}</span>
+                                        <span className="ml-0.5 bg-sky-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{activeFilters.length}</span>
                                     )}
                                 </button>
 
-                                {/* Filter Dropdown/Menu */} 
+                                {/* Filter Dropdown/Menu - Stil Güncellendi */}
                                 {isFilterMenuOpen && (
-                                    <div className={`absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 z-50 transition-all duration-300 ease-in-out transform ${isFilterMenuOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-                                        <div className="p-5">
-                                            <div className="flex justify-between items-center mb-4">
-                                                <h4 className="text-lg font-semibold text-gray-800">Filtreler</h4>
+                                    <div className={cn(
+                                        "absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-2xl border border-neutral-100/80 z-50 overflow-hidden",
+                                        "transition-all duration-200 ease-out",
+                                        isFilterMenuOpen ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+                                    )}>
+                                        <div className="p-4">
+                                            <div className="flex justify-between items-center mb-3 pb-3 border-b border-neutral-100">
+                                                <h4 className="text-sm font-semibold text-neutral-800">Filtreler</h4>
                                                 <button 
                                                     onClick={resetFilters} 
-                                                    className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    className="text-xs text-neutral-500 hover:text-rose-600 font-medium flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     disabled={activeFilters.length === 0 && sortBy === 'popularity'}
                                                 >
                                                     <Trash2 className="w-3 h-3" />
@@ -443,15 +491,15 @@ export default function ActivitiesPage() {
                                                 </button>
                                             </div>
 
-                                            {/* Filter Options */}
-                                            <div className="space-y-4">
+                                            {/* Filter Options - Stiller Güncellendi */}
+                                            <div className="space-y-3.5">
                                                 {/* Sort By */}
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-600 mb-1.5">Sırala</label>
+                                                    <label className="block text-xs font-medium text-neutral-600 mb-1">Sırala</label>
                                                     <select 
                                                         value={sortBy} 
                                                         onChange={(e) => setSortBy(e.target.value)}
-                                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                                        className="w-full px-3 py-1.5 text-xs border border-neutral-300 rounded-md focus:outline-none focus:ring-1 focus:ring-sky-300 focus:border-sky-500 bg-white appearance-none"
                                                     >
                                                         {sortOptions.map(option => (
                                                             <option key={option.id} value={option.id}>{option.name}</option>
@@ -461,11 +509,11 @@ export default function ActivitiesPage() {
 
                                                 {/* Activity Type */}
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-600 mb-1.5">Aktivite Türü</label>
+                                                    <label className="block text-xs font-medium text-neutral-600 mb-1">Aktivite Türü</label>
                                                     <select 
                                                         value={selectedActivityType || ""} 
                                                         onChange={(e) => setSelectedActivityType(e.target.value || undefined)}
-                                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                                        className="w-full px-3 py-1.5 text-xs border border-neutral-300 rounded-md focus:outline-none focus:ring-1 focus:ring-sky-300 focus:border-sky-500 bg-white appearance-none"
                                                     >
                                                         <option value="">Tüm Türler</option>
                                                         {activityTypes.map(type => (
@@ -476,15 +524,14 @@ export default function ActivitiesPage() {
 
                                                 {/* City */}
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-600 mb-1.5">Şehir</label>
+                                                    <label className="block text-xs font-medium text-neutral-600 mb-1">Şehir</label>
                                                     <select 
                                                         value={selectedCity || ""} 
                                                         onChange={(e) => setSelectedCity(e.target.value || undefined)}
-                                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                                        className="w-full px-3 py-1.5 text-xs border border-neutral-300 rounded-md focus:outline-none focus:ring-1 focus:ring-sky-300 focus:border-sky-500 bg-white appearance-none"
                                                     >
                                                         <option value="">Tüm Şehirler</option>
-                                                        {/* Dynamically get cities from activities or use a predefined list */}
-                                                        {Array.from(new Set(activities.map(a => a.location))).sort().map(city => (
+                                                        {cities.map((city: string) => (
                                                             <option key={city} value={city.toLowerCase()}>{city}</option>
                                                         ))}
                                                     </select>
@@ -492,22 +539,22 @@ export default function ActivitiesPage() {
 
                                                 {/* Price Range */}
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-600 mb-1.5">Fiyat Aralığı (₺)</label>
-                                                    <div className="flex items-center gap-2">
+                                                    <label className="block text-xs font-medium text-neutral-600 mb-1">Fiyat Aralığı (₺)</label>
+                                                    <div className="flex items-center gap-1.5">
                                                         <input
                                                             type="number"
                                                             placeholder="Min"
                                                             min="0"
-                                                            className="w-1/2 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                            className="w-1/2 px-3 py-1.5 text-xs border border-neutral-300 rounded-md focus:outline-none focus:ring-1 focus:ring-sky-300 focus:border-sky-500"
                                                             value={minPrice}
                                                             onChange={(e) => setMinPrice(e.target.value)}
                                                         />
-                                                        <span className="text-gray-400">-</span>
+                                                        <span className="text-neutral-400 text-sm">-</span>
                                                         <input
                                                             type="number"
                                                             placeholder="Max"
                                                             min="0"
-                                                            className="w-1/2 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                            className="w-1/2 px-3 py-1.5 text-xs border border-neutral-300 rounded-md focus:outline-none focus:ring-1 focus:ring-sky-300 focus:border-sky-500"
                                                             value={maxPrice}
                                                             onChange={(e) => setMaxPrice(e.target.value)}
                                                         />
@@ -516,7 +563,7 @@ export default function ActivitiesPage() {
 
                                                 {/* Max Duration */}
                                                 <div>
-                                                    <label htmlFor="max-duration" className="block text-sm font-medium text-gray-600 mb-1.5">Maksimum Süre (Saat)</label>
+                                                    <label htmlFor="max-duration" className="block text-xs font-medium text-neutral-600 mb-1.5">Maksimum Süre (Saat)</label>
                                                     <input
                                                         id="max-duration"
                                                         type="range"
@@ -525,9 +572,9 @@ export default function ActivitiesPage() {
                                                         step="1"
                                                         value={maxDuration || 24}
                                                         onChange={(e) => setMaxDuration(e.target.valueAsNumber === 24 ? '' : e.target.value)}
-                                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-thumb-blue"
+                                                        className="w-full h-1.5 bg-neutral-200 rounded-lg appearance-none cursor-pointer range-thumb-sky accent-sky-600"
                                                     />
-                                                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                                    <div className="flex justify-between text-xs text-neutral-500 mt-1">
                                                         <span>1 sa</span>
                                                         <span>{maxDuration ? `${maxDuration} sa` : 'Sınırsız'}</span>
                                                     </div>
@@ -536,7 +583,7 @@ export default function ActivitiesPage() {
 
                                             <button 
                                                 onClick={() => setIsFilterMenuOpen(false)} 
-                                                className="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors"
+                                                className="mt-4 w-full bg-sky-600 hover:bg-sky-700 text-white py-2 px-4 rounded-lg text-xs font-semibold transition-colors"
                                             >
                                                 Filtreleri Uygula
                                             </button>
@@ -546,8 +593,8 @@ export default function ActivitiesPage() {
                             </div>
 
                             {/* Search Button */}
-                            <button className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-3 transition-colors">
-                                <Search className="h-5 w-5" />
+                            <button className="bg-sky-600 hover:bg-sky-700 text-white rounded-full p-2.5 transition-colors shadow-md">
+                                <Search className="h-4 w-4" />
                             </button>
                         </div>
                     </div>
@@ -555,17 +602,27 @@ export default function ActivitiesPage() {
             </section>
 
             {/* Main Content Wrapper */}
-            <main className="w-full bg-gray-50 py-12 md:py-16">
+            <main className="w-full bg-neutral-50 py-12 md:py-16">
                 <div className="w-full max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8">
                     
-                    {/* Refined Activity Categories Buttons */}
+                    {/* Kategori Butonları Güncellendi */}
                     <div className="mb-10">
-                        <div className="flex items-center space-x-2 overflow-x-auto pb-2 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 custom-scrollbar">
-                            {categories.map(category => (
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-neutral-800">Kategoriler</h3>
+                            <button 
+                                onClick={() => setShowAllCategories(!showAllCategories)}
+                                className="text-sky-600 hover:text-sky-800 text-xs font-medium flex items-center gap-1"
+                            >
+                                {showAllCategories ? 'Daha Az Göster' : 'Tümünü Göster'}
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllCategories ? 'rotate-180' : ''}`} />
+                            </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {(showAllCategories ? categories : categories.slice(0, 6)).map(category => (
                                 <button
                                     key={category.id}
                                     onClick={() => setSelectedCategory(category.id)}
-                                    className={`flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ease-in-out whitespace-nowrap ${selectedCategory === category.id ? 'bg-blue-600 text-white shadow-md scale-105' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 hover:scale-105 active:scale-100'}`}
+                                    className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ease-out ${selectedCategory === category.id ? 'bg-sky-600 text-white shadow-sm' : 'bg-white text-neutral-700 hover:bg-neutral-100 border border-neutral-200/80'}`}
                                 >
                                     {category.name}
                                 </button>
@@ -575,30 +632,30 @@ export default function ActivitiesPage() {
 
                     {/* Active Filter Tags */}
                     {activeFilters.length > 0 && (
-                        <div className="mb-6 flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-medium text-gray-600">Aktif Filtreler:</span>
+                        <div className="mb-6 flex flex-wrap items-center gap-2 border-b border-neutral-200 pb-4">
+                            <span className="text-xs font-semibold text-neutral-600 mr-1">Aktif Filtreler:</span>
                             {activeFilters.map(filter => (
-                                <div key={filter.key} className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-1 rounded-full">
+                                <div key={filter.key} className="inline-flex items-center gap-1 bg-sky-100/80 text-sky-800 text-xs font-semibold px-2.5 py-1 rounded-full">
                                     <span>{filter.label}</span>
-                                    <button onClick={() => removeFilter(filter.key)} className="ml-1 text-blue-600 hover:text-blue-800">
-                                        <X className="h-3.5 w-3.5" />
+                                    <button onClick={() => removeFilter(filter.key)} className="ml-0.5 text-sky-600 hover:text-sky-800">
+                                        <X className="h-3 w-3 stroke-2" />
                                     </button>
                                 </div>
                             ))}
                             <button 
                                 onClick={resetFilters} 
-                                className="text-xs text-gray-500 hover:text-red-600 font-medium flex items-center gap-1 ml-2"
+                                className="text-xs text-neutral-500 hover:text-rose-600 font-medium flex items-center gap-1 ml-auto"
                             >
-                                <Trash2 className="w-3.5 h-3.5" /> Tümünü Temizle
+                                <Trash2 className="w-3.5 h-3.5" /> Filtreleri Temizle
                             </button>
                         </div>
                     )}
 
                     {/* Activity Listing Section Header */}
-                    <div className="mb-8 flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <div className="mb-6 flex flex-col md:flex-row justify-between md:items-center gap-2">
                         <div>
-                            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight">Popüler Aktiviteler</h2>
-                            <p className="mt-1 text-sm text-gray-600">
+                            <h2 className="text-xl lg:text-2xl font-semibold text-neutral-900 tracking-tight">Aktiviteler</h2>
+                            <p className="mt-0.5 text-xs text-neutral-600">
                                 {!loading && `${allFilteredActivities.length} aktivite bulundu.`}
                             </p>
                         </div>
@@ -606,32 +663,31 @@ export default function ActivitiesPage() {
 
                     {/* Loading / No Results / Grid */}
                     {loading ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
                             {[...Array(ITEMS_PER_PAGE)].map((_, i) => <ActivityCardSkeleton key={i} />)} 
                         </div>
                     ) : displayedActivities.length === 0 ? (
-                        <div className="mt-8 text-center">
-                            <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 bg-white">
-                                <Filter className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                                <h3 className="text-lg font-semibold text-gray-800 mb-2">Sonuç Bulunamadı</h3>
-                                <p className="text-sm text-gray-500 mb-4">Arama kriterlerinize uygun aktivite bulunamadı. Filtreleri değiştirmeyi veya sıfırlamayı deneyin.</p>
+                        <div className="mt-10 text-center">
+                            <div className="rounded-lg border-2 border-dashed border-neutral-300 p-12 bg-white">
+                                <Filter className="mx-auto h-10 w-10 text-neutral-400 mb-4" />
+                                <h3 className="text-base font-semibold text-neutral-800 mb-2">Sonuç Bulunamadı</h3>
+                                <p className="text-xs text-neutral-500 mb-4 max-w-xs mx-auto">Arama kriterlerinize uygun aktivite bulunamadı. Filtreleri değiştirmeyi veya temizlemeyi deneyin.</p>
                                 <button 
-                                    className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center justify-center mx-auto gap-1"
+                                    className="text-sky-600 hover:text-sky-800 font-medium text-xs flex items-center justify-center mx-auto gap-1"
                                     onClick={resetFilters}
                                 >
-                                    <Trash2 className="w-4 h-4"/> Filtreleri Sıfırla
+                                    <Trash2 className="w-3.5 h-3.5" /> Filtreleri Temizle
                                 </button>
                             </div>
                         </div>
                     ) : (
                         <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
                                 {displayedActivities.map((experience) => (
-                                    // --- Refined Activity Card --- 
                                     <Link 
                                         href={`/activities/${experience.id}`} 
                                         key={experience.id} 
-                                        className="group block bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 ease-in-out transform hover:-translate-y-1"
+                                        className="group block bg-white rounded-xl overflow-hidden shadow-sm border border-neutral-100/80 hover:shadow-lg transition-all duration-300 ease-in-out transform hover:-translate-y-1"
                                     >
                                         <div className="relative h-56 overflow-hidden"> 
                                             <Image
@@ -642,7 +698,7 @@ export default function ActivitiesPage() {
                                                 className="object-cover transition-transform duration-500 group-hover:scale-105"
                                             />
                                             {/* Top Right Badge (Rating) */}
-                                            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-sm">
+                                            <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-lg shadow-sm">
                                                 <div className="flex items-center gap-1">
                                                     <Star className="w-4 h-4 text-yellow-400 fill-current" />
                                                     <span className="text-sm font-semibold text-gray-800">{experience.rating.toFixed(1)}</span> 
@@ -651,31 +707,30 @@ export default function ActivitiesPage() {
                                             </div>
                                             {/* Top Left Badge (Category/Type) */}
                                             {experience.category && (
-                                              <div className="absolute top-4 left-4 bg-gradient-to-r from-blue-600 to-blue-500 px-3 py-1 rounded-lg shadow">
-                                                  <span className="text-xs font-semibold text-white capitalize tracking-wide">{experience.category}</span>
+                                              <div className="absolute top-3 left-3 bg-gradient-to-r from-sky-500 to-blue-600 px-2.5 py-1 rounded-md shadow">
+                                                  <span className="text-[11px] font-semibold text-white capitalize tracking-wide">{experience.category}</span>
                                               </div>
                                             )}
                                         </div>
-                                        <div className="p-5">
-                                            <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-700 transition-colors duration-200">{experience.title}</h3>
-                                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-1.5">
-                                                <MapPin className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                                        <div className="p-4">
+                                            <h3 className="text-base font-semibold text-neutral-900 mb-1.5 line-clamp-2 group-hover:text-sky-700 transition-colors duration-200">{experience.title}</h3>
+                                            <div className="flex items-center gap-1.5 text-xs text-neutral-600 mb-1">
+                                                <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-neutral-400" />
                                                 <span>{experience.location}</span>
                                             </div>
-                                            <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                                                <Clock className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                                            <div className="flex items-center gap-1.5 text-xs text-neutral-600 mb-3">
+                                                <Clock className="w-3.5 h-3.5 flex-shrink-0 text-neutral-400" />
                                                 <span>{experience.duration} {experience.durationHours ? `(${experience.durationHours} sa)` : ''}</span>
                                             </div>
-                                            <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                                            <div className="flex items-center justify-between pt-3 border-t border-neutral-100/80">
                                                 {experience.price ? (
-                                                    <span className="text-xl font-bold text-blue-600">₺{experience.price.toLocaleString('tr-TR')}</span>
+                                                    <span className="text-lg font-bold text-sky-600">₺{experience.price.toLocaleString('tr-TR')}</span>
                                                 ) : (
-                                                    <span className="text-sm font-medium text-gray-500">Fiyat Sorunuz</span>
+                                                    <span className="text-xs font-medium text-neutral-500">Fiyat Sorunuz</span>
                                                 )}
-                                                {/* Button style updated to match premium feel */}
-                                                <span className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors duration-200 cursor-pointer">
+                                                <span className="inline-flex items-center px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-md transition-colors duration-200 cursor-pointer">
                                                     Detayları Gör
-                                                    <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform"/>
+                                                    <ChevronRight className="w-3.5 h-3.5 ml-1 group-hover:translate-x-0.5 transition-transform"/>
                                                 </span>
                                             </div>
                                         </div>
@@ -687,9 +742,9 @@ export default function ActivitiesPage() {
                                 <div className="mt-12 text-center">
                                     <button
                                         onClick={loadMoreActivities}
-                                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+                                        className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
                                     >
-                                        <Plus className="w-5 h-5" />
+                                        <Plus className="w-4 h-4" />
                                         Daha Fazla Yükle ({allFilteredActivities.length - displayedActivities.length} tane daha)
                                     </button>
                                 </div>
@@ -699,15 +754,15 @@ export default function ActivitiesPage() {
 
                     {/* Other Sections (Popular Categories, Offers, Events, Stats, Testimonials) */}
                     
-                    {/* --- Popular Categories: Refined Hover --- */} 
-                    <div className="mt-16">
-                        <div className="mb-8">
-                            <h2 className="text-2xl font-semibold text-gray-900">Popüler Kategorilerimiz</h2>
-                            <p className="mt-2 text-sm text-gray-700">
+                    {/* --- Popular Categories: Stil Güncellendi */}
+                    <div className="mt-16 md:mt-20">
+                        <div className="mb-6 md:mb-8">
+                            <h2 className="text-xl lg:text-2xl font-semibold text-neutral-900">Popüler Kategorilerimiz</h2>
+                            <p className="mt-1 text-xs text-neutral-600">
                                 En çok tercih edilen deneyim türlerini keşfedin.
                             </p>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
                             {[
                                 { id: "doga", name: "Doğa Turları", image: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070&auto=format&fit=crop", count: 24 },
                                 { id: "macera", name: "Macera Turları", image: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=2070&auto=format&fit=crop", count: 18 },
@@ -717,9 +772,9 @@ export default function ActivitiesPage() {
                                 <Link
                                     href={`/activities?category=${category.id}`}
                                     key={category.id}
-                                    className="group relative overflow-hidden rounded-xl h-64 shadow-md block hover:shadow-xl transition-shadow duration-300"
+                                    className="group relative overflow-hidden rounded-lg h-64 shadow-sm block border border-neutral-100/80 hover:shadow-lg transition-all duration-300"
                                 >
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-10 transition-opacity duration-300 group-hover:opacity-80" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10 transition-opacity duration-300 group-hover:from-black/70" />
                                     <Image
                                         src={category.image}
                                         alt={category.name}
@@ -728,11 +783,11 @@ export default function ActivitiesPage() {
                                         className="object-cover transition-transform duration-500 group-hover:scale-110"
                                     />
                                     <div className="absolute inset-0 z-20 flex flex-col justify-end p-5 text-white">
-                                        <h3 className="text-xl font-bold mb-1 transition-transform duration-300 group-hover:-translate-y-1">{category.name}</h3>
-                                        <p className="text-sm text-white/80 mb-3 transition-opacity duration-300 group-hover:opacity-0">{category.count} tur</p>
-                                        <div className="flex items-center text-sm font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                                        <h3 className="text-lg font-semibold mb-1 transition-transform duration-300 group-hover:-translate-y-1">{category.name}</h3>
+                                        <p className="text-xs text-white/80 mb-2 transition-opacity duration-300 group-hover:opacity-0">{category.count} aktivite</p>
+                                        <div className="flex items-center text-xs font-medium opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
                                             <span>Kategoriyi Keşfet</span>
-                                            <ChevronRight className="w-4 h-4 ml-1.5 transition-transform group-hover:translate-x-1"/>
+                                            <ChevronRight className="w-3.5 h-3.5 ml-1 transition-transform group-hover:translate-x-1"/>
                                         </div>
                                     </div>
                                 </Link>
@@ -740,74 +795,68 @@ export default function ActivitiesPage() {
                         </div>
                     </div>
 
-                    {/* --- Limited Time Offer with Functional Countdown --- */}
-                    <div className="mt-20">
-                         <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl overflow-hidden shadow-lg">
-                             <div className="grid grid-cols-1 lg:grid-cols-2">
-                                 <div className="p-8 lg:p-12 flex flex-col justify-center text-white">
-                                     <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white/90 text-indigo-700 mb-4 self-start shadow-sm">
-                                         <Timer className="w-3.5 h-3.5 mr-1.5"/> SINIRLI SÜRE TEKLİFİ
-                                     </div>
-                                     <h2 className="text-3xl lg:text-4xl font-bold mb-4 tracking-tight">
-                                         Yaz Tatili Erken Rezervasyon Fırsatı
-                                     </h2>
-                                     <p className="text-indigo-100 mb-6 text-lg">
-                                         Yaz aylarındaki tüm tur paketlerinde %25'e varan indirim fırsatını kaçırmayın. Erken rezervasyon avantajlarıyla hayalinizdeki tatili şimdiden planlayın.
-                                     </p>
-                                     {/* Functional Countdown Timer */} 
-                                     <div className="flex flex-wrap gap-3 sm:gap-4 mb-8">
-                                         {Object.entries(timeLeft).map(([unit, value]) => (
-                                             <div key={unit} className="bg-white/20 backdrop-blur-sm rounded-lg p-3 text-center min-w-[70px] sm:min-w-[80px]">
-                                                 <div className="text-2xl sm:text-3xl font-bold tabular-nums">{String(value).padStart(2, '0')}</div>
-                                                 <div className="text-xs text-indigo-200 uppercase tracking-wider capitalize">{unit === 'days' ? 'Gün' : unit === 'hours' ? 'Saat' : unit === 'minutes' ? 'Dakika' : 'Saniye'}</div>
-                                             </div>
-                                         ))}
-                                          {/* Display message if countdown finished */}
-                                         {timeLeft.days === 0 && timeLeft.hours === 0 && timeLeft.minutes === 0 && timeLeft.seconds === 0 && (
-                                            <p className="text-yellow-300 font-medium text-sm w-full">Bu fırsat sona erdi!</p>
-                                         )}
-                                     </div>
-                                     <Link href="/deals" className="bg-white text-indigo-700 hover:bg-gray-100 px-6 py-3 rounded-lg font-semibold transition-colors duration-200 inline-flex items-center self-start shadow hover:shadow-md active:scale-95">
-                                         Fırsatları İncele
-                                         <ChevronRight className="ml-2 h-5 w-5" />
-                                     </Link>
-                                 </div>
-                                 <div className="relative h-64 lg:h-auto min-h-[300px]">
-                                     <Image
-                                         src="https://images.unsplash.com/photo-1596895111956-bf1cf0599ce5?q=80&w=2070&auto=format&fit=crop"
-                                         alt="Yaz Tatili Fırsatları"
-                                         fill
-                                         className="object-cover"
-                                     />
-                                 </div>
-                             </div>
-                         </div>
+                    {/* --- Limited Time Offer - Stil Güncellendi */}
+                    <div className="mt-16 md:mt-20">
+                        <div className="bg-gradient-to-r from-sky-600 to-blue-700 rounded-xl overflow-hidden shadow-lg">
+                            <div className="grid grid-cols-1 lg:grid-cols-2">
+                                <div className="p-8 lg:p-10 flex flex-col justify-center text-white">
+                                    <div className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-white/90 text-sky-700 mb-3 self-start shadow-sm">
+                                        <Timer className="w-3 h-3 mr-1"/> SINIRLI SÜRE TEKLİFİ
+                                    </div>
+                                    <h2 className="text-2xl lg:text-3xl font-bold mb-3 tracking-tight">
+                                        Yaz Tatili Erken Rezervasyon Fırsatı
+                                    </h2>
+                                    <p className="text-sky-100/90 mb-5 text-sm font-light">
+                                        Yaz aylarındaki tüm tur paketlerinde %25'e varan indirim fırsatını kaçırmayın. Erken rezervasyon avantajlarıyla hayalinizdeki tatili şimdiden planlayın.
+                                    </p>
+                                    <div className="flex flex-wrap gap-2 sm:gap-3 mb-6">
+                                        {Object.entries(timeLeft).map(([unit, value]) => (
+                                            <div key={unit} className="bg-white/15 backdrop-blur-sm rounded-md p-2 text-center min-w-[60px] sm:min-w-[70px]">
+                                                <div className="text-xl sm:text-2xl font-bold tabular-nums">{String(value).padStart(2, '0')}</div>
+                                                <div className="text-[10px] text-sky-200/80 uppercase tracking-wider capitalize">{unit === 'days' ? 'Gün' : unit === 'hours' ? 'Saat' : unit === 'minutes' ? 'Dakika' : 'Saniye'}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {timeLeft.days === 0 && timeLeft.hours === 0 && timeLeft.minutes === 0 && timeLeft.seconds === 0 && (
+                                        <p className="text-amber-300 font-medium text-xs w-full">Bu fırsat sona erdi!</p>
+                                    )}
+                                </div>
+                                <div className="relative h-64 lg:h-auto min-h-[300px]">
+                                    <Image
+                                        src="https://images.unsplash.com/photo-1596895111956-bf1cf0599ce5?q=80&w=2070&auto=format&fit=crop"
+                                        alt="Yaz Tatili Fırsatları"
+                                        fill
+                                        className="object-cover lg:rounded-r-xl"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* --- Special Events: Refined Hover --- */} 
-                    <div className="mt-20">
-                        <div className="mb-8 flex justify-between items-center">
+                    {/* --- Special Events - Stil Güncellendi */}
+                    <div className="mt-16 md:mt-20">
+                        <div className="mb-6 md:mb-8 flex justify-between items-center">
                             <div>
-                                <h2 className="text-2xl font-semibold text-gray-900">Özel Etkinlikler</h2>
-                                <p className="mt-2 text-sm text-gray-700">
+                                <h2 className="text-xl lg:text-2xl font-semibold text-neutral-900">Özel Etkinlikler</h2>
+                                <p className="mt-1 text-xs text-neutral-600">
                                     Bu yaz unutulmaz deneyimler yaşayabileceğiniz özel etkinlikler
                                 </p>
                             </div>
                             <Link 
                                 href="/special-events" 
-                                className="text-blue-600 hover:text-blue-800 font-medium flex items-center text-sm"
+                                className="text-sky-600 hover:text-sky-800 font-medium flex items-center text-xs"
                             >
                                 Tümünü Görüntüle
-                                <ChevronRight className="ml-1 h-4 w-4" />
+                                <ChevronRight className="ml-1 h-3.5 w-3.5" />
                             </Link>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
                             {[
                                 { id: 1, title: "Kapadokya Festival Haftası", date: "15-22 Temmuz 2023", image: "https://images.unsplash.com/photo-1486911278844-a81c5267e227?q=80&w=2070&auto=format&fit=crop", location: "Kapadokya Vadisi" },
                                 { id: 2, title: "Efes Antik Tiyatro Konserleri", date: "5-12 Ağustos 2023", image: "https://images.unsplash.com/photo-1607998802009-26ce5b682ad1?q=80&w=2070&auto=format&fit=crop", location: "Efes Antik Kenti, İzmir" },
                                 { id: 3, title: "Boğaz'da Yemek Festivali", date: "3-10 Haziran 2023", image: "https://images.unsplash.com/photo-1527547637224-a93d42c7b332?q=80&w=2070&auto=format&fit=crop", location: "İstanbul Boğazı" }
                             ].map(event => (
-                                <Link href={`/event/${event.id}`} key={event.id} className="group relative block overflow-hidden rounded-xl shadow-md hover:shadow-xl transition-shadow duration-300">
+                                <Link href={`/event/${event.id}`} key={event.id} className="group relative block overflow-hidden rounded-lg shadow-sm border border-neutral-100/80 hover:shadow-lg transition-all duration-300">
                                     <div className="relative h-64 w-full">
                                         <Image
                                             src={event.image}
@@ -816,17 +865,17 @@ export default function ActivitiesPage() {
                                             sizes="(max-width: 768px) 100vw, 33vw"
                                             className="object-cover transition-transform duration-500 group-hover:scale-110"
                                         />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent transition-opacity duration-300 group-hover:from-black/90" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent transition-opacity duration-300 group-hover:from-black/80" />
                                     </div>
-                                    <div className="absolute bottom-0 left-0 right-0 p-5">
-                                        <div className="text-blue-300 text-xs font-semibold mb-1 uppercase tracking-wider">
+                                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                                        <div className="text-sky-300 text-[11px] font-semibold mb-0.5 uppercase tracking-wider">
                                             {event.date}
                                         </div>
-                                        <h3 className="text-white text-lg font-bold mb-1 line-clamp-2 transition-transform duration-300 group-hover:-translate-y-1">
+                                        <h3 className="text-white text-base font-semibold mb-0.5 line-clamp-2 transition-transform duration-300 group-hover:-translate-y-0.5">
                                             {event.title}
                                         </h3>
-                                        <div className="flex items-center text-white/80 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                            <MapPin className="h-3.5 w-3.5 mr-1" />
+                                        <div className="flex items-center text-white/70 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                            <MapPin className="h-3 w-3 mr-0.5" />
                                             {event.location}
                                         </div>
                                     </div>
@@ -835,52 +884,50 @@ export default function ActivitiesPage() {
                         </div>
                     </div>
 
-                    {/* --- Statistics Section: Refined with Icons --- */} 
-                    <div className="mt-20 bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 rounded-2xl py-12 px-6 md:px-10 shadow-inner border border-gray-200/30 relative overflow-hidden">
-                        {/* Optional: Subtle pattern - Add a real SVG path if needed */}
-                        <div className="absolute inset-0 opacity-[0.02] bg-[url('/patterns/subtle-grid.svg')] bg-repeat"></div>
-                         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center relative z-10">
+                    {/* --- Statistics Section - Stil Güncellendi */}
+                    <div className="mt-16 md:mt-20 bg-neutral-100/70 rounded-xl py-10 px-6 md:px-8 border border-neutral-200/60 relative overflow-hidden">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center relative z-10">
                             {[ 
-                                { icon: Users, val: "10K+", text: "Mutlu Müşteri", color: "text-blue-600" },
-                                { icon: MapPin, val: "500+", text: "Benzersiz Tur", color: "text-orange-500" },
-                                { icon: Star, val: "4.8/5", text: "Ortalama Puan", color: "text-yellow-500" },
-                                { icon: Calendar, val: "7+", text: "Yıllık Deneyim", color: "text-green-500" }
+                                { icon: Users, val: "10K+", text: "Mutlu Müşteri", color: "text-sky-600" },
+                                { icon: MapPin, val: "500+", text: "Benzersiz Tur", color: "text-amber-600" },
+                                { icon: Star, val: "4.8/5", text: "Ortalama Puan", color: "text-emerald-600" },
+                                { icon: Calendar, val: "7+", text: "Yıllık Deneyim", color: "text-rose-600" }
                             ].map((stat, index) => (
                                 <div key={index} className="flex flex-col items-center">
-                                    <stat.icon className={`w-10 h-10 md:w-12 md:h-12 mb-3 ${stat.color}`} />
-                                    <div className="text-3xl md:text-4xl font-bold text-gray-800 tracking-tight">{stat.val}</div>
-                                    <div className="mt-1 text-sm md:text-base text-gray-600">{stat.text}</div>
+                                    <stat.icon className={`w-8 h-8 md:w-10 md:h-10 mb-2 ${stat.color}`} strokeWidth={1.5}/>
+                                    <div className="text-2xl md:text-3xl font-bold text-neutral-800 tracking-tight">{stat.val}</div>
+                                    <div className="mt-0.5 text-xs md:text-sm text-neutral-600">{stat.text}</div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* --- Customer Testimonials: Refined Card Style --- */} 
-                    <div className="mt-20 mb-16">
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Müşterilerimiz Ne Diyor?</h2>
-                            <p className="mt-3 text-lg text-gray-600 max-w-2xl mx-auto">
+                    {/* --- Customer Testimonials - Stil Güncellendi */}
+                    <div className="mt-16 md:mt-20 mb-12 md:mb-16">
+                        <div className="text-center mb-10 md:mb-12">
+                            <h2 className="text-2xl lg:text-3xl font-semibold text-neutral-900 tracking-tight">Müşterilerimiz Ne Diyor?</h2>
+                            <p className="mt-2 text-sm text-neutral-600 max-w-xl mx-auto">
                                 Misafirlerimizin bizimle yaşadıkları unutulmaz deneyimlere göz atın.
                             </p>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                             {[
                                 { name: "Ayşe Y.", avatar: "https://picsum.photos/100/100?random=20", text: "Kapadokya balon turu hayatımda yaşadığım en güzel deneyimlerden biriydi. Her şey sorunsuz ilerledi ve rehberimiz çok bilgiliydi.", tour: "Kapadokya Balon Turu", rating: 5 },
                                 { name: "Mehmet K.", avatar: "https://picsum.photos/100/100?random=21", text: "İstanbul Boğaz Turu'nda harika bir gün geçirdik. Tekne çok konforluydu ve boğaz manzarası muhteşemdi. Kesinlikle tavsiye ederim!", tour: "İstanbul Boğaz Turu", rating: 4 },
                                 { name: "Zeynep A.", avatar: "https://picsum.photos/100/100?random=22", text: "Efes Antik Kenti turu beklentilerimin ötesindeydi. Rehberimiz çok bilgiliydi ve tarih hakkında çok şey öğrendim.", tour: "Efes Antik Kenti Turu", rating: 5 }
                             ].map((testimonial, index) => (
-                                <div key={index} className="bg-white p-6 rounded-xl shadow-md border border-gray-100 hover:shadow-lg transition-shadow duration-300 flex flex-col">
-                                    <div className="flex items-center mb-3">
+                                <div key={index} className="bg-white p-6 rounded-lg shadow-sm border border-neutral-100/80 hover:shadow-lg transition-shadow duration-300 flex flex-col">
+                                    <div className="flex items-center mb-2.5">
                                         {[...Array(5)].map((_, i) => (
                                             <Star 
                                                 key={i} 
-                                                className={`h-5 w-5 ${i < testimonial.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} 
+                                                className={`h-4 w-4 ${i < testimonial.rating ? 'text-yellow-400 fill-yellow-400' : 'text-neutral-300'}`} 
                                             />
                                         ))}
                                     </div>
-                                    <p className="text-gray-600 italic mb-5 text-base flex-grow">"{testimonial.text}"</p>
-                                    <div className="flex items-center mt-auto pt-4 border-t border-gray-100">
-                                        <div className="relative w-11 h-11 mr-4 flex-shrink-0">
+                                    <p className="text-neutral-600 italic mb-4 text-sm flex-grow">"{testimonial.text}"</p>
+                                    <div className="flex items-center mt-auto pt-3.5 border-t border-neutral-100/80">
+                                        <div className="relative w-9 h-9 mr-3 flex-shrink-0">
                                             <Image 
                                                 src={testimonial.avatar} 
                                                 alt={testimonial.name} 
@@ -890,8 +937,8 @@ export default function ActivitiesPage() {
                                             />
                                         </div>
                                         <div>
-                                            <h4 className="font-semibold text-gray-900 text-sm">{testimonial.name}</h4>
-                                            <p className="text-xs text-gray-500">Katıldığı Tur: {testimonial.tour}</p>
+                                            <h4 className="font-semibold text-neutral-900 text-sm">{testimonial.name}</h4>
+                                            <p className="text-xs text-neutral-500">Katıldığı Tur: {testimonial.tour}</p>
                                         </div>
                                     </div>
                                 </div>
