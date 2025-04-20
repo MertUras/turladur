@@ -44,25 +44,27 @@ export default function RegisterPage() {
       let strength = 0;
       if (value.length >= 8) strength += 1;
       if (/[A-Z]/.test(value)) strength += 1;
+      if (/[a-z]/.test(value)) strength += 1;
       if (/[0-9]/.test(value)) strength += 1;
-      if (/[^A-Za-z0-9]/.test(value)) strength += 1;
+      if (/[!@#$%^&*(),.?":{}|<>-]/.test(value)) strength += 1;
       
       setPasswordStrength(strength);
       
       switch(strength) {
         case 0:
+        case 1:
           setPasswordMessage('Çok zayıf');
           break;
-        case 1:
+        case 2:
           setPasswordMessage('Zayıf');
           break;
-        case 2:
+        case 3:
           setPasswordMessage('Orta');
           break;
-        case 3:
+        case 4:
           setPasswordMessage('İyi');
           break;
-        case 4:
+        case 5:
           setPasswordMessage('Güçlü');
           break;
       }
@@ -78,8 +80,8 @@ export default function RegisterPage() {
       return;
     }
     
-    if (passwordStrength < 2) {
-      setError('Lütfen daha güçlü bir şifre seçin');
+    if (passwordStrength < 5) {
+      setError('Şifre en az bir büyük harf, bir küçük harf, bir sayı ve bir özel karakter içermelidir');
       return;
     }
     
