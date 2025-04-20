@@ -12,7 +12,6 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [closingDropdown, setClosingDropdown] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [dealsOpen, setDealsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -20,7 +19,6 @@ export default function Header() {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const dropdownTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { data: session, status } = useSession();
 
   // Client-side kontrolü için mounted state'i
@@ -29,24 +27,20 @@ export default function Header() {
     return () => setMounted(false);
   }, []);
 
-  // Sayfa kaydırıldığında header'ın görünümünü değiştir
+  // Scroll listener to update isScrolled state
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 50) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY > 50);
     };
-
     window.addEventListener("scroll", handleScroll);
+    // Set initial state based on current scroll position
+    handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Sayfa değiştiğinde dropdown ve menüyü kapat
   useEffect(() => {
     setActiveDropdown(null);
-    setClosingDropdown(null);
     setIsMenuOpen(false);
     setSearchOpen(false);
     setDealsOpen(false);
@@ -60,108 +54,90 @@ export default function Header() {
   }, [searchOpen]);
 
   // Mobil menüdeki dropdown tıklaması için mantığı düzenliyorum
-  const toggleDropdown = useCallback((dropdown: string, isMobile: boolean = false) => {
-    // Hem mobil hem desktop için aynı mantık
-    if (dropdown === activeDropdown) {
-      // Aynı dropdown'a tekrar tıklandığında kapat
-      setActiveDropdown(null);
-    } else {
-      // Farklı dropdown'a tıklandığında, önceki kapanır ve yeni açılır
-      setActiveDropdown(dropdown);
-    }
-
-    // Dropdown işlemi yapıldığında aramaları kapat
+  const toggleDropdown = useCallback((dropdown: string) => {
+    setActiveDropdown(prev => (prev === dropdown ? null : dropdown));
     setSearchOpen(false);
-  }, [activeDropdown]);
+  }, []);
 
   const toggleSearch = () => {
     setSearchOpen(!searchOpen);
+    setActiveDropdown(null);
+    setIsMenuOpen(false);
   };
 
   // Dışarı tıklandığında dropdown'ları kapat
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Desktop ve mobil dropdown'lar için dışarı tıklama kontrolü
-      if (activeDropdown) {
-        // Eğer tıklanan element dropdown container'ın içinde değilse ve bir link değilse kapat
-        if (!(event.target as Element).closest('.dropdown-container') && 
-            !(event.target as Element).closest('a')) {
-          setActiveDropdown(null);
-        }
+      if (activeDropdown && !(event.target as Element).closest('.dropdown-container')) {
+        setActiveDropdown(null);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [activeDropdown]);
 
   // Mobil menü dışına tıklandığında menüyü kapat
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (isMenuOpen && mobileMenuRef.current && 
-          !mobileMenuRef.current.contains(event.target as Node) && 
-          !(event.target as Element).closest('.mobile-menu-button') &&
-          !(event.target as Element).closest('a')) {
+      if (isMenuOpen && mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node) && !(event.target as Element).closest('.mobile-menu-button')) {
         setIsMenuOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isMenuOpen]);
 
   // Arama dışına tıklandığında kapat
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchOpen && searchRef.current && 
-          !searchRef.current.contains(event.target as Node) && 
-          !(event.target as Element).closest('.search-button')) {
+      if (searchOpen && searchRef.current && !searchRef.current.contains(event.target as Node) && !(event.target as Element).closest('.search-button')) {
         setSearchOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [searchOpen]);
 
   // Fırsatlar popup'ını açmak için güçlendirilmiş fonksiyon
   const openDealsPopup = useCallback(() => {
     if (mounted) {
       setDealsOpen(true);
+      setIsMenuOpen(false);
+      setActiveDropdown(null);
     }
   }, [mounted]);
 
+  const handleSignOut = () => {
+    signOut({ callbackUrl: '/' });
+    setActiveDropdown(null);
+    setIsMenuOpen(false);
+  };
+
   return (
     <header 
-      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 backdrop-blur-sm ${
+      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 backdrop-blur-sm ${ 
         isScrolled 
-          ? "bg-white/90 shadow-lg py-2" 
-          : "bg-gradient-to-b from-black/50 to-transparent py-4"
+          ? "bg-white/95 shadow-md py-2"
+          : "bg-gradient-to-b from-black/60 to-transparent py-4"
       }`}
     >
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link href="/" className="flex items-center group">
-            <div className="relative h-10 w-10 mr-2">
+            <div className="relative h-9 w-9 mr-2">
               <Image
                 src="/images/logo.png"
-                alt="TurlaDur Logo"
-                width={40}
-                height={40}
+                alt="TourTech Logo"
+                width={36}
+                height={36}
                 className="transition-transform duration-300 group-hover:scale-105"
               />
             </div>
-            <span className={`text-2xl font-bold ${
-              isScrolled ? "text-blue-700" : "text-orange-500"
-            } transition-all duration-300`}>
-              TurlaDur
+            <span className={`text-2xl font-bold ${ 
+              isScrolled ? "text-indigo-700" : "text-orange-500"
+            } transition-colors duration-300`}>
+              TourTech
             </span>
           </Link>
 
@@ -170,38 +146,36 @@ export default function Header() {
             <div className="relative group dropdown-container">
               <button 
                 onClick={() => toggleDropdown('tours')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${ 
                   isScrolled 
-                    ? "text-blue-600 hover:text-blue-800 hover:bg-blue-50" 
-                    : "text-blue-100 hover:text-white hover:bg-white/10"
-                } flex items-center`}
+                    ? "text-gray-700 hover:text-indigo-700 hover:bg-indigo-50" 
+                    : "text-white hover:text-orange-300 hover:bg-white/10" 
+                }`}
               >
                 Turlar
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" 
-                  className={`w-4 h-4 ml-1 transition-transform duration-200 ${activeDropdown === 'tours' ? 'rotate-180' : ''}`}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                </svg>
+                <ChevronDownIcon 
+                  className={`w-4 h-4 ml-1 transition-transform duration-200 ${activeDropdown === 'tours' ? 'rotate-180' : ''}`}
+                />
               </button>
               
               {activeDropdown === 'tours' && (
-                <div className="absolute left-0 mt-2 w-56 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 p-2 z-50 animate-fadeIn">
-                  <Link href="/tours" className="block px-4 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-md transition-all duration-200">
+                <div className="absolute left-0 mt-2 w-56 rounded-lg shadow-xl bg-white ring-1 ring-black ring-opacity-5 p-2 z-50 animate-fadeIn">
+                  <Link href="/tours" className="block px-3 py-2 text-sm text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors duration-200">
                     Tüm Turlar
                   </Link>
-                  <div className="border-t border-gray-100 my-2 pt-2">
-                    <Link href="/tour-operator" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
-                      Tur Operatörleri
-                    </Link>
-                    <Link href="/tours?duration=1" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
-                      Günübirlik Turlar
-                    </Link>
-                    <Link href="/tours?duration=7" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
-                      Haftalık Turlar
-                    </Link>
-                    <Link href="/tours?featured=true" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
-                      Öne Çıkan Turlar
-                    </Link>
-                  </div>
+                  <div className="border-t border-gray-100 my-1"></div>
+                  <Link href="/tour-operator" className="block px-3 py-2 text-sm text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors duration-200">
+                    Tur Operatörleri
+                  </Link>
+                  <Link href="/tours?duration=1" className="block px-3 py-2 text-sm text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors duration-200">
+                    Günübirlik Turlar
+                  </Link>
+                  <Link href="/tours?duration=7" className="block px-3 py-2 text-sm text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors duration-200">
+                    Haftalık Turlar
+                  </Link>
+                  <Link href="/tours?featured=true" className="block px-3 py-2 text-sm text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors duration-200">
+                    Öne Çıkan Turlar
+                  </Link>
                 </div>
               )}
             </div>
@@ -209,43 +183,43 @@ export default function Header() {
             <div className="relative group dropdown-container">
               <button 
                 onClick={() => toggleDropdown('activities')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${ 
                   isScrolled 
-                    ? "text-blue-600 hover:text-blue-800 hover:bg-blue-50" 
-                    : "text-blue-100 hover:text-white hover:bg-white/10"
-                } flex items-center`}
+                    ? "text-gray-700 hover:text-indigo-700 hover:bg-indigo-50" 
+                    : "text-white hover:text-orange-300 hover:bg-white/10" 
+                }`}
               >
                 Aktiviteler
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" 
-                  className={`w-4 h-4 ml-1 transition-transform duration-200 ${activeDropdown === 'activities' ? 'rotate-180' : ''}`}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                </svg>
+                <ChevronDownIcon 
+                  className={`w-4 h-4 ml-1 transition-transform duration-200 ${activeDropdown === 'activities' ? 'rotate-180' : ''}`}
+                />
               </button>
               
               {activeDropdown === 'activities' && (
-                <div className="absolute left-0 mt-2 w-56 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 p-2 z-50 animate-fadeIn">
-                  <Link href="/activities" className="block px-4 py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-md transition-all duration-200">
+                <div className="absolute left-0 mt-2 w-56 rounded-lg shadow-xl bg-white ring-1 ring-black ring-opacity-5 p-2 z-50 animate-fadeIn">
+                  <Link href="/activities" className="block px-3 py-2 text-sm text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors duration-200">
                     Tüm Aktiviteler
                   </Link>
-                  <div className="border-t border-gray-100 my-2 pt-2">
-                    <Link href="/gastronomi" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
-                      Gastronomi
-                    </Link>
-                    <Link href="/kultur-turlari" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
-                      Kültür Turları
-                    </Link>
-                    <Link href="/macera-aktiviteleri" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
-                      Macera Aktiviteleri
-                    </Link>
-                  </div>
+                  <div className="border-t border-gray-100 my-1"></div>
+                  <Link href="/gastronomi" className="block px-3 py-2 text-sm text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors duration-200">
+                    Gastronomi
+                  </Link>
+                  <Link href="/kultur-turlari" className="block px-3 py-2 text-sm text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors duration-200">
+                    Kültür Turları
+                  </Link>
+                  <Link href="/macera-aktiviteleri" className="block px-3 py-2 text-sm text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors duration-200">
+                    Macera Aktiviteleri
+                  </Link>
                 </div>
               )}
             </div>
             
             <Link 
               href="/about" 
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                isScrolled ? "text-gray-700 hover:bg-gray-50" : "text-white hover:bg-white/10"
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${ 
+                isScrolled 
+                  ? "text-gray-700 hover:text-indigo-700 hover:bg-indigo-50" 
+                  : "text-white hover:text-orange-300 hover:bg-white/10" 
               }`}
             >
               Hakkımızda
@@ -253,53 +227,54 @@ export default function Header() {
             
             <Link 
               href="/contact" 
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                isScrolled ? "text-gray-700 hover:bg-gray-50" : "text-white hover:bg-white/10"
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-300 ${ 
+                isScrolled 
+                  ? "text-gray-700 hover:text-indigo-700 hover:bg-indigo-50" 
+                  : "text-white hover:text-orange-300 hover:bg-white/10" 
               }`}
             >
               İletişim
             </Link>
 
-            {/* Deals button */}
             <button 
               onClick={openDealsPopup}
-              className={`ml-2 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center ${
+              className={`ml-2 flex items-center px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 transform hover:scale-[1.03] ${ 
                 isScrolled 
-                  ? "bg-blue-600 text-white hover:bg-blue-700" 
-                  : "bg-white text-blue-600 hover:bg-blue-50"
+                  ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm" 
+                  : "bg-orange-500 text-white hover:bg-orange-600 shadow" 
               }`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
-              </svg>
+              <TagIcon className="w-4 h-4 mr-1.5" />
               Fırsatlar
-              <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">
-                Yeni
-              </span>
             </button>
 
-            {/* Arama Butonu */}
             <button 
               onClick={toggleSearch} 
-              className={`ml-2 p-2 rounded-full ${
-                isScrolled ? "text-gray-600 hover:bg-gray-100" : "text-white hover:bg-white/10"
-              } transition-colors duration-300 relative`}
+              className={`search-button ml-1 p-2 rounded-full transition-colors duration-300 ${ 
+                isScrolled 
+                  ? "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50" 
+                  : "text-gray-300 hover:text-white hover:bg-white/10" 
+              }`}
               aria-label="Aramayı aç"
             >
               <MagnifyingGlassIcon className="w-5 h-5" />
             </button>
           </nav>
 
-          {/* Desktop Search and Auth Buttons */}
+          {/* Desktop Auth Area */}
           <div className="hidden lg:flex items-center space-x-2">
-            {status === "authenticated" ? (
+            {status === "loading" ? (
+              <div className="flex space-x-2">
+                 <div className={`h-8 w-20 rounded-md animate-pulse ${isScrolled ? 'bg-gray-200' : 'bg-white/20'}`}></div>
+                 <div className={`h-8 w-20 rounded-md animate-pulse ${isScrolled ? 'bg-gray-200' : 'bg-white/20'}`}></div>
+              </div>
+            ) : status === "authenticated" ? (
               <div className="relative group dropdown-container">
                 <button 
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                  className={`flex items-center space-x-2 p-1.5 rounded-full text-sm font-medium transition-colors duration-300 ${ 
                     isScrolled 
-                      ? "text-gray-700 hover:bg-gray-100" 
-                      : "text-white hover:bg-white/10"
+                      ? "text-gray-600 hover:bg-gray-100" 
+                      : "text-gray-200 hover:bg-white/10" 
                   }`}
                   onClick={() => toggleDropdown('profile')}
                 >
@@ -307,34 +282,33 @@ export default function Header() {
                     <Image
                       src={session.user.image}
                       alt={session.user.name || "Profil"}
-                      width={32}
-                      height={32}
+                      width={28} 
+                      height={28}
                       className="rounded-full"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white">
-                      {session.user?.name?.[0] || "U"}
-                    </div>
+                    <span className={`flex items-center justify-center h-7 w-7 rounded-full text-xs ${ 
+                      isScrolled ? "bg-gray-200 text-gray-600" : "bg-white/20 text-white" 
+                    }`}>
+                      {(session.user?.name?.[0] || session.user?.email?.[0] || "P").toUpperCase()}
+                    </span>
                   )}
-                  <span className="hidden md:block">{session.user?.name}</span>
-                  <ChevronDownIcon className={`w-4 h-4 transition-transform duration-200 ${activeDropdown === 'profile' ? 'rotate-180' : ''}`} />
+                  <span className="hidden xl:block text-xs mr-1">{session.user?.name?.split(' ')[0]}</span>
+                  <ChevronDownIcon className={`w-4 h-4 ${isScrolled ? 'text-gray-500' : 'text-gray-300'} transition-transform duration-200 ${activeDropdown === 'profile' ? 'rotate-180' : ''}`} />
                 </button>
 
                 {activeDropdown === 'profile' && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-xl bg-white ring-1 ring-gray-200 p-2 z-50 animate-fadeIn dropdown-container">
-                    <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                  <div className="absolute right-0 mt-2 w-48 rounded-lg shadow-xl bg-white ring-1 ring-black ring-opacity-5 p-2 z-50 animate-fadeIn dropdown-container">
+                    <Link href="/profile" className="block px-3 py-2 text-sm text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors duration-200">
                       Profilim
                     </Link>
-                    <Link href="/bookings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-md transition-all duration-200">
+                    <Link href="/bookings" className="block px-3 py-2 text-sm text-gray-700 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors duration-200">
                       Rezervasyonlarım
                     </Link>
-                    <div className="border-t border-gray-100 my-2"></div>
+                    <div className="border-t border-gray-100 my-1"></div>
                     <button
-                      onClick={() => {
-                        signOut({ callbackUrl: '/' });
-                        setActiveDropdown(null);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-all duration-200"
+                      onClick={handleSignOut}
+                      className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
                     >
                       Çıkış Yap
                     </button>
@@ -345,35 +319,37 @@ export default function Header() {
               <>
                 <Link 
                   href="/login" 
-                  className={`px-4 py-2 rounded-md text-sm font-medium border transition-all duration-300 ${
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium border transition-colors duration-300 ${ 
                     isScrolled 
-                      ? "text-blue-700 border-blue-700 hover:bg-blue-50" 
-                      : "text-white border-white hover:bg-white/10"
+                      ? "text-indigo-600 border-indigo-600 hover:bg-indigo-50" 
+                      : "text-white border-white hover:bg-white/10" 
                   }`}
                 >
                   Giriş Yap
                 </Link>
                 <Link 
                   href="/register" 
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-300 transform hover:scale-[1.03] ${ 
                     isScrolled 
-                      ? "bg-blue-700 text-white hover:bg-blue-800" 
-                      : "bg-white text-blue-700 hover:bg-gray-100"
+                      ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm" 
+                      : "bg-orange-500 text-white hover:bg-orange-600 shadow" 
                   }`}
                 >
-                  Kaydol
+                  Kayıt Ol
                 </Link>
               </>
             )}
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="flex lg:hidden items-center space-x-2">
+          <div className="flex lg:hidden items-center space-x-1">
             <button 
               onClick={toggleSearch} 
-              className={`p-2 rounded-full ${
-                isScrolled ? "text-gray-600 hover:bg-gray-100" : "text-white hover:bg-white/10"
-              } transition-colors`}
+              className={`search-button p-2 rounded-full transition-colors duration-300 ${ 
+                isScrolled 
+                  ? "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50" 
+                  : "text-gray-300 hover:text-white hover:bg-white/10" 
+              }`}
               aria-label="Aramayı aç"
             >
               <MagnifyingGlassIcon className="w-5 h-5" />
@@ -381,9 +357,11 @@ export default function Header() {
 
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)} 
-              className={`p-2 rounded-md ${
-                isScrolled ? "text-gray-600 hover:bg-gray-100" : "text-white hover:bg-white/10"
-              } transition-colors`}
+              className={`mobile-menu-button p-2 rounded-md transition-colors duration-300 ${ 
+                isScrolled 
+                  ? "text-gray-500 hover:text-indigo-600 hover:bg-indigo-50" 
+                  : "text-gray-300 hover:text-white hover:bg-white/10" 
+              }`}
               aria-label={isMenuOpen ? "Menüyü kapat" : "Menüyü aç"}
             >
               {isMenuOpen ? (
@@ -400,24 +378,24 @@ export default function Header() {
       {searchOpen && (
         <div className="fixed inset-0 z-50">
           <div 
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm" 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm" 
             onClick={() => setSearchOpen(false)}
           ></div>
           
           <div 
             ref={searchRef}
-            className="relative max-w-2xl mx-auto mt-20 bg-white rounded-lg shadow-xl p-4 animate-fadeIn"
+            className="relative max-w-xl mx-auto mt-16 bg-white rounded-lg shadow-xl p-4 animate-fadeIn"
           >
             <div className="flex items-center">
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Ara..."
-                className="flex-1 px-4 py-2 text-gray-900 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Tur, aktivite veya bölge ara..."
+                className="flex-1 px-4 py-2.5 text-gray-900 bg-gray-50 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 border border-transparent focus:border-indigo-500"
               />
               <button
                 onClick={() => setSearchOpen(false)}
-                className="ml-2 p-2 text-gray-500 hover:text-gray-700"
+                className="ml-2 p-2 text-gray-400 hover:text-gray-600"
               >
                 <XMarkIcon className="w-5 h-5" />
               </button>
@@ -430,199 +408,154 @@ export default function Header() {
       {isMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
           <div 
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm" 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm" 
             onClick={() => setIsMenuOpen(false)}
           ></div>
           
           <div 
             ref={mobileMenuRef}
-            className="relative w-full max-w-xs ml-auto h-screen bg-white shadow-xl flex flex-col animate-slide-in-right z-10 overflow-y-auto"
+            className="relative w-full max-w-sm ml-auto h-screen bg-white shadow-xl flex flex-col animate-slide-in-right z-10 overflow-y-auto"
           >
-            {/* Header */}
+            {/* Mobile Menu Header */}
             <div className="sticky top-0 flex justify-between items-center px-4 py-3 border-b border-gray-100 bg-white z-20">
-              <Link href="/" className="flex items-center">
-                <div className="relative h-8 w-8 mr-2">
-                  <Image
-                    src="/images/logo.png"
-                    alt="TurlaDur Logo"
-                    width={32}
-                    height={32}
-                    className="transition-transform duration-300"
-                  />
+              <Link href="/" className="flex items-center" onClick={() => setIsMenuOpen(false)}>
+                <div className="relative h-7 w-7 mr-2">
+                  <Image src="/images/logo.png" alt="TourTech Logo" width={28} height={28} />
                 </div>
-                <span className="text-xl font-bold text-blue-700">TurlaDur</span>
+                <span className="text-xl font-bold text-indigo-700">TourTech</span>
               </Link>
               <button
-                className="p-2 rounded-lg text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+                className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <XMarkIcon className="w-6 h-6" />
               </button>
             </div>
             
-            {/* Menu Items */}
-            <div className="flex-1 py-2 px-3">
-              {status === "authenticated" ? (
-                <Link href="/profile" className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg mb-4 hover:bg-gray-100 transition-colors">
+            {/* Mobile Menu Content */}
+            <div className="flex-1 py-3 px-3">
+              {status === "loading" ? (
+                 <div className="p-3 space-y-4">
+                   <div className="h-12 bg-gray-200 animate-pulse rounded-md"></div>
+                   <div className="h-10 bg-gray-200 animate-pulse rounded-md"></div>
+                   <div className="h-10 bg-gray-200 animate-pulse rounded-md"></div>
+                 </div>
+              ) : status === "authenticated" ? (
+                <Link href="/profile" className="flex items-center space-x-3 p-3 mb-3 rounded-lg hover:bg-indigo-50 transition-colors" onClick={() => setIsMenuOpen(false)}>
                   {session.user?.image ? (
                     <Image
                       src={session.user.image}
                       alt={session.user.name || "Profil"}
-                      width={40}
-                      height={40}
+                      width={36} 
+                      height={36}
                       className="rounded-full"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white">
-                      {session.user?.name?.[0] || "U"}
-                    </div>
+                    <span className="flex items-center justify-center h-9 w-9 rounded-full bg-indigo-100 text-indigo-600 text-sm">
+                      {(session.user?.name?.[0] || session.user?.email?.[0] || "P").toUpperCase()}
+                    </span>
                   )}
                   <div>
-                    <p className="font-medium text-gray-900">{session.user?.name}</p>
-                    <p className="text-sm text-gray-500">{session.user?.email}</p>
+                    <p className="font-medium text-sm text-gray-900">{session.user?.name}</p>
+                    <p className="text-xs text-gray-500">Profili Görüntüle</p>
                   </div>
                 </Link>
               ) : (
-                <div className="flex flex-col space-y-2 mb-4">
+                <div className="grid grid-cols-2 gap-2 mb-4">
                   <Link
                     href="/login"
-                    className="w-full px-4 py-3 text-sm font-medium text-center text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                    className="px-4 py-2.5 rounded-md text-sm font-medium text-center border border-indigo-600 text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
                   >
                     Giriş Yap
                   </Link>
                   <Link
                     href="/register"
-                    className="w-full px-4 py-3 text-sm font-medium text-center text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="px-4 py-2.5 rounded-md text-sm font-medium text-center bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
                   >
-                    Kaydol
+                    Kayıt Ol
                   </Link>
                 </div>
               )}
 
-              <div className="space-y-1">
-                {/* Turlar Dropdown */}
-                <div className="py-2 dropdown-container">
+              <div className="space-y-1 border-t border-gray-100 pt-3">
+                <div className="dropdown-container">
                   <button 
-                    className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'tours-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
-                    onClick={() => toggleDropdown('tours-mobile', true)}
+                    className={`w-full flex justify-between items-center py-2.5 px-3 rounded-lg text-left ${activeDropdown === 'tours-mobile' ? 'bg-indigo-50' : ''} text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors`}
+                    onClick={() => toggleDropdown('tours-mobile')}
                   >
-                    <div className="flex items-center">
-                      <GlobeAltIcon className="w-5 h-5 mr-3" />
-                      <span className="font-medium">Turlar</span>
-                    </div>
+                    <span className="font-medium text-sm">Turlar</span>
                     <ChevronDownIcon 
-                      className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'tours-mobile' ? 'transform rotate-180' : ''}`} 
+                      className={`w-4 h-4 transition-transform duration-200 ${activeDropdown === 'tours-mobile' ? 'rotate-180 text-indigo-700' : 'text-gray-400'}`}
                     />
                   </button>
-                  
                   <div 
-                    className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'tours-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                    className={`mt-1 overflow-hidden transition-all duration-300 ease-in-out ${activeDropdown === 'tours-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
                   >
-                    <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
-                      <Link href="/tours" className="block py-2 text-gray-600 hover:text-blue-700">
-                        Tüm Turlar
-                      </Link>
-                      <Link href="/tour-operator" className="block py-2 text-gray-600 hover:text-blue-700">
-                        Tur Operatörleri
-                      </Link>
-                      <div className="pt-2 mt-2 border-t border-gray-200">
-                        <Link href="/tours?duration=1" className="block py-2 text-gray-600 hover:text-blue-700">
-                          Günübirlik Turlar
-                        </Link>
-                        <Link href="/tours?duration=7" className="block py-2 text-gray-600 hover:text-blue-700">
-                          Haftalık Turlar
-                        </Link>
-                        <Link href="/tours?featured=true" className="block py-2 text-gray-600 hover:text-blue-700">
-                          Öne Çıkan Turlar
-                        </Link>
-                      </div>
+                    <div className="py-1 pl-6 space-y-1">
+                      <Link href="/tours" className="block py-2 px-2 text-sm text-gray-600 hover:text-indigo-700 rounded-md hover:bg-indigo-50" onClick={() => setIsMenuOpen(false)}>Tüm Turlar</Link>
+                      <Link href="/tour-operator" className="block py-2 px-2 text-sm text-gray-600 hover:text-indigo-700 rounded-md hover:bg-indigo-50" onClick={() => setIsMenuOpen(false)}>Tur Operatörleri</Link>
+                      <Link href="/tours?duration=1" className="block py-2 px-2 text-sm text-gray-600 hover:text-indigo-700 rounded-md hover:bg-indigo-50" onClick={() => setIsMenuOpen(false)}>Günübirlik</Link>
+                      <Link href="/tours?duration=7" className="block py-2 px-2 text-sm text-gray-600 hover:text-indigo-700 rounded-md hover:bg-indigo-50" onClick={() => setIsMenuOpen(false)}>Haftalık</Link>
+                      <Link href="/tours?featured=true" className="block py-2 px-2 text-sm text-gray-600 hover:text-indigo-700 rounded-md hover:bg-indigo-50" onClick={() => setIsMenuOpen(false)}>Öne Çıkan</Link>
                     </div>
                   </div>
                 </div>
 
-                {/* Aktiviteler Dropdown */}
-                <div className="py-2 dropdown-container">
+                <div className="dropdown-container">
                   <button 
-                    className={`w-full flex justify-between items-center py-3 px-3 rounded-lg ${activeDropdown === 'activities-mobile' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
-                    onClick={() => toggleDropdown('activities-mobile', true)}
+                    className={`w-full flex justify-between items-center py-2.5 px-3 rounded-lg text-left ${activeDropdown === 'activities-mobile' ? 'bg-indigo-50' : ''} text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors`}
+                    onClick={() => toggleDropdown('activities-mobile')}
                   >
-                    <div className="flex items-center">
-                      <SparklesIcon className="w-5 h-5 mr-3" />
-                      <span className="font-medium">Aktiviteler</span>
-                    </div>
+                    <span className="font-medium text-sm">Aktiviteler</span>
                     <ChevronDownIcon 
-                      className={`w-5 h-5 transition-transform duration-200 ${activeDropdown === 'activities-mobile' ? 'transform rotate-180' : ''}`} 
+                      className={`w-4 h-4 transition-transform duration-200 ${activeDropdown === 'activities-mobile' ? 'rotate-180 text-indigo-700' : 'text-gray-400'}`}
                     />
                   </button>
-                  
                   <div 
-                    className={`mt-1 overflow-hidden mobile-menu-dropdown ${activeDropdown === 'activities-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
+                    className={`mt-1 overflow-hidden transition-all duration-300 ease-in-out ${activeDropdown === 'activities-mobile' ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}
                   >
-                    <div className="py-2 px-4 pl-11 space-y-2 bg-gray-50 rounded-lg">
-                      <Link href="/activities" className="block py-2 text-gray-600 hover:text-blue-700">
-                        Tüm Aktiviteler
-                      </Link>
-                      <Link href="/gastronomi" className="block py-2 text-gray-600 hover:text-blue-700">
-                        Gastronomi
-                      </Link>
-                      <Link href="/kultur-turlari" className="block py-2 text-gray-600 hover:text-blue-700">
-                        Kültür Turları
-                      </Link>
-                      <Link href="/macera-aktiviteleri" className="block py-2 text-gray-600 hover:text-blue-700">
-                        Macera Aktiviteleri
-                      </Link>
+                    <div className="py-1 pl-6 space-y-1">
+                      <Link href="/activities" className="block py-2 px-2 text-sm text-gray-600 hover:text-indigo-700 rounded-md hover:bg-indigo-50" onClick={() => setIsMenuOpen(false)}>Tüm Aktiviteler</Link>
+                      <Link href="/gastronomi" className="block py-2 px-2 text-sm text-gray-600 hover:text-indigo-700 rounded-md hover:bg-indigo-50" onClick={() => setIsMenuOpen(false)}>Gastronomi</Link>
+                      <Link href="/kultur-turlari" className="block py-2 px-2 text-sm text-gray-600 hover:text-indigo-700 rounded-md hover:bg-indigo-50" onClick={() => setIsMenuOpen(false)}>Kültür Turları</Link>
+                      <Link href="/macera-aktiviteleri" className="block py-2 px-2 text-sm text-gray-600 hover:text-indigo-700 rounded-md hover:bg-indigo-50" onClick={() => setIsMenuOpen(false)}>Macera</Link>
                     </div>
                   </div>
                 </div>
 
                 <Link 
                   href="/about" 
-                  className="block py-3 px-3 text-gray-700 hover:bg-gray-50 rounded-lg"
+                  className="block py-2.5 px-3 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   Hakkımızda
                 </Link>
-                
                 <Link 
                   href="/contact" 
-                  className="block py-3 px-3 text-gray-700 hover:bg-gray-50 rounded-lg"
+                  className="block py-2.5 px-3 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   İletişim
                 </Link>
-
                 <button 
-                  onClick={openDealsPopup}
-                  className="w-full flex items-center py-3 px-3 text-gray-700 hover:bg-gray-50 rounded-lg"
+                  onClick={() => { openDealsPopup(); setIsMenuOpen(false); }}
+                  className="w-full text-left flex items-center py-2.5 px-3 text-sm font-medium text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition-colors"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-3">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6Z" />
-                  </svg>
+                  <TagIcon className="w-4 h-4 mr-2" />
                   Fırsatlar
-                  <span className="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white">
-                    Yeni
-                  </span>
                 </button>
               </div>
             </div>
 
-            {/* Mobile Footer Buttons */}
+            {/* Mobile Footer Buttons (Authenticated) */}
             {status === "authenticated" && (
-              <div className="sticky bottom-0 bg-white border-t border-gray-100 p-4 space-y-2">
-                <Link
-                  href="/profile"
-                  className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <UserIcon className="w-5 h-5 mr-2" />
-                  Profilim
-                </Link>
+              <div className="sticky bottom-0 bg-white border-t border-gray-100 p-3">
                 <button
-                  onClick={() => {
-                    signOut({ callbackUrl: '/' });
-                    setIsMenuOpen(false);
-                  }}
-                  className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                  onClick={handleSignOut}
+                  className="w-full text-center px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                 >
-                  <XMarkIcon className="w-5 h-5 mr-2" />
                   Çıkış Yap
                 </button>
               </div>
@@ -631,7 +564,6 @@ export default function Header() {
         </div>
       )}
 
-      {/* DealsPopup bileşenini ekleyelim */}
       {mounted && <DealsPopup isOpen={dealsOpen} onClose={() => setDealsOpen(false)} />}
     </header>
   );

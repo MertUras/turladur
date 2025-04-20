@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -40,7 +40,20 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
   
   const router = useRouter();
   
-  // Client-side render kontrolü
+  // Moved handleClose definition before useEffect hooks that use it
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
+    setIsClosing(true);
+    const timer = setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+      setActiveCategory("all");
+      setShowAll(false);
+    }, 300); // Match animation duration
+    return () => clearTimeout(timer); // Cleanup timer
+  }, [isClosing, onClose]);
+  
+  // Client-side render & portal setup
   useEffect(() => {
     setMounted(true);
     setPortalContainer(document.body);
@@ -50,80 +63,73 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
     };
   }, []);
   
-  // Focus handling when popup opens
+  // Focus handling
   useEffect(() => {
-    if (isOpen && closeButtonRef.current) {
-      setTimeout(() => {
+    if (isOpen && !isClosing && closeButtonRef.current) {
+      const timer = setTimeout(() => {
         closeButtonRef.current?.focus();
-      }, 100);
+      }, 150); // Slightly increased delay for smoother focus after animation
+      return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen, isClosing]);
   
-  // Click outside control
+  // Click outside & body scroll lock
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Use popupRef.current checking inside the handler
       if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
         handleClose();
       }
     };
     
+    let scrollbarWidth = 0;
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      // Prevent body scrolling when popup is open
       document.body.style.overflow = 'hidden';
-      // Add padding to body if page is scrollable to prevent layout shift
+      // Calculate scrollbar width only if needed
       if (window.innerWidth > document.documentElement.clientWidth) {
-        const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-        document.body.style.paddingRight = `${scrollbarWidth}px`;
+          scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+          document.body.style.paddingRight = `${scrollbarWidth}px`;
       }
+    } else {
+       document.body.style.overflow = 'auto';
+       document.body.style.paddingRight = '0';
     }
     
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      // Restore body scrolling when popup is closed
+      // Ensure style reset on cleanup
       document.body.style.overflow = 'auto';
       document.body.style.paddingRight = '0';
     };
-  }, [isOpen]);
+  }, [isOpen, handleClose]); // Now handleClose is defined before this useEffect
   
-  // Close with ESC key
+  // ESC key handler
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         handleClose();
       }
     };
-    
     if (isOpen) {
       document.addEventListener('keydown', handleEscKey);
     }
-    
     return () => {
       document.removeEventListener('keydown', handleEscKey);
     };
-  }, [isOpen]);
+  }, [isOpen, handleClose]); // Now handleClose is defined before this useEffect
 
-  // Smooth closing animation
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(() => {
-      onClose();
-      setIsClosing(false);
-      setShowAll(false);
-    }, 300);
-  };
-
-  // Handle card click - navigation with preload
-  const handleCardClick = (e: React.MouseEvent<HTMLAnchorElement>, link: string) => {
+  // Handle card click navigation
+  const handleCardClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, link: string) => {
     e.preventDefault();
     router.prefetch(link);
-    setTimeout(() => {
-      handleClose();
-      setTimeout(() => {
-        router.push(link);
-      }, 300);
-    }, 100);
-  };
+    handleClose(); 
+    // Navigate slightly before animation finishes
+    const timer = setTimeout(() => {
+      router.push(link);
+    }, 150); 
+     return () => clearTimeout(timer); // Cleanup timer
+  }, [router, handleClose]);
 
   // Örnek fırsat verileri
   const deals: Deal[] = [
@@ -251,7 +257,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
 
   const popupContent = (
     <div 
-      className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto overflow-x-hidden"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 overflow-y-auto overflow-x-hidden"
       aria-labelledby="modal-title"
       role="dialog"
       aria-modal="true"
@@ -264,33 +270,33 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
     >
       {/* Arkaplan Overlay */}
       <div 
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`} 
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out ${isClosing ? 'opacity-0' : 'opacity-100'}`} 
         aria-hidden="true"
       />
       
       <div 
         ref={popupRef}
-        className={`relative bg-white rounded-xl shadow-2xl mx-auto max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col transform ${
-          isClosing ? 'animate-slideOutDown' : 'animate-slideInUp'
+        className={`relative bg-white rounded-lg shadow-2xl mx-auto max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col transform transition-all duration-300 ease-in-out ${
+          isClosing ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
         }`}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-700 to-indigo-800 py-6 px-6 sm:px-8">
+        <div className="bg-indigo-700 pt-5 pb-4 px-6 sm:px-8">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-white text-xl sm:text-2xl font-bold flex items-center" id="modal-title">
-                <TagIcon className="w-6 h-6 mr-2" />
+              <h2 className="text-white text-xl sm:text-2xl font-extrabold tracking-tight flex items-center" id="modal-title">
+                <TagIcon className="w-6 h-6 mr-2.5" />
                 Özel Fırsatlar
               </h2>
-              <p className="text-blue-100 mt-1 text-sm sm:text-base">
-                Sizin için seçilmiş en avantajlı kampanyalar
+              <p className="text-indigo-100 mt-1 text-sm">
+                Size özel en avantajlı kampanyalarımız
               </p>
             </div>
             
             <button
               ref={closeButtonRef}
               onClick={handleClose}
-              className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
+              className="rounded-full bg-indigo-600 hover:bg-indigo-500 p-1.5 text-indigo-100 hover:text-white transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-indigo-700 focus:ring-white active:scale-[0.95]"
               aria-label="Kapat"
             >
               <XMarkIcon className="w-5 h-5" />
@@ -298,21 +304,21 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
           </div>
           
           {/* Category Pills */}
-          <div className="mt-6 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             {categories.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setActiveCategory(category.id)}
-                className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-all duration-200 ease-in-out transform active:scale-[0.97] ${
                   activeCategory === category.id
-                    ? 'bg-white text-indigo-800'
-                    : 'bg-white/20 text-white hover:bg-white/30'
+                    ? 'bg-white text-indigo-700 shadow-sm'
+                    : 'bg-indigo-600 text-indigo-100 hover:bg-indigo-500 hover:text-white'
                 }`}
               >
                 <category.icon className="w-4 h-4" />
                 {category.name}
                 {activeCategory === category.id && activeCategory !== 'all' && (
-                  <span className="ml-1 rounded-full bg-indigo-100 text-indigo-800 text-xs px-1.5 py-0.5">
+                  <span className="ml-1 rounded-full bg-indigo-200 text-indigo-800 text-xs font-medium px-1.5 py-0.5">
                     {filteredDeals.length}
                   </span>
                 )}
@@ -321,42 +327,43 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
           </div>
         </div>
         
-        <div className="overflow-y-auto p-6 sm:p-8 flex-grow">
+        <div className="overflow-y-auto p-6 sm:p-8 flex-grow bg-gray-50/70">
           {/* Card Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {displayedDeals.map((deal) => (
               <Link
                 href={deal.link}
                 key={deal.id}
-                className={`group relative rounded-xl overflow-hidden flex flex-col shadow-md hover:shadow-xl transform transition-all duration-300 ${
-                  hoveredCard === deal.id ? 'scale-[1.02]' : 'scale-100'
-                } focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                className={`group relative rounded-lg overflow-hidden flex flex-col bg-white shadow-md hover:shadow-lg transform transition-all duration-300 ease-in-out border border-transparent hover:border-indigo-100 ${
+                  hoveredCard === deal.id ? 'scale-[1.03]' : 'scale-100'
+                } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
                 onClick={(e) => handleCardClick(e, deal.link)}
                 onMouseEnter={() => setHoveredCard(deal.id)}
                 onMouseLeave={() => setHoveredCard(null)}
               >
-                <div className="relative h-44">
+                <div className="relative h-44 overflow-hidden">
                   <Image
                     src={deal.image}
                     alt={deal.title}
                     fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
                   />
                   
                   {/* Overlay Gradient */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${deal.color} opacity-75`}></div>
+                  <div className={`absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent mix-blend-multiply`}></div>
                   
                   {/* Discount Badge */}
-                  <div className="absolute top-0 left-0 m-4">
-                    <div className="bg-white text-gray-900 text-lg font-bold px-3 py-1 rounded-md shadow-lg">
+                  <div className="absolute top-3 left-3">
+                    <div className="bg-white text-gray-900 text-base sm:text-lg font-bold px-2.5 py-1 rounded-md shadow-lg">
                       {deal.discount}
                     </div>
                   </div>
                   
                   {/* Badge (if any) */}
                   {deal.badge && (
-                    <div className="absolute top-0 right-0 m-4">
-                      <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-md flex items-center">
+                    <div className="absolute top-3 right-3">
+                      <div className="bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded-md shadow-md flex items-center">
                         <FireIcon className="w-3 h-3 mr-1" />
                         {deal.badge}
                       </div>
@@ -364,34 +371,33 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
                   )}
                   
                   {/* Title & Expiry */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                    <h3 className="font-bold text-lg">{deal.title}</h3>
-                    <div className="flex items-center mt-1 text-sm text-white/90">
-                      <ClockIcon className="w-4 h-4 mr-1" />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
+                    <h3 className="font-semibold tracking-tight text-white text-base sm:text-lg line-clamp-1">{deal.title}</h3>
+                    <div className="flex items-center mt-1 text-xs text-white/80">
+                      <ClockIcon className="w-3.5 h-3.5 mr-1" />
                       {deal.expiry}
                     </div>
                   </div>
                 </div>
                 
-                <div className="bg-white p-4 flex-grow flex flex-col justify-between">
-                  <p className="text-gray-700 mb-4">{deal.description}</p>
+                <div className="p-4 flex-grow flex flex-col justify-between">
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">{deal.description}</p>
                   
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center text-xs text-gray-500">
+                  <div className="flex justify-between items-end mt-auto pt-2">
+                    <div className="flex items-center space-x-1.5 text-gray-400">
                       {deal.category?.map((cat) => {
                         const foundCat = categories.find(c => c.id === cat);
                         return foundCat ? (
-                          <span key={cat} className="flex items-center mr-2">
-                            <foundCat.icon className="w-3 h-3 mr-1" />
-                            {foundCat.name}
+                          <span key={cat} title={foundCat.name} className="p-1.5 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                            <foundCat.icon className="w-3.5 h-3.5" />
                           </span>
                         ) : null;
                       })}
                     </div>
                     
-                    <div className="inline-flex items-center text-indigo-700 font-medium text-sm group-hover:text-indigo-800">
-                      <span>Fırsatı Gör</span>
-                      <ChevronRightIcon className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
+                    <div className="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-medium text-sm">
+                      <span className="tracking-tight">Fırsatı Gör</span>
+                      <ChevronRightIcon className="w-4 h-4 ml-0.5 transition-transform group-hover:translate-x-0.5" />
                     </div>
                   </div>
                 </div>
@@ -404,16 +410,17 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
             <div className="mt-8 text-center">
               <button
                 onClick={() => setShowAll(!showAll)}
-                className="inline-flex items-center justify-center bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-medium px-6 py-3 rounded-lg transition-colors"
+                className="inline-flex items-center justify-center bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-medium px-5 py-2.5 rounded-lg transition-all duration-200 ease-in-out text-sm tracking-tight transform active:scale-[0.98]"
               >
                 {showAll ? (
                   <>
+                    <XMarkIcon className="w-4 h-4 mr-1.5" />
                     <span>Daha Az Göster</span>
                   </>
                 ) : (
                   <>
                     <span>Tümünü Göster</span>
-                    <span className="ml-2 bg-indigo-100 text-indigo-800 text-xs font-medium rounded-full px-1.5 py-0.5">
+                    <span className="ml-2 bg-indigo-200 text-indigo-800 text-xs font-medium rounded-full px-1.5 py-0.5">
                       +{filteredDeals.length - 6}
                     </span>
                   </>
@@ -424,25 +431,25 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
         </div>
         
         {/* Footer */}
-        <div className="bg-gray-50 border-t border-gray-100 p-6 sm:p-8">
+        <div className="bg-gray-100 border-t border-gray-200 p-5">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <h4 className="font-bold text-gray-900 flex items-center">
-                <CheckCircleIcon className="w-5 h-5 text-indigo-700 mr-2" />
-                Size Özel Avantajlar
+              <h4 className="font-semibold tracking-tight text-gray-800 flex items-center text-base">
+                <CheckCircleIcon className="w-5 h-5 text-indigo-600 mr-2" />
+                Özel Avantajlardan Yararlanın
               </h4>
-              <p className="text-gray-600 text-sm mt-1">
-                TurlaDur üyeleri tüm fırsatlardan öncelikli olarak yararlanır
+              <p className="text-gray-600 text-sm mt-0.5">
+                TourTech üyeleri tüm fırsatlardan öncelikli haberdar olur.
               </p>
             </div>
             
             <Link
               href="/campaigns"
-              className="inline-flex items-center justify-center bg-indigo-700 hover:bg-indigo-800 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+              className="inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-lg transition-all duration-200 ease-in-out text-sm shadow-sm hover:shadow-md tracking-tight transform active:scale-[0.98]"
               onClick={(e) => handleCardClick(e, '/campaigns')}
             >
-              <span>Tüm Kampanyaları Gör</span>
-              <ArrowRightIcon className="w-4 h-4 ml-2" />
+              <span>Tüm Kampanyalar</span>
+              <ArrowRightIcon className="w-4 h-4 ml-1.5" />
             </Link>
           </div>
         </div>
@@ -452,7 +459,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
 
   // Client-side render kontrolü için createPortal'ı şartlı olarak kullanıyoruz
   return createPortal(
-    <FocusTrap focusTrapOptions={{ initialFocus: false }}>
+    <FocusTrap focusTrapOptions={{ initialFocus: false, allowOutsideClick: true }}>
       {popupContent}
     </FocusTrap>,
     portalContainer
