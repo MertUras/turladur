@@ -127,49 +127,23 @@ export default function RegisterPage() {
     <div className="min-h-screen flex bg-white">
       <div className="hidden lg:block lg:w-1/2 relative">
         <Image
-          src="https://images.unsplash.com/photo-1596941248238-0d49dcaa4263?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
-          alt="Tatil Manzarası"
+          src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
+          alt="Dağ Manzarası"
           layout="fill"
           objectFit="cover"
           priority
+          className="absolute inset-0"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 via-indigo-700/90 to-indigo-900/95 z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/70 via-indigo-700/80 to-indigo-900/90 z-10"></div>
         
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 p-10 text-center">
-          <div className="max-w-lg">
-            <h2 className="text-4xl font-bold text-white mb-6 tracking-tight">
-                Üyelik Ayrıcalıklarını Keşfedin
+          <div className="max-w-md">
+            <h2 className="text-4xl font-bold text-white mb-4 tracking-tight">
+              TourTech ile Seyahat Planları
             </h2>
-            <p className="text-lg text-indigo-100/90 mb-8">
-              TourTech ailesine katılarak özel fırsatlar, indirimler ve kişiselleştirilmiş seyahat deneyimlerinden faydalanın.
+            <p className="text-lg text-indigo-100/90">
+              Dünyayı keşfetmek için en iyi turları ve deneyimleri burada bulun. Kolayca plan yapın ve rezervasyon yapın.
             </p>
-            
-            <div className="space-y-4">
-              {[
-                { icon: (props:any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V6.375c0-.621.504-1.125 1.125-1.125h.375m18 3.75h.75a.75.75 0 0 0 .75-.75V6.75m0 0h-.75a.75.75 0 0 1-.75-.75V6m0 0H3.75" /></svg>,
-                  title: "İlk Rezervasyona Özel %15 İndirim",
-                  desc: "Yeni üyelere özel ilk rezervasyonlarında geçerli indirim fırsatı"
-                },
-                { icon: (props:any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>,
-                  title: "Erken Rezervasyon Fırsatları",
-                  desc: "Üyelere özel erken rezervasyon ve en iyi fiyatlardan faydalanma imkanı"
-                },
-                { icon: (props:any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L1.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L25.75 5.25l-.813 2.846a4.5 4.5 0 0 0-3.09 3.09L18.25 12ZM18.25 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09L11.75 18.75l.813-2.846a4.5 4.5 0 0 0 3.09-3.09L18.25 12Z" /></svg>,
-                  title: "Kişiselleştirilmiş Deneyimler",
-                  desc: "Sadece üyelere özel turlar ve unutulmaz seyahat planları"
-                }
-              ].map((feature, index) => (
-                <div key={index} className="flex items-start bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/15 text-left shadow-sm">
-                  <div className="bg-white/20 p-2.5 rounded-lg mr-4 mt-1 flex-shrink-0">
-                    <feature.icon className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-white font-semibold text-base mb-0.5">{feature.title}</h3>
-                    <p className="text-indigo-100/80 text-sm leading-snug">{feature.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>
@@ -342,8 +316,8 @@ export default function RegisterPage() {
               )}
             </div>
             
-            <div className="flex items-start">
-              <div className="flex items-center h-5 mt-1">
+            <div className="flex items-start pt-1">
+              <div className="flex items-center h-5 mt-0.5">
                   <input
                     id="termsAccepted"
                     name="termsAccepted"
@@ -355,14 +329,14 @@ export default function RegisterPage() {
                   />
               </div>
               <div className="ml-3 text-sm">
-                  <label htmlFor="termsAccepted" className="text-gray-600">
+                  <label htmlFor="termsAccepted" className="text-gray-600 leading-snug">
                       <Link href="/terms" className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline transition-colors duration-150">Kullanım Şartları</Link>
                       'nı ve <Link href="/privacy" className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline transition-colors duration-150">Gizlilik Politikası</Link>'nı okudum ve kabul ediyorum.
                   </label>
               </div>
             </div>
 
-            <div>
+            <div className="pt-2">
               <button
                 type="submit"
                 disabled={loading}
