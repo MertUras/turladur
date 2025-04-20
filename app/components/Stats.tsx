@@ -144,7 +144,7 @@ export default function Stats() {
                   {/* Değer ve Başlık */}
                   <div className="flex-1">
                     <p className="text-3xl sm:text-4xl font-bold text-gray-900">
-                      {stat.value.toLocaleString()}
+                      {stat.value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
                       <span className={`${colors.text} ml-1`}>{stat.suffix}</span>
                     </p>
                     <p className="text-sm font-medium text-gray-500 mt-1">{stat.title}</p>

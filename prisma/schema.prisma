@@ -33,6 +33,7 @@ model User {
   experiences   Experience[]
   bookings      Booking[]
   reviews       Review[]
+  activityReviews ActivityReview[]
   posts         Post[]
   comments      Comment[]
 
@@ -195,32 +196,49 @@ model Tour {
 // Deneyim modeli
 model Experience {
   id              String   @id @default(cuid())
-  name            String
-  description     String?  @db.Text
-  category        String?
-  duration        Int
+  title           String
+  description     String   @db.Text
+  longDescription String   @db.Text
+  imageUrl        String
+  gallery         Json     @default("[]") // string[]
+  location        String
+  duration        String
+  rating          Float    @default(0)
+  reviewCount     Int      @default(0)
+  popularityRate  Float    @default(0)
   price           Float
-  discount        Float?
-  location        String?
-  city            String?
-  country         String?
-  latitude        Float?
-  longitude       Float?
-  maxParticipants Int?
-  inclusions      Json     @default("[]")
-  exclusions      Json     @default("[]")
-  images          Json     @default("[]")
+  category        String
+  included        Json     @default("[]") // string[]
+  notIncluded     Json     @default("[]") // string[]
+  highlights      Json     @default("[]") // string[]
+  schedule        Json     @default("[]") // Array<{ time: string; activity: string }>
   featured        Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   // İlişkiler
-  providerId String
-  provider   User     @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  bookings   Booking[]
-  reviews    Review[]
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews  ActivityReview[]
+  bookings Booking[]
 
   @@map("experiences")
+}
+
+// Aktivite yorumları modeli
+model ActivityReview {
+  id        String   @id @default(cuid())
+  rating    Float
+  comment   String   @db.Text
+  date      DateTime @default(now())
+  
+  // İlişkiler
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@map("activity_reviews")
 }
 
 // Rezervasyon modeli
@@ -271,19 +289,16 @@ enum PaymentStatus {
 
 // Değerlendirme modeli
 model Review {
-  id          String   @id @default(cuid())
-  rating      Int
-  comment     String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String   @db.Text
+  date      DateTime @default(now())
 
   // İlişkiler
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hotelId      String?
-  hotel        Hotel?     @relation(fields: [hotelId], references: [id])
-  experienceId String?
-  experience   Experience? @relation(fields: [experienceId], references: [id])
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hotelId   String?
+  hotel     Hotel?  @relation(fields: [hotelId], references: [id])
 
   @@map("reviews")
 }

@@ -276,13 +276,13 @@ export default function ActivityDetail() {
                             <div className="mt-12">
                                 <h2 className="text-2xl font-semibold mb-6 text-gray-900">Benzer Aktiviteler</h2>
                                 <div className="relative">
-                                    <div className="overflow-x-auto hide-scrollbar">
+                                    <div className="overflow-x-auto hide-scrollbar similar-activities-container">
                                         <div className="flex gap-4 pb-4" style={{ scrollBehavior: 'smooth' }}>
                                             {relatedActivities.map((relatedActivity) => (
-                                                <Link
+                                                <div
                                                     key={relatedActivity.id}
-                                                    href={`/activities/${relatedActivity.id}`}
-                                                    className="flex-none w-[300px] bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                                                    className="flex-none w-[300px] bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow group cursor-pointer"
+                                                    onClick={() => window.location.href = `/activities/${relatedActivity.id}`}
                                                 >
                                                     <div className="relative h-48">
                                                         <Image
@@ -291,13 +291,13 @@ export default function ActivityDetail() {
                                                             fill
                                                             className="object-cover"
                                                         />
-                                                        <div className="absolute top-4 left-4 bg-white/90 px-3 py-1 rounded-full">
-                                                            <span className="text-sm font-medium">{relatedActivity.category}</span>
+                                                        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
+                                                            <span className="text-sm font-medium text-gray-800">{relatedActivity.category}</span>
                                                         </div>
                                                     </div>
                                                     <div className="p-4">
-                                                        <h3 className="text-xl font-semibold text-gray-900 mb-1">{relatedActivity.title}</h3>
-                                                        <p className="text-sm text-gray-600 mb-3">{relatedActivity.description}</p>
+                                                        <h3 className="text-lg font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">{relatedActivity.title}</h3>
+                                                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{relatedActivity.description}</p>
                                                         <div className="flex items-center gap-2 mb-3">
                                                             <MapPin className="w-4 h-4 text-gray-400" />
                                                             <span className="text-sm text-gray-600">{relatedActivity.location}</span>
@@ -313,29 +313,29 @@ export default function ActivityDetail() {
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </Link>
+                                                </div>
                                             ))}
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => {
-                                            const container = document.querySelector('.overflow-x-auto');
+                                            const container = document.querySelector('.similar-activities-container');
                                             if (container) {
                                                 container.scrollLeft -= 320;
                                             }
                                         }}
-                                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white rounded-full p-2 shadow-md hover:bg-gray-50 transition-colors"
+                                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white rounded-full p-2 shadow-md hover:bg-gray-50 transition-colors z-10"
                                     >
                                         <ChevronLeft className="w-6 h-6 text-gray-600" />
                                     </button>
                                     <button
                                         onClick={() => {
-                                            const container = document.querySelector('.overflow-x-auto');
+                                            const container = document.querySelector('.similar-activities-container');
                                             if (container) {
                                                 container.scrollLeft += 320;
                                             }
                                         }}
-                                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white rounded-full p-2 shadow-md hover:bg-gray-50 transition-colors"
+                                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white rounded-full p-2 shadow-md hover:bg-gray-50 transition-colors z-10"
                                     >
                                         <ChevronRight className="w-6 h-6 text-gray-600" />
                                     </button>

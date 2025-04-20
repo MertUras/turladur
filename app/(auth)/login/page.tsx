@@ -25,12 +25,11 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    // Kullanıcı oturum açtıysa ana sayfaya yönlendir
-    if (isAuthenticated(status)) {
+    if (mounted && status === 'authenticated') {
       router.push('/');
       router.refresh();
     }
-  }, [status, router]);
+  }, [mounted, status, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,17 +50,24 @@ export default function LoginPage() {
         return;
       }
 
-      // Başarılı giriş, ana sayfaya yönlendirilecek
-      // useSession hook'u ile otomatik olarak yönlendirilecek
+      if (result?.ok) {
+        router.push('/');
+        router.refresh();
+      }
     } catch (error) {
+      console.error('Login error:', error);
       setError('Bir hata oluştu. Lütfen tekrar deneyin.');
       setLoading(false);
     }
   };
 
-  // Kullanıcı zaten giriş yaptıysa login sayfasını gösterme
-  if (isAuthenticated(status)) {
-    return null; // veya bir yükleme ekranı gösterilebilir
+  // Yükleme durumunda loading göster
+  if (!mounted || status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   return (
