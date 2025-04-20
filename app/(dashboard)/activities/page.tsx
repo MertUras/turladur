@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, MapPin, Clock, ChevronLeft, ChevronRight, Search, Star, Filter, Calendar, Users, X, Wallet, Timer } from "lucide-react";
+import { Loader2, MapPin, Clock, ChevronLeft, ChevronRight, Search, Star, Filter, Calendar, Users, X, Wallet, Timer, ChevronDown } from "lucide-react";
 
 interface Experience {
     id: number;
@@ -69,13 +69,22 @@ export default function ActivitiesPage() {
         const fetchExperiences = async () => {
             try {
                 setLoading(true);
-                // For demo purposes, use sample data
+                const response = await fetch('/api/activities');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch activities');
+                }
+                const data = await response.json();
+                setActivities(data);
+                setFilteredActivities(data);
+            } catch (error) {
+                console.error("Error fetching experiences:", error);
+                // Fallback to demo data in case of error
                 const demoExperiences = [
                     {
                         id: 1,
                         title: "Kapadokya Balon Turu",
                         description: "Eşsiz peri bacaları manzarasında unutulmaz bir balon deneyimi yaşayın",
-                        imageUrl: "https://picsum.photos/800/500?random=1",
+                        imageUrl: "https://images.unsplash.com/photo-1641128324972-af3212f0f6bd?q=80&w=2070&auto=format&fit=crop",
                         featured: true,
                         createdAt: new Date().toISOString(),
                         location: "Kapadokya",
@@ -84,7 +93,7 @@ export default function ActivitiesPage() {
                         rating: 4.8,
                         reviewCount: 423,
                         popularityRate: 90,
-                        price: 2500,
+                        price: 4200,
                         category: "macera"
                     },
                     {
@@ -168,11 +177,8 @@ export default function ActivitiesPage() {
                         category: "tarihi"
                     }
                 ];
-                
                 setActivities(demoExperiences);
                 setFilteredActivities(demoExperiences);
-            } catch (error) {
-                console.error("Error fetching experiences:", error);
             } finally {
                 setLoading(false);
             }
@@ -287,182 +293,143 @@ export default function ActivitiesPage() {
                         </p>
                         
                         {/* Search Section */}
-                        <div className="mt-10 relative max-w-5xl mx-auto" ref={dropdownRef} style={{ zIndex: 50 }}>
-                            <div className="bg-white/95 backdrop-blur-sm shadow-xl rounded-2xl overflow-visible border border-gray-100">
-                                <div className="p-3">
-                                    <div className="flex items-center gap-3">
-                                        {/* Search Input */}
-                                        <div className="relative flex-1 min-w-[200px]">
-                                            <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <div className="relative z-10 max-w-5xl mx-auto mb-12">
+                            <div className="bg-white/95 backdrop-blur-sm rounded-[28px] shadow-xl p-2">
+                                <div className="flex items-center divide-x divide-gray-200">
+                                    {/* Search Input */}
+                                    <div className="flex-1 relative pl-4 pr-2">
+                                        <div className="flex items-center gap-3">
+                                            <Search className="h-5 w-5 text-gray-400" />
                                             <input
                                                 type="text"
                                                 placeholder="Hangi aktiviteyi arıyorsunuz?"
-                                                className="w-full pl-9 pr-3 py-2.5 text-sm text-gray-600 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50/50"
+                                                className="w-full py-4 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 bg-transparent"
                                                 value={searchTerm}
                                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()}
                                             />
                                         </div>
+                                    </div>
 
-                                        {/* Activity Types Dropdown */}
-                                        <div className="relative w-[180px]">
-                                            <button
-                                                onClick={() => setOpenFilter(openFilter === 'activities' ? null : 'activities')}
-                                                className="w-full flex items-center justify-between pl-9 pr-3 py-2.5 text-sm text-gray-600 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50/50"
-                                            >
-                                                <span>{selectedActivityType ? activityTypes.find(t => t.id === selectedActivityType)?.name : 'Tüm Aktiviteler'}</span>
-                                                <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${openFilter === 'activities' ? 'rotate-[270deg]' : 'rotate-90'}`} />
-                                            </button>
-                                            <Filter className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                            
-                                            {openFilter === 'activities' && (
-                                                <div className="absolute top-[calc(100%+4px)] left-0 w-full py-1 bg-white rounded-xl shadow-lg border border-gray-100" style={{ zIndex: 51 }}>
-                                                    <div className="max-h-[240px] overflow-y-auto custom-scrollbar">
-                                                        <style jsx>{`
-                                                            .custom-scrollbar::-webkit-scrollbar {
-                                                                width: 6px;
-                                                            }
-                                                            .custom-scrollbar::-webkit-scrollbar-track {
-                                                                background: transparent;
-                                                            }
-                                                            .custom-scrollbar::-webkit-scrollbar-thumb {
-                                                                background-color: #E2E8F0;
-                                                                border-radius: 20px;
-                                                            }
-                                                            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                                                                background-color: #CBD5E1;
-                                                            }
-                                                            .custom-scrollbar {
-                                                                scrollbar-width: thin;
-                                                                scrollbar-color: #E2E8F0 transparent;
-                                                            }
-                                                        `}</style>
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedActivityType(undefined);
-                                                                setOpenFilter(null);
-                                                            }}
-                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-gray-600"
-                                                        >
-                                                            Tüm Aktiviteler
-                                                        </button>
-                                                        {activityTypes.map(type => (
-                                                            <button
-                                                                key={type.id}
-                                                                onClick={() => {
-                                                                    setSelectedActivityType(type.id);
-                                                                    setOpenFilter(null);
-                                                                }}
-                                                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-gray-600"
-                                                            >
-                                                                {type.name}
-                                                            </button>
-                                                        ))}
+                                    {/* Activity Type Dropdown */}
+                                    <div className="flex-1 px-6 relative group">
+                                        <div 
+                                            className="flex items-center gap-3 cursor-pointer"
+                                            onClick={() => setOpenFilter(openFilter === 'activity' ? null : 'activity')}
+                                        >
+                                            <Filter className="h-5 w-5 text-gray-400" />
+                                            <div className="w-full py-4 text-base text-gray-900 placeholder-gray-500 outline-none focus:ring-0">
+                                                {selectedActivityType ? activityTypes.find(type => type.id === selectedActivityType)?.name : 'Tüm Aktiviteler'}
+                                            </div>
+                                            <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${openFilter === 'activity' ? 'rotate-180' : ''}`} />
+                                        </div>
+                                        
+                                        {openFilter === 'activity' && (
+                                            <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 max-h-64 overflow-y-auto custom-scrollbar">
+                                                <div 
+                                                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors"
+                                                    onClick={() => {
+                                                        setSelectedActivityType(undefined);
+                                                        setOpenFilter(null);
+                                                    }}
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-gray-700">Tüm Aktiviteler</span>
+                                                        {!selectedActivityType && <div className="w-2 h-2 rounded-full bg-blue-500"></div>}
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
-
-                                        {/* Cities Dropdown */}
-                                        <div className="relative w-[160px]">
-                                            <button
-                                                onClick={() => setOpenFilter(openFilter === 'cities' ? null : 'cities')}
-                                                className="w-full flex items-center justify-between pl-9 pr-3 py-2.5 text-sm text-gray-600 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50/50"
-                                            >
-                                                <span>{selectedCity ? selectedCity.charAt(0).toUpperCase() + selectedCity.slice(1) : 'Tüm Şehirler'}</span>
-                                                <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${openFilter === 'cities' ? 'rotate-[270deg]' : 'rotate-90'}`} />
-                                            </button>
-                                            <MapPin className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                            
-                                            {openFilter === 'cities' && (
-                                                <div className="absolute top-[calc(100%+4px)] left-0 w-full py-1 bg-white rounded-xl shadow-lg border border-gray-100" style={{ zIndex: 51 }}>
-                                                    <div className="max-h-[240px] overflow-y-auto custom-scrollbar">
-                                                        <style jsx>{`
-                                                            .custom-scrollbar::-webkit-scrollbar {
-                                                                width: 6px;
-                                                            }
-                                                            .custom-scrollbar::-webkit-scrollbar-track {
-                                                                background: transparent;
-                                                            }
-                                                            .custom-scrollbar::-webkit-scrollbar-thumb {
-                                                                background-color: #E2E8F0;
-                                                                border-radius: 20px;
-                                                            }
-                                                            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                                                                background-color: #CBD5E1;
-                                                            }
-                                                            .custom-scrollbar {
-                                                                scrollbar-width: thin;
-                                                                scrollbar-color: #E2E8F0 transparent;
-                                                            }
-                                                        `}</style>
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedCity(undefined);
-                                                                setOpenFilter(null);
-                                                            }}
-                                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-gray-600"
-                                                        >
-                                                            Tüm Şehirler
-                                                        </button>
-                                                        {["İstanbul", "Antalya", "Muğla", "Nevşehir", "İzmir", "Aydın", "Bodrum"].map(city => (
-                                                            <button
-                                                                key={city}
-                                                                onClick={() => {
-                                                                    setSelectedCity(city.toLowerCase());
-                                                                    setOpenFilter(null);
-                                                                }}
-                                                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-gray-600"
-                                                            >
-                                                                {city}
-                                                            </button>
-                                                        ))}
+                                                {activityTypes.map(type => (
+                                                    <div 
+                                                        key={type.id}
+                                                        className="px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors"
+                                                        onClick={() => {
+                                                            setSelectedActivityType(type.id);
+                                                            setOpenFilter(null);
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-gray-700">{type.name}</span>
+                                                            {selectedActivityType === type.id && <div className="w-2 h-2 rounded-full bg-blue-500"></div>}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Price Range Inputs */}
-                                        <div className="flex items-center gap-2">
-                                            <div className="relative w-[100px]">
-                                                <input 
-                                                    type="number"
-                                                    placeholder="Min ₺"
-                                                    className="w-full pl-9 pr-2 py-2.5 text-sm text-gray-600 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50/50"
-                                                    value={minPrice || ""}
-                                                    onChange={(e) => setMinPrice(Number(e.target.value))}
-                                                    min="0"
-                                                />
-                                                <Wallet className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                                ))}
                                             </div>
-                                            <span className="text-gray-400">-</span>
-                                            <div className="relative w-[100px]">
-                                                <input 
-                                                    type="number"
-                                                    placeholder="Max ₺"
-                                                    className="w-full pl-9 pr-2 py-2.5 text-sm text-gray-600 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-gray-50/50"
-                                                    value={maxPrice || ""}
-                                                    onChange={(e) => setMaxPrice(Number(e.target.value))}
-                                                    min={minPrice}
-                                                />
-                                                <Wallet className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                            </div>
-                                        </div>
-
-                                        {/* Reset Filters Button - Only show when filters are active */}
-                                        {(searchTerm || selectedActivityType || selectedCity || minPrice > 0 || maxPrice < 5000) && (
-                                            <button 
-                                                className="flex items-center justify-center h-[38px] px-4 text-gray-500 hover:text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-100 transition-all border border-gray-200 whitespace-nowrap bg-gray-50/50"
-                                                onClick={(e: React.MouseEvent) => {
-                                                    e.preventDefault();
-                                                    resetFilters();
-                                                    setOpenFilter(null);
-                                                }}
-                                            >
-                                                <X className="w-4 h-4 mr-1.5" /> Temizle
-                                            </button>
                                         )}
                                     </div>
+
+                                    {/* City Dropdown */}
+                                    <div className="flex-1 px-6 relative group">
+                                        <div 
+                                            className="flex items-center gap-3 cursor-pointer"
+                                            onClick={() => setOpenFilter(openFilter === 'city' ? null : 'city')}
+                                        >
+                                            <MapPin className="h-5 w-5 text-gray-400" />
+                                            <div className="w-full py-4 text-base text-gray-900 placeholder-gray-500 outline-none focus:ring-0">
+                                                {selectedCity ? selectedCity.charAt(0).toUpperCase() + selectedCity.slice(1) : 'Tüm Şehirler'}
+                                            </div>
+                                            <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${openFilter === 'city' ? 'rotate-180' : ''}`} />
+                                        </div>
+                                        
+                                        {openFilter === 'city' && (
+                                            <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 max-h-64 overflow-y-auto custom-scrollbar">
+                                                <div 
+                                                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors"
+                                                    onClick={() => {
+                                                        setSelectedCity(undefined);
+                                                        setOpenFilter(null);
+                                                    }}
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-gray-700">Tüm Şehirler</span>
+                                                        {!selectedCity && <div className="w-2 h-2 rounded-full bg-blue-500"></div>}
+                                                    </div>
+                                                </div>
+                                                {["İstanbul", "Antalya", "Muğla", "Nevşehir", "İzmir", "Aydın", "Bodrum"].map(city => (
+                                                    <div 
+                                                        key={city}
+                                                        className="px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors"
+                                                        onClick={() => {
+                                                            setSelectedCity(city.toLowerCase());
+                                                            setOpenFilter(null);
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-gray-700">{city}</span>
+                                                            {selectedCity === city.toLowerCase() && <div className="w-2 h-2 rounded-full bg-blue-500"></div>}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Price Range */}
+                                    <div className="flex-1 px-6">
+                                        <div className="flex items-center gap-3">
+                                            <Wallet className="h-5 w-5 text-gray-400" />
+                                            <div className="flex items-center gap-2 w-full">
+                                                <input
+                                                    type="number"
+                                                    placeholder="Min ₺"
+                                                    className="w-full py-4 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 bg-transparent"
+                                                    value={minPrice || ""}
+                                                    onChange={(e) => setMinPrice(Number(e.target.value))}
+                                                />
+                                                <span className="text-gray-400">-</span>
+                                                <input
+                                                    type="number"
+                                                    placeholder="Max ₺"
+                                                    className="w-full py-4 text-base text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 bg-transparent"
+                                                    value={maxPrice || ""}
+                                                    onChange={(e) => setMaxPrice(Number(e.target.value))}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Search Button */}
+                                    <button className="ml-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 transition-colors">
+                                        <Search className="h-6 w-6" />
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -470,33 +437,33 @@ export default function ActivitiesPage() {
                 </div>
             </section>
 
-            {/* Category selector */}
-            <div className="bg-white sticky top-0 z-20 shadow-sm">
-                <div className="w-full max-w-[85rem] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                        <div className="mb-4 sm:mb-0">
-                            <h2 className="text-lg font-semibold text-gray-900">Aktivite Kategorileri</h2>
-                            <p className="text-sm text-gray-500">Aktivite türüne göre filtreleyin</p>
-                        </div>
-                        <div className="flex overflow-x-auto scrollbar-hide space-x-3 pb-2">
-                            {categories.map(category => (
-                                <button
-                                    key={category.id}
-                                    onClick={(e: React.MouseEvent) => {
-                                        e.preventDefault();
-                                        setSelectedCategory(category.id === "tumu" ? undefined : category.id);
-                                    }}
-                                    className={`flex-none px-4 py-2 rounded-full text-sm font-medium ${
-                                        (category.id === "tumu" && !selectedCategory) || selectedCategory === category.id
-                                            ? "bg-blue-500 text-white shadow-md hover:bg-blue-600"
-                                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                                    } transition-colors`}
-                                >
-                                    {category.name}
-                                </button>
-                            ))}
-                        </div>
+            {/* Activity Categories */}
+            <div className="mb-12">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 className="text-lg font-medium text-gray-900">Aktivite Kategorileri</h2>
+                        <p className="text-sm text-gray-500">Aktivite türüne göre filtreleyin</p>
                     </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <button className="px-4 py-2 rounded-full bg-blue-500 text-white text-sm font-medium">
+                        Tümü
+                    </button>
+                    <button className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200">
+                        Doğa
+                    </button>
+                    <button className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200">
+                        Tarihi
+                    </button>
+                    <button className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200">
+                        Deniz
+                    </button>
+                    <button className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200">
+                        Şehir
+                    </button>
+                    <button className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200">
+                        Macera
+                    </button>
                 </div>
             </div>
 
