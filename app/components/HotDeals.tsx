@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { MapPinIcon } from '@heroicons/react/24/outline';
 
 // Simplified Deal type
 type Deal = {
@@ -88,34 +89,35 @@ export default function HotDeals() {
   return (
     <section 
       ref={sectionRef}
-      className={`py-24 bg-white transition-opacity duration-1000 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+      className={`py-24 md:py-32 bg-neutral-50 transition-opacity duration-1000 ease-out ${isVisible ? 'opacity-100' : 'opacity-0 translate-y-4'}`}
     >
-      <div className="container px-4 mx-auto max-w-7xl">
+      <div className="container px-6 mx-auto max-w-7xl">
         <div className="text-center mb-16">
-           {/* Optional: Simple blue tag */}
-           <div className="inline-flex items-center justify-center px-4 py-2 bg-blue-50 rounded-full text-blue-600 font-medium text-sm mb-6">
+           {/* Etiket stili güncellendi */}
+           <div className="inline-flex items-center justify-center px-3 py-1 bg-sky-100 rounded-full text-sky-700 font-medium text-xs mb-6">
              Öne Çıkanlar
            </div>
-           {/* Simplified Main Title */}
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-black mb-4">
-            Öne Çıkan Turlarımız
+           {/* Ana başlık stili güncellendi */}
+           <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
+            Sizin İçin Seçtiklerimiz
           </h2>
-          {/* Simplified Description */}
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            En popüler, son dakika ve indirimli turlarımızı keşfedin.
+           {/* Açıklama stili güncellendi */}
+           <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
+            En popüler, son dakika ve indirimli turlarımıza göz atın.
           </p>
         </div>
         
-        {/* Simplified Category Tabs */}
-        <div className="flex justify-center border-b border-gray-200 mb-12">
+        {/* Kategori Sekmeleri - Stil güncellendi */}
+        <div className="flex justify-center border-b border-neutral-200 mb-12">
           {categoryData.map((category) => (
             <button
               key={category.id}
               onClick={() => handleCategoryChange(category.id as CategoryTab)}
-              className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${ 
+               // Sekme butonu stili güncellendi (aktif/pasif)
+               className={`px-4 sm:px-5 py-2.5 text-sm font-medium transition-colors duration-200 border-b-2 -mb-px ${ 
                 activeCategory === category.id
-                  ? 'border-black text-black' 
-                  : 'border-transparent text-gray-500 hover:text-black hover:border-gray-300'
+                  ? 'border-sky-600 text-sky-700 font-semibold' 
+                  : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:border-neutral-300'
               }`}
             >
               {category.title}
@@ -123,44 +125,60 @@ export default function HotDeals() {
           ))}
         </div>
         
-        {/* Modernized Deal Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {filteredDeals.map((deal) => (
+        {/* Fırsat Kartları - Stil güncellendi */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+          {filteredDeals.map((deal, index) => (
             <div 
               key={deal.id}
-              className="bg-white rounded-lg shadow-md hover:shadow-xl flex flex-col transform transition duration-300 hover:-translate-y-1 overflow-hidden"
+               // Kart ana yapısı ve hover efekti güncellendi
+               className={`bg-white rounded-xl border border-neutral-200/80 shadow-sm hover:shadow-lg flex flex-col transition-all duration-300 ease-out group overflow-hidden ${isVisible ? `animate-fadeInUp delay-${index * 100}` : 'opacity-0 translate-y-3'}`}
             >
-              <div className="relative h-56 w-full overflow-hidden rounded-t-lg flex-shrink-0">
+               {/* Kart Görseli */}
+               <div className="relative aspect-[4/3] w-full overflow-hidden flex-shrink-0">
                 <Image 
                   src={deal.image} 
                   alt={deal.title}
                   fill
-                  priority={deal.id <= 4} 
-                  sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, (max-width: 1536px) 33vw, 25vw"
-                  className="object-cover"
+                  priority={index < 4} // İlk 4 görseli öncelikli yükle
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                   // Hover efekti eklendi
+                   className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                 />
-              </div>
+                 {/* Görsel üzerine overlay (isteğe bağlı) */}
+                 {/* <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div> */} 
+               </div>
               
-              <div className="p-6 flex flex-col flex-grow">
-                 <p className="text-xs text-gray-500 mb-1 uppercase tracking-wider">{deal.location}</p>
-                 <h3 className="text-lg font-semibold text-gray-900 mb-2 truncate">
-                  {deal.title}
-                </h3>
-                <p className="text-sm text-gray-600 mb-4 flex-grow line-clamp-3">
-                  {deal.description}
-                </p>
+               {/* Kart İçeriği */}
+               <div className="p-5 flex flex-col flex-grow">
+                  {/* Konum */}
+                  <div className="flex items-center text-xs text-neutral-500 mb-1.5">
+                   <MapPinIcon className="w-3.5 h-3.5 mr-1 text-neutral-400 flex-shrink-0" />
+                   <span>{deal.location}</span>
+                 </div>
+                  {/* Başlık */}
+                  <h3 className="text-base font-semibold text-neutral-800 mb-2 leading-snug group-hover:text-sky-700 transition-colors">
+                   {/* Başlığın tamamını göstermek için truncate kaldırıldı */} 
+                   {deal.title}
+                 </h3>
+                  {/* Açıklama */}
+                  <p className="text-xs text-neutral-600 mb-4 flex-grow line-clamp-2 leading-relaxed">
+                   {deal.description}
+                 </p>
                 
-                <div className="mb-5 mt-auto pt-5 border-t border-gray-100">
-                   <span className="text-xl font-bold text-black">
-                     {formatPrice(deal.salePrice)}
-                   </span>
-                   <span className="text-xs text-gray-500 ml-1">/ kişi</span>
-                </div>
+                 {/* Fiyat */}
+                 <div className="mb-4 mt-auto pt-4 border-t border-neutral-100">
+                    <span className="text-xl font-bold text-neutral-900">
+                      {formatPrice(deal.salePrice)}
+                    </span>
+                    <span className="text-xs text-neutral-500 ml-1">/ kişi</span>
+                 </div>
                 
-                <Link 
+                 {/* Buton */}
+                 <Link 
                   href={`/tour/${deal.id}`}
-                  className="block w-full text-center px-6 py-3 bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors font-medium rounded-md shadow-sm text-sm"
-                >
+                   // Buton stili güncellendi
+                   className="block w-full text-center px-4 py-2 bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors font-medium rounded-lg shadow-sm text-sm"
+                 >
                   Detayları Gör
                 </Link>
               </div>
@@ -168,10 +186,11 @@ export default function HotDeals() {
           ))}
         </div>
         
-        <div className="mt-20 text-center">
+        {/* Tümünü Gör Butonu - Stil güncellendi */}
+        <div className="mt-16 md:mt-20 text-center">
           <Link 
             href="/tours"
-            className="inline-block px-8 py-4 bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors font-medium rounded-md shadow-sm text-base"
+             className="inline-block px-7 py-3 bg-white text-sky-700 border border-neutral-300 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors font-medium rounded-lg shadow-sm text-sm"
           >
             Tüm Turları Görüntüle
           </Link>

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
 
 interface FooterProps {
     className?: string;
@@ -85,29 +84,29 @@ export default function Footer({ className = "" }: FooterProps) {
   
   return (
     // Changed background to black, adjusted padding
-    <footer className={`bg-black text-gray-400 pt-20 pb-10 ${className}`}>
-      <div className="container mx-auto px-4">
+    <footer className={`bg-neutral-900 text-neutral-400 pt-16 pb-8 ${className}`}>
+      <div className="container mx-auto px-6">
         {/* Top section: Logo, description, links, social */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 mb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 mb-16">
           
           {/* Logo, description, and social links */}
           <div className="lg:col-span-4">
-            <div className="flex items-center mb-5">
-              {/* Simplified Logo */}
-              <div className="mr-3 flex-shrink-0">
-                 <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
-                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-white">
-                     <path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-2.25-1.313M21 7.5v2.25m0-2.25-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3 2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75 2.25-1.313M12 21.75V19.5m0 2.25-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25" />
-                   </svg>
-                 </div>
-              </div>
-              <span className="text-2xl font-bold text-white">TourTech</span> {/* Brand name */} 
+            <div className="flex items-center mb-6">
+              <Link href="/" className="flex items-center group">
+                <div className="mr-2.5 flex-shrink-0">
+                  <div className="w-9 h-9 bg-gradient-to-br from-sky-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md group-hover:scale-105 transition-transform duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-white">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m21 7.5-2.25-1.313M21 7.5v2.25m0-2.25-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3 2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75 2.25-1.313M12 21.75V19.5m0 2.25-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25" />
+                    </svg>
+                  </div>
+                </div>
+                <span className="text-xl font-semibold text-white group-hover:text-neutral-100 transition-colors">TourTech</span>
+              </Link>
             </div>
-            <p className="text-sm mb-6 leading-relaxed">
+            <p className="text-sm mb-7 leading-relaxed text-neutral-300">
               Türkiye'nin lider turizm teknolojileri platformu. Seyahat deneyiminizi dijitalleştiren yenilikçi çözümler.
             </p>
-            {/* Simplified Social Links */}
-            <div className="flex space-x-5">
+            <div className="flex space-x-4">
               {socialLinks.map((link) => (
                 <a 
                   key={link.label}
@@ -115,7 +114,7 @@ export default function Footer({ className = "" }: FooterProps) {
                   target="_blank" 
                   rel="noopener noreferrer" 
                   aria-label={link.label}
-                  className="text-gray-500 hover:text-indigo-400 transition-colors duration-200"
+                  className="text-neutral-500 hover:text-white transition-colors duration-200"
                 >
                   {link.icon}
                 </a>
@@ -127,13 +126,13 @@ export default function Footer({ className = "" }: FooterProps) {
           <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-3 gap-8">
             {footerLinks.map((section) => (
               <div key={section.title}>
-                <h4 className="font-semibold text-base text-white mb-4">{section.title}</h4>
-                <ul className="space-y-3">
+                <h4 className="font-semibold text-sm text-white mb-4 tracking-wide">{section.title}</h4>
+                <ul className="space-y-2.5">
                   {section.links.map((link) => (
                     <li key={link.label}>
                       <Link 
                         href={link.href} 
-                        className="text-sm hover:text-white hover:underline transition-colors duration-200"
+                        className="text-sm hover:text-white transition-colors duration-200"
                       >
                         {link.label}
                       </Link>
@@ -150,9 +149,9 @@ export default function Footer({ className = "" }: FooterProps) {
         {/* Middle subscription section is removed */} 
         
         {/* Bottom section - Copyright and legal links */}
-        <div className="border-t border-gray-800 pt-8 mt-16">
+        <div className="border-t border-neutral-800 pt-8 mt-12">
           <div className="flex flex-col sm:flex-row justify-between items-center">
-            <div className="text-gray-500 text-xs mb-4 sm:mb-0">
+            <div className="text-neutral-500 text-xs mb-4 sm:mb-0">
               © {currentYear} TourTech A.Ş. Tüm hakları saklıdır.
             </div>
             
@@ -161,7 +160,7 @@ export default function Footer({ className = "" }: FooterProps) {
                  <Link 
                    key={link.label} 
                    href={link.href} 
-                   className="text-gray-500 hover:text-white transition-colors"
+                   className="text-neutral-500 hover:text-white transition-colors duration-200"
                  >
                    {link.label}
                  </Link>

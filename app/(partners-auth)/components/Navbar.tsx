@@ -8,25 +8,25 @@ export default function PartnerNavbar() {
     const pathname = usePathname();
     
     return (
-        <header className="fixed top-0 left-0 right-0 z-40 bg-indigo-900 shadow-md py-3 backdrop-blur-sm">
-            <div className="container mx-auto px-4">
-                <div className="flex items-center justify-between">
+        <header className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-indigo-900 to-indigo-800 shadow-lg backdrop-blur-sm border-b border-indigo-700/50 py-3">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-14">
                     {/* Logo */}
                     <Link href="/" className="flex items-center group">
-                        <div className="relative h-10 w-10 mr-2">
+                        <div className="relative h-9 w-9 mr-2.5 flex-shrink-0">
                             <Image
                                 src="/images/logo.png"
                                 alt="Turladur Partner"
-                                width={40}
-                                height={40}
-                                className="transition-transform duration-300 group-hover:scale-105"
+                                layout="fill"
+                                objectFit="contain"
+                                className="transition-transform duration-300 group-hover:scale-110"
                             />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-xl font-bold text-white transition-all duration-300">
+                            <span className="text-xl font-semibold text-white transition-colors duration-300 group-hover:text-indigo-100">
                                 TurlaDur
                             </span>
-                            <span className="text-xs text-indigo-200">Partner Portal</span>
+                            <span className="text-xs text-indigo-300 tracking-wide">Partner Portal</span>
                         </div>
                     </Link>
 
@@ -34,20 +34,20 @@ export default function PartnerNavbar() {
                     <div className="flex items-center space-x-3">
                         <Link 
                             href="/partner-login" 
-                            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ease-in-out ${
                                 pathname === '/partner-login' 
-                                ? 'bg-white text-indigo-700' 
-                                : 'text-white hover:bg-indigo-800'
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'text-indigo-100 hover:text-white hover:bg-indigo-700/60'
                             }`}
                         >
                             Giriş Yap
                         </Link>
                         <Link 
                             href="/partner-register" 
-                            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                            className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ease-in-out border ${
                                 pathname === '/partner-register' 
-                                ? 'bg-white text-indigo-700' 
-                                : 'text-indigo-100 border border-indigo-700 hover:border-indigo-300 hover:bg-indigo-800'
+                                ? 'bg-white text-indigo-700 border-white shadow-sm'
+                                : 'text-indigo-100 border-indigo-600 hover:text-white hover:border-indigo-400 hover:bg-indigo-700/60'
                             }`}
                         >
                             Kayıt Ol

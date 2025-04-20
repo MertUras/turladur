@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Marquee from "react-fast-marquee";
-import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/solid";
+import { ChatBubbleLeftRightIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
 
 // Sadeleştirilmiş müşteri yorumları verisi
 const testimonials = [
@@ -82,53 +82,56 @@ export default function Testimonials() {
   return (
     <section 
       ref={testimonialsRef}
-      className={`py-24 bg-white transition-opacity duration-1000 ease-out ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+      className={`py-24 md:py-32 bg-neutral-50 border-y border-neutral-200/60 transition-opacity duration-1000 ease-out ${isVisible ? 'opacity-100' : 'opacity-0 translate-y-4'}`}
     >
-      <div className="container px-4 mx-auto max-w-7xl">
+      <div className="container px-6 mx-auto max-w-7xl">
         {/* Başlık Bölümü */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-           <div className="inline-flex items-center justify-center px-4 py-2 bg-blue-50 rounded-full text-blue-600 font-medium text-sm mb-6">
-             Referanslarımız
+           <div className="inline-flex items-center justify-center px-3 py-1 bg-sky-100 rounded-full text-sky-700 font-medium text-xs mb-6">
+             <ChatBubbleLeftRightIcon className="w-4 h-4 mr-1.5" />
+             Müşteri Deneyimleri
            </div>
-           <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-             Müşterilerimizin Deneyimleri
+           <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
+             İş Ortaklarımız Ne Diyor?
            </h2>
-           <p className="text-lg text-gray-600 leading-relaxed">
+           <p className="text-lg text-neutral-600">
              TourTech'i kullanan işletmelerin başarılarını ve deneyimlerini kendi ağızlarından dinleyin.
            </p>
         </div>
         
         {/* Müşteri Değerlendirmeleri Marquee */}
-        <div className="-mx-4">
+        <div className="-mx-4 md:-mx-6 lg:-mx-8">
           <Marquee
-            gradient={false}
-            speed={30}
+            gradient={true}
+            gradientColor={'rgb(248, 250, 252)'}
+            gradientWidth={100}
+            speed={25}
             pauseOnHover={true}
-            className="py-8"
+            className="py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
             {testimonials.map((testimonial) => (
               <div 
                 key={testimonial.id}
-                className="mx-4 w-80 sm:w-96 flex-shrink-0"
+                className="mx-4 w-80 sm:w-[350px] flex-shrink-0"
               >
-                <div className="bg-gray-50/70 border-t-2 border-black p-6 flex flex-col h-full transition-shadow duration-300 hover:shadow-lg">
-                  <p className="text-base text-gray-800 font-normal leading-relaxed mb-8 flex-grow">
-                    "{testimonial.content}"
+                <div className="bg-white border border-neutral-200/80 rounded-xl p-6 flex flex-col h-full shadow-sm transition-shadow duration-300 hover:shadow-md">
+                  <p className="text-sm text-neutral-700 font-normal leading-relaxed mb-6 flex-grow italic before:content-['\201C'] before:mr-1 before:text-sky-500 before:text-xl before:font-serif after:content-['\201D'] after:ml-1 after:text-sky-500 after:text-xl after:font-serif">
+                    {testimonial.content}
                   </p>
                   
-                  <div className="mt-auto flex items-center pt-4 border-t border-gray-200/80">
-                    <div className="relative h-11 w-11 rounded-full overflow-hidden flex-shrink-0">
+                  <div className="mt-auto flex items-center pt-4 border-t border-neutral-100">
+                    <div className="relative h-10 w-10 rounded-full overflow-hidden flex-shrink-0">
                       <Image
                         src={testimonial.image}
                         alt={testimonial.name}
                         fill
-                        sizes="44px"
+                        sizes="40px"
                         className="object-cover"
                       />
                     </div>
-                    <div className="ml-4">
-                      <p className="font-semibold text-gray-900 text-sm">{testimonial.name}</p>
-                      <p className="text-xs text-gray-500">{testimonial.role}, {testimonial.company}</p>
+                    <div className="ml-3">
+                      <p className="font-semibold text-neutral-800 text-sm leading-tight">{testimonial.name}</p>
+                      <p className="text-xs text-neutral-500 leading-tight">{testimonial.role}, {testimonial.company}</p>
                     </div>
                   </div>
                 </div>
@@ -137,13 +140,14 @@ export default function Testimonials() {
           </Marquee>
         </div>
 
-        {/* CTA Butonu - Tema rengine döndürüldü */}
-        <div className="mt-20 text-center">
+        {/* CTA Butonu - Stil güncellendi */}
+        <div className="mt-16 md:mt-20 text-center">
           <Link 
             href="/basari-hikayeleri"
-            className="inline-block px-8 py-4 bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors font-medium rounded-md shadow-sm"
+            className="inline-flex items-center justify-center px-6 py-3 bg-white text-sky-700 border border-neutral-300 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors font-medium rounded-lg shadow-sm text-sm"
           >
             Tüm Başarı Hikayelerini Gör
+            <ArrowRightIcon className="w-4 h-4 ml-1.5" />
           </Link>
         </div>
       </div>

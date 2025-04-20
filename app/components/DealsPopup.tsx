@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { XMarkIcon, CalendarIcon, FireIcon, TagIcon, ClockIcon, SparklesIcon } from '@heroicons/react/24/outline';
-import { CheckCircleIcon, ChevronRightIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
+import { ChevronRightIcon } from '@heroicons/react/24/solid';
 import FocusTrap from 'focus-trap-react';
 
 // Deal types
@@ -138,7 +138,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
       title: "Erken Rezervasyon İndirimi",
       discount: "%25",
       expiry: "Son 3 gün",
-      color: "from-blue-600 to-indigo-700",
+      color: "sky",
       image: "https://images.unsplash.com/photo-1610641818989-c2051b5e2cfd?q=80&w=2070&auto=format&fit=crop",
       link: "/campaigns/early-booking",
       badge: "Popüler",
@@ -150,7 +150,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
       title: "Aile Paketi",
       discount: "1 Çocuk Ücretsiz",
       expiry: "Sınırlı sayıda",
-      color: "from-emerald-600 to-teal-700",
+      color: "emerald",
       image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2070&auto=format&fit=crop",
       link: "/campaigns/family-package",
       description: "Ailecek tatil yapın, çocuğunuzun konaklaması bizden!",
@@ -161,7 +161,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
       title: "Son Dakika Fırsatı",
       discount: "%30",
       expiry: "Bugüne özel",
-      color: "from-rose-600 to-red-700",
+      color: "rose",
       image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?q=80&w=2070&auto=format&fit=crop",
       link: "/campaigns/last-minute",
       description: "Hemen kararını ver, ekstra %30 indirim yakala!",
@@ -172,7 +172,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
       title: "Hafta Sonu Kaçamağı",
       discount: "%15",
       expiry: "Her hafta sonu",
-      color: "from-sky-600 to-blue-700",
+      color: "blue",
       image: "https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?q=80&w=2083&auto=format&fit=crop",
       link: "/campaigns/weekend-getaway",
       badge: "Yeni",
@@ -184,7 +184,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
       title: "Bahar Kampanyası",
       discount: "%20",
       expiry: "Mayıs sonuna kadar",
-      color: "from-purple-600 to-indigo-800",
+      color: "violet",
       image: "https://images.unsplash.com/photo-1488085061387-422e29b40080?q=80&w=2031&auto=format&fit=crop",
       link: "/campaigns/spring-deal",
       description: "Baharın tadını çıkarın, erken yaz fırsatlarını yakalayın.",
@@ -195,7 +195,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
       title: "Balayı Paketi",
       discount: "Özel İndirim",
       expiry: "Yıl boyunca",
-      color: "from-pink-600 to-rose-700",
+      color: "pink",
       image: "https://images.unsplash.com/photo-1539635278303-d4002c07eae3?q=80&w=2070&auto=format&fit=crop",
       link: "/campaigns/honeymoon",
       description: "Hayatınızın en özel tatilini unutulmaz kılın, ücretsiz ekstralar!",
@@ -206,7 +206,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
       title: "Tekne Turu Fırsatı",
       discount: "2 Kişi 1 Kişi Öder",
       expiry: "Yaz sezonu",
-      color: "from-cyan-600 to-blue-700",
+      color: "cyan",
       image: "https://images.unsplash.com/photo-1586902197503-e71026292412?q=80&w=2070&auto=format&fit=crop",
       link: "/campaigns/boat-tour",
       description: "Eşsiz mavilikte tekne turu, iki kişi fiyatına bir kişi",
@@ -217,7 +217,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
       title: "Uzun Konaklama İndirimi",
       discount: "%35",
       expiry: "Her zaman",
-      color: "from-amber-600 to-orange-700",
+      color: "amber",
       image: "https://images.unsplash.com/photo-1629140727571-9b5c6f6267b4?q=80&w=2070&auto=format&fit=crop",
       link: "/campaigns/long-stay",
       badge: "Sınırlı",
@@ -229,7 +229,7 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
       title: "Kültür Turu Kampanyası",
       discount: "%15 + Müze Kartı",
       expiry: "Kış sezonu",
-      color: "from-indigo-600 to-violet-800",
+      color: "indigo",
       image: "https://images.unsplash.com/photo-1572883454114-1cf0031ede2a?q=80&w=2076&auto=format&fit=crop",
       link: "/campaigns/culture-tour",
       description: "Şehrin kültürel zenginliklerini keşfedin, müze kartı hediye",
@@ -435,7 +435,6 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
               <h4 className="font-semibold tracking-tight text-gray-800 flex items-center text-base">
-                <CheckCircleIcon className="w-5 h-5 text-indigo-600 mr-2" />
                 Özel Avantajlardan Yararlanın
               </h4>
               <p className="text-gray-600 text-sm mt-0.5">
@@ -449,7 +448,6 @@ export default function DealsPopup({ isOpen, onClose }: DealsPopupProps) {
               onClick={(e) => handleCardClick(e, '/campaigns')}
             >
               <span>Tüm Kampanyalar</span>
-              <ArrowRightIcon className="w-4 h-4 ml-1.5" />
             </Link>
           </div>
         </div>

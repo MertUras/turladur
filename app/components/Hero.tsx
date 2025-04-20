@@ -14,30 +14,29 @@ import {
   ChevronRightIcon
 } from '@heroicons/react/24/outline';
 
-// Using a single, static background image
-const staticHeroImage = "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=2070&auto=format&fit=crop"; 
-// Example, replace with your preferred high-quality image
+// Statik arka plan görseli (Daha modern bir görsel seçilebilir)
+const staticHeroImage = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2070&auto=format&fit=crop"; 
 
-// Re-added necessary data (Keep only what's needed for the modal)
+// Modal için gerekli veriler
 const locations = [
-  { name: "İstanbul", image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80" },
-  { name: "Kapadokya", image: "https://images.unsplash.com/photo-1570654230464-9e63b3497a1e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80" },
-  { name: "Antalya", image: "https://images.unsplash.com/photo-1605217613423-0ebe71a1f71f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80" },
-  { name: "Bodrum", image: "https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=200&q=80" }
+  { name: "İstanbul", image: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" },
+  { name: "Kapadokya", image: "https://images.unsplash.com/photo-1570654230464-9e63b3497a1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" },
+  { name: "Antalya", image: "https://images.unsplash.com/photo-1605217613423-0ebe71a1f71f?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" },
+  { name: "Bodrum", image: "https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" }
 ];
 const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
 export default function Hero() {
-  // Re-added necessary state
+  // State'ler
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
-  const [adultCount, setAdultCount] = useState(2);
+  const [adultCount, setAdultCount] = useState(1); // Yetişkin sayısı 1'den başlasın
   const [childrenCount, setChildrenCount] = useState(0);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [activeModalTab, setActiveModalTab] = useState<'location' | 'dates' | 'guests'>('location');
-  const [currentMonth, setCurrentMonth] = useState(0); // For calendar navigation
+  const [currentMonth, setCurrentMonth] = useState(0); // Takvim navigasyonu
   
   const modalRef = useRef<HTMLDivElement>(null);
   const [isBrowser, setIsBrowser] = useState(false);
@@ -46,7 +45,7 @@ export default function Hero() {
     setIsBrowser(true);
   }, []);
 
-  // Re-added logic to close modal on outside click
+  // Dışarı tıklanınca modal kapatma
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (isSearchModalOpen && modalRef.current && !modalRef.current.contains(event.target as Node)) {
@@ -63,13 +62,13 @@ export default function Hero() {
     };
   }, [isSearchModalOpen]);
 
-  // Simplified search trigger (opens modal)
+  // Arama modalını açma
   const openSearchModal = () => {
     setIsSearchModalOpen(true);
-    setActiveModalTab('location'); // Start with location tab
+    setActiveModalTab('location'); // Konum sekmesiyle başla
   };
 
-  // Final search action (from modal)
+  // Modal'dan son arama işlemi
   const handleFinalSearch = () => {
     console.log("Final Arama:", {
       lokasyon: selectedLocation || searchQuery,
@@ -79,13 +78,15 @@ export default function Hero() {
       çocuk: childrenCount
     });
     setIsSearchModalOpen(false);
-    // Redirect or API call here
+    // Yönlendirme veya API çağrısı burada yapılabilir
+    // Örneğin: router.push(`/search?location=${...}&start=${...}&...`) 
   };
 
-  // --- Re-added Helper Functions (Formatters, Calendar Logic, etc.) ---
+  // --- Yardımcı Fonksiyonlar --- 
   const formatDate = (date: Date | null) => {
     if (!date) return "Tarih Ekle";
-    return new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short' }).format(date);
+    // Daha kısa format
+    return new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long' }).format(date);
   };
 
   const formatGuests = () => {
@@ -95,33 +96,43 @@ export default function Hero() {
   };
 
   const handleDateSelect = (date: Date) => {
-     if (!selectedStartDate || (selectedStartDate && selectedEndDate) || date < selectedStartDate) {
+     // Tarih seçme mantığı güncellendi: ilk tıklama başlangıç, ikinci tıklama bitiş
+     if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
+      setSelectedStartDate(date);
+      setSelectedEndDate(null);
+    } else if (date < selectedStartDate) {
+      // Eğer başlangıçtan önceki bir tarih seçilirse, yeni başlangıç tarihi olur
       setSelectedStartDate(date);
       setSelectedEndDate(null);
     } else {
+       // Başlangıç tarihi varken sonraki bir tarih seçilirse, bitiş tarihi olur
       setSelectedEndDate(date);
-      // Optional: move to next tab after selecting end date
+      // Bitiş tarihi seçildikten sonra otomatik olarak misafir sekmesine geçilebilir
       // setActiveModalTab('guests'); 
     }
   };
   
+  // Geçmiş tarih kontrolü
   const isPastDate = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return date < today;
   };
 
+  // Seçili tarih kontrolü
   const isSelectedDate = (date: Date) => {
-    if (selectedStartDate && date.getTime() === selectedStartDate.getTime()) return true;
-    if (selectedEndDate && date.getTime() === selectedEndDate.getTime()) return true;
+    if (selectedStartDate && date.getTime() === selectedStartDate.getTime()) return 'start';
+    if (selectedEndDate && date.getTime() === selectedEndDate.getTime()) return 'end';
     return false;
   };
 
+  // Tarih aralığında mı kontrolü
   const isInDateRange = (date: Date) => {
     if (!selectedStartDate || !selectedEndDate) return false;
     return date > selectedStartDate && date < selectedEndDate;
   };
   
+  // Takvim oluşturma fonksiyonu
   const generateCalendar = (monthOffset: number) => {
       const currentDate = new Date();
       currentDate.setHours(0, 0, 0, 0);
@@ -132,8 +143,8 @@ export default function Hero() {
       const firstDayOfMonth = new Date(year, month, 1);
       const lastDayOfMonth = new Date(year, month + 1, 0);
 
-      let firstDayOffset = firstDayOfMonth.getDay(); // 0=Sun, 1=Mon ... 6=Sat
-      firstDayOffset = firstDayOffset === 0 ? 6 : firstDayOffset - 1; // Adjust to make Monday 0
+      let firstDayOffset = firstDayOfMonth.getDay(); // Pazar=0, Ptesi=1...
+      firstDayOffset = firstDayOffset === 0 ? 6 : firstDayOffset - 1; // Pazartesi=0 yap
 
       const daysInMonth = lastDayOfMonth.getDate();
       const weeks: (Date | null)[][] = [];
@@ -153,9 +164,9 @@ export default function Hero() {
       }
       return { month, year, weeks };
   };
-  // --- End Helper Functions ---
+  // --- End Yardımcı Fonksiyonlar --- 
 
-  // --- Modal Rendering Function ---
+  // --- Modal Render Fonksiyonu --- 
   const renderSearchModal = () => {
     if (!isSearchModalOpen || !isBrowser) return null;
 
@@ -163,165 +174,214 @@ export default function Hero() {
       <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/60 backdrop-blur-sm flex items-start justify-center pt-16 sm:pt-24 p-4 animate-fadeInBg">
         <div 
           ref={modalRef}
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl animate-slideDownEnter overflow-hidden"
+           // Modal stili: daha modern, neutral renkler
+           className="bg-white rounded-xl shadow-xl w-full max-w-3xl animate-slideDownEnter overflow-hidden border border-neutral-200/70"
         >
-          {/* Modal Tabs */}
-          <div className="flex border-b border-gray-200">
+          {/* Modal Tabs */} 
+           <div className="flex border-b border-neutral-200 bg-neutral-50/50">
             <button 
               onClick={() => setActiveModalTab('location')}
-              className={`flex-1 py-4 px-2 text-center text-sm font-medium transition-colors border-b-2 ${activeModalTab === 'location' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+               // Tab stili: aktif/pasif durumlar belirginleştirildi
+               className={`flex-1 py-3 px-2 text-center text-sm font-medium transition-all duration-200 border-b-2 ${activeModalTab === 'location' ? 'border-sky-600 text-sky-700 font-semibold' : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
             >
               Konum
             </button>
             <button 
               onClick={() => setActiveModalTab('dates')}
-              className={`flex-1 py-4 px-2 text-center text-sm font-medium transition-colors border-b-2 ${activeModalTab === 'dates' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+               className={`flex-1 py-3 px-2 text-center text-sm font-medium transition-all duration-200 border-b-2 ${activeModalTab === 'dates' ? 'border-sky-600 text-sky-700 font-semibold' : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
             >
               Tarihler
             </button>
             <button 
               onClick={() => setActiveModalTab('guests')}
-              className={`flex-1 py-4 px-2 text-center text-sm font-medium transition-colors border-b-2 ${activeModalTab === 'guests' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+               className={`flex-1 py-3 px-2 text-center text-sm font-medium transition-all duration-200 border-b-2 ${activeModalTab === 'guests' ? 'border-sky-600 text-sky-700 font-semibold' : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
             >
               Misafirler
             </button>
           </div>
 
           {/* Modal Content */} 
-          <div className="p-6 min-h-[300px]">
-            {/* Location Tab Content */}
+           <div className="p-6 md:p-8 min-h-[350px]">
+            {/* Konum Sekmesi İçeriği */} 
             {activeModalTab === 'location' && (
-              <div>
-                <h3 className="text-xl font-semibold mb-4 text-gray-900">Nereye gitmek istersiniz?</h3>
-                <div className="relative mb-6">
-                   <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                   <input
+               <div className="animate-fadeIn">
+                 <h3 className="text-lg font-semibold mb-4 text-neutral-900">Nereye gitmek istersiniz?</h3>
+                 <div className="relative mb-6">
+                    {/* Input stili güncellendi */}
+                    <MagnifyingGlassIcon className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
                      type="text"
-                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-black"
+                      className="w-full pl-10 pr-4 py-2.5 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-500 text-neutral-800 placeholder-neutral-400 text-sm"
                      placeholder="Şehir, otel veya bölge adı..."
                      value={searchQuery}
                      onChange={(e) => setSearchQuery(e.target.value)}
                    />
                 </div>
-                <h4 className="text-sm font-medium text-gray-500 mb-3">Popüler Destinasyonlar</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                 <h4 className="text-xs font-medium text-neutral-500 mb-3 uppercase tracking-wider">Popüler Destinasyonlar</h4>
+                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {locations.map((location) => (
                     <button 
                       key={location.name}
                       onClick={() => { setSelectedLocation(location.name); setActiveModalTab('dates'); }}
-                      className="text-left group"
+                       // Lokasyon kart stili güncellendi
+                       className="text-left group transition-transform duration-200 ease-out hover:scale-[1.03]"
                     >
-                      <div className="aspect-square rounded-lg overflow-hidden mb-2 relative">
-                        <Image src={location.image} alt={location.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 640px) 50vw, 25vw" />
+                       <div className="aspect-[4/3] rounded-lg overflow-hidden mb-2 relative shadow-sm border border-neutral-100">
+                        <Image src={location.image} alt={location.name} fill className="object-cover group-hover:brightness-105 transition-all duration-300" sizes="(max-width: 640px) 50vw, 25vw" />
                       </div>
-                      <p className="text-sm font-medium text-gray-800 group-hover:text-indigo-600 transition-colors">{location.name}</p>
+                       <p className="text-sm font-medium text-neutral-800 group-hover:text-sky-700 transition-colors">{location.name}</p>
                     </button>
                   ))}
                 </div>
               </div>
             )}
             
-            {/* Dates Tab Content */} 
-            {activeModalTab === 'dates' && (
-               <div>
-                 <h3 className="text-xl font-semibold mb-4 text-gray-900">Tarih Aralığı Seçin</h3>
-                 {/* Calendar Implementation */} 
-                 <div className="flex justify-between items-center mb-3">
-                   <button 
-                     type="button" 
-                     className="p-2 rounded-full hover:bg-gray-100 text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed" 
-                     onClick={() => setCurrentMonth(currentMonth - 1)} 
-                     disabled={currentMonth === 0}
-                   >
-                     <ChevronLeftIcon className="w-5 h-5" />
-                   </button>
-                   <div className="font-semibold text-gray-800">
-                     {monthNames[generateCalendar(currentMonth).month]} {generateCalendar(currentMonth).year}
-                   </div>
-                   <div className="font-semibold text-gray-800 ml-12 hidden sm:block">
-                      {monthNames[generateCalendar(currentMonth + 1).month]} {generateCalendar(currentMonth + 1).year}
-                   </div>
-                   <button 
-                     type="button" 
-                     className="p-2 rounded-full hover:bg-gray-100 text-gray-500" 
-                     onClick={() => setCurrentMonth(currentMonth + 1)}
-                   >
-                     <ChevronRightIcon className="w-5 h-5" />
-                   </button>
-                 </div>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
-                   {[generateCalendar(currentMonth), generateCalendar(currentMonth + 1)].map((cal, calIndex) => (
-                      <div key={calIndex} className={calIndex === 0 ? "mb-4 sm:mb-0" : "hidden sm:block"}> {/* Hide second calendar on mobile */}
-                        <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 font-medium mb-2">
+            {/* Tarih Sekmesi İçeriği */} 
+             {activeModalTab === 'dates' && (
+                <div className="animate-fadeIn">
+                  <h3 className="text-lg font-semibold mb-5 text-neutral-900">Tarih Aralığı Seçin</h3>
+                  {/* Takvim stilleri güncellendi */}
+                  <div className="flex justify-between items-center mb-4">
+                    <button 
+                      type="button" 
+                       className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors" 
+                      onClick={() => setCurrentMonth(currentMonth - 1)} 
+                      disabled={currentMonth === 0}
+                    >
+                      <ChevronLeftIcon className="w-5 h-5" />
+                    </button>
+                    {/* Ay gösterimi */}
+                    <div className="flex-grow text-center">
+                      <div className="font-semibold text-neutral-800 text-sm">
+                        {monthNames[generateCalendar(currentMonth).month]} {generateCalendar(currentMonth).year}
+                      </div>
+                      <div className="font-semibold text-neutral-800 text-sm ml-12 hidden sm:inline-block">
+                         {monthNames[generateCalendar(currentMonth + 1).month]} {generateCalendar(currentMonth + 1).year}
+                      </div>
+                    </div>
+                    <button 
+                      type="button" 
+                       className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-500 transition-colors" 
+                      onClick={() => setCurrentMonth(currentMonth + 1)}
+                    >
+                      <ChevronRightIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                    {[generateCalendar(currentMonth), generateCalendar(currentMonth + 1)].map((cal, calIndex) => (
+                       <div key={calIndex} className={`${calIndex === 0 ? "mb-4 sm:mb-0" : "hidden sm:block"} ${calIndex === 1 ? "sm:border-l sm:pl-6 sm:border-neutral-200" : ""}`}>
+                         {/* Gün isimleri */} 
+                         <div className="grid grid-cols-7 gap-y-1 text-center text-xs text-neutral-500 font-medium mb-2">
                           <div>Pt</div><div>Sa</div><div>Ça</div><div>Pe</div><div>Cu</div><div>Ct</div><div>Pa</div>
                         </div>
-                        {cal.weeks.map((week, weekIdx) => (
-                          <div key={weekIdx} className="grid grid-cols-7 gap-1">
+                        {/* Takvim günleri */} 
+                         {cal.weeks.map((week, weekIdx) => (
+                           <div key={weekIdx} className="grid grid-cols-7">
                             {week.map((date, dayIdx) => {
-                              if (!date) return <div key={dayIdx} className="h-9"></div>;
+                              if (!date) return <div key={dayIdx} className="p-0.5"><div className="h-7"></div></div>;
                               const isPast = isPastDate(date);
-                              const isSelected = isSelectedDate(date);
+                              const selectionState = isSelectedDate(date);
                               const isInRange = isInDateRange(date);
+                              const isStart = selectionState === 'start';
+                              const isEnd = selectionState === 'end';
+                              
+                              // Daha iyi UX için takvim gün stilleri
+                              const dayWrapperClasses = `p-0.5 ${isInRange || isStart || isEnd ? 'bg-sky-100/70' : ''} ${isStart ? 'rounded-l-full' : ''} ${isEnd ? 'rounded-r-full' : ''}`;
+                              const buttonClasses = `
+                                h-7 w-full flex items-center justify-center rounded-full text-xs transition-colors duration-150 ease-out 
+                                ${isPast ? 'text-neutral-300 cursor-not-allowed' 
+                                  : isStart || isEnd ? 'bg-sky-600 text-white font-semibold' 
+                                  : isInRange ? 'text-sky-700' 
+                                  : 'text-neutral-700 hover:bg-neutral-100'}
+                              `;
+
                               return (
-                                <button
-                                  key={dayIdx}
-                                  type="button"
-                                  disabled={isPast}
-                                  onClick={() => handleDateSelect(date)}
-                                  className={`h-9 w-full flex items-center justify-center rounded text-sm transition-colors ${isPast ? 'text-gray-300 cursor-not-allowed' : isSelected ? 'bg-indigo-600 text-white font-semibold' : isInRange ? 'bg-indigo-100 text-indigo-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                                >
-                                  {date.getDate()}
-                                </button>
+                                <div key={dayIdx} className={dayWrapperClasses}>
+                                  <button
+                                    type="button"
+                                    disabled={isPast}
+                                    onClick={() => handleDateSelect(date)}
+                                    className={buttonClasses}
+                                  >
+                                    {date.getDate()}
+                                  </button>
+                                </div>
                               );
                             })}
                           </div>
                         ))}
                       </div>
-                   ))}
-                 </div>
-                 {/* Add clear button? */}
-               </div>
-            )}
+                    ))}
+                  </div>
+                   {/* Temizle butonu eklenebilir */} 
+                  {(selectedStartDate || selectedEndDate) && (
+                    <button 
+                       onClick={() => {setSelectedStartDate(null); setSelectedEndDate(null);}}
+                       className="text-xs text-neutral-500 hover:text-neutral-700 underline mt-4"
+                     >
+                      Tarihleri Temizle
+                    </button>
+                  )}
+                </div>
+             )}
             
-            {/* Guests Tab Content */}
-            {activeModalTab === 'guests' && (
-              <div>
-                <h3 className="text-xl font-semibold mb-6 text-gray-900">Misafir Sayısı Seçin</h3>
-                 <div className="space-y-5">
-                    {/* Adults */}
-                    <div className="flex justify-between items-center">
-                       <div>
-                          <p className="font-medium text-gray-800">Yetişkinler</p>
-                          <p className="text-sm text-gray-500">13 yaş ve üzeri</p>
-                       </div>
-                       <div className="flex items-center space-x-3">
-                          <button type="button" onClick={() => setAdultCount(Math.max(1, adultCount - 1))} disabled={adultCount <= 1} className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 disabled:opacity-50 flex items-center justify-center hover:border-gray-500 transition">-</button>
-                          <span className="w-8 text-center font-medium text-lg text-black">{adultCount}</span>
-                          <button type="button" onClick={() => setAdultCount(adultCount + 1)} className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 transition">+</button>
-                       </div>
-                    </div>
-                    {/* Children */}
-                    <div className="flex justify-between items-center">
-                       <div>
-                          <p className="font-medium text-gray-800">Çocuklar</p>
-                          <p className="text-sm text-gray-500">2-12 yaş</p>
-                       </div>
-                       <div className="flex items-center space-x-3">
-                          <button type="button" onClick={() => setChildrenCount(Math.max(0, childrenCount - 1))} disabled={childrenCount <= 0} className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 disabled:opacity-50 flex items-center justify-center hover:border-gray-500 transition">-</button>
-                          <span className="w-8 text-center font-medium text-lg text-black">{childrenCount}</span>
-                          <button type="button" onClick={() => setChildrenCount(childrenCount + 1)} className="w-8 h-8 rounded-full border border-gray-300 text-gray-600 flex items-center justify-center hover:border-gray-500 transition">+</button>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-            )}
+            {/* Misafir Sekmesi İçeriği */} 
+             {activeModalTab === 'guests' && (
+               <div className="animate-fadeIn">
+                 <h3 className="text-lg font-semibold mb-6 text-neutral-900">Misafir Sayısı Seçin</h3>
+                  <div className="space-y-6 max-w-sm mx-auto">
+                     {/* Yetişkinler */}
+                     <div className="flex justify-between items-center">
+                        <div>
+                           {/* Misafir etiketleri güncellendi */}
+                           <p className="font-medium text-neutral-800">Yetişkinler</p>
+                           <p className="text-xs text-neutral-500">13 yaş ve üzeri</p>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                           {/* Sayaç butonları güncellendi */}
+                           <button type="button" onClick={() => setAdultCount(Math.max(1, adultCount - 1))} disabled={adultCount <= 1} className="w-7 h-7 rounded-full border border-neutral-300 text-neutral-600 disabled:opacity-40 flex items-center justify-center hover:border-neutral-500 transition text-lg">-</button>
+                           <span className="w-8 text-center font-medium text-base text-neutral-900">{adultCount}</span>
+                           <button type="button" onClick={() => setAdultCount(adultCount + 1)} className="w-7 h-7 rounded-full border border-neutral-300 text-neutral-600 flex items-center justify-center hover:border-neutral-500 transition text-lg">+</button>
+                        </div>
+                     </div>
+                     {/* Çocuklar */}
+                     <div className="flex justify-between items-center">
+                        <div>
+                           <p className="font-medium text-neutral-800">Çocuklar</p>
+                           <p className="text-xs text-neutral-500">2-12 yaş</p>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                           <button type="button" onClick={() => setChildrenCount(Math.max(0, childrenCount - 1))} disabled={childrenCount <= 0} className="w-7 h-7 rounded-full border border-neutral-300 text-neutral-600 disabled:opacity-40 flex items-center justify-center hover:border-neutral-500 transition text-lg">-</button>
+                           <span className="w-8 text-center font-medium text-base text-neutral-900">{childrenCount}</span>
+                           <button type="button" onClick={() => setChildrenCount(childrenCount + 1)} className="w-7 h-7 rounded-full border border-neutral-300 text-neutral-600 flex items-center justify-center hover:border-neutral-500 transition text-lg">+</button>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+             )}
           </div>
 
-          {/* Modal Footer / Search Button */}
-          <div className="bg-gray-50 p-4 border-t border-gray-200 flex justify-end">
+          {/* Modal Footer / Arama Butonu */} 
+           <div className="bg-neutral-50 p-4 border-t border-neutral-200 flex items-center justify-between">
+             {/* Seçimleri temizle butonu */} 
+             <button 
+               onClick={() => {
+                 setSearchQuery("");
+                 setSelectedLocation(null);
+                 setSelectedStartDate(null);
+                 setSelectedEndDate(null);
+                 setAdultCount(1);
+                 setChildrenCount(0);
+                 setActiveModalTab('location');
+               }}
+               className="text-xs text-neutral-500 hover:text-neutral-700 underline"
+             >
+               Temizle
+             </button>
             <button 
               onClick={handleFinalSearch}
-              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-white font-semibold rounded-lg transition-colors text-sm shadow-sm flex items-center gap-2"
+               // Arama butonu stili güncellendi
+               className="px-6 py-2.5 bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 text-white font-semibold rounded-lg transition-colors text-sm shadow-sm flex items-center gap-2"
             >
               <MagnifyingGlassIcon className="w-4 h-4"/>
               Ara
@@ -333,11 +393,11 @@ export default function Hero() {
       document.body
     );
   }; 
-  // --- End Modal Rendering Function ---
+  // --- End Modal Render Fonksiyonu --- 
 
   return (
-    <section className="relative mt-16 md:mt-0 min-h-[600px] h-[85vh] max-h-[800px] w-full overflow-hidden flex items-center justify-center">
-      {/* Static Background Image (Keep as is) */}
+    <section className="relative mt-16 md:mt-0 min-h-[650px] h-[85vh] max-h-[900px] w-full overflow-hidden flex items-center justify-center">
+      {/* Arka Plan Görseli */}
       <div className="absolute inset-0 w-full h-full">
          <Image
             src={staticHeroImage} 
@@ -345,52 +405,66 @@ export default function Hero() {
             fill
             sizes="100vw"
             priority
-            className="object-cover object-center filter brightness-[0.7]"
+             // Parlaklık ayarı güncellendi
+             className="object-cover object-center filter brightness-[0.6]"
           />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-black/50 to-black/70" />
+         {/* Gradient overlay güncellendi */}
+         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-black/60" />
       </div>
 
-      {/* Hero Content */}
-      <div className="relative z-10 container mx-auto px-4 flex flex-col items-center justify-center text-center text-white">
+      {/* Hero İçeriği */}
+      <div className="relative z-10 container mx-auto px-6 flex flex-col items-center justify-center text-center text-white">
         
-        <div className="w-full max-w-4xl mb-10 md:mb-12 animate-fadeIn">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-5 leading-tight">
-            Hayalindeki Tatili <span className="text-blue-400">Keşfet</span>
+         <div className="w-full max-w-4xl mb-10 md:mb-12 animate-fadeIn">
+           {/* Başlık ve açıklama stilleri güncellendi */}
+           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[64px] font-bold mb-5 !leading-tight tracking-tight">
+            Hayalindeki Tatili <span className="text-sky-400">Keşfet</span>
           </h1>
-          <p className="text-lg md:text-xl max-w-2xl mx-auto text-white/90">
+          <p className="text-lg md:text-xl max-w-2xl mx-auto text-white/90 font-light">
             Türkiye'nin dört bir yanındaki eşsiz otelleri, turları ve deneyimleri kolayca bulun ve rezerve edin.
           </p>
         </div>
         
-        {/* Clickable Search Bar Trigger */}
-        <div className="w-full max-w-2xl animate-slideUp delay-200">
+        {/* Tıklanabilir Arama Çubuğu Tetikleyicisi */}
+         <div className="w-full max-w-3xl animate-slideUp delay-200">
           <button 
             onClick={openSearchModal}
-            className="w-full flex items-center bg-white/90 backdrop-blur-sm rounded-full shadow-xl p-3 text-left border border-gray-200/50 hover:shadow-2xl transition-shadow duration-300"
+             // Arama çubuğu stili güncellendi (daha modern, sky renkleri)
+             className="w-full grid grid-cols-[1fr_auto_1fr_auto_auto] md:grid-cols-[1fr_auto_1fr_auto_1fr_auto] items-center bg-white/95 backdrop-blur-sm rounded-full shadow-lg p-2 text-left border border-neutral-200/30 hover:shadow-xl transition-shadow duration-300"
           >
-            <div className="flex-1 flex items-center px-3 border-r border-gray-200 mr-3">
-               <MapPinIcon className="w-5 h-5 text-indigo-600 mr-2 flex-shrink-0"/>
-               <span className="text-gray-700 text-sm md:text-base truncate">{selectedLocation || "Nereye?"}</span>
+             {/* Konum */}
+             <div className="flex-1 flex items-center pl-3 pr-2 min-w-0">
+                <MapPinIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
+               <span className="text-neutral-700 text-sm truncate font-medium">{selectedLocation || "Nereye?"}</span>
             </div>
-             <div className="flex-1 flex items-center px-3 border-r border-gray-200 mr-3">
-               <CalendarDaysIcon className="w-5 h-5 text-indigo-600 mr-2 flex-shrink-0"/>
-               <span className="text-gray-700 text-sm md:text-base truncate">{selectedStartDate ? `${formatDate(selectedStartDate)} - ${formatDate(selectedEndDate)}` : "Tarihler"}</span>
+             {/* Ayraç */} 
+             <div className="hidden md:block h-6 border-l border-neutral-200 mx-1"></div>
+             {/* Tarihler */}
+             <div className="flex-1 flex items-center pl-3 pr-2 min-w-0">
+                <CalendarDaysIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
+               <span className="text-neutral-700 text-sm truncate font-medium">{selectedStartDate ? `${formatDate(selectedStartDate)}${selectedEndDate ? ' - '+formatDate(selectedEndDate) : ''}` : "Tarihler"}</span>
             </div>
-             <div className="flex-1 flex items-center px-3 mr-3">
-               <UserGroupIcon className="w-5 h-5 text-indigo-600 mr-2 flex-shrink-0"/>
-               <span className="text-gray-700 text-sm md:text-base truncate">{formatGuests()}</span>
-            </div>
-            <div className="flex-shrink-0">
-              <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center shadow-md">
-                 <MagnifyingGlassIcon className="w-5 h-5 text-white"/>
-              </div>
-            </div>
+             {/* Ayraç */} 
+             <div className="hidden md:block h-6 border-l border-neutral-200 mx-1"></div>
+             {/* Misafirler ve Arama Butonu */} 
+             <div className="flex-1 flex items-center justify-between pl-3 pr-1 md:pr-0 min-w-0">
+               <div className="flex items-center">
+                 <UserGroupIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
+                 <span className="text-neutral-500 text-sm truncate font-medium whitespace-nowrap">{formatGuests()}</span>
+               </div>
+               {/* Arama butonu */}
+               <div className="flex-shrink-0 ml-2">
+                 <div className="w-8 h-8 md:w-9 md:h-9 bg-sky-600 rounded-full flex items-center justify-center shadow hover:bg-sky-700 transition-colors">
+                    <MagnifyingGlassIcon className="w-4 h-4 text-white"/>
+                 </div>
+               </div>
+             </div>
           </button>
         </div>
       </div>
       
-      {/* Render the Search Modal */} 
-      {renderSearchModal()} 
+      {/* Arama Modalını Render Et */} 
+       {renderSearchModal()} 
     </section>
   );
 } 
