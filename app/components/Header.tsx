@@ -152,7 +152,7 @@ export default function Header() {
               />
             </div>
             <span className={`text-xl font-semibold ${logoColor} transition-colors duration-300 tracking-tight`}>
-              TourTech
+              Turladur
             </span>
           </Link>
 
@@ -371,7 +371,7 @@ export default function Header() {
                  <div className="relative h-7 w-7 mr-1.5">
                   <Image src="/images/logo.png" alt="TourTech Logo" width={28} height={28} />
                 </div>
-                 <span className="text-lg font-semibold text-sky-700">TourTech</span>
+                 <span className="text-lg font-semibold text-sky-700">Turladur</span>
               </Link>
               <button
                  className="p-1.5 rounded-md text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100"

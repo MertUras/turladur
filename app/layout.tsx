@@ -19,7 +19,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "TourTech - Türkiye'nin En İyi Seyahat Platformu",
+  title: "Turladur - Türkiye'nin En İyi Seyahat Platformu",
   description: "En iyi oteller, turlar ve seyahat deneyimleri için TourTech'i tercih edin.",
 };
 

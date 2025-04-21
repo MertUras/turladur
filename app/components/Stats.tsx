@@ -102,7 +102,7 @@ export default function Stats() {
             Başarı Hikayemiz
            </div>
            <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
-            Rakamlarla TourTech
+            Rakamlarla Turladur
           </h2>
            <p className="text-lg text-neutral-600">
             Binlerce mutlu gezgin, unutulmaz anılar ve sürekli büyüyen bir topluluk.
@@ -145,15 +145,24 @@ export default function Stats() {
         {/* Ekstra Bilgi veya CTA - Stil güncellendi */}
         <div className="mt-16 md:mt-20 text-center">
            <p className="text-neutral-600 text-base mb-6 max-w-2xl mx-auto">
-            Türkiye'nin dört bir yanındaki eşsiz destinasyonları keşfedin.
+            Türkiye'nin dört bir yanındaki eşsiz destinasyonları ve aktiviteleri keşfedin.
             Özel fırsatlar ve unutulmaz deneyimler sizi bekliyor.
           </p>
+          
           <Link 
             href="/tours" 
              // Buton stili güncellendi
              className="inline-flex items-center justify-center px-6 py-3 bg-sky-600 text-white hover:bg-sky-700 rounded-lg transition-colors duration-200 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 text-sm"
           >
             Turları Keşfet
+             <ArrowRightIcon className="w-4 h-4 ml-1.5" />
+          </Link>
+          <Link 
+            href="/activities" 
+             // Buton stili güncellendi
+             className="ml-4 inline-flex items-center justify-center px-6 py-3 bg-sky-600 text-white hover:bg-sky-700 rounded-lg transition-colors duration-200 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 text-sm"
+          >
+            Aktiviteleri Keşfet
              <ArrowRightIcon className="w-4 h-4 ml-1.5" />
           </Link>
         </div>

@@ -95,7 +95,7 @@ export default function Testimonials() {
              İş Ortaklarımız Ne Diyor?
            </h2>
            <p className="text-lg text-neutral-600">
-             TourTech'i kullanan işletmelerin başarılarını ve deneyimlerini kendi ağızlarından dinleyin.
+             Turladur'u kullanan işletmelerin başarılarını ve deneyimlerini kendi ağızlarından dinleyin.
            </p>
         </div>
         
