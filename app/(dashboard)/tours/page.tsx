@@ -689,7 +689,7 @@ export default function ToursPage() {
         <div className="absolute inset-0 opacity-10 overflow-hidden">
           <div className="absolute inset-0 bg-repeat" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\' fill-rule=\'evenodd\'%3E%3Ccircle cx=\'3\' cy=\'3\' r=\'2\'/%3E%3Ccircle cx=\'13\' cy=\'13\' r=\'2\'/%3E%3C/g%3E%3C/svg%3E")' }}></div>
         </div>
-        <div className="container mx-auto px-4 relative">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 relative">
           <div className="text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center bg-blue-900/30 backdrop-blur-sm text-blue-100 rounded-full py-1.5 px-4 text-xs font-medium mb-4">
               <span className="w-2 h-2 bg-blue-200 rounded-full mr-2"></span>
@@ -759,7 +759,7 @@ export default function ToursPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-20 py-12">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 py-10">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Mobil Filtre Butonu */}
           <div className="lg:hidden mb-4">
@@ -785,12 +785,12 @@ export default function ToursPage() {
 
           {/* Yandan Açılır Filtre Menüsü */}
           <div className={`
-            fixed inset-y-0 right-0 w-full lg:w-80 bg-gray-50 shadow-lg transform transition-transform duration-300 ease-in-out z-50
+            fixed inset-y-0 right-0 w-full lg:w-80 bg-gray-50 shadow-lg transform transition-transform duration-300 ease-in-out z-30
             ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}
             lg:relative lg:translate-x-0 lg:shadow-none
           `}>
             <div className="h-full flex flex-col">
-              <div className="bg-gray-50 border-b border-gray-100 py-4 px-6 flex justify-between items-center">
+              <div className="bg-gray-50 border-b border-gray-100 pt-0 pb-3 px-6 flex justify-between items-center">
                 <h3 className="font-bold text-gray-900 flex items-center">
                   <Filter className="h-5 w-5 mr-2 text-blue-600" />
                   Filtreler
@@ -1342,7 +1342,7 @@ export default function ToursPage() {
                 </div>
                 
                 {view === 'grid' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {currentTours.map((tour) => {
                       const tourImages = parseJsonString<string[]>(tour.images || '[]', []);
                       const destinations = parseJsonString<string[]>(tour.destinations || '[]', []);
@@ -1746,7 +1746,7 @@ export default function ToursPage() {
         </div>
         
       {/* Sabit Filtreleme Butonları */}
-      <div className="fixed bottom-6 left-6 z-50 flex flex-col gap-2">
+      <div className="fixed bottom-6 left-4 sm:left-6 z-40 flex flex-col gap-2">
                   <button
           onClick={() => {
             setLoading(true);
