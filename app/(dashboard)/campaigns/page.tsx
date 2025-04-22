@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React from "react";
 import Image from "next/image";
 //import LiveCampaigns from "../components/LiveCampaigns";
 import { FireIcon, ClockIcon, TagIcon, SparklesIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
@@ -86,99 +86,90 @@ const campaigns: Campaign[] = [
 
 export default function CampaignsPage() {
   return (
-    <div className="pt-24 bg-gradient-to-b from-gray-50 via-white to-gray-50 min-h-screen">
-      {/* HERO BÖLÜMÜ */}
-      <div className="relative h-[500px] w-full overflow-hidden">
+    <main className="bg-neutral-50 text-neutral-800 min-h-screen">
+      {/* HERO SECTION - Refined */}
+      <section className="relative h-[450px] md:h-[500px] w-full overflow-hidden bg-neutral-900"> 
         <Image
           src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=2070&auto=format&fit=crop"
           alt="Kampanyalar Hero"
           fill
-          className="object-cover object-center"
+          className="object-cover object-center opacity-30"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black/40" />
-        <div className="relative z-10 flex flex-col items-center justify-center h-full text-center text-white px-4">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" /> 
+        <div className="relative z-10 flex flex-col items-center justify-center h-full text-center text-white px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight text-white drop-shadow-lg">
+            <h1 className="text-4xl md:text-6xl font-extrabold mb-5 tracking-tight text-white drop-shadow-lg">
               Kaçırılmayacak Fırsatlar
             </h1>
-            <p className="text-xl md:text-2xl text-gray-100 font-light leading-relaxed drop-shadow mb-8">
+            <p className="text-lg md:text-xl text-neutral-200 font-light leading-relaxed drop-shadow mb-10">
               En avantajlı seyahat fırsatlarını keşfedin. Sınırlı süreli kampanyalar ve özel indirimler sizi bekliyor.
             </p>
             
-            {/* Banner Etiketleri */}
-            <div className="flex flex-wrap justify-center gap-4">
-              <div className="flex items-center bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-full shadow-lg hover:bg-white/30 transition-colors">
-                <FireIcon className="w-5 h-5 mr-2" />
-                <span className="font-semibold">Acil Fırsatlar</span>
+            {/* Refined Banner Tags */}
+            <div className="flex flex-wrap justify-center gap-3 text-sm"> 
+              <div className="flex items-center bg-black/20 backdrop-blur-md text-neutral-200 px-4 py-2 rounded-lg"> 
+                <FireIcon className="w-4 h-4 mr-1.5 text-orange-400" />
+                <span className="font-medium">Acil Fırsatlar</span>
               </div>
-              <div className="flex items-center bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-full shadow-lg hover:bg-white/30 transition-colors">
-                <TagIcon className="w-5 h-5 mr-2" />
-                <span className="font-semibold">En Çok Tercih Edilenler</span>
+              <div className="flex items-center bg-black/20 backdrop-blur-md text-neutral-200 px-4 py-2 rounded-lg"> 
+                <TagIcon className="w-4 h-4 mr-1.5 text-sky-300" />
+                <span className="font-medium">En Çok Tercih Edilenler</span>
               </div>
-              <div className="flex items-center bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-full shadow-lg hover:bg-white/30 transition-colors">
-                <SparklesIcon className="w-5 h-5 mr-2" />
-                <span className="font-semibold">Özel Kampanyalar</span>
+              <div className="flex items-center bg-black/20 backdrop-blur-md text-neutral-200 px-4 py-2 rounded-lg"> 
+                <SparklesIcon className="w-4 h-4 mr-1.5 text-yellow-400" />
+                <span className="font-medium">Özel Kampanyalar</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ANA İÇERİK */}
-      <div className="max-w-7xl mx-auto px-4 py-16">
-        <div className="space-y-16">
-          {/* Anlık Kampanyalar */}
+      {/* MAIN CONTENT */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+        <div className="space-y-16 md:space-y-20">
+          {/* Live Campaigns Section - Refined Header */}
           <section>
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl font-bold flex items-center text-gray-900">
-                <FireIcon className="w-8 h-8 mr-3 text-red-500" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+              <h2 className="text-3xl font-bold text-neutral-900 tracking-tight">
                 Anlık Kampanyalar
               </h2>
-              <span className="text-sm text-gray-600 flex items-center bg-gray-100 px-4 py-2 rounded-full">
-                <ClockIcon className="w-4 h-4 mr-1 text-gray-500" />
+              <span className="text-xs sm:text-sm text-neutral-500 flex items-center bg-neutral-100 px-3 py-1.5 rounded-md border border-neutral-200/80">
+                <ClockIcon className="w-4 h-4 mr-1.5 text-neutral-400" />
                 Sürekli güncelleniyor
               </span>
             </div>
             <LiveCampaigns />
           </section>
 
-          {/* Tüm Kampanyalar */}
+          {/* All Campaigns Section - Refined Header */}
           <section>
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-3xl font-bold flex items-center text-gray-900">
-                <SparklesIcon className="w-8 h-8 mr-3 text-yellow-500" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+              <h2 className="text-3xl font-bold text-neutral-900 tracking-tight">
                 Tüm Kampanyalar
               </h2>
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600 bg-gray-100 px-4 py-2 rounded-full">
-                  Toplam {campaigns.length} kampanya
+              <div className="flex items-center space-x-3">
+                <span className="text-xs sm:text-sm text-neutral-500 bg-neutral-100 px-3 py-1.5 rounded-md border border-neutral-200/80">
+                  {campaigns.length} kampanya
                 </span>
-                <button className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center bg-blue-50 px-4 py-2 rounded-full hover:bg-blue-100 transition-colors">
-                  Tümünü Gör
-                  <ArrowRightIcon className="w-4 h-4 ml-1" />
-                </button>
               </div>
             </div>
             <CampaignsList campaigns={campaigns} />
           </section>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
 
-/* Kampanya kartlarını renderlayan fonksiyonel bileşen */
+/* CampaignsList Component - Refined Styles */
 function CampaignsList({ campaigns }: { campaigns: Campaign[] }) {
   if (campaigns.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20 bg-white rounded-2xl shadow-sm">
-        <SparklesIcon className="w-12 h-12 text-gray-300 mb-4" />
-        <p className="text-gray-600 text-xl mb-2">Henüz kampanya bulunmuyor</p>
-        <p className="text-gray-500 mb-6">Yakında yeni kampanyalar eklenecek</p>
-        <button className="px-6 py-3 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors font-medium">
-          Ana Sayfaya Dön
-        </button>
+      <div className="flex flex-col items-center justify-center text-center py-20 bg-neutral-100 rounded-2xl border border-neutral-200/80">
+        <SparklesIcon className="w-10 h-10 text-neutral-400 mb-4" />
+        <p className="text-neutral-600 text-lg mb-2">Henüz kampanya bulunmuyor</p>
+        <p className="text-neutral-500 text-sm mb-6">Yakında yeni kampanyalar eklenecek.</p>
       </div>
     );
   }
@@ -188,69 +179,62 @@ function CampaignsList({ campaigns }: { campaigns: Campaign[] }) {
       {campaigns.map((c) => (
         <div
           key={c.id}
-          className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 hover:border-blue-100"
+          className="group bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden border border-neutral-200/50"
         >
-          {/* Kampanya Görseli */}
           <div className="relative h-56 overflow-hidden">
-            <div className="absolute inset-0">
-              <Image
-                src={c.image}
-                alt={c.title}
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-500"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent group-hover:from-black/80 group-hover:via-black/40 group-hover:to-transparent transition-all duration-300" />
-            </div>
+            <Image
+              src={c.image}
+              alt={c.title}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
             
-            {/* Üst Etiketler */}
-            <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-10">
+            <div className="absolute top-3 left-3 right-3 flex flex-wrap gap-2 z-10">
               {c.discount && (
-                <span className="bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm px-4 py-1.5 rounded-full shadow-lg font-medium transform group-hover:-translate-y-1 transition-transform duration-300">
-                  {c.discount} İndirim
+                <span className="bg-sky-100 text-sky-700 text-xs px-2.5 py-1 rounded-md font-semibold border border-sky-200/80">
+                  {c.discount} İNDİRİM
                 </span>
               )}
-              
               {c.label && (
-                <span className="bg-gradient-to-r from-green-600 to-green-700 text-white text-sm px-4 py-1.5 rounded-full shadow-lg font-medium transform group-hover:-translate-y-1 transition-transform duration-300">
+                <span className="bg-neutral-100 text-neutral-700 text-xs px-2.5 py-1 rounded-md font-medium border border-neutral-200/80">
                   {c.label}
                 </span>
               )}
             </div>
 
-            {/* Alt Etiketler */}
-            <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end z-10">
-              <span className="bg-white/95 text-gray-800 text-xs px-3 py-1 rounded-full shadow-sm backdrop-blur-sm group-hover:bg-white transition-colors duration-300">
+            <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2 z-10">
+              <span className="bg-white/80 backdrop-blur-sm text-neutral-800 text-xs px-2.5 py-1 rounded-md shadow-sm">
                 {c.category}
               </span>
-              <span className="bg-white/95 text-gray-800 text-xs px-3 py-1 rounded-full shadow-sm backdrop-blur-sm group-hover:bg-white transition-colors duration-300">
+              <span className="bg-white/80 backdrop-blur-sm text-neutral-800 text-xs px-2.5 py-1 rounded-md shadow-sm">
                 {c.location}
               </span>
             </div>
           </div>
 
-          {/* Kampanya İçeriği */}
-          <div className="p-6">
-            <div className="space-y-3">
-              <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+          <div className="p-5 md:p-6">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-neutral-900 line-clamp-1 mb-1">
                 {c.title}
               </h3>
-              <p className="text-gray-600 line-clamp-2 text-sm group-hover:text-gray-700 transition-colors">
+              <p className="text-neutral-600 line-clamp-2 text-sm">
                 {c.description}
               </p>
             </div>
 
-            <div className="mt-6 flex items-center justify-between">
+            <div className="mt-5 pt-4 flex items-center justify-between border-t border-neutral-100">
               {c.validity && (
-                <div className="flex items-center text-sm text-red-500 group-hover:text-red-600 transition-colors">
-                  <ClockIcon className="w-4 h-4 mr-1 animate-pulse" />
+                <div className="flex items-center text-xs text-neutral-500">
+                  <ClockIcon className="w-3.5 h-3.5 mr-1" />
                   <span>{c.validity}</span>
                 </div>
               )}
               
-              <button className="flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium bg-blue-50 px-4 py-2 rounded-full hover:bg-blue-100 transition-all duration-300 hover:scale-105">
-                Detayları Gör
-                <ArrowRightIcon className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+              <button className="inline-flex items-center text-sky-600 hover:text-sky-800 text-sm font-medium hover:bg-sky-50 px-3 py-1.5 rounded-md transition-colors">
+                Detaylar
+                <ArrowRightIcon className="w-3.5 h-3.5 ml-1 group-hover:translate-x-0.5 transition-transform" />
               </button>
             </div>
           </div>

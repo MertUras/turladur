@@ -13,11 +13,12 @@ import {
   BuildingOfficeIcon,
   GlobeAltIcon,
   SparklesIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import Image from 'next/image';
-import { dummyBookings } from '../lib/dummy-data';
-import { Booking } from '../types';
+import { dummyBookings } from '@/app/lib/dummy-data';
+import { Booking } from '@/app/types';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -51,11 +52,13 @@ export default function BookingsPage() {
       setTimeout(() => {
         setBookings(dummyBookings);
         setLoading(false);
-      }, 1000);
+      }, 500);
     };
 
     if (status === 'authenticated') {
       fetchBookings();
+    } else if (status === 'unauthenticated') {
+      setLoading(false);
     }
   }, [status]);
 
@@ -140,11 +143,19 @@ export default function BookingsPage() {
     return format(new Date(date), 'dd MMMM yyyy', { locale: tr });
   };
 
+  const handleClearFilters = () => {
+    setStatusFilter('all');
+    setTypeFilter('all');
+    setSortBy('date-desc'); // Optionally reset sort order too
+    toast('Filtreler temizlendi');
+  };
+
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-16 flex items-center justify-center">
-        <div className="animate-spin text-blue-600">
-          <ArrowPathIcon className="h-10 w-10" />
+      <div className="min-h-screen bg-neutral-50 pt-16 flex items-center justify-center">
+        <div className="flex flex-col items-center text-neutral-500">
+          <ArrowPathIcon className="h-10 w-10 animate-spin text-sky-600" />
+          <p className="mt-3 text-sm">Rezervasyonlar yükleniyor...</p>
         </div>
       </div>
     );
@@ -152,13 +163,13 @@ export default function BookingsPage() {
 
   if (status === 'unauthenticated') {
     return (
-      <div className="min-h-screen bg-gray-50 pt-20">
-        <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Rezervasyonlarınızı görüntülemek için giriş yapmalısınız</h1>
-          <p className="text-gray-600 mb-8">Rezervasyonlarınızı görüntülemek, yönetmek ve yeni rezervasyon yapmak için lütfen giriş yapın.</p>
+      <div className="min-h-screen bg-neutral-50 pt-20">
+        <div className="max-w-lg mx-auto px-4 py-16 text-center bg-white rounded-xl border border-neutral-200/50 shadow-sm">
+          <h1 className="text-xl font-semibold text-neutral-900 mb-3">Erişim Reddedildi</h1>
+          <p className="text-neutral-600 mb-6">Rezervasyonlarınızı görüntülemek ve yönetmek için lütfen giriş yapın.</p>
           <Link 
             href="/api/auth/signin"
-            className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center justify-center px-5 py-2.5 bg-sky-600 text-white text-sm font-semibold rounded-lg hover:bg-sky-700 transition-colors shadow-sm active:scale-[0.98]"
           >
             Giriş Yap
           </Link>
@@ -168,94 +179,119 @@ export default function BookingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-neutral-50 pt-6 pb-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20">
         {/* Başlık */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Rezervasyonlarım</h1>
-          <p className="text-gray-600">Tüm rezervasyonlarınızı görüntüleyin ve yönetin</p>
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-neutral-900">Rezervasyonlarım</h1>
+          <p className="text-sm text-neutral-600 mt-1">Tüm geçmiş, güncel ve gelecek rezervasyonlarınızı buradan yönetebilirsiniz.</p>
         </div>
         
         {/* Filtre ve sıralama */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              {/* Durum filtresi */}
-              <div className="relative group">
-                <label htmlFor="status-filter" className="block text-xs font-medium text-gray-700 mb-1">
-                  Durum
-                </label>
-                <div className="relative flex items-center">
-                  <select
-                    id="status-filter"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
-                    className="appearance-none block w-full pl-3 pr-10 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">Tümü</option>
-                    <option value="CONFIRMED">Onaylı</option>
-                    <option value="PENDING">Beklemede</option>
-                    <option value="COMPLETED">Tamamlandı</option>
-                    <option value="CANCELLED">İptal Edildi</option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                    <ChevronDownIcon className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Tip filtresi */}
-              <div className="relative group">
-                <label htmlFor="type-filter" className="block text-xs font-medium text-gray-700 mb-1">
-                  Rezervasyon Tipi
-                </label>
-                <div className="relative flex items-center">
-                  <select
-                    id="type-filter"
-                    value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value as FilterType)}
-                    className="appearance-none block w-full pl-3 pr-10 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">Tümü</option>
-                    <option value="hotel">Otel</option>
-                    <option value="tour">Tur</option>
-                    <option value="experience">Deneyim</option>
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                    <ChevronDownIcon className="h-4 w-4" />
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="bg-white rounded-xl shadow-sm border border-neutral-200/50 p-5 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-4 gap-y-5">
             
-            {/* Sıralama */}
-            <div className="relative group">
-              <label htmlFor="sort-by" className="block text-xs font-medium text-gray-700 mb-1">
-                Sırala
+            {/* Status Filter (Button Group) */}
+            <div className="lg:col-span-2">
+              <label className="block text-sm font-medium text-neutral-700 mb-2">
+                Durum
               </label>
-              <div className="relative flex items-center">
-                <select
-                  id="sort-by"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortOption)}
-                  className="appearance-none block w-full pl-3 pr-10 py-2 text-sm text-gray-900 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="date-desc">Tarihe Göre (Yeniden Eskiye)</option>
-                  <option value="date-asc">Tarihe Göre (Eskiden Yeniye)</option>
-                  <option value="price-desc">Fiyata Göre (Yüksekten Düşüğe)</option>
-                  <option value="price-asc">Fiyata Göre (Düşükten Yükseğe)</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                  <ChevronDownIcon className="h-4 w-4" />
+              <div className="flex flex-wrap gap-2">
+                {([
+                  { key: 'all', label: 'Tümü' },
+                  { key: 'CONFIRMED', label: 'Onaylı' },
+                  { key: 'PENDING', label: 'Beklemede' },
+                  { key: 'COMPLETED', label: 'Tamamlandı' },
+                  { key: 'CANCELLED', label: 'İptal Edildi' },
+                ] as { key: FilterStatus; label: string }[]).map(statusOpt => (
+                  <button
+                    key={statusOpt.key}
+                    type="button"
+                    onClick={() => setStatusFilter(statusOpt.key)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${ 
+                      statusFilter === statusOpt.key
+                        ? 'bg-sky-100 text-sky-700 border-sky-200 ring-1 ring-sky-200'
+                        : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300'
+                    }`}
+                  >
+                    {statusOpt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Type Filter (Button Group) - Combined with Sort for layout */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5 items-end">
+               <div>
+                 <label className="block text-sm font-medium text-neutral-700 mb-2">
+                   Rezervasyon Tipi
+                 </label>
+                 <div className="flex flex-wrap gap-2">
+                    {([
+                      { key: 'all', label: 'Tümü' },
+                      { key: 'hotel', label: 'Otel' },
+                      { key: 'tour', label: 'Tur' },
+                      { key: 'experience', label: 'Deneyim' },
+                    ] as { key: FilterType; label: string }[]).map(typeOpt => (
+                      <button
+                        key={typeOpt.key}
+                        type="button"
+                        onClick={() => setTypeFilter(typeOpt.key)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${ 
+                          typeFilter === typeOpt.key
+                            ? 'bg-sky-100 text-sky-700 border-sky-200 ring-1 ring-sky-200'
+                            : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300'
+                        }`}
+                      >
+                        {typeOpt.label}
+                      </button>
+                    ))}
+                  </div>
+               </div>
+
+              {/* Sort By (Dropdown) */}
+              <div>
+                <label htmlFor="sort-by" className="block text-sm font-medium text-neutral-700 mb-1.5">
+                  Sırala
+                </label>
+                <div className="relative">
+                  <select
+                    id="sort-by"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortOption)}
+                    className="block w-full text-neutral-700 appearance-none rounded-md border-neutral-300 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm pl-3 pr-10 py-2"
+                  >
+                    <option value="date-desc">Tarih (Yeni)</option>
+                    <option value="date-asc">Tarih (Eski)</option>
+                    <option value="price-desc">Fiyat (Yüksek)</option>
+                    <option value="price-asc">Fiyat (Düşük)</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-neutral-400">
+                    <ChevronDownIcon className="h-5 w-5" />
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Clear Filters Button */}
+            {(statusFilter !== 'all' || typeFilter !== 'all' || sortBy !== 'date-desc') && (
+              <div className="lg:col-span-3 flex justify-end mt-3">
+                <button 
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="inline-flex items-center text-xs font-medium text-neutral-500 hover:text-sky-600 transition-colors"
+                >
+                  <XMarkIcon className="h-4 w-4 mr-1" />
+                  Filtreleri Temizle
+                </button>
+              </div>
+            )}
           </div>
         </div>
         
         {/* Rezervasyon listesi */}
         {sortedBookings.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {sortedBookings.map((booking) => (
               <BookingCard 
                 key={booking.id}
@@ -266,25 +302,19 @@ export default function BookingsPage() {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-            <div className="max-w-md mx-auto">
-              <Image 
-                src="/images/empty-bookings.svg" 
-                alt="Rezervasyon bulunamadı" 
-                width={200} 
-                height={200} 
-                className="mx-auto mb-6" 
-              />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Henüz rezervasyonunuz bulunmuyor</h3>
-              <p className="text-gray-600 mb-6">Henüz hiç rezervasyon yapmadınız veya seçtiğiniz filtrelere uygun rezervasyon bulunamadı.</p>
-              <Link 
-                href="/" 
-                className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Keşfetmeye Başla
-              </Link>
-            </div>
-          </div>
+          <div className="flex flex-col items-center justify-center text-center py-16 px-6 bg-white rounded-xl border border-dashed border-neutral-200 mt-8">
+             <div className="p-3 bg-neutral-100 rounded-full mb-4">
+               <CalendarIcon className="h-8 w-8 text-neutral-400" /> 
+             </div>
+             <h3 className="text-lg font-semibold text-neutral-700">Rezervasyon Bulunamadı</h3>
+             <p className="mt-1 text-neutral-500 text-sm max-w-xs mb-6">Seçtiğiniz filtrelere uygun rezervasyon bulunamadı veya henüz rezervasyon yapmadınız.</p>
+             <Link 
+               href="/"
+               className="inline-flex items-center justify-center px-5 py-2.5 bg-sky-600 text-white text-sm font-semibold rounded-lg hover:bg-sky-700 transition-colors shadow-sm active:scale-[0.98]"
+             >
+               Yeni Rezervasyon Yap
+             </Link>
+           </div>
         )}
       </div>
       

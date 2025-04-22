@@ -1,9 +1,11 @@
 'use client';
 
-import { CalendarIcon, UsersIcon } from '@heroicons/react/24/outline';
-import { Booking } from '../../types';
+import { CalendarIcon, UsersIcon, CreditCardIcon, InformationCircleIcon, XMarkIcon, CheckCircleIcon, ClockIcon, ExclamationTriangleIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
+import { Booking } from '@/app/types';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { Dialog, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
 
 interface BookingDetailsModalProps {
   isOpen: boolean;
@@ -12,6 +14,26 @@ interface BookingDetailsModalProps {
   onCancelBooking: (bookingId: string) => void;
 }
 
+const getStatusInfo = (status: Booking['status']) => {
+  switch (status) {
+    case 'CONFIRMED': return { icon: CheckCircleIcon, text: 'Onaylandı', color: 'text-green-600', badge: 'bg-green-100 text-green-800 ring-green-200' };
+    case 'PENDING': return { icon: ClockIcon, text: 'Beklemede', color: 'text-yellow-600', badge: 'bg-yellow-100 text-yellow-800 ring-yellow-200' };
+    case 'CANCELLED': return { icon: NoSymbolIcon, text: 'İptal Edildi', color: 'text-red-600', badge: 'bg-red-100 text-red-800 ring-red-200' };
+    case 'COMPLETED': return { icon: CheckCircleIcon, text: 'Tamamlandı', color: 'text-sky-600', badge: 'bg-sky-100 text-sky-800 ring-sky-200' };
+    default: return { icon: InformationCircleIcon, text: status, color: 'text-neutral-600', badge: 'bg-neutral-100 text-neutral-800 ring-neutral-200' };
+  }
+};
+
+const getPaymentStatusInfo = (status: Booking['paymentStatus']) => {
+   switch (status) {
+    case 'PAID': return { text: 'Ödendi', badge: 'bg-green-100 text-green-800 ring-green-200' };
+    case 'PARTIALLY_PAID': return { text: 'Kısmen Ödendi', badge: 'bg-yellow-100 text-yellow-800 ring-yellow-200' };
+    case 'UNPAID': return { text: 'Ödenmedi', badge: 'bg-red-100 text-red-800 ring-red-200' };
+    case 'REFUNDED': return { text: 'İade Edildi', badge: 'bg-purple-100 text-purple-800 ring-purple-200' };
+    default: return { text: status, badge: 'bg-neutral-100 text-neutral-800 ring-neutral-200' };
+  }
+};
+
 export default function BookingDetailsModal({ 
   isOpen, 
   onClose, 
@@ -19,153 +41,152 @@ export default function BookingDetailsModal({
   onCancelBooking 
 }: BookingDetailsModalProps) {
   
-  const formatDate = (date: Date) => {
-    return format(new Date(date), 'dd MMMM yyyy', { locale: tr });
+  const formatDate = (date?: Date | string) => {
+     if (!date) return '-';
+     try {
+      return format(new Date(date), 'dd MMMM yyyy, EEEE', { locale: tr });
+     } catch { return '-'; }
   };
 
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'CONFIRMED':
-        return 'bg-green-100 text-green-800';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800';
-      case 'COMPLETED':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const bookingStatusInfo = getStatusInfo(booking.status);
+  const paymentStatusInfo = getPaymentStatusInfo(booking.paymentStatus);
 
-  if (!isOpen) return null;
+  const bookingTypeLabel = booking.hotelId ? 'Otel' : booking.tourId ? 'Tur' : 'Deneyim';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
-      <div className="relative bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <button 
-            onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="h-6 w-6">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Rezervasyon Detayları</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <div className="mb-6">
-                <div className="text-sm font-medium text-gray-500 mb-1">Rezervasyon Numarası</div>
-                <div className="text-lg font-semibold">{booking.bookingNumber}</div>
-              </div>
-              
-              <div className="mb-6">
-                <div className="text-sm font-medium text-gray-500 mb-1">Durum</div>
-                <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusBadgeColor(booking.status)}`}>
-                  {booking.status === 'CONFIRMED' && 'Onaylı'}
-                  {booking.status === 'PENDING' && 'Beklemede'}
-                  {booking.status === 'CANCELLED' && 'İptal Edildi'}
-                  {booking.status === 'COMPLETED' && 'Tamamlandı'}
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50" onClose={onClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 text-center">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-xl bg-white text-left align-middle shadow-xl transition-all">
+                <div className="flex items-center justify-between p-5 border-b border-neutral-100">
+                  <Dialog.Title as="h3" className="text-lg font-semibold leading-6 text-neutral-900">
+                    Rezervasyon Detayları (#{booking.bookingNumber})
+                  </Dialog.Title>
+                  <button
+                    type="button"
+                    className="rounded-full p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+                    onClick={onClose}
+                  >
+                    <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+                  </button>
                 </div>
-              </div>
-              
-              <div className="mb-6">
-                <div className="text-sm font-medium text-gray-500 mb-1">Ödeme Durumu</div>
-                <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                  booking.paymentStatus === 'PAID' 
-                    ? 'bg-green-100 text-green-800' 
-                    : booking.paymentStatus === 'PARTIALLY_PAID'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-red-100 text-red-800'
-                }`}>
-                  {booking.paymentStatus === 'PAID' && 'Ödendi'}
-                  {booking.paymentStatus === 'PARTIALLY_PAID' && 'Kısmen Ödendi'}
-                  {booking.paymentStatus === 'UNPAID' && 'Ödenmedi'}
-                  {booking.paymentStatus === 'REFUNDED' && 'İade Edildi'}
+
+                <div className="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-neutral-50 rounded-lg p-3 border border-neutral-200/80">
+                      <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Rezervasyon Durumu</p>
+                      <div className="flex items-center">
+                         <bookingStatusInfo.icon className={`h-5 w-5 mr-1.5 ${bookingStatusInfo.color}`} />
+                         <span className={`text-sm font-medium ${bookingStatusInfo.color}`}>{bookingStatusInfo.text}</span>
+                      </div>
+                    </div>
+                     <div className="bg-neutral-50 rounded-lg p-3 border border-neutral-200/80">
+                      <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Ödeme Durumu</p>
+                       <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full capitalize ${paymentStatusInfo.badge} ring-1 ring-inset`}>
+                         {paymentStatusInfo.text}
+                       </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                     <div>
+                        <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Rezervasyon Tipi</p>
+                        <p className="text-sm text-neutral-800 font-medium">{bookingTypeLabel}</p>
+                     </div>
+                     <div>
+                        <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Tarihler</p>
+                        <div className="flex items-center text-sm text-neutral-800">
+                          <CalendarIcon className="h-4 w-4 text-neutral-400 mr-1.5 flex-shrink-0" />
+                          <span>{formatDate(booking.startDate)} - {formatDate(booking.endDate)}</span>
+                        </div>
+                      </div>
+                       <div>
+                        <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Misafirler</p>
+                         <div className="flex items-center text-sm text-neutral-800">
+                           <UsersIcon className="h-4 w-4 text-neutral-400 mr-1.5 flex-shrink-0" />
+                            <span>
+                             {booking.adults} Yetişkin
+                             {booking.children > 0 && `, ${booking.children} Çocuk`}
+                           </span>
+                         </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Toplam Tutar</p>
+                        <div className="flex items-center text-base font-semibold text-neutral-900">
+                           <CreditCardIcon className="h-4 w-4 text-neutral-400 mr-1.5 flex-shrink-0" />
+                           <span>{booking.totalPrice.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</span>
+                         </div>
+                      </div>
+                  </div>
+                  
+                  {booking.specialRequests && (
+                    <div className="pt-4">
+                      <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Özel İstekler</p>
+                      <div className="p-3 bg-neutral-50 rounded-md border border-neutral-200/80 text-sm text-neutral-700">
+                        {booking.specialRequests}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-              
-              <div className="mb-6">
-                <div className="text-sm font-medium text-gray-500 mb-1">Rezervasyon Türü</div>
-                <div className="text-base">
-                  {booking.hotelId 
-                    ? 'Otel Rezervasyonu' 
-                    : booking.tourId 
-                      ? 'Tur Rezervasyonu' 
-                      : 'Deneyim Rezervasyonu'}
+
+                <div className="bg-neutral-50 px-5 py-4 border-t border-neutral-100">
+                  {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' ? (
+                    <div className="flex flex-col sm:flex-row justify-end gap-3">
+                       <button
+                        type="button"
+                        onClick={() => onCancelBooking(booking.id)}
+                        className="inline-flex items-center justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                      >
+                         <ExclamationTriangleIcon className="h-4 w-4 mr-1.5" />
+                         Rezervasyonu İptal Et
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center justify-center px-4 py-2 bg-white hover:bg-neutral-50 text-neutral-700 border border-neutral-300 text-sm font-semibold rounded-lg transition-colors shadow-sm active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+                        onClick={onClose}
+                      >
+                        Kapat
+                      </button>
+                    </div>
+                  ) : (
+                     <div className="flex justify-end">
+                       <button
+                         type="button"
+                         className="inline-flex items-center justify-center px-4 py-2 bg-white hover:bg-neutral-50 text-neutral-700 border border-neutral-300 text-sm font-semibold rounded-lg transition-colors shadow-sm active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+                         onClick={onClose}
+                       >
+                         Kapat
+                       </button>
+                     </div>
+                  )}
                 </div>
-              </div>
-            </div>
-            
-            <div>
-              <div className="mb-6">
-                <div className="text-sm font-medium text-gray-500 mb-1">Tarihler</div>
-                <div className="flex items-center">
-                  <CalendarIcon className="h-5 w-5 text-blue-600 mr-2" />
-                  <span>{formatDate(booking.startDate)} - {formatDate(booking.endDate)}</span>
-                </div>
-              </div>
-              
-              <div className="mb-6">
-                <div className="text-sm font-medium text-gray-500 mb-1">Misafirler</div>
-                <div className="flex items-center">
-                  <UsersIcon className="h-5 w-5 text-blue-600 mr-2" />
-                  <span>
-                    {booking.adults} Yetişkin
-                    {booking.children > 0 && `, ${booking.children} Çocuk`}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="mb-6">
-                <div className="text-sm font-medium text-gray-500 mb-1">Toplam Fiyat</div>
-                <div className="text-xl font-bold text-blue-600">{booking.totalPrice.toLocaleString('tr-TR')} ₺</div>
-              </div>
-            </div>
-          </div>
-          
-          {booking.specialRequests && (
-            <div className="mb-6">
-              <div className="text-sm font-medium text-gray-500 mb-1">Özel İstekler</div>
-              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                {booking.specialRequests}
-              </div>
-            </div>
-          )}
-          
-          <div className="border-t border-gray-200 pt-6 mt-6">
-            {booking.status !== 'CANCELLED' && booking.status !== 'COMPLETED' ? (
-              <div className="flex justify-between">
-                <button
-                  onClick={() => onCancelBooking(booking.id)}
-                  className="px-6 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Rezervasyonu İptal Et
-                </button>
-                
-                <button
-                  onClick={onClose}
-                  className="px-6 py-2 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Kapat
-                </button>
-              </div>
-            ) : (
-              <div className="flex justify-end">
-                <button
-                  onClick={onClose}
-                  className="px-6 py-2 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Kapat
-                </button>
-              </div>
-            )}
+              </Dialog.Panel>
+            </Transition.Child>
           </div>
         </div>
-      </div>
-    </div>
+      </Dialog>
+    </Transition>
   );
 } 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { CalendarIcon, ClockIcon, UsersIcon, TicketIcon, FunnelIcon, ArrowsUpDownIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, ClockIcon, UsersIcon, FunnelIcon, ArrowsUpDownIcon, MapPinIcon, XMarkIcon, CheckIcon, BanknotesIcon } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 
 interface Booking {
@@ -32,219 +32,205 @@ interface BookingsTabProps {
 export default function BookingsTab({ bookings, onViewDetails, onCancelBooking, formatDate }: BookingsTabProps) {
   const [bookingTab, setBookingTab] = useState('upcoming');
   const [filterModalOpen, setFilterModalOpen] = useState(false);
-  const [sortOrder, setSortOrder] = useState<'priceAsc' | 'priceDesc' | 'dateAsc' | 'dateDesc'>('dateDesc');
+  const [sortOrder, setSortOrder] = useState<'dateDesc' | 'dateAsc' | 'priceDesc' | 'priceAsc'>('dateDesc');
   const [showSortOptions, setShowSortOptions] = useState(false);
 
-  // Sıralama işlevi
-  const handleSort = (order: 'priceAsc' | 'priceDesc' | 'dateAsc' | 'dateDesc') => {
+  const handleSort = (order: 'dateDesc' | 'dateAsc' | 'priceDesc' | 'priceAsc') => {
     setSortOrder(order);
     setShowSortOptions(false);
     
-    if (order === 'priceAsc') {
-      toast.success('Rezervasyonlar fiyata göre artan sıralandı');
-    } else if (order === 'priceDesc') {
-      toast.success('Rezervasyonlar fiyata göre azalan sıralandı');
-    } else if (order === 'dateAsc') {
-      toast.success('Rezervasyonlar tarihe göre artan sıralandı');
-    } else if (order === 'dateDesc') {
-      toast.success('Rezervasyonlar tarihe göre azalan sıralandı');
+    if (order.startsWith('date')) {
+      toast.success(`Tarihe göre sıralandı (${order === 'dateDesc' ? 'Yeni > Eski' : 'Eski > Yeni'})`);
+    } else {
+      toast.success(`Fiyata göre sıralandı (${order === 'priceDesc' ? 'Yüksek > Düşük' : 'Düşük > Yüksek'})`);
     }
   };
 
+  const currentBookings = bookings[bookingTab]?.sort((a, b) => {
+    switch (sortOrder) {
+      case 'dateAsc': return new Date(a.date || a.checkIn || 0).getTime() - new Date(b.date || b.checkIn || 0).getTime();
+      case 'priceDesc': return b.price - a.price;
+      case 'priceAsc': return a.price - b.price;
+      case 'dateDesc':
+      default: return new Date(b.date || b.checkIn || 0).getTime() - new Date(a.date || a.checkIn || 0).getTime();
+    }
+  }) || [];
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Rezervasyonlarım</h2>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h2 className="text-xl font-semibold text-neutral-900">Rezervasyonlarım</h2>
         
-        <div className="flex space-x-2">
+        <div className="flex items-center space-x-2">
           <button 
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+            className="p-2 rounded-lg text-neutral-500 hover:text-sky-600 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1 transition-colors"
             onClick={() => setFilterModalOpen(true)}
+            title="Filtrele"
           >
             <FunnelIcon className="h-5 w-5" />
           </button>
           <div className="relative">
             <button 
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
+              className="p-2 rounded-lg text-neutral-500 hover:text-sky-600 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1 transition-colors"
               onClick={() => setShowSortOptions(!showSortOptions)}
+              title="Sırala"
             >
               <ArrowsUpDownIcon className="h-5 w-5" />
             </button>
             {showSortOptions && (
-              <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 shadow-lg rounded-lg overflow-hidden z-20 border border-gray-200 dark:border-gray-700">
-                <button 
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                  onClick={() => handleSort('dateDesc')}
-                >
-                  En Yeni Tarih
-                </button>
-                <button 
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                  onClick={() => handleSort('dateAsc')}
-                >
-                  En Eski Tarih
-                </button>
-                <button 
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                  onClick={() => handleSort('priceDesc')}
-                >
-                  Fiyat: Yüksekten Düşüğe
-                </button>
-                <button 
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-                  onClick={() => handleSort('priceAsc')}
-                >
-                  Fiyat: Düşükten Yükseğe
-                </button>
+              <div className="absolute right-0 mt-2 w-56 bg-white/95 backdrop-blur-sm shadow-lg rounded-lg overflow-hidden z-20 border border-neutral-200/60 ring-1 ring-black ring-opacity-5">
+                <p className="px-3 py-2 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Sırala</p>
+                {[
+                  { key: 'dateDesc', label: 'Tarih: En Yeni' },
+                  { key: 'dateAsc', label: 'Tarih: En Eski' },
+                  { key: 'priceDesc', label: 'Fiyat: Yüksekten Düşüğe' },
+                  { key: 'priceAsc', label: 'Fiyat: Düşükten Yükseğe' },
+                ].map(opt => (
+                  <button 
+                    key={opt.key}
+                    className={`w-full px-3 py-2 text-left text-sm transition-colors flex items-center justify-between ${sortOrder === opt.key ? 'bg-neutral-50 text-sky-700 font-medium' : 'text-neutral-700 hover:bg-neutral-50'}`}
+                    onClick={() => handleSort(opt.key as any)}
+                  >
+                    {opt.label}
+                    {sortOrder === opt.key && <CheckIcon className="h-4 w-4 text-sky-600" />}
+                  </button>
+                ))}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Rezervasyon sekmeleri */}
-      <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-700">
-        <button 
-          onClick={() => setBookingTab('upcoming')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 ${
-            bookingTab === 'upcoming'
-              ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}
-        >
-          Yaklaşan
-        </button>
-        <button 
-          onClick={() => setBookingTab('past')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 ${
-            bookingTab === 'past'
-              ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}
-        >
-          Geçmiş
-        </button>
-        <button 
-          onClick={() => setBookingTab('cancelled')}
-          className={`px-4 py-2 text-sm font-medium border-b-2 ${
-            bookingTab === 'cancelled'
-              ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-          }`}
-        >
-          İptal Edilen
-        </button>
+      <div className="border-b border-neutral-200">
+        <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+          {[
+            { key: 'upcoming', label: 'Yaklaşan' },
+            { key: 'past', label: 'Geçmiş' },
+            { key: 'cancelled', label: 'İptal Edilen' },
+          ].map(tab => (
+            <button 
+              key={tab.key}
+              onClick={() => setBookingTab(tab.key)}
+              className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-150 focus:outline-none ${
+                bookingTab === tab.key
+                  ? 'border-sky-600 text-sky-600'
+                  : 'border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
       </div>
 
-      {/* Rezervasyon listesi */}
-      <div className="space-y-4">
-        {bookings[bookingTab].length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500 dark:text-gray-400">
-            <CalendarIcon className="h-12 w-12 mb-3" />
-            <h3 className="text-lg font-medium">Henüz rezervasyonunuz yok</h3>
-            <p className="mt-1">Yeni bir rezervasyon yapmak için keşfetmeye başlayın.</p>
-            <button className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-              Otel Ara
-            </button>
+      <div className="space-y-5">
+        {currentBookings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-center py-16 px-6 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
+            <div className="p-3 bg-neutral-100 rounded-full mb-4">
+              <CalendarIcon className="h-8 w-8 text-neutral-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-neutral-700">Bu sekmede rezervasyon bulunmuyor</h3>
+            <p className="mt-1 text-neutral-500 text-sm max-w-xs">Farklı bir sekmeyi kontrol edin veya keşfetmeye başlayarak yeni maceralar planlayın.</p>
           </div>
         ) : (
-          bookings[bookingTab].map((booking) => (
+          currentBookings.map((booking) => (
             <div 
               key={booking.id} 
-              className="flex flex-col md:flex-row bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow transition-shadow"
+              className="flex flex-col md:flex-row bg-white rounded-xl overflow-hidden border border-neutral-200/50 shadow-sm transition-shadow hover:shadow-md"
             >
-              <div className="relative h-48 md:h-auto md:w-1/3 md:max-w-xs">
-                <Image
-                  src={booking.image}
-                  alt={booking.name}
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute top-2 left-2">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-white dark:bg-gray-800 shadow">
-                    {booking.type === 'hotel' ? 'Otel' : 'Tur'}
+              <div className="relative h-48 md:h-auto md:w-1/3 md:max-w-xs flex-shrink-0 bg-neutral-100">
+                {booking.image ? (
+                  <Image
+                    src={booking.image}
+                    alt={booking.name}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 320px"
+                    className="object-cover"
+                    priority={bookingTab === 'upcoming'}
+                  />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center text-neutral-400">
+                    <BanknotesIcon className="h-16 w-16" />
+                  </div>
+                )}
+                <div className="absolute top-3 left-3">
+                  <span className="inline-block px-2.5 py-1 text-xs font-semibold rounded-full bg-white/80 backdrop-blur-sm text-neutral-700 border border-neutral-200/80 shadow-sm">
+                    {booking.type === 'hotel' ? 'Otel Konaklama' : 'Tur Aktivitesi'}
                   </span>
                 </div>
               </div>
               
-              <div className="flex-1 p-4 flex flex-col">
-                <div className="flex justify-between">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">{booking.name}</h3>
-                    <div className="flex items-center mt-1 text-sm text-gray-500 dark:text-gray-400">
-                      <MapPinIcon className="h-4 w-4 mr-1" />
-                      <span>{booking.location}</span>
+              <div className="flex-1 p-4 md:p-5 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start gap-2 mb-2">
+                    <div className="flex-grow">
+                      <h3 className="text-base font-semibold text-neutral-900 line-clamp-1" title={booking.name}>{booking.name}</h3>
+                      <div className="flex items-center mt-1 text-xs text-neutral-500">
+                        <MapPinIcon className="h-3.5 w-3.5 mr-1.5 flex-shrink-0 text-neutral-400" />
+                        <span className="line-clamp-1" title={booking.location}>{booking.location}</span>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0 mt-0.5">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full capitalize ${
+                        booking.status === 'confirmed' 
+                          ? 'bg-green-100 text-green-800 ring-1 ring-inset ring-green-200' 
+                          : booking.status === 'completed'
+                            ? 'bg-sky-100 text-sky-800 ring-1 ring-inset ring-sky-200'
+                            : 'bg-red-100 text-red-800 ring-1 ring-inset ring-red-200'
+                      }`}>
+                        {booking.status === 'confirmed' ? 'Onaylandı' : booking.status === 'completed' ? 'Tamamlandı' : 'İptal Edildi'}
+                      </span>
                     </div>
                   </div>
                   
-                  <div>
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      booking.status === 'confirmed' 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-300' 
-                        : booking.status === 'completed'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300'
-                          : 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300'
-                    }`}>
-                      {booking.status === 'confirmed' 
-                        ? 'Onaylandı' 
-                        : booking.status === 'completed'
-                          ? 'Tamamlandı'
-                          : 'İptal Edildi'}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                  {booking.type === 'hotel' ? (
-                    <>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <CalendarIcon className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" />
-                        <span>Giriş: {formatDate(booking.checkIn || '')}</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <CalendarIcon className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" />
-                        <span>Çıkış: {formatDate(booking.checkOut || '')}</span>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <CalendarIcon className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" />
-                        <span>Tarih: {formatDate(booking.date || '')}</span>
-                      </div>
-                      <div className="flex items-center text-gray-700 dark:text-gray-300">
-                        <ClockIcon className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" />
-                        <span>Saat: {booking.time}</span>
-                      </div>
-                    </>
-                  )}
-                  <div className="flex items-center text-gray-700 dark:text-gray-300">
-                    <UsersIcon className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" />
-                    <span>{booking.guests} Kişi</span>
-                  </div>
-                  <div className="flex items-center text-gray-700 dark:text-gray-300">
-                    <TicketIcon className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" />
-                    <span>#{booking.bookingNumber}</span>
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs text-neutral-600 border-t border-neutral-100 pt-3">
+                    {booking.type === 'hotel' ? (
+                      <>
+                        <div className="flex items-center">
+                          <CalendarIcon className="h-4 w-4 mr-1.5 text-neutral-400 flex-shrink-0" />
+                          <span>Giriş: <span className="font-medium text-neutral-700">{formatDate(booking.checkIn || '')}</span></span>
+                        </div>
+                        <div className="flex items-center">
+                          <CalendarIcon className="h-4 w-4 mr-1.5 text-neutral-400 flex-shrink-0" />
+                          <span>Çıkış: <span className="font-medium text-neutral-700">{formatDate(booking.checkOut || '')}</span></span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center">
+                          <CalendarIcon className="h-4 w-4 mr-1.5 text-neutral-400 flex-shrink-0" />
+                          <span>Tarih: <span className="font-medium text-neutral-700">{formatDate(booking.date || '')}</span></span>
+                        </div>
+                        <div className="flex items-center">
+                          <ClockIcon className="h-4 w-4 mr-1.5 text-neutral-400 flex-shrink-0" />
+                          <span>Saat: <span className="font-medium text-neutral-700">{booking.time || '-'}</span></span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex items-center">
+                      <UsersIcon className="h-4 w-4 mr-1.5 text-neutral-400 flex-shrink-0" />
+                      <UsersIcon className="h-3.5 w-3.5 mr-1 text-neutral-400 flex-shrink-0" />
+                      <span>{booking.guests} Kişi</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between">
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">
+                <div className="mt-4 pt-3 flex flex-col sm:flex-row sm:items-center justify-between border-t border-neutral-100 gap-3">
+                  <div className="text-lg font-semibold text-neutral-900 flex-shrink-0">
                     {booking.price.toLocaleString('tr-TR')} ₺
                   </div>
-                  
-                  <div className="mt-3 md:mt-0 flex space-x-2">
+                  <div className="flex space-x-2 flex-shrink-0">
                     {booking.status === 'confirmed' && (
                       <button 
                         onClick={() => onCancelBooking(booking.id)}
-                        className="px-3 py-1 text-sm border border-red-200 text-red-600 hover:bg-red-50 rounded-lg"
+                        className="px-3 py-1.5 text-xs font-medium border border-red-200 text-red-600 hover:bg-red-50 rounded-md transition-colors"
                       >
                         İptal Et
                       </button>
                     )}
                     <button
                       onClick={() => onViewDetails(booking)}
-                      className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                      className="px-3 py-1.5 text-xs font-medium bg-white hover:bg-neutral-50 text-sky-600 rounded-md transition-colors border border-neutral-200 shadow-sm"
                     >
                       Detaylar
                     </button>

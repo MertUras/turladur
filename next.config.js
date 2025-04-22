@@ -48,9 +48,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'via.placeholder.com',
         pathname: '/**',
-      }
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatar.vercel.sh',
+        pathname: '/**',
+      },
     ],
-    domains: ['images.unsplash.com', 'source.unsplash.com'],
+    domains: ['images.unsplash.com', 'source.unsplash.com', 'avatar.vercel.sh'],
   },
   webpack: (config, { isServer }) => {
     // Node modüllerini client-side transpilation'dan hariç tut

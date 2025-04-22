@@ -111,7 +111,7 @@ export default function Header() {
   };
 
   // Hangi sayfalarda başlangıçta açık renk header kullanılacağını belirle
-  const lightBackgroundRoutes = ['/about', '/contact'];
+  const lightBackgroundRoutes = ['/about', '/contact', '/profile', '/bookings'];
   const forceScrolledAppearance = lightBackgroundRoutes.includes(pathname);
 
   // Dinamik stiller için değişkenler
