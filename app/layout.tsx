@@ -4,7 +4,7 @@ import "./globals.css";
 import AuthProvider from "../components/providers/AuthProvider";
 import ChatWidgetWrapper from "./components/ChatWidgetWrapper";
 import { ThemeProvider } from "./providers/theme-provider";
-
+import { Toaster } from "react-hot-toast";
 const montserrat = Montserrat({
   subsets: ["latin"],
   variable: "--font-montserrat",
@@ -42,6 +42,7 @@ export default function RootLayout({
             <ChatWidgetWrapper />
           </ThemeProvider>
         </AuthProvider>
+        <Toaster position="bottom-left" />
       </body>
     </html>
   );

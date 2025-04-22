@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from 'zod'; // Import zod for validation
 
 // Daha kapsamlı cevaplar içeren yanıt seti
 const responses: Record<string, string> = {
@@ -73,16 +74,17 @@ const destinations = {
 // Yanıt vermek için varsayılan mesaj
 const defaultResponse = "Sorunuz için teşekkürler! Şu anda bu konu hakkında detaylı bilgi veremiyorum, ancak müşteri temsilcilerimizden biri en kısa sürede size yardımcı olacaktır. Başka bir konuda yardımcı olabilir miyim?";
 
-// Türkçe karakterleri normalize eden yardımcı fonksiyon
-function normalizeTurkishText(text: string): string {
-  return text.toLowerCase()
-    .replace(/İ/g, 'i')
-    .replace(/I/g, 'ı')
-    .replace(/Ş/g, 'ş')
-    .replace(/Ğ/g, 'ğ')
-    .replace(/Ü/g, 'ü')
-    .replace(/Ö/g, 'ö')
-    .replace(/Ç/g, 'ç')
+// Türkçe karakterleri normalize eden yardımcı fonksiyon (Karşılaştırma için)
+function normalizeTurkishTextForComparison(text: string): string {
+  if (!text) return ''; // Boş veya tanımsız girişi işle
+  return text
+    .toLowerCase() // Önce küçük harfe çevir
+    .replace(/ı/g, 'i')
+    .replace(/ş/g, 's')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
     .trim();
 }
 
@@ -95,34 +97,60 @@ const conversations = new Map<string, {
   suggestedQuestions?: {id: string, question: string}[]
 }>();
 
+// Define schema for request body validation
+const chatRequestSchema = z.object({
+  message: z.string().trim().min(1, { message: "Mesaj boş olamaz." }),
+  userId: z.string().optional(), // userId optional for now
+});
+
 // Kullanıcının mesajını analiz eden yardımcı fonksiyon
 function analyzeMessage(message: string, userId: string = 'default') {
-  // Türkçe karakterleri düzgün şekilde normalize et
-  const normalizedMessage = normalizeTurkishText(message);
-  
+  // Karşılaştırma için yeni normalizasyon fonksiyonunu kullan
+  const normalizedMessage = normalizeTurkishTextForComparison(message);
+  console.log(`[${userId}] Normalized message (for comparison): "${normalizedMessage}"`); // Log input
+
   // Kullanıcı bağlamını al veya oluştur
   let userContext = conversations.get(userId);
   if (!userContext) {
+      console.log(`[${userId}] Creating new context.`);
     userContext = {
       context: '',
       lastInteraction: new Date(),
       messageCount: 0
     };
     conversations.set(userId, userContext);
+  } else {
+      // Clean up old conversations periodically (e.g., older than 1 hour) - Basic example
+      const now = new Date();
+      if (now.getTime() - userContext.lastInteraction.getTime() > 3600000) { // 1 hour
+           console.log(`[${userId}] Context expired, creating new one.`);
+          conversations.delete(userId);
+          userContext = {
+              context: '',
+              lastInteraction: new Date(),
+              messageCount: 0
+          };
+          conversations.set(userId, userContext);
+      } else {
+          console.log(`[${userId}] Using existing context. Last topic: ${userContext.lastTopic}`);
+      }
   }
-  
+
+
   // Mesaj sayısını ve son etkileşim zamanını güncelle
   userContext.messageCount++;
   userContext.lastInteraction = new Date();
-  
+
   // Konuşma bağlamını güncelle
   if (userContext.lastTopic) {
     userContext.context += `Son konu: ${userContext.lastTopic}. `;
   }
-  
+
   // Destinasyon kontrolü
   for (const [dest, info] of Object.entries(destinations)) {
-    if (normalizedMessage.includes(normalizeTurkishText(dest))) {
+    // Destinasyonu da aynı şekilde normalize et
+    if (normalizedMessage.includes(normalizeTurkishTextForComparison(dest))) {
+      console.log(`[${userId}] Destination match: "${dest}"`); // Log match
       userContext.lastTopic = dest;
       return {
         message: info,
@@ -150,15 +178,17 @@ function analyzeMessage(message: string, userId: string = 'default') {
     {text: "hava durumu", key: "hava"}
   ];
 
-  // Hızlı yanıt için tam metin kontrolü (Türkçe karakter duyarlılığı olmadan)
+  // Hızlı yanıt için tam metin kontrolü (Yeni normalizasyon ile)
   for (const item of quickResponseTexts) {
-    const normalizedText = normalizeTurkishText(item.text);
+    // Hızlı yanıt metnini de aynı şekilde normalize et
+    const normalizedText = normalizeTurkishTextForComparison(item.text);
     if (normalizedMessage === normalizedText) {
+      console.log(`[${userId}] Quick response match: "${item.key}" (Normalized Text: "${normalizedText}")`); // Log match
       userContext.lastTopic = item.key;
-      
+
       // İlgili sorular öner
       let suggestedQuestions;
-      
+
       if (item.key === "fiyat") {
         suggestedQuestions = [
           { id: 'indirim', question: 'İndirim fırsatlarınız var mı?' },
@@ -176,28 +206,35 @@ function analyzeMessage(message: string, userId: string = 'default') {
           .sort(() => 0.5 - Math.random())
           .slice(0, 2);
       }
-      
+
+      // Ensure response exists, otherwise use default
+      const responseMessage = responses[item.key] ? responses[item.key] : defaultResponse;
+      if (!responses[item.key]) {
+          console.warn(`[${userId}] Missing response for quick response key: "${item.key}". Using default.`);
+      }
+
       return {
-        message: responses[item.key],
-        suggestedQuestions
+        message: responseMessage,
+        suggestedQuestions: suggestedQuestions || [] // Ensure suggestedQuestions is always an array
       };
     }
   }
 
   // Kullanıcının daha önce sorduğu soru ile ilgili takip sorusu olabilir mi?
-  if (userContext.lastTopic && normalizedMessage.length < 15 && 
-      (normalizedMessage.includes("evet") || 
-       normalizedMessage.includes("hayir") || 
-       normalizedMessage.includes("detay") || 
-       normalizedMessage.includes("daha") || 
+  if (userContext.lastTopic && normalizedMessage.length < 15 &&
+      (normalizedMessage.includes("evet") || // Bunlar zaten ASCII
+       normalizedMessage.includes("hayir") ||
+       normalizedMessage.includes("detay") ||
+       normalizedMessage.includes("daha") ||
        normalizedMessage.includes("baska"))) {
+     console.log(`[${userId}] Follow-up question detected for topic: "${userContext.lastTopic}"`); // Log match
     // Önceki konuyla ilgili takip sorusu
     const lastTopic = userContext.lastTopic;
-    
+
     if (responses[lastTopic]) {
       // Konu hakkında daha fazla sorular öner
       let relatedQuestions;
-      
+
       if (lastTopic === "fiyat") {
         relatedQuestions = [
           { id: 'indirim', question: 'İndirim fırsatlarınız var mı?' },
@@ -215,11 +252,13 @@ function analyzeMessage(message: string, userId: string = 'default') {
           .sort(() => 0.5 - Math.random())
           .slice(0, 2);
       }
-      
+
       return {
         message: `${responses[lastTopic]}\n\nBaşka bir sorunuz var mı?`,
-        suggestedQuestions: relatedQuestions
+        suggestedQuestions: relatedQuestions || [] // Ensure suggestedQuestions is always an array
       };
+    } else {
+        console.warn(`[${userId}] Missing response for follow-up topic: "${lastTopic}". Falling back.`);
     }
   }
 
@@ -250,161 +289,90 @@ function analyzeMessage(message: string, userId: string = 'default') {
     { terms: ["hava", "hava durumu", "mevsim", "iklim", "yagmur", "sicaklik", "soguk"], key: "hava" }
   ];
 
-  // Tam eşleşme kontrolü - Türkçe karakter duyarlılığı olmadan
-  for (const item of keywords) {
-    if (item.terms.some(term => {
-      const normalizedTerm = normalizeTurkishText(term);
-      return normalizedMessage.includes(normalizedTerm);
-    })) {
-      userContext.lastTopic = item.key;
-      
-      // İlgili sorular öner
-      let suggestedQuestions;
-      
-      if (item.key === "fiyat") {
-        suggestedQuestions = [
-          { id: 'indirim', question: 'İndirim fırsatlarınız var mı?' },
-          { id: 'ödeme', question: 'Hangi ödeme yöntemlerini kabul ediyorsunuz?' }
-        ];
-      } else if (item.key === "rezervasyon") {
-        suggestedQuestions = [
-          { id: 'iptal', question: 'İptal politikanız nedir?' },
-          { id: 'belge', question: 'Rezervasyon için hangi belgeler gerekli?' }
-        ];
-      } else {
-        // Rastgele 2 soru öner
-        suggestedQuestions = faq
-          .filter(q => q.id !== item.key)
+  // Kelime bazlı kontrol (Yeni normalizasyon ile)
+  console.log(`[${userId}] Starting keyword check for: "${normalizedMessage}"`); // Log start
+  for (const { terms, key } of keywords) {
+    const isMatch = terms.some(term => {
+        // Anahtar kelime terimini de aynı şekilde normalize et
+        const normalizedTerm = normalizeTurkishTextForComparison(term);
+        const check = normalizedMessage.includes(normalizedTerm);
+        // Add detailed comparison logging
+        console.log(`[${userId}]   -- Comparing Msg: "${normalizedMessage}" | Term: "${term}" (Normalized: "${normalizedTerm}") | Includes? ${check}`);
+        return check;
+    });
+
+    if (isMatch) {
+      // Eşleşen terimi loglamak için küçük bir ekleme (debugging için)
+       const matchingTerm = terms.find(term => normalizedMessage.includes(normalizeTurkishTextForComparison(term)));
+      console.log(`[${userId}] Keyword match FOUND: key="${key}" (Matching Term Original: "${matchingTerm}")`); // Log success
+      userContext.lastTopic = key;
+
+      // İlgili sorular öner (önceki mantıkla benzer)
+      let suggestedQuestions = faq
+          .filter(q => q.id !== key)
           .sort(() => 0.5 - Math.random())
           .slice(0, 2);
-      }
-      
+
+      // Ensure response exists, otherwise use default
+      const responseMessage = responses[key] ? responses[key] : defaultResponse;
+       if (!responses[key]) {
+           console.warn(`[${userId}] Missing response for keyword key: "${key}". Using default.`);
+       }
+
       return {
-        message: responses[item.key],
-        suggestedQuestions
+        message: responseMessage,
+        suggestedQuestions: suggestedQuestions || [] // Ensure suggestedQuestions is always an array
       };
     }
   }
-  
-  // Hiçbir eşleşme bulunamadıysa
-  if (userContext.messageCount <= 2) {
-    // Yeni kullanıcı için genel bilgi ve kılavuz
-    return {
-      message: "Size en iyi şekilde yardımcı olabilmem için turlar, fiyatlar, rezervasyon veya destinasyonlar hakkında spesifik sorular sorabilirsiniz. Kapadokya, İstanbul, Pamukkale, Fethiye gibi destinasyonlarımız hakkında bilgi almak ister misiniz?",
-      suggestedQuestions: faq.slice(0, 4) // İlk 4 SSS'yi göster
-    };
-  }
-  
+
+  // Eşleşme bulunamazsa varsayılan yanıtı ve rastgele soruları ver
+  console.log(`[${userId}] No match found. Returning default response.`); // Log default case
+  userContext.lastTopic = undefined; // Reset topic if no match
   return {
     message: defaultResponse,
-    suggestedQuestions: faq
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 3) // Rastgele 3 soru öner
+    suggestedQuestions: faq.sort(() => 0.5 - Math.random()).slice(0, 3) // Suggest 3 random general questions
   };
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, userId = 'default' } = await request.json();
-    console.log("Gelen mesaj:", message);
-    
-    // Türkçe karakter düzeltmelerini içeren özel kontrol
-    // İptal politikası sorgusu için özel kontrol
-    if (message.toLowerCase().includes("iptal") || 
-        message.replace(/İ/g, "i").toLowerCase().includes("iptal") ||
-        message.includes("İptal") ||
-        message.includes("İptal politikası") || 
-        message.includes("iptal politikası") ||
-        message === "İptal Politikası") {
-      console.log("İptal politikası sorgusu tespit edildi");
-      return NextResponse.json({ 
-        message: responses["iptal"],
-        suggestedQuestions: [
-          { id: 'rezervasyon', question: 'Nasıl rezervasyon yapabilirim?' },
-          { id: 'ödeme', question: 'Ödeme seçenekleri nelerdir?' }
-        ],
-        timestamp: new Date().toISOString()
-      });
+    // 1. Parse and Validate Request Body
+    const body = await request.json();
+    const validationResult = chatRequestSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      console.error("Validation Error:", validationResult.error.errors);
+      // Return structured error response
+      return NextResponse.json({
+        success: false,
+        error: "Geçersiz istek: " + validationResult.error.errors.map(e => e.message).join(', ')
+      }, { status: 400 }); // Bad Request
     }
-    
-    // İndirim fırsatları sorgusu için özel kontrol
-    if (message.toLowerCase().includes("indirim") || 
-        message.replace(/İ/g, "i").toLowerCase().includes("indirim") ||
-        message.includes("İndirim") ||
-        message.includes("İndirim fırsatları") ||
-        message.includes("indirim fırsatları") ||
-        message === "İndirim fırsatları var mı?") {
-      console.log("İndirim fırsatları sorgusu tespit edildi");
-      return NextResponse.json({ 
-        message: responses["indirim"],
-        suggestedQuestions: [
-          { id: 'rezervasyon', question: 'Nasıl rezervasyon yapabilirim?' },
-          { id: 'fiyat', question: 'Turların fiyatları ne kadar?' }
-        ],
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    // Çocuklar için uygunluk sorgusu için özel kontrol
-    if (message.toLowerCase().includes("çocuk") || 
-        message.replace(/Ç/g, "c").toLowerCase().includes("cocuk") ||
-        message.includes("Çocuk") ||
-        message.includes("Çocuklar için uygunluk") ||
-        message.includes("çocuklar için uygunluk")) {
-      console.log("Çocuklar için uygunluk sorgusu tespit edildi");
-      return NextResponse.json({ 
-        message: responses["çocuk"],
-        suggestedQuestions: [
-          { id: 'fiyat', question: 'Çocuk indirimleri ne kadar?' },
-          { id: 'konaklama', question: 'Konaklama tesisleriniz nasıl?' }
-        ],
-        timestamp: new Date().toISOString()
-      });
-    }
-    
-    // Doğrudan sorgu görüntüleme için
-    const specificQueries = {
-      "Fiyatlar hakkında bilgi": "fiyat",
-      "Rezervasyon nasıl yapılır": "rezervasyon",
-      "İptal politikası": "iptal",
-      "Ödeme seçenekleri": "ödeme",
-      "İletişim bilgileri": "iletişim",
-      "Tur tarihleri": "tarih",
-      "Konaklama seçenekleri": "konaklama",
-      "Çocuklar için uygunluk": "çocuk",
-      "En popüler turları göster": "popüler"
-    };
-    
-    // Tam metin karşılaştırması
-    for (const [query, key] of Object.entries(specificQueries)) {
-      if (message.trim() === query || message.replace(/İ/g, "i").replace(/Ç/g, "c").trim().toLowerCase() === query.replace(/İ/g, "i").replace(/Ç/g, "c").toLowerCase()) {
-        console.log(`Tam metin eşleşmesi: "${query}" -> "${key}"`);
-        return NextResponse.json({ 
-          message: responses[key],
-          suggestedQuestions: faq
-            .filter(q => q.id !== key)
-            .sort(() => 0.5 - Math.random())
-            .slice(0, 2),
-          timestamp: new Date().toISOString()
-        });
-      }
-    }
-    
-    // Yukarıdaki kontrollerde eşleşme olmazsa normal analiz fonksiyonuna geç
-    console.log("Normal analiz fonksiyonuna geçiliyor...");
-    const analysis = analyzeMessage(message, userId);
-    
-    // Yanıt ver
-    return NextResponse.json({ 
-      message: analysis.message,
-      suggestedQuestions: analysis.suggestedQuestions || [],
-      timestamp: new Date().toISOString(),
+
+    const { message, userId } = validationResult.data;
+
+    // 2. Analyze Message and Get Response
+    const responseData = analyzeMessage(message, userId);
+
+    // 3. Return Successful Response
+    return NextResponse.json({
+      success: true,
+      message: responseData.message,
+      suggestedQuestions: responseData.suggestedQuestions,
+      timestamp: new Date().toISOString() // Add timestamp to response
     });
+
   } catch (error) {
-    console.error("Chat API hatası:", error);
-    return NextResponse.json(
-      { error: "Mesajınız işlenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin." },
-      { status: 500 }
-    );
+    // 4. Handle Unexpected Errors
+    console.error("Chat API Error:", error);
+
+    // Log the error appropriately (e.g., using a logging service)
+
+    // Return generic error response
+    return NextResponse.json({
+      success: false,
+      error: "Bir sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin."
+    }, { status: 500 }); // Internal Server Error
   }
 }

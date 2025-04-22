@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Send, X, MessageCircle, BellRing, Smile, ThumbsUp } from "lucide-react";
+import { useState, useRef, useEffect, Fragment } from "react";
+import { Send, X, MessageCircle, BellRing, Smile, ThumbsUp, Trash2, ChevronDown, Loader2, AlertTriangle } from "lucide-react";
 import Image from "next/image";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+import { Transition, Dialog } from "@headlessui/react";
 
 type Message = {
   id: string;
@@ -12,6 +13,9 @@ type Message = {
   timestamp: Date;
   rich?: boolean;
   suggestedQuestions?: SuggestedQuestion[];
+  hideSuggested?: boolean;
+  feedbackGiven?: boolean;
+  isError?: boolean;
 };
 
 type SuggestedQuestion = {
@@ -57,7 +61,10 @@ export default function ChatWidget() {
   const [isTypingAnimation, setIsTypingAnimation] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
   const [showQuickResponses, setShowQuickResponses] = useState(true);
-  const [userId, setUserId] = useState<string>(''); // Kullanıcı ID'si için state
+  const [userId, setUserId] = useState<string>('');
+  const [hiddenSuggestions, setHiddenSuggestions] = useState<Record<string, boolean>>({});
+  const [feedbackStates, setFeedbackStates] = useState<Record<string, boolean>>({});
+  const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const firstRenderRef = useRef(true);
@@ -65,12 +72,10 @@ export default function ChatWidget() {
 
   // Kullanıcı ID'si oluşturma
   useEffect(() => {
-    // Eğer yerel depolamada bir kullanıcı ID'si varsa onu al
     const storedUserId = localStorage.getItem('chat_user_id');
     if (storedUserId) {
       setUserId(storedUserId);
     } else {
-      // Yoksa yeni bir ID oluştur ve kaydet
       const newUserId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       setUserId(newUserId);
       localStorage.setItem('chat_user_id', newUserId);
@@ -179,13 +184,16 @@ export default function ChatWidget() {
     }
   };
 
-  const clearChat = () => {
-    if (window.confirm('Tüm sohbet geçmişini silmek istediğinize emin misiniz?')) {
-      setMessages(initialMessages);
-      localStorage.removeItem('chat_messages');
-      localStorage.removeItem('last_read_index');
-      setUnreadCount(0);
-    }
+  const openClearConfirm = () => {
+    setIsClearConfirmOpen(true);
+  };
+
+  const handleConfirmClear = () => {
+    setMessages(initialMessages);
+    localStorage.removeItem('chat_messages');
+    localStorage.removeItem('last_read_index');
+    setUnreadCount(0);
+    setIsClearConfirmOpen(false);
   };
 
   const simulateTyping = async (text: string) => {
@@ -198,7 +206,6 @@ export default function ChatWidget() {
   const handleSendMessage = async (text = input) => {
     if (text.trim() === "") return;
 
-    // Kullanıcı mesajı
     const userMessage: Message = {
       id: Date.now().toString(),
       text,
@@ -210,53 +217,68 @@ export default function ChatWidget() {
     setInput("");
     setIsLoading(true);
     setShowEmojis(false);
+    setHiddenSuggestions({});
 
     try {
-      // API'ye istek gönder
       const response = await axios.post("/api/chat", {
         message: text,
-        userId: userId, // Kullanıcı ID'sini gönder
+        userId: userId,
       });
 
-      // Önerilen soruları al
-      const suggestedQuestions = response.data.suggestedQuestions || [];
+      if (response.data && response.data.success) {
+        const botResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          text: response.data.message,
+          isBot: true,
+          timestamp: new Date(response.data.timestamp),
+          rich: true,
+          suggestedQuestions: response.data.suggestedQuestions || [],
+          hideSuggested: false,
+          feedbackGiven: false,
+        };
+        // Simulate typing before adding bot response
+        await simulateTyping(response.data.message);
+        setMessages((prev) => [...prev, botResponse]);
 
-      // Bot yanıtı
-      const botResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: await simulateTyping(response.data.message),
-        isBot: true,
-        timestamp: new Date(response.data.timestamp),
-        rich: true,
-        suggestedQuestions: suggestedQuestions
-      };
-
-      setMessages((prev) => [...prev, botResponse]);
-      
-      // Sohbet penceresi açık değilse, bildirim göster
-      if (!isOpen && 'Notification' in window && Notification.permission === 'granted') {
-        new Notification('TourTech Destek', {
-          body: botResponse.text.substring(0, 100) + (botResponse.text.length > 100 ? '...' : ''),
-          icon: '/favicon.ico'
-        });
+        if (!isOpen) {
+           if ('Notification' in window && Notification.permission === 'granted') {
+             new Notification('TourTech Destek', {
+               body: botResponse.text.substring(0, 100) + (botResponse.text.length > 100 ? '...' : ''),
+               icon: '/favicon.ico'
+             });
+           }
+           playNotificationSound();
+        }
+      } else {
+        const errorMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            text: response.data.error || "Beklenmedik bir sunucu hatası oluştu.",
+            isBot: true,
+            timestamp: new Date(),
+            rich: false,
+            isError: true,
+        };
+        setMessages((prev) => [...prev, errorMessage]);
       }
 
-      // Ses efekti
-      if (!isOpen) {
-        playNotificationSound();
-      }
     } catch (error) {
       console.error("Chat API hatası:", error);
-      
-      // Hata durumunda kullanıcıya bilgi ver
+      let errorText = "Mesajınız gönderilirken bir sorun oluştu. Lütfen tekrar deneyin.";
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError<{ error?: string }>;
+        if (axiosError.response && axiosError.response.data && axiosError.response.data.error) {
+          errorText = axiosError.response.data.error;
+        }
+      }
+
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: "Özür dileriz, mesajınız iletilemedi. Lütfen daha sonra tekrar deneyin.",
+        text: errorText,
         isBot: true,
         timestamp: new Date(),
-        rich: true,
+        rich: false,
+        isError: true,
       };
-      
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -279,9 +301,14 @@ export default function ChatWidget() {
   const handleQuickResponse = (text: string) => {
     handleSendMessage(text);
   };
-  
-  const handleSuggestedQuestion = (question: string) => {
+
+  const handleSuggestedQuestion = (question: string, messageId: string) => {
+    setHiddenSuggestions(prev => ({ ...prev, [messageId]: true }));
     handleSendMessage(question);
+  };
+
+  const handleFeedbackClick = (messageId: string) => {
+      setFeedbackStates(prev => ({ ...prev, [messageId]: true }));
   };
 
   const addEmoji = (emoji: string) => {
@@ -291,33 +318,20 @@ export default function ChatWidget() {
 
   const formatRichText = (text: string) => {
     if (!text) return '';
-    
-    // Satır sonlarını <br> ile değiştir
     let formattedText = text.replace(/\n/g, '<br>');
-    
-    // Madde işaretli listeleri formatla
-    formattedText = formattedText.replace(/•\s(.*?)(<br>|$)/g, '<li>$1</li>');
+    formattedText = formattedText.replace(/•\s(.*?)(<br>|$)/g, '<li class="ml-4">$1</li>');
     if (formattedText.includes('<li>')) {
-      formattedText = formattedText.replace(/<li>(.*?)<\/li>/g, '<ul class="list-disc pl-5 my-2">$&</ul>');
-      formattedText = formattedText.replace(/<\/ul><ul class="list-disc pl-5 my-2">/g, '');
+      formattedText = formattedText.replace(/<li>(.*?)<\/li>/g, '<ul class="list-disc list-outside mb-1">$&</ul>').replace(/<\/ul><ul/g, '<ul');
     }
-    
-    // Numaralı listeleri formatla
-    formattedText = formattedText.replace(/(\d+)\.\s(.*?)(<br>|$)/g, '<li>$2</li>');
+    formattedText = formattedText.replace(/(\d+)\.\s(.*?)(<br>|$)/g, '<li class="ml-4">$2</li>');
     if (formattedText.includes('<li>') && !formattedText.includes('list-disc')) {
-      formattedText = formattedText.replace(/<li>(.*?)<\/li>/g, '<ol class="list-decimal pl-5 my-2">$&</ol>');
-      formattedText = formattedText.replace(/<\/ol><ol class="list-decimal pl-5 my-2">/g, '');
+      formattedText = formattedText.replace(/<li>(.*?)<\/li>/g, '<ol class="list-decimal list-outside mb-1">$&</ol>').replace(/<\/ol><ol/g, '<ol');
     }
-    
-    // Emojileri vurgula
-    formattedText = formattedText.replace(/([\uD800-\uDBFF][\uDC00-\uDFFF])/g, '<span class="text-lg">$1</span>');
-    
-    // Önemli terimleri vurgulamak için
+    formattedText = formattedText.replace(/([\uD800-\uDBFF][\uDC00-\uDFFF])/g, '<span class="inline-block align-middle">$1</span>');
     const highlightTerms = ['%100', '%75', '%50', 'iade', 'TourTech Wallet', 'Fethiye', 'Kapadokya', 'İstanbul', 'Pamukkale', 'Antalya'];
     highlightTerms.forEach(term => {
-      formattedText = formattedText.replace(new RegExp(term, 'g'), `<span class="font-semibold text-blue-600 dark:text-blue-400">${term}</span>`);
+      formattedText = formattedText.replace(new RegExp(term, 'g'), `<span class="font-medium text-sky-600 dark:text-sky-400">${term}</span>`);
     });
-    
     return formattedText;
   };
 
@@ -327,255 +341,333 @@ export default function ChatWidget() {
     }
   }, [messages, isTypingAnimation]);
 
-  // Emojiler
   const emojis = ["😊", "👍", "🙏", "❤️", "👋", "🌟", "🏖️", "🧳", "🗺️", "✈️", "🏨", "🏞️", "🚌", "🎫"];
 
   return (
-    <div className="fixed bottom-5 right-5 z-50">
-      {isOpen ? (
-        <div className={`bg-white dark:bg-gray-800 rounded-xl shadow-lg flex flex-col ${
-          isMobile ? 'fixed inset-x-2 top-20 bottom-2' : 'w-[350px] sm:w-[380px] h-[500px]'
-        } border border-gray-100 dark:border-gray-700 overflow-hidden transition-all animate-fadeIn`}
-        style={{
-          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)'
-        }}
+    <Fragment>
+      <div className="fixed bottom-5 right-5 z-[1000]">
+        <Transition
+          show={isOpen}
+          as={Fragment}
+          enter="transition-all duration-300 ease-out"
+          enterFrom="opacity-0 scale-95"
+          enterTo="opacity-100 scale-100"
+          leave="transition-all duration-200 ease-in"
+          leaveFrom="opacity-100 scale-100"
+          leaveTo="opacity-0 scale-95"
         >
-          {/* Chat Header */}
-          <div className="bg-blue-600 text-white p-3 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md overflow-hidden">
-                <Image 
-                  src="/images/chat-bot.png" 
-                  alt="TourTech Logo"
-                  width={32}
-                  height={32}
-                  className="rounded-full"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%232563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
-                  }}
-                />
-              </div>
-              <div>
-                <h3 className="font-medium text-base">TourTech Destek</h3>
-                <div className="flex items-center text-xs text-blue-100">
-                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block mr-1.5 animate-pulse"></span>
-                  <span>Çevrimiçi</span>
+          <div className={`bg-white dark:bg-neutral-900 rounded-lg shadow-lg flex flex-col ${
+            isMobile ? 'fixed inset-x-2 top-16 bottom-4' : 'w-80 md:w-96 h-[500px] md:h-[600px]'
+          } border border-neutral-200 dark:border-neutral-700 overflow-hidden`}
+          >
+            <div className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700 p-3 flex justify-between items-center flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="relative w-9 h-9">
+                  <Image
+                    src="/images/chat-bot.png"
+                    alt="Destek Avatarı"
+                    fill
+                    className="rounded-full object-cover bg-neutral-100 dark:bg-neutral-800"
+                     onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.outerHTML = `<span class="flex items-center justify-center w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-500"><MessageCircle size={20} /></span>`;
+                    }}
+                  />
+                   <span className="absolute bottom-0 right-0 block w-2.5 h-2.5 bg-green-500 rounded-full ring-2 ring-white dark:ring-neutral-900"></span>
+                </div>
+                <div>
+                  <h3 className="font-medium text-sm text-neutral-800 dark:text-neutral-100">TourTech Destek</h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Genellikle hemen yanıt verir</p>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={requestNotificationPermission}
-                className="text-white hover:bg-blue-500 p-1.5 rounded-full transition-colors"
-                title="Bildirimlere izin ver"
-              >
-                <BellRing className="h-4 w-4" />
-              </button>
-              <button
-                onClick={clearChat}
-                className="text-white hover:bg-blue-500 p-1.5 rounded-full transition-colors"
-                title="Sohbeti temizle"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-              <button
-                onClick={toggleChat}
-                className="text-white hover:bg-blue-500 p-1.5 rounded-full transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-gray-50 dark:bg-gray-900">
-            {messages.map((msg, index) => (
-              <div
-                key={msg.id}
-                className="flex flex-col gap-2"
-              >
-                <div
-                  className={`flex ${
-                    msg.isBot ? "justify-start" : "justify-end"
-                  } animate-fadeIn`}
+              <div className="flex items-center">
+                <button
+                   onClick={openClearConfirm}
+                   className="p-1.5 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors"
+                   title="Sohbeti temizle"
+                   aria-label="Sohbet geçmişini temizle"
                 >
-                  {msg.isBot && (
-                    <div className="w-8 h-8 rounded-full bg-blue-500 flex-shrink-0 mr-2 flex items-center justify-center">
-                      <MessageCircle className="h-4 w-4 text-white" />
+                  <Trash2 size={16} />
+                </button>
+                <button
+                  onClick={toggleChat}
+                   className="p-1.5 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors ml-1"
+                  aria-label="Sohbet penceresini kapat"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div
+              aria-live="polite"
+              className="flex-1 overflow-y-auto p-4 space-y-2 bg-neutral-50 dark:bg-neutral-800/30 scrollbar-thin scrollbar-thumb-neutral-300 dark:scrollbar-thumb-neutral-700 scrollbar-track-transparent"
+            >
+              {messages.map((msg, index) => {
+                const prevMessage = messages[index - 1];
+                const isSameSenderAsPrev = prevMessage ? prevMessage.isBot === msg.isBot : false;
+                const nextMessage = messages[index + 1];
+                const isSameSenderAsNext = nextMessage ? nextMessage.isBot === msg.isBot : false;
+
+                return (
+                  <div key={msg.id} className={`flex flex-col ${isSameSenderAsNext ? 'mb-0.5' : 'mb-2.5'}`}>
+                    <div className={`flex items-start gap-2.5 ${msg.isBot ? "justify-start" : "justify-end"}`}>
+                      {msg.isBot && !isSameSenderAsPrev && (
+                         <div className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-700 flex-shrink-0 flex items-center justify-center mt-1">
+                           <MessageCircle size={14} className="text-neutral-600 dark:text-neutral-400" />
+                         </div>
+                      )}
+                      {msg.isBot && isSameSenderAsPrev && <div className="w-6 flex-shrink-0 mr-2.5"></div>}
+
+                      <div
+                        className={`max-w-[80%] md:max-w-[75%] px-3.5 py-2.5 rounded-lg ${
+                          msg.isBot
+                            ? msg.isError
+                              ? "bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-600/50"
+                              : "bg-neutral-100 dark:bg-neutral-700 text-neutral-800 dark:text-neutral-100"
+                            : "bg-sky-500 dark:bg-sky-600 text-white"
+                        }
+                         ${isSameSenderAsPrev ? '' : (msg.isBot ? 'rounded-tl-none' : 'rounded-tr-none')} 
+                         ${isSameSenderAsNext ? '' : (msg.isBot ? 'rounded-bl-none' : 'rounded-br-none')}
+                        `}
+                      >
+                        {msg.isBot && msg.isError && (
+                            <AlertTriangle size={14} className="mr-1.5 -mt-0.5 inline-block text-red-500" />
+                        )}
+                        {msg.rich && !msg.isError ? (
+                          <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none prose-p:my-0 prose-ul:my-0.5 prose-ol:my-0.5 prose-li:m-0" dangerouslySetInnerHTML={{ __html: formatRichText(msg.text) }}></div>
+                        ) : (
+                          <p className={`text-sm leading-relaxed ${msg.isError ? 'font-medium' : ''}`}>{msg.text}</p>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  <div
-                    className={`max-w-[80%] rounded-lg px-3 py-2 ${
-                      msg.isBot
-                        ? "bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-sm"
-                        : "bg-blue-500 text-white"
-                    }`}
-                    style={{
-                      borderTopLeftRadius: msg.isBot ? '4px' : '16px',
-                      borderTopRightRadius: !msg.isBot ? '4px' : '16px',
-                    }}
-                  >
-                    {msg.rich ? (
-                      <div className="text-sm" dangerouslySetInnerHTML={{ __html: formatRichText(msg.text) }}></div>
-                    ) : (
-                      <p className="text-sm">{msg.text}</p>
-                    )}
-                    <div className="flex justify-between items-center mt-1">
-                      <p className="text-xs opacity-70">
-                        {new Date(msg.timestamp).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                      {msg.isBot && (
-                        <button 
-                          className="text-xs opacity-50 hover:opacity-100 transition-all" 
-                          title="Bu yanıt faydalı oldu"
-                          onClick={() => alert('Teşekkürler! Geri bildiriminiz alındı.')}
+                    <div className={`flex items-center justify-end mt-0.5 px-1 ${msg.isBot ? 'ml-8' : ''}`}>
+                      {msg.isBot && !msg.isError && !isSameSenderAsNext && (
+                        <button
+                          className={`transition-colors text-xs mr-2 ${
+                            feedbackStates[msg.id]
+                              ? 'text-sky-500 dark:text-sky-400'
+                              : 'text-neutral-400 dark:text-neutral-500 hover:text-sky-500 dark:hover:text-sky-400'
+                          }`}
+                          title={feedbackStates[msg.id] ? "Alındı" : "Faydalı oldu"}
+                          aria-label={feedbackStates[msg.id] ? "Beğenildi" : "Beğen"}
+                          disabled={feedbackStates[msg.id]}
+                          onClick={() => handleFeedbackClick(msg.id)}
                         >
-                          <ThumbsUp className="h-3 w-3" />
+                          <ThumbsUp size={14} />
                         </button>
                       )}
+                      <p className={`text-xs ${msg.isError ? 'text-red-500/80' : 'text-neutral-400 dark:text-neutral-500'}`}>
+                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                       </p>
                     </div>
+
+                    {msg.isBot && !msg.isError && msg.suggestedQuestions && msg.suggestedQuestions.length > 0 && !hiddenSuggestions[msg.id] && (
+                       <div className="ml-8 mt-1.5 flex flex-wrap gap-1.5">
+                         {msg.suggestedQuestions.map((q) => (
+                           <button
+                            key={`${msg.id}-${q.id}`}
+                            onClick={() => handleSuggestedQuestion(q.question, msg.id)}
+                             className="text-xs text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/30 hover:bg-sky-100 dark:hover:bg-sky-900/50 px-2.5 py-1 rounded-md transition-colors"
+                          >
+                            {q.question}
+                           </button>
+                         ))}
+                       </div>
+                    )}
                   </div>
-                  {!msg.isBot && (
-                    <div className="w-8 h-8 rounded-full bg-blue-500 flex-shrink-0 ml-2 flex items-center justify-center">
-                      <span className="text-white text-xs font-medium">Siz</span>
+                );
+              })}
+              {isTypingAnimation && (
+                 <div className="flex items-start gap-2.5 mb-2.5">
+                    <div className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-700 flex-shrink-0 flex items-center justify-center mt-1">
+                      <MessageCircle size={14} className="text-neutral-600 dark:text-neutral-400" />
                     </div>
-                  )}
+                    <div className="bg-neutral-100 dark:bg-neutral-700 rounded-lg rounded-tl-none px-3.5 py-2.5">
+                       <div className="flex space-x-1.5 items-center">
+                         <div className="h-1.5 w-1.5 bg-neutral-400 dark:bg-neutral-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                         <div className="h-1.5 w-1.5 bg-neutral-400 dark:bg-neutral-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                         <div className="h-1.5 w-1.5 bg-neutral-400 dark:bg-neutral-500 rounded-full animate-bounce"></div>
+                       </div>
+                     </div>
+                   </div>
+              )}
+              {isLoading && !isTypingAnimation && (
+                <div className="flex justify-center items-center p-3">
+                  <Loader2 size={20} className="text-neutral-500 animate-spin" />
                 </div>
-                
-                {/* Önerilen Sorular */}
-                {msg.isBot && msg.suggestedQuestions && msg.suggestedQuestions.length > 0 && (
-                  <div className="ml-10 flex flex-wrap gap-2 animate-fadeIn">
-                    {msg.suggestedQuestions.map((q, qIndex) => (
-                      <button
-                        key={`${msg.id}-${q.id}-${qIndex}`}
-                        onClick={() => handleSuggestedQuestion(q.question)}
-                        className="text-xs bg-blue-50 hover:bg-blue-100 dark:bg-gray-700 dark:hover:bg-gray-600 text-blue-600 dark:text-blue-300 px-3 py-1.5 rounded-full border border-blue-100 dark:border-gray-600 transition-colors"
-                      >
-                        {q.question}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-            {isTypingAnimation && (
-              <div className="flex justify-start animate-fadeIn">
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex-shrink-0 mr-2 flex items-center justify-center">
-                  <MessageCircle className="h-4 w-4 text-white" />
-                </div>
-                <div className="bg-white dark:bg-gray-800 rounded-lg px-4 py-3 shadow-sm"
-                  style={{ borderTopLeftRadius: '4px' }}>
-                  <div className="flex space-x-2">
-                    <div className="h-2 w-2 bg-blue-400 rounded-full animate-bounce"></div>
-                    <div className="h-2 w-2 bg-blue-400 rounded-full animate-bounce delay-75"></div>
-                    <div className="h-2 w-2 bg-blue-400 rounded-full animate-bounce delay-150"></div>
-                  </div>
-                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {messages.length <= 3 && (
+              <div className="border-t border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3 flex-shrink-0">
+                 <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-2">Veya şunları deneyin:</p>
+                 <div className="flex flex-wrap gap-1.5">
+                   {quickResponses.slice(0, 4).map((response) => (
+                     <button
+                       key={response.id}
+                       onClick={() => handleQuickResponse(response.text)}
+                       className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 text-xs rounded-md transition-colors"
+                     >
+                       {response.text}
+                     </button>
+                   ))}
+                 </div>
               </div>
             )}
-            <div ref={messagesEndRef} />
-          </div>
 
-          {/* Hızlı Yanıtlar */}
-          {messages.length <= 3 && (
-            <div className="border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
-              <button 
-                onClick={() => setShowQuickResponses(!showQuickResponses)}
-                className="w-full px-3 py-2 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Hızlı Yanıtlar</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-gray-400 transition-transform ${showQuickResponses ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-              
-              <div className={`transition-all duration-200 overflow-y-auto ${
-                showQuickResponses ? 'max-h-56 opacity-100 p-3' : 'max-h-0 opacity-0 p-0'
-              }`}>
-                <div className="flex flex-wrap gap-2">
-                  {quickResponses.map((response) => (
+            <Transition
+              show={showEmojis}
+              enter="transition-opacity ease-in-out duration-200"
+              enterFrom="opacity-0"
+              enterTo="opacity-100"
+              leave="transition-opacity ease-in-out duration-150"
+              leaveFrom="opacity-100"
+              leaveTo="opacity-0"
+            >
+              <div className="p-2 border-t border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex-shrink-0">
+                <div className="grid grid-cols-8 gap-0.5">
+                  {emojis.map((emoji, index) => (
                     <button
-                      key={response.id}
-                      onClick={() => handleQuickResponse(response.text)}
-                      className="px-3 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm rounded-lg transition-colors border border-gray-100 dark:border-gray-600 flex-shrink-0"
+                      key={index}
+                      onClick={() => addEmoji(emoji)}
+                      className="aspect-square flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-md transition-colors text-lg"
+                       aria-label={`Emoji: ${emoji}`}
                     >
-                      {response.text}
+                      {emoji}
                     </button>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
+            </Transition>
 
-          {/* Emoji Picker */}
-          {showEmojis && (
-            <div className="p-2 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 animate-fadeIn">
-              <div className="flex flex-wrap gap-1 justify-center">
-                {emojis.map((emoji, index) => (
-                  <button
-                    key={index}
-                    onClick={() => addEmoji(emoji)}
-                    className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                  >
-                    <span className="text-lg">{emoji}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Chat Input */}
-          <div className="border-t border-gray-100 dark:border-gray-700 p-3 bg-white dark:bg-gray-800">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 relative">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Mesajınızı yazın..."
-                  className="w-full py-2 px-4 pr-10 border border-gray-200 dark:border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                />
+            <div className="border-t border-neutral-200 dark:border-neutral-700 p-2.5 bg-white dark:bg-neutral-900 flex-shrink-0">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowEmojis(!showEmojis)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-500 transition-colors"
+                  className={`p-1.5 rounded-md text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors ${showEmojis ? 'bg-neutral-100 dark:bg-neutral-800' : ''}`}
+                   aria-label={showEmojis ? "Emoji kapat" : "Emoji aç"}
                 >
-                  <Smile className="h-5 w-5" />
+                  <Smile size={20} />
+                </button>
+                <div className="flex-1 relative">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Mesajınızı yazın..."
+                    className="w-full py-2 px-3.5 border border-neutral-300 dark:border-neutral-600 rounded-lg focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder-neutral-400 dark:placeholder-neutral-500 text-sm transition-colors"
+                    disabled={isLoading}
+                    aria-label="Sohbet mesajı"
+                  />
+                </div>
+                <button
+                  onClick={() => handleSendMessage()}
+                  disabled={input.trim() === "" || isLoading || isTypingAnimation}
+                  className="bg-sky-500 text-white p-2 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed hover:bg-sky-600 active:bg-sky-700 transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500 focus:ring-offset-1 dark:focus:ring-offset-neutral-900 shrink-0"
+                  aria-label={isLoading ? "Gönderiliyor" : "Gönder"}
+                >
+                  {isLoading && !isTypingAnimation ? (
+                      <Loader2 size={20} className="animate-spin" />
+                  ) : (
+                      <Send size={20} />
+                  )}
                 </button>
               </div>
-              <button
-                onClick={() => handleSendMessage()}
-                disabled={input.trim() === "" || isLoading}
-                className="bg-blue-500 text-white p-2 rounded-full disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors"
-              >
-                <Send className="h-5 w-5" />
-              </button>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="relative animate-fadeIn">
-          {unreadCount > 0 && (
-            <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full min-w-6 h-6 px-1.5 flex items-center justify-center shadow-md border-2 border-white">
-              {unreadCount}
+        </Transition>
+
+        <Transition
+            show={!isOpen}
+            as={Fragment}
+            enter="transition-opacity duration-200 delay-100 ease-out"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="transition-opacity duration-100 ease-in"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+        >
+            <div className="relative">
+              {unreadCount > 0 && (
+                <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center shadow border border-white dark:border-neutral-900">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </div>
+              )}
+              <button
+                onClick={toggleChat}
+                className="bg-sky-500 text-white p-3 rounded-full shadow-md hover:bg-sky-600 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-900"
+                aria-label="Sohbeti Aç"
+              >
+                <MessageCircle size={24} />
+              </button>
             </div>
-          )}
-          <button
-            onClick={toggleChat}
-            className="bg-blue-500 text-white p-3 rounded-full shadow-md hover:bg-blue-600 transition-colors"
-            aria-label="Destek Sohbeti Aç"
+        </Transition>
+      </div>
+
+      <Transition appear show={isClearConfirmOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-[1100]" onClose={() => setIsClearConfirmOpen(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-200"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-150"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
           >
-            <MessageCircle className="h-6 w-6" />
-          </button>
-        </div>
-      )}
-    </div>
+            <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-200"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-150"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-lg bg-white dark:bg-neutral-800 p-6 text-left align-middle shadow-xl transition-all">
+                  <Dialog.Title
+                    as="h3"
+                    className="text-lg font-medium leading-6 text-neutral-900 dark:text-neutral-100"
+                  >
+                    Sohbeti Temizle
+                  </Dialog.Title>
+                  <div className="mt-2">
+                    <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                      Tüm sohbet geçmişini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                    </p>
+                  </div>
+
+                  <div className="mt-5 sm:mt-6 flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-3 space-y-2 space-y-reverse sm:space-y-0">
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-md border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 px-4 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-200 shadow-sm hover:bg-neutral-50 dark:hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-800 transition-colors"
+                      onClick={() => setIsClearConfirmOpen(false)}
+                    >
+                      İptal
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:focus:ring-offset-neutral-800 transition-colors"
+                      onClick={handleConfirmClear}
+                    >
+                      Sil
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+    </Fragment>
   );
 } 

@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 // Statik arka plan görseli (Daha modern bir görsel seçilebilir)
-const staticHeroImage = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2070&auto=format&fit=crop"; 
+const staticHeroImage = "https://images.unsplash.com/photo-1583062482795-d2bef78e9bc1?q=80&w=2070&auto=format&fit=crop"; 
 
 // Modal için gerekli veriler
 const locations = [
