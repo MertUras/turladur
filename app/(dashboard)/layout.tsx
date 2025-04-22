@@ -7,8 +7,8 @@ import Footer from "../components/Footer";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "TourTech - Dashboard",
-    description: "TourTech - Türkiye'nin En İyi Tur Deneyimleri",
+    title: "Turladur",
+    description: "Turladur - Türkiye'nin En İyi Tur Deneyimleri",
 };
 
 export default function DashboardLayout({

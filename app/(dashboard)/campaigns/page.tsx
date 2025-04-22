@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 //import LiveCampaigns from "../components/LiveCampaigns";
 import { FireIcon, ClockIcon, TagIcon, SparklesIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
+import LiveCampaigns from "@/app/components/LiveCampaigns";
 
 // Kampanya tipini tanımlıyoruz
 type Campaign = {
@@ -85,7 +86,7 @@ const campaigns: Campaign[] = [
 
 export default function CampaignsPage() {
   return (
-    <main className="pt-24 bg-gradient-to-b from-gray-50 via-white to-gray-50 min-h-screen">
+    <div className="pt-24 bg-gradient-to-b from-gray-50 via-white to-gray-50 min-h-screen">
       {/* HERO BÖLÜMÜ */}
       <div className="relative h-[500px] w-full overflow-hidden">
         <Image
@@ -163,7 +164,7 @@ export default function CampaignsPage() {
           </section>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 

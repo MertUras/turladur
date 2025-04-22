@@ -116,7 +116,7 @@ const benefits = [
     title: 'Esnek Çalışma Modelleri',
     description: 'Hibrit ve uzaktan çalışma seçenekleriyle iş-yaşam dengenizi destekliyoruz.',
     icon: ClockIcon,
-    color: 'text-indigo-600'
+    color: 'text-sky-600'
   },
   {
     title: 'Kapsamlı Sağlık Paketi',
@@ -134,13 +134,13 @@ const benefits = [
     title: 'Rekabetçi Yan Haklar',
     description: 'Performansa dayalı primler, yemek kartı ve ulaşım desteği.',
     icon: CheckBadgeIcon,
-    color: 'text-indigo-600'
+    color: 'text-sky-600'
   },
   {
     title: 'Dinamik ve Destekleyici Kültür',
     description: 'Takım etkinlikleri, sosyal kulüpler ve iş birliğine dayalı pozitif bir çalışma ortamı.',
     icon: UserGroupIcon,
-    color: 'text-orange-500'
+    color: 'text-sky-600'
   },
   {
     title: 'Teknoloji ve Araçlar',
@@ -186,48 +186,51 @@ const applicationProcess = [
 
 export default function CareersPage() {
   return (
-    <main className="bg-white text-gray-800">
-      {/* Hero Section - Refined */}
-      <section className="relative h-[70vh] md:h-[80vh] overflow-hidden bg-gray-900">
+    <main className="bg-neutral-50 text-neutral-800">
+      {/* Hero Section - Final Refinement */}
+      <section className="relative h-[70vh] md:h-[80vh] overflow-hidden bg-neutral-900">
         <Image
           src="https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
           alt="TourTech Ekibi Çalışıyor"
           fill
-          className="object-cover opacity-30"
+          className="object-cover opacity-25"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/60 to-black/70"></div>
+        {/* Adjusted overlay to match tour-operator hero */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
         
         <div className="absolute inset-0 flex items-center justify-center text-center">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl mx-auto">
-              <div className="inline-flex items-center justify-center px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-white text-xs font-semibold mb-4 tracking-widest uppercase">
+              {/* Adjusted tag style */}
+              <div className="inline-flex items-center justify-center px-3 py-1 bg-black/20 backdrop-blur-md rounded-full text-white text-xs font-semibold mb-4 tracking-widest uppercase">
                 KARİYER
               </div>
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tighter text-white mb-6 leading-tight">
                 Turizmin Geleceğini<br />
-                <span className="text-orange-400">Birlikte</span> Kodlayalım
+                <span className="text-sky-400">Birlikte</span> Kodlayalım
               </h1>
-              <p className="text-lg md:text-xl text-gray-200 mb-10 leading-relaxed max-w-2xl mx-auto">
+              <p className="text-lg md:text-xl text-neutral-200 mb-10 leading-relaxed max-w-2xl mx-auto">
                 TourTech ailesine katılarak, dinamik ve yenilikçi bir ortamda turizm teknolojilerine yön veren projelerde yer alın.
               </p>
               <a
                 href="#jobs"
-                className="group inline-flex items-center justify-center px-7 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 shadow-lg active:scale-[0.98] tracking-tight"
+                // Adjusted shadow to shadow-sm
+                className="group inline-flex items-center justify-center px-7 py-3 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg transition-colors duration-200 ease-in-out shadow-sm active:scale-[0.98] tracking-tight"
               >
                 <span>Açık Pozisyonlar</span>
-                <ArrowRightIcon className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
+                <ArrowRightIcon className="w-5 h-5 ml-2 transition-transform duration-200 group-hover:translate-x-1" />
               </a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Şirket Kültürü - Refined */}
-      <section className="py-24 md:py-32 bg-gray-50/70">
+      {/* Şirket Kültürü - Switched to white bg, adjusted shadow */}
+      <section className="py-24 md:py-32 bg-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
-            <div className="relative h-80 lg:h-[28rem] rounded-2xl overflow-hidden shadow-xl order-last lg:order-first">
+            <div className="relative h-80 lg:h-[28rem] rounded-2xl overflow-hidden shadow-lg order-last lg:order-first border border-neutral-100">
               <Image
                 src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"
                 alt="TourTech İşbirliği Ortamı"
@@ -238,14 +241,14 @@ export default function CareersPage() {
               <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/10 to-transparent"></div>
             </div>
             <div className="order-first lg:order-last">
-              <p className="text-base font-semibold text-indigo-600 uppercase tracking-wide mb-3">Şirket Kültürümüz</p>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tighter mb-6">
+              <p className="text-base font-semibold text-sky-600 uppercase tracking-wide mb-3">Şirket Kültürümüz</p>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 tracking-tighter mb-6">
                 Yenilikçi, İşbirlikçi ve <br />Destekleyici Bir Ortam
               </h2>
-              <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-                TourTech\'te, çalışanlarımızın potansiyelini en üst düzeye çıkarabileceği, fikirlerini özgürce paylaşabileceği ve sürekli öğrenebileceği bir kültürü benimsiyoruz.
+              <p className="text-lg text-neutral-600 mb-6 leading-relaxed">
+                TourTech'te, çalışanlarımızın potansiyelini en üst düzeye çıkarabileceği, fikirlerini özgürce paylaşabileceği ve sürekli öğrenebileceği bir kültürü benimsiyoruz.
               </p>
-              <ul className="space-y-3 text-gray-700">
+              <ul className="space-y-3 text-neutral-700">
                 {[
                   { icon: LightBulbIcon, text: 'Yenilikçi projelerle sektöre yön verme fırsatı.', color: 'text-indigo-500' },
                   { icon: AcademicCapIcon, text: 'Kapsamlı eğitim ve mentorluk programlarıyla sürekli gelişim imkanı.', color: 'text-emerald-500' },
@@ -263,13 +266,13 @@ export default function CareersPage() {
         </div>
       </section>
 
-      {/* Açık Pozisyonlar - Refined */}
-      <section id="jobs" className="py-24 md:py-32">
+      {/* Açık Pozisyonlar - Switched to neutral bg */}
+      <section id="jobs" className="py-24 md:py-32 bg-neutral-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center mb-16 md:mb-20">
-            <p className="text-base font-semibold text-indigo-600 uppercase tracking-wide mb-3">Bize Katılın</p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tighter mb-5">Açık Pozisyonlarımız</h2>
-            <p className="text-lg text-gray-600 leading-relaxed">
+            <p className="text-base font-semibold text-sky-600 uppercase tracking-wide mb-3">Bize Katılın</p>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 tracking-tighter mb-5">Açık Pozisyonlarımız</h2>
+            <p className="text-lg text-neutral-600 leading-relaxed">
               Dinamik ekibimizin bir parçası olmak ve turizm teknolojilerinin geleceğini şekillendirmek için güncel iş fırsatlarımıza göz atın.
             </p>
           </div>
@@ -282,56 +285,56 @@ export default function CareersPage() {
         </div>
       </section>
 
-      {/* Çalışan Avantajları - Refined */}
-      <section className="py-24 md:py-32 bg-gray-50/70">
+      {/* Çalışan Avantajları - Switched to white bg, refined cards */}
+      <section className="py-24 md:py-32 bg-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center mb-16 md:mb-20">
-            <p className="text-base font-semibold text-indigo-600 uppercase tracking-wide mb-3">Size Sunduklarımız</p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tighter mb-5">Ayrıcalıklı Çalışma Ortamı</h2>
-            <p className="text-lg text-gray-600 leading-relaxed">
+            <p className="text-base font-semibold text-sky-600 uppercase tracking-wide mb-3">Size Sunduklarımız</p>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 tracking-tighter mb-5">Ayrıcalıklı Çalışma Ortamı</h2>
+            <p className="text-lg text-neutral-600 leading-relaxed">
               Başarımızın temelinde yer alan çalışanlarımızın mutluluğu ve gelişimi için sunduğumuz avantajlar.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {benefits.map((benefit, index) => (
-              <div key={index} className="bg-white p-6 rounded-xl border border-gray-100/50 shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out transform hover:-translate-y-1">
-                <div className={`inline-flex items-center justify-center w-10 h-10 rounded-lg bg-${benefit.color.split('-')[1]}-50/70 mb-4`}>
-                  <benefit.icon className={`w-5 h-5 ${benefit.color}`} aria-hidden="true" />
+              <div key={index} className="bg-white p-6 rounded-xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow duration-300 ease-in-out">
+                <div className={`inline-flex items-center justify-center w-10 h-10 rounded-lg bg-sky-50 mb-4`}>
+                  <benefit.icon className={`w-5 h-5 text-sky-600`} aria-hidden="true" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2 tracking-tight">{benefit.title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{benefit.description}</p>
+                <h3 className="text-lg font-semibold text-neutral-900 mb-2 tracking-tight">{benefit.title}</h3>
+                <p className="text-sm text-neutral-600 leading-relaxed">{benefit.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Başvuru Süreci - Refined */}
-      <section className="py-24 md:py-32">
+      {/* Başvuru Süreci - Switched to neutral bg, refined cards */}
+      <section className="py-24 md:py-32 bg-neutral-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center mb-16 md:mb-20">
-            <p className="text-base font-semibold text-indigo-600 uppercase tracking-wide mb-3">Nasıl Başvurulur?</p>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 tracking-tighter mb-5">Başvuru Sürecimiz</h2>
-            <p className="text-lg text-gray-600 leading-relaxed">
+            <p className="text-base font-semibold text-sky-600 uppercase tracking-wide mb-3">Nasıl Başvurulur?</p>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 tracking-tighter mb-5">Başvuru Sürecimiz</h2>
+            <p className="text-lg text-neutral-600 leading-relaxed">
               TourTech ekibine katılma yolculuğunuzdaki adımlar.
             </p>
           </div>
 
           <div className="relative max-w-3xl mx-auto">
-            <div className="absolute left-4 md:left-1/2 top-2 bottom-0 w-0.5 bg-gradient-to-b from-indigo-100 via-orange-100 to-transparent transform md:-translate-x-1/2"></div>
+            <div className="absolute left-4 md:left-1/2 top-2 bottom-0 w-0.5 bg-gradient-to-b from-sky-100 via-sky-100 to-transparent transform md:-translate-x-1/2"></div>
             
             <div className="space-y-8 md:space-y-0">
               {applicationProcess.map((process, index) => (
                 <div key={index} className="relative pl-10 md:pl-0 pb-8 md:pb-12 group last:pb-0">
                   <div className="md:flex items-start">
-                    <div className={`absolute left-4 top-0.5 md:left-1/2 flex items-center justify-center w-7 h-7 rounded-full transform -translate-x-[calc(50%+1px)] md:-translate-x-1/2 border-2 border-white z-10 transition-all duration-300 ease-in-out ${index % 2 === 0 ? 'bg-indigo-500 group-hover:bg-indigo-600' : 'bg-orange-500 group-hover:bg-orange-600'}`}>
+                    <div className={`absolute left-4 top-0.5 md:left-1/2 flex items-center justify-center w-7 h-7 rounded-full transform -translate-x-[calc(50%+1px)] md:-translate-x-1/2 border-2 border-neutral-50 bg-sky-500 group-hover:bg-sky-600 z-10 transition-colors duration-300 ease-in-out`}>
                       <span className="text-xs font-bold text-white">{process.step}</span>
                     </div>
                     <div className={`w-full md:w-1/2 ${index % 2 === 0 ? 'md:pr-10' : 'md:pl-10 md:order-last'}`}>
-                      <div className="bg-white p-5 rounded-lg shadow-md hover:shadow-lg border border-gray-100/50 transition-all duration-300 ease-in-out relative md:top-[-0.8rem]">
-                        <h3 className={`text-base font-semibold mb-1.5 tracking-tight ${index % 2 === 0 ? 'text-indigo-800' : 'text-orange-700'}`}>{process.title}</h3>
-                        <p className="text-sm text-gray-600 leading-relaxed">{process.description}</p>
+                      <div className="bg-white p-5 rounded-lg shadow-sm hover:shadow-md border border-neutral-100/80 transition-shadow duration-300 ease-in-out relative md:top-[-0.8rem]">
+                        <h3 className={`text-base font-semibold text-neutral-800 mb-1.5 tracking-tight`}>{process.title}</h3>
+                        <p className="text-sm text-neutral-600 leading-relaxed">{process.description}</p>
                       </div>
                     </div>
                     <div className={`hidden md:block md:w-1/2 ${index % 2 === 0 ? 'md:pl-10' : 'md:pr-10 md:order-first'}`}></div>
@@ -343,21 +346,21 @@ export default function CareersPage() {
         </div>
       </section>
 
-      {/* Başvuru CTA - Refined */}
-      <section className="py-24 md:py-32 bg-gradient-to-r from-indigo-700 to-purple-800">
+      {/* Başvuru CTA - Simplified background, adjusted text/button */}
+      <section className="py-24 md:py-32 bg-sky-600">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-white tracking-tighter mb-5">
             Kariyerinizde Parlamaya Hazır mısınız?
           </h2>
-          <p className="text-lg md:text-xl text-indigo-100 max-w-3xl mx-auto mb-10 leading-relaxed">
+          <p className="text-lg md:text-xl text-sky-100 max-w-3xl mx-auto mb-10 leading-relaxed">
             Turizm teknolojilerinin geleceğini birlikte inşa etmek için bize katılın. Yeteneklerinizi sergileyin ve fark yaratın.
           </p>
           <a
             href="#jobs"
-            className="group inline-flex items-center justify-center px-7 py-3 bg-white hover:bg-gray-100 text-indigo-700 font-semibold rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 shadow-lg active:scale-[0.98] tracking-tight"
+            className="group inline-flex items-center justify-center px-7 py-3 bg-white hover:bg-neutral-100 text-sky-700 font-semibold rounded-lg transition-colors duration-200 ease-in-out shadow-md active:scale-[0.98] tracking-tight"
           >
             <span>Güncel İlanlara Göz Atın</span>
-            <BriefcaseIcon className="w-5 h-5 ml-2 text-indigo-500 group-hover:text-indigo-600 transition-colors" />
+            <BriefcaseIcon className="w-5 h-5 ml-2 text-sky-600 transition-colors" />
           </a>
         </div>
       </section>
