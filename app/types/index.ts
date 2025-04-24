@@ -116,32 +116,40 @@ export interface TourOperator {
 export interface Tour {
   id: string;
   name: string;
-  description?: string;
+  description: string;
   duration: number;
   price: number;
-  discount?: number;
-  startDate?: Date;
-  endDate?: Date;
-  maxParticipants?: number;
-  currentParticipants?: number;
-  departureCity?: string;
-  region?: string;
-  transportation?: string;
-  period?: string;
-  destinations: string; // JSON formatında
-  inclusions: string; // JSON formatında
-  exclusions: string; // JSON formatında
-  itinerary?: string; // JSON formatında
-  images: string; // JSON formatında
-  features: string; // JSON formatında
-  rating?: number;
-  reviews?: number;
+  discount: number;
+  startDate: Date;
+  endDate: Date;
+  maxParticipants: number;
+  destinations: string[];
+  inclusions: string[];
+  exclusions: string[];
+  itinerary: string[];
+  images: string[];
   featured: boolean;
-  isJointTour?: boolean;
+  departureCity: string;
+  region: string;
+  transportation: string;
+  period: string;
+  rating: number;
+  tourType: string;
+  accommodationType: string;
+  difficultyLevel: string;
+  ageRestriction: string;
+  isPopular: boolean;
+  isLastMinute: boolean;
+  isEarlyBird: boolean;
+  languages: string[];
+  tags: string[];
   createdAt: Date;
   updatedAt: Date;
-  tourOperatorId: string;
-  experienceType?: string;
+  tourOperator: {
+    id: string;
+    name: string;
+    logo: string;
+  };
 }
 
 // Aktiviteler tipleri

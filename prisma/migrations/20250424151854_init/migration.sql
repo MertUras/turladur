@@ -130,6 +130,20 @@ CREATE TABLE "tours" (
     "itinerary" JSONB,
     "images" JSONB NOT NULL DEFAULT '[]',
     "featured" BOOLEAN NOT NULL DEFAULT false,
+    "departureCity" TEXT,
+    "region" TEXT,
+    "transportation" TEXT,
+    "period" TEXT,
+    "rating" DOUBLE PRECISION DEFAULT 0,
+    "tourType" TEXT,
+    "accommodationType" TEXT,
+    "difficultyLevel" TEXT,
+    "ageRestriction" INTEGER,
+    "isPopular" BOOLEAN NOT NULL DEFAULT false,
+    "isLastMinute" BOOLEAN NOT NULL DEFAULT false,
+    "isEarlyBird" BOOLEAN NOT NULL DEFAULT false,
+    "languages" JSONB NOT NULL DEFAULT '[]',
+    "tags" JSONB NOT NULL DEFAULT '[]',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "tourOperatorId" TEXT NOT NULL,
@@ -140,27 +154,40 @@ CREATE TABLE "tours" (
 -- CreateTable
 CREATE TABLE "experiences" (
     "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-    "category" TEXT,
-    "duration" INTEGER NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "longDescription" TEXT NOT NULL,
+    "imageUrl" TEXT NOT NULL,
+    "gallery" JSONB NOT NULL DEFAULT '[]',
+    "location" TEXT NOT NULL,
+    "duration" TEXT NOT NULL,
+    "rating" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "reviewCount" INTEGER NOT NULL DEFAULT 0,
+    "popularityRate" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "price" DOUBLE PRECISION NOT NULL,
-    "discount" DOUBLE PRECISION,
-    "location" TEXT,
-    "city" TEXT,
-    "country" TEXT,
-    "latitude" DOUBLE PRECISION,
-    "longitude" DOUBLE PRECISION,
-    "maxParticipants" INTEGER,
-    "inclusions" JSONB NOT NULL DEFAULT '[]',
-    "exclusions" JSONB NOT NULL DEFAULT '[]',
-    "images" JSONB NOT NULL DEFAULT '[]',
+    "category" TEXT NOT NULL,
+    "included" JSONB NOT NULL DEFAULT '[]',
+    "notIncluded" JSONB NOT NULL DEFAULT '[]',
+    "highlights" JSONB NOT NULL DEFAULT '[]',
+    "schedule" JSONB NOT NULL DEFAULT '[]',
     "featured" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "providerId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
 
     CONSTRAINT "experiences_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "activity_reviews" (
+    "id" TEXT NOT NULL,
+    "rating" DOUBLE PRECISION NOT NULL,
+    "comment" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "userId" TEXT NOT NULL,
+    "experienceId" TEXT NOT NULL,
+
+    CONSTRAINT "activity_reviews_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -202,60 +229,15 @@ CREATE TABLE "reviews" (
 );
 
 -- CreateTable
-CREATE TABLE "Timeline" (
-    "id" SERIAL NOT NULL,
-    "year" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Timeline_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Certification" (
-    "id" SERIAL NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "icon" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Certification_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Statistic" (
-    "id" SERIAL NOT NULL,
-    "number" TEXT NOT NULL,
-    "label" TEXT NOT NULL,
-    "icon" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Statistic_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "CompanyInfo" (
-    "id" SERIAL NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "CompanyInfo_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "posts" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
-    "content" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
-    "image" TEXT,
+    "content" TEXT NOT NULL,
+    "excerpt" TEXT,
+    "coverImage" TEXT,
     "published" BOOLEAN NOT NULL DEFAULT false,
+    "publishedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "authorId" TEXT NOT NULL,
@@ -279,11 +261,10 @@ CREATE TABLE "categories" (
 CREATE TABLE "comments" (
     "id" TEXT NOT NULL,
     "content" TEXT NOT NULL,
-    "approved" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "postId" TEXT NOT NULL,
     "authorId" TEXT NOT NULL,
+    "postId" TEXT NOT NULL,
 
     CONSTRAINT "comments_pkey" PRIMARY KEY ("id")
 );
@@ -304,6 +285,9 @@ CREATE UNIQUE INDEX "bookings_bookingNumber_key" ON "bookings"("bookingNumber");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "posts_slug_key" ON "posts"("slug");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "categories_name_key" ON "categories"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "categories_slug_key" ON "categories"("slug");
@@ -327,7 +311,13 @@ ALTER TABLE "tour_operators" ADD CONSTRAINT "tour_operators_userId_fkey" FOREIGN
 ALTER TABLE "tours" ADD CONSTRAINT "tours_tourOperatorId_fkey" FOREIGN KEY ("tourOperatorId") REFERENCES "tour_operators"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "experiences" ADD CONSTRAINT "experiences_providerId_fkey" FOREIGN KEY ("providerId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "experiences" ADD CONSTRAINT "experiences_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "activity_reviews" ADD CONSTRAINT "activity_reviews_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "activity_reviews" ADD CONSTRAINT "activity_reviews_experienceId_fkey" FOREIGN KEY ("experienceId") REFERENCES "experiences"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "bookings" ADD CONSTRAINT "bookings_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -360,10 +350,10 @@ ALTER TABLE "reviews" ADD CONSTRAINT "reviews_experienceId_fkey" FOREIGN KEY ("e
 ALTER TABLE "posts" ADD CONSTRAINT "posts_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "comments" ADD CONSTRAINT "comments_postId_fkey" FOREIGN KEY ("postId") REFERENCES "posts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "comments" ADD CONSTRAINT "comments_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "comments" ADD CONSTRAINT "comments_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "comments" ADD CONSTRAINT "comments_postId_fkey" FOREIGN KEY ("postId") REFERENCES "posts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_CategoryToPost" ADD CONSTRAINT "_CategoryToPost_A_fkey" FOREIGN KEY ("A") REFERENCES "categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -169,7 +169,7 @@ model TourOperator {
 model Tour {
   id              String   @id @default(cuid())
   name            String
-  description     String?  @db.Text
+  description     String?
   duration        Int
   price           Float
   discount        Float?
@@ -182,6 +182,20 @@ model Tour {
   itinerary       Json?
   images          Json     @default("[]")
   featured        Boolean  @default(false)
+  departureCity   String?
+  region          String?
+  transportation  String?
+  period          String?
+  rating          Float?   @default(0)
+  tourType        String?
+  accommodationType String?
+  difficultyLevel String?
+  ageRestriction  Int?
+  isPopular       Boolean  @default(false)
+  isLastMinute    Boolean  @default(false)
+  isEarlyBird     Boolean  @default(false)
+  languages       Json     @default("[]")
+  tags            Json     @default("[]")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

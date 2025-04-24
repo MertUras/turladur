@@ -26,53 +26,42 @@ import React from "react";
 
 interface Tour {
   id: string;
-  title: string;
+  name: string;
   description: string;
-  price: number;
   duration: number;
-  image: string;
-  rating: number;
-  reviewCount: number;
-  departurePoint: string;
-  departureDate: string;
-  returnDate: string;
-  availableSeats: number;
-  totalSeats: number;
+  price: number;
+  discount: number | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  maxParticipants: number | null;
+  destinations: string[];
+  inclusions: string[];
+  exclusions: string[];
+  itinerary: any;
+  images: string[];
+  featured: boolean;
+  departureCity: string | null;
+  region: string | null;
+  transportation: string | null;
+  period: string | null;
+  rating: number | null;
+  tourType: string | null;
+  accommodationType: string | null;
+  difficultyLevel: string | null;
+  ageRestriction: number | null;
   isPopular: boolean;
   isLastMinute: boolean;
   isEarlyBird: boolean;
-  tourType: string;
-  accommodationType: string;
-  difficultyLevel: string;
-  ageRestriction: number;
   languages: string[];
   tags: string[];
-  region: string;
-  transportationType: string;
-  period: string;
-  startDate: string;
-  discount: number;
-  reviews: number;
-  isFavorite: boolean;
+  createdAt: Date;
+  updatedAt: Date;
   tourOperatorId: string;
-  cancellationPolicy: string;
-  highlights: string[];
-  requirements: string[];
-  mapUrl: string;
-  videoUrl: string;
-  priceHistory: {
-    date: string;
-    price: number;
-  }[];
-  isJointTour: boolean;
-  createdAt: string;
-  updatedAt: string;
-  destinations: string;
-  inclusions: string;
-  exclusions: string;
-  itinerary: string;
-  images: string;
-  features: string;
+  tourOperator: {
+    id: string;
+    name: string;
+    logo: string | null;
+  };
 }
 
 interface FilterOptions {
@@ -141,11 +130,44 @@ export default function ToursPage() {
 
   // Sayfalama ve gösterim seçenekleri
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(15); // Varsayılan değeri 15 olarak değiştirdim
+  const [itemsPerPage, setItemsPerPage] = useState(15);
   const [isLoading, setIsLoading] = useState(false);
+  const [totalTours, setTotalTours] = useState(0);
 
   const [loadingMore, setLoadingMore] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  // Turları getir
+  const fetchTours = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+        search: searchTerm,
+        sortBy: sortBy === 'popular' ? 'createdAt' : sortBy,
+        sortOrder: 'desc'
+      });
+
+      const response = await fetch(`/api/tours?${params}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        setFilteredTours(data.tours);
+        setTotalTours(data.total);
+      } else {
+        console.error('Error fetching tours:', data.error);
+      }
+    } catch (error) {
+      console.error('Error fetching tours:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, itemsPerPage, searchTerm, sortBy]);
+
+  useEffect(() => {
+    fetchTours();
+  }, [fetchTours]);
 
   // Filtreleme seçenekleri
   const departureCities = [
@@ -294,83 +316,51 @@ export default function ToursPage() {
     }, 1000);
   }, []);
 
+  // Filtreleme fonksiyonunu güncelle
   useEffect(() => {
-    let filtered = [...dummyTours];
-    
-    // Mevcut filtreler
-    if (filterOptions.minPrice !== null && filterOptions.maxPrice !== null) {
-      filtered = filtered.filter(tour => 
-        (tour.price || 0) >= filterOptions.minPrice! && 
-        (tour.price || 0) <= filterOptions.maxPrice!
-      );
-    }
-    
-    if (filterOptions.departureCity) {
-      filtered = filtered.filter(tour => tour.departureCity === filterOptions.departureCity);
-    }
-    if (filterOptions.region) {
-      filtered = filtered.filter(tour => tour.region === filterOptions.region);
-    }
-    if (filterOptions.transportation) {
-      filtered = filtered.filter(tour => tour.transportation === filterOptions.transportation);
-    }
-    if (filterOptions.duration) {
-      filtered = filtered.filter(tour => tour.duration?.toString() === filterOptions.duration);
-    }
-    if (filterOptions.period) {
-      filtered = filtered.filter(tour => tour.period === filterOptions.period);
-    }
-    if (filterOptions.featured) {
-      filtered = filtered.filter(tour => tour.featured);
-    }
-    
-    // Yeni filtreler
-    if (filterOptions.tourType) {
-      filtered = filtered.filter(tour => tour.tourType === filterOptions.tourType);
-    }
-    if (filterOptions.accommodationType) {
-      filtered = filtered.filter(tour => tour.accommodationType === filterOptions.accommodationType);
-    }
-    if (filterOptions.difficultyLevel) {
-      filtered = filtered.filter(tour => tour.difficultyLevel === filterOptions.difficultyLevel);
-    }
-    if (filterOptions.ageRestriction) {
-      filtered = filtered.filter(tour => (tour.ageRestriction || 0) <= filterOptions.ageRestriction!);
-    }
-    if (filterOptions.rating) {
-      filtered = filtered.filter(tour => (tour.rating || 0) >= filterOptions.rating!);
-    }
-    if (filterOptions.dateRange[0] && filterOptions.dateRange[1]) {
-      filtered = filtered.filter(tour => {
-        const startDate = new Date(tour.startDate || '');
-        return startDate >= filterOptions.dateRange[0]! && startDate <= filterOptions.dateRange[1]!;
-      });
-    }
-    if (filterOptions.isPopular) {
-      filtered = filtered.filter(tour => tour.isPopular);
-    }
-    if (filterOptions.isLastMinute) {
-      filtered = filtered.filter(tour => tour.isLastMinute);
-    }
-    if (filterOptions.isEarlyBird) {
-      filtered = filtered.filter(tour => tour.isEarlyBird);
-    }
-    if (filterOptions.languages.length > 0) {
-      filtered = filtered.filter(tour => 
-        tour.languages?.some(lang => filterOptions.languages.includes(lang))
-      );
-    }
-    if (filterOptions.tags.length > 0) {
-      filtered = filtered.filter(tour => 
-        tour.tags?.some(tag => filterOptions.tags.includes(tag))
-      );
-    }
-    
-    // Sıralama uygula
-    filtered = sortTours(filtered);
-    
-    setFilteredTours(filtered);
-  }, [filterOptions, sortBy]);
+    const applyFilters = async () => {
+      try {
+        setIsLoading(true);
+        const params = new URLSearchParams({
+          page: '1',
+          limit: itemsPerPage.toString(),
+          search: searchTerm,
+          sortBy: sortBy === 'popular' ? 'createdAt' : sortBy,
+          sortOrder: 'desc'
+        });
+
+        // Filtre parametrelerini ekle
+        if (filterOptions.minPrice) params.append('minPrice', filterOptions.minPrice.toString());
+        if (filterOptions.maxPrice) params.append('maxPrice', filterOptions.maxPrice.toString());
+        if (filterOptions.departureCity) params.append('departureCity', filterOptions.departureCity);
+        if (filterOptions.region) params.append('region', filterOptions.region);
+        if (filterOptions.transportation) params.append('transportation', filterOptions.transportation);
+        if (filterOptions.duration) params.append('duration', filterOptions.duration);
+        if (filterOptions.period) params.append('period', filterOptions.period);
+        if (filterOptions.featured) params.append('featured', 'true');
+        if (filterOptions.rating) params.append('minRating', filterOptions.rating.toString());
+        if (filterOptions.dateRange[0]) params.append('startDate', filterOptions.dateRange[0].toISOString());
+        if (filterOptions.dateRange[1]) params.append('endDate', filterOptions.dateRange[1].toISOString());
+
+        const response = await fetch(`/api/tours?${params}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          setFilteredTours(data.tours);
+          setTotalTours(data.total);
+          setCurrentPage(1);
+        } else {
+          console.error('Error filtering tours:', data.error);
+        }
+      } catch (error) {
+        console.error('Error filtering tours:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    applyFilters();
+  }, [filterOptions, itemsPerPage, searchTerm, sortBy]);
 
   // Filtreleri sıfırla
   const resetFilters = () => {
@@ -453,11 +443,10 @@ export default function ToursPage() {
 
   // Performans optimizasyonu için memoize edilmiş tur kartı bileşeni
   const TourCard = React.memo(({ tour }: { tour: Tour }) => {
-    const tourImages = parseJsonString<string[]>(tour.images || '[]', []);
-    const destinations = parseJsonString<string[]>(tour.destinations || '[]', []);
-    const tourOperator = dummyTourOperators.find(op => op.id === tour.tourOperatorId);
-    const remainingSpots = (tour.maxParticipants || 0) - (tour.currentParticipants || 0);
-    const startDate = new Date(tour.startDate || new Date());
+    const destinations = tour.destinations;
+    const tourOperator = tour.tourOperator;
+    const remainingSpots = tour.maxParticipants || 0;
+    const startDate = tour.startDate || new Date();
     const discountedPrice = tour.discount && tour.price 
       ? tour.price * (1 - (tour.discount || 0) / 100) 
       : tour.price || 0;
@@ -472,7 +461,7 @@ export default function ToursPage() {
           <div className="relative h-64 overflow-hidden">
             <div className="relative w-full h-full">
               <Image
-                src={tourImages[0] || '/images/tours/default.jpg'}
+                src={tour.images[0] || '/images/tours/default.jpg'}
                 alt={tour.name || 'Tur görseli'}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -515,11 +504,6 @@ export default function ToursPage() {
                   </div>
                   <span className="text-white text-sm font-medium">{tourOperator?.name}</span>
                 </div>
-                {tour.isJointTour && (
-                  <div className="bg-white/20 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full">
-                    Ortak Tur
-                  </div>
-                )}
               </div>
               <div className="flex items-center text-white/90 text-sm">
                 <MapPin className="h-4 w-4 mr-1" />
@@ -537,17 +521,17 @@ export default function ToursPage() {
             <div className="flex flex-wrap gap-2 mb-4">
               {tour.tourType && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {tourTypes.find(t => t.type === tour.tourType)?.label || tour.tourType}
+                  {tour.tourType}
                 </span>
               )}
-              {tour.transportationType && (
+              {tour.transportation && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  {transportationTypes.find(t => t.type === tour.transportationType)?.type || tour.transportationType}
+                  {tour.transportation}
                 </span>
               )}
               {tour.accommodationType && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  {accommodationTypes.find(t => t.type === tour.accommodationType)?.label || tour.accommodationType}
+                  {tour.accommodationType}
                 </span>
               )}
             </div>
@@ -592,7 +576,7 @@ export default function ToursPage() {
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Puan</div>
-                  <div className="text-sm font-medium">{tour.rating || 0}/5 ({tour.reviews || 0})</div>
+                  <div className="text-sm font-medium">{tour.rating || 0}/5</div>
                 </div>
               </div>
             </div>
@@ -1406,11 +1390,6 @@ export default function ToursPage() {
                                     </div>
                                     <span className="text-white text-sm font-medium">{tourOperator?.name}</span>
                                   </div>
-                                  {tour.isJointTour && (
-                                    <div className="bg-white/20 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full">
-                                      Ortak Tur
-                                    </div>
-                                  )}
                                 </div>
                                 <div className="flex items-center text-white/90 text-sm">
                                   <MapPin className="h-4 w-4 mr-1" />
@@ -1428,17 +1407,17 @@ export default function ToursPage() {
                               <div className="flex flex-wrap gap-2 mb-4">
                                 {tour.tourType && (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    {tourTypes.find(t => t.type === tour.tourType)?.label || tour.tourType}
+                                    {tour.tourType}
                                   </span>
                                 )}
-                                {tour.transportationType && (
+                                {tour.transportation && (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    {transportationTypes.find(t => t.type === tour.transportationType)?.type || tour.transportationType}
+                                    {tour.transportation}
                                   </span>
                                 )}
                                 {tour.accommodationType && (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                    {accommodationTypes.find(t => t.type === tour.accommodationType)?.label || tour.accommodationType}
+                                    {tour.accommodationType}
                                   </span>
                                 )}
                               </div>
@@ -1483,7 +1462,7 @@ export default function ToursPage() {
                                   </div>
                                   <div>
                                     <div className="text-xs text-gray-500">Puan</div>
-                                    <div className="text-sm font-medium">{tour.rating || 0}/5 ({tour.reviews || 0})</div>
+                                    <div className="text-sm font-medium">{tour.rating || 0}/5</div>
                                   </div>
                                 </div>
                               </div>

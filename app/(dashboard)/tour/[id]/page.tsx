@@ -7,6 +7,7 @@ import { dummyTours, dummyTourOperators } from "@/app/lib/dummy-data";
 import { parseJsonString } from "@/app/utils/format";
 import BottomBookingBar from "@/app/components/BottomBookingBar";
 import { useEffect, useRef, useState } from "react";
+import { useParams } from 'next/navigation';
 
 // Heroicons bileşenlerini içe aktarıyoruz
 import {
@@ -39,6 +40,47 @@ import {
 // Solid ikonları
 import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
 
+interface Tour {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;
+  price: number;
+  discount: number | null;
+  startDate: Date | null;
+  endDate: Date | null;
+  maxParticipants: number | null;
+  destinations: string[];
+  inclusions: string[];
+  exclusions: string[];
+  itinerary: any;
+  images: string[];
+  featured: boolean;
+  departureCity: string | null;
+  region: string | null;
+  transportation: string | null;
+  period: string | null;
+  rating: number | null;
+  tourType: string | null;
+  accommodationType: string | null;
+  difficultyLevel: string | null;
+  ageRestriction: number | null;
+  isPopular: boolean;
+  isLastMinute: boolean;
+  isEarlyBird: boolean;
+  languages: string[];
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+  tourOperatorId: string;
+  tourOperator: {
+    id: string;
+    name: string;
+    logo: string | null;
+    description: string | null;
+  };
+}
+
 interface TourPageProps {
   params: {
     id: string;
@@ -58,10 +100,33 @@ interface ReviewItem {
   date: string;
 }
 
-export default function TourPage({ params }: TourPageProps) {
+export default function TourPage() {
+  const params = useParams();
+  const [tour, setTour] = useState<Tour | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
   const [tourCount, setTourCount] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const fetchTour = async () => {
+      try {
+        const response = await fetch(`/api/tours/${params.id}`);
+        if (!response.ok) {
+          throw new Error('Tur bulunamadı');
+        }
+        const data = await response.json();
+        setTour(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTour();
+  }, [params.id]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -79,14 +144,13 @@ export default function TourPage({ params }: TourPageProps) {
     const calculateTourCount = () => {
       if (containerRef.current) {
         const containerHeight = containerRef.current.clientHeight;
-        const tourItemHeight = 210; // daha doğru yükseklik
-        const paddingAndMargin = 35; // ekstra boşluklar
+        const tourItemHeight = 210;
+        const paddingAndMargin = 35;
         const availableHeight = containerHeight - paddingAndMargin;
         const calculatedCount = Math.floor(availableHeight / tourItemHeight);
         setTourCount(Math.max(3, calculatedCount));
       }
     };
-    
 
     window.addEventListener('scroll', handleScroll);
     window.addEventListener('resize', calculateTourCount);
@@ -98,14 +162,14 @@ export default function TourPage({ params }: TourPageProps) {
     };
   }, []);
 
-  // Tur verilerini al
-  const tour = dummyTours.find((tour) => tour.id === params.id);
-  
-  // Tur bulunamazsa 404 sayfasına yönlendir
-  if (!tour) {
-    notFound();
+  if (loading) {
+    return <div>Yükleniyor...</div>;
   }
-  
+
+  if (error || !tour) {
+    return notFound();
+  }
+
   // Tur operatörü bilgilerini al
   const tourOperator = dummyTourOperators.find((operator) => operator.id === tour.tourOperatorId);
   
@@ -665,6 +729,14 @@ export default function TourPage({ params }: TourPageProps) {
                               <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
                                 <h3 className="text-lg sm:text-xl font-bold text-white group-hover:text-sky-300 transition-colors truncate mb-2 drop-shadow-lg">{otherTour.name}</h3>
                                 
+                                {/* Tur Operatörü Bilgisi */}
+                                <div className="flex items-center mb-2">
+                                  <div className="flex items-center bg-white/10 backdrop-blur-sm px-2 py-1 rounded-full">
+                                    <BuildingOfficeIcon className="w-4 h-4 mr-1.5 text-sky-300 flex-shrink-0" />
+                                    <span className="text-xs font-medium truncate max-w-[150px]">{otherTour.tourOperator?.name || 'Tur Operatörü'}</span>
+                                  </div>
+                                </div>
+
                                 <div className="flex flex-wrap items-center gap-1.5 mb-2">
                                   <div className="flex items-center bg-white/10 backdrop-blur-sm px-2 py-1 rounded-full">
                                     <CalendarDaysIcon className="w-4 h-4 mr-1.5 text-sky-300 flex-shrink-0" />
@@ -676,6 +748,7 @@ export default function TourPage({ params }: TourPageProps) {
                                   </div>
                                 </div>
 
+                                {/* Destinasyon Bilgisi */}
                                 <div className="flex items-center">
                                   <div className="flex items-center bg-white/10 backdrop-blur-sm px-2 py-1 rounded-full">
                                     <MapPinIcon className="w-4 h-4 mr-1.5 text-sky-300 flex-shrink-0" />

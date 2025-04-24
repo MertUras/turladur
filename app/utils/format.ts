@@ -37,9 +37,12 @@ export const formatShortDate = (date: Date | string): string => {
 /**
  * JSON formatındaki string'i parse eder
  */
-export const parseJsonString = <T>(jsonString: string, defaultValue: T): T => {
+export const parseJsonString = <T>(jsonString: string | T, defaultValue: T): T => {
   try {
-    return JSON.parse(jsonString) as T;
+    if (typeof jsonString === 'string') {
+      return JSON.parse(jsonString) as T;
+    }
+    return jsonString;
   } catch (error) {
     return defaultValue;
   }
