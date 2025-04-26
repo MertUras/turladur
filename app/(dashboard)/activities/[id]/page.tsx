@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Star, Clock, MapPin, Users, Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import Marquee from "react-fast-marquee";
 
 interface Activity {
     id: number;
@@ -26,7 +27,7 @@ interface Activity {
     schedule: Array<{ time: string; activity: string }>;
     reviews: Array<{
         id: number;
-        name: string;
+        user: string;
         rating: number;
         comment: string;
         date: string;
@@ -51,10 +52,11 @@ export default function ActivityDetail() {
     const [activity, setActivity] = useState<Activity | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [selectedActivity, setSelectedActivity] = useState<RelatedActivity | null>(null);
     const [relatedActivities, setRelatedActivities] = useState<RelatedActivity[]>([]);
+    const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
 
     useEffect(() => {
         const fetchActivity = async () => {
@@ -101,18 +103,6 @@ export default function ActivityDetail() {
             </div>
         );
     }
-
-    const nextImage = () => {
-        setCurrentImageIndex((prev) => 
-            prev === activity.gallery.length - 1 ? 0 : prev + 1
-        );
-    };
-
-    const prevImage = () => {
-        setCurrentImageIndex((prev) => 
-            prev === 0 ? activity.gallery.length - 1 : prev - 1
-        );
-    };
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -175,15 +165,16 @@ export default function ActivityDetail() {
                                         {activity.gallery.map((image, index) => (
                                             <div 
                                                 key={index} 
-                                                className="flex-none w-[280px] relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                                                onClick={() => setSelectedImage(image)}
+                                                className="flex-none w-[220px] relative aspect-[4/3] rounded-xl overflow-hidden cursor-pointer"
+                                                style={{ top: '0px' }}
+                                                onClick={() => { setSelectedImage(image); setCurrentImageIndex(index); }}
                                             >
                                                 <Image
                                                     src={image}
                                                     alt={`${activity.title} - Fotoğraf ${index + 1}`}
                                                     fill
                                                     className="object-cover"
-                                                    sizes="(max-width: 280px) 100vw, 280px"
+                                                    sizes="(max-width: 220px) 100vw, 220px"
                                                     priority={index === 0}
                                                 />
                                             </div>
@@ -194,7 +185,7 @@ export default function ActivityDetail() {
                                     onClick={() => {
                                         const container = document.querySelector('.gallery-container');
                                         if (container) {
-                                            container.scrollLeft -= 300;
+                                            container.scrollLeft -= 240;
                                         }
                                     }}
                                     className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white rounded-full p-2 shadow-md hover:bg-gray-50 transition-colors"
@@ -205,7 +196,7 @@ export default function ActivityDetail() {
                                     onClick={() => {
                                         const container = document.querySelector('.gallery-container');
                                         if (container) {
-                                            container.scrollLeft += 300;
+                                            container.scrollLeft += 240;
                                         }
                                     }}
                                     className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white rounded-full p-2 shadow-md hover:bg-gray-50 transition-colors"
@@ -252,22 +243,62 @@ export default function ActivityDetail() {
                         </div>
 
                         {/* Reviews */}
-                        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                            <h2 className="text-2xl font-semibold mb-4 text-gray-900">Yorumlar</h2>
-                            <div className="space-y-6">
-                                {activity.reviews.map((review) => (
-                                    <div key={review.id} className="border-b border-gray-100 pb-6 last:border-0 last:pb-0">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="font-semibold text-gray-900">{review.name}</div>
-                                            <div className="flex items-center gap-1">
-                                                <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                                                <span className="text-gray-600">{review.rating}</span>
+                        <div className="bg-white rounded-lg shadow-sm p-6 mb-8 overflow-y-hidden">
+                            <div className="text-center max-w-3xl mx-auto mb-8">
+                                <div className="inline-flex items-center justify-center px-3 py-1 bg-sky-100 rounded-full text-sky-700 font-medium text-xs mb-4">
+                                    <Star className="w-4 h-4 mr-1.5 text-yellow-400" />
+                                    Müşteri Deneyimleri
+                                </div>
+                                <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-2">
+                                    Yorumlar
+                                </h2>
+                                <p className="text-base text-neutral-600">
+                                    Aktivitemizi deneyimleyen misafirlerimizin gerçek yorumları.
+                                </p>
+                            </div>
+                            <div className="-mx-2 md:-mx-4 lg:-mx-6 overflow-y-hidden h-52">
+                                <Marquee
+                                    gradient={true}
+                                    gradientColor={'rgb(248, 250, 252)'}
+                                    gradientWidth={60}
+                                    speed={25}
+                                    pauseOnHover={true}
+                                    className="py-2 overflow-y-hidden h-48"
+                                >
+                                    {activity.reviews.map((review) => (
+                                        <div 
+                                            key={review.id}
+                                            className="mx-2 w-64 sm:w-72 flex-shrink-0 h-48"
+                                        >
+                                            <div className="bg-white border border-neutral-200/80 rounded-xl p-4 flex flex-col h-full shadow-sm hover:shadow-md transition-shadow duration-300 justify-between">
+                                                <p className="text-sm text-neutral-700 font-normal leading-snug mb-2 flex-grow italic line-clamp-3">
+                                                    “{review.comment}”
+                                                </p>
+                                                <div className="flex items-center justify-between pt-2 border-t border-neutral-100 mt-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="relative h-8 w-8 rounded-full overflow-hidden flex-shrink-0 bg-gray-100">
+                                                            <Image
+                                                                src={`https://randomuser.me/api/portraits/lego/${review.id % 10}.jpg`}
+                                                                alt={review.user}
+                                                                fill
+                                                                sizes="32px"
+                                                                className="object-cover"
+                                                            />
+                                                        </div>
+                                                        <span className="text-xs text-gray-700 font-medium">{review.user}</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-xs text-gray-500">{review.date}</span>
+                                                        <div className="flex items-center gap-1 mt-0.5">
+                                                            <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                                                            <span className="text-xs text-gray-600 font-semibold">{review.rating}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                        <p className="text-gray-800">{review.comment}</p>
-                                        <div className="text-sm text-gray-500 mt-2">{review.date}</div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </Marquee>
                             </div>
                         </div>
 
