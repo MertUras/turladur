@@ -24,9 +24,13 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      router.push('/');
+      if (session.user.role === 'TOUR_OPERATOR') {
+        router.push('/partner-dashboard');
+      } else {
+        router.push('/');
+      }
     }
-  }, [status, router]);
+  }, [status, router, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,23 +41,16 @@ export default function LoginPage() {
       const result = await signIn('credentials', {
         email,
         password,
+        remember: rememberMe,
         redirect: false,
       });
 
       if (result?.error) {
-        setError('E-posta veya şifre hatalı. Lütfen kontrol edin.');
-        setLoading(false);
-      } else if (result?.ok) {
-        // Successful login: Redirect is handled by the useEffect above,
-        // but we can trigger a refresh if needed for immediate UI update elsewhere
-        // router.refresh(); // Usually not needed as session status change triggers redirect
-      } else {
-        setError('Giriş sırasında beklenmeyen bir durum oluştu.');
-        setLoading(false);
+        setError('E-posta veya şifre hatalı');
       }
     } catch (err) {
-      console.error("Login error:", err);
-      setError('Giriş sırasında bir sistem hatası oluştu. Lütfen tekrar deneyin.');
+      setError('Giriş yapılırken bir hata oluştu');
+    } finally {
       setLoading(false);
     }
   };

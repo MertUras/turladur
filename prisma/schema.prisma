@@ -23,6 +23,8 @@ model User {
   password      String?
   image         String?
   role          UserRole  @default(USER)
+  verificationToken String?
+  verificationTokenExpires DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -161,6 +163,7 @@ model TourOperator {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   tours  Tour[]
+  bookings Booking[]
 
   @@map("tour_operators")
 }
@@ -200,8 +203,8 @@ model Tour {
   updatedAt       DateTime @updatedAt
 
   // İlişkiler
-  tourOperatorId String
-  tourOperator   TourOperator @relation(fields: [tourOperatorId], references: [id], onDelete: Cascade)
+  tourOperatorId String?
+  tourOperator   TourOperator? @relation(fields: [tourOperatorId], references: [id])
   bookings       Booking[]
 
   @@map("tours")
@@ -284,6 +287,8 @@ model Booking {
   experience   Experience? @relation(fields: [experienceId], references: [id])
   agencyId     String?
   agency       Agency?     @relation(fields: [agencyId], references: [id])
+  tourOperatorId String?
+  tourOperator   TourOperator? @relation(fields: [tourOperatorId], references: [id])
 
   @@map("bookings")
 }

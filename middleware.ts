@@ -9,6 +9,7 @@ const authRequiredPaths = [
   '/favorites',
   '/settings',
   '/dashboard',
+  '/partner-dashboard',
 ];
 
 // Middleware
@@ -25,7 +26,18 @@ export async function middleware(request: NextRequest) {
   const isAuthenticated = !!token;
   
   // Kullanıcı giriş yapmışsa login ve register sayfalarına erişemez
-  if (isAuthenticated && (pathname === '/login' || pathname === '/register' || pathname === '/forgot-password')) {
+  if (isAuthenticated && (pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname === '/partner-login' || pathname === '/partner-register')) {
+    // Eğer kullanıcı TOUR_OPERATOR rolüne sahipse partner dashboard'a yönlendir
+    if (token?.role === 'TOUR_OPERATOR') {
+      return NextResponse.redirect(new URL('/partner-dashboard', request.url));
+    }
+    
+    // Callback URL kontrolü
+    const callbackUrl = request.nextUrl.searchParams.get('callbackUrl');
+    if (callbackUrl) {
+      return NextResponse.redirect(new URL(callbackUrl, request.url));
+    }
+    
     return NextResponse.redirect(new URL('/', request.url));
   }
   
@@ -34,6 +46,17 @@ export async function middleware(request: NextRequest) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Partner dashboard için özel kontrol
+  if (pathname.startsWith('/partner-dashboard')) {
+    if (!token) {
+      return NextResponse.redirect(new URL('/partner-login', request.url));
+    }
+    
+    if (token.role !== 'TOUR_OPERATOR') {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
   }
   
   return NextResponse.next();
@@ -45,10 +68,13 @@ export const config = {
     '/login', 
     '/register', 
     '/forgot-password',
+    '/partner-login',
+    '/partner-register',
     '/profile/:path*',
     '/bookings/:path*',
     '/favorites/:path*',
     '/settings/:path*',
-    '/dashboard/:path*'
+    '/dashboard/:path*',
+    '/partner-dashboard/:path*',
   ],
 }; 

@@ -22,6 +22,7 @@ import {
   BellIcon,
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
+import { signOut } from 'next-auth/react';
 
 interface SidebarLink {
   name: string;
@@ -368,15 +369,15 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
                       </Link>
                     </div>
                     <div className="py-1 border-t border-gray-200">
-                      <Link 
-                        href="/" 
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      <button 
+                        onClick={() => signOut({ callbackUrl: '/partner-login' })}
+                        className="block w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
                         <div className="flex items-center">
                           <ArrowLeftOnRectangleIcon className="h-4 w-4 mr-2 text-gray-500" />
                           Çıkış Yap
                         </div>
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 )}

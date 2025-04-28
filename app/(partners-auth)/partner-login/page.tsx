@@ -1,26 +1,25 @@
 'use client';
 
-import { useState, /* useEffect */ } from 'react'; // useEffect kaldırıldı, kullanılmıyor
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { signIn, useSession } from 'next-auth/react';
 import {
-  ArrowRightIcon as ArrowRightIconSolid, // Solid ikonları ayırt edelim
+  ArrowRightIcon as ArrowRightIconSolid,
   EyeIcon as EyeIconSolid,
   EyeSlashIcon as EyeSlashIconSolid,
-  ExclamationCircleIcon as ExclamationCircleIconSolid
+  ExclamationCircleIcon as ExclamationCircleIconSolid,
+  XMarkIcon
 } from '@heroicons/react/20/solid'; 
 import {
-  ArrowRightIcon, // Outline versiyonunu da tutalım
-  // ChevronRightIcon, // Kullanılmıyor
+  ArrowRightIcon,
   BuildingOfficeIcon,
   EnvelopeIcon,
   LockClosedIcon,
   EyeIcon,
   EyeSlashIcon,
-  XMarkIcon,
-  // ExclamationCircleIcon // Outline kaldırıldı, solid kullanılacak
-  BriefcaseIcon, // Yeni ikonlar
+  BriefcaseIcon,
   ChartBarIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
@@ -33,6 +32,13 @@ export default function PartnerLoginPage() {
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user?.role === 'PARTNER') {
+      router.push('/partner-dashboard');
+    }
+  }, [status, session, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,23 +46,38 @@ export default function PartnerLoginPage() {
     setError('');
 
     try {
-      console.log('Attempting partner login with:', { email, password, rememberMe });
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const result = await signIn('partner-credentials', {
+        email,
+        password,
+        redirect: false,
+      });
 
-      if (email === "partner@test.com" && password === "password123") {
-        console.log('Partner login successful');
-        router.push('/partner-dashboard');
-      } else {
-        throw new Error('E-posta veya şifre hatalı.');
+      if (result?.error) {
+        setError('E-posta veya şifre hatalı. Lütfen kontrol edin.');
+        setLoading(false);
       }
-
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.';
-      console.error('Partner login error:', message);
-      setError('Girdiğiniz e-posta veya şifre hatalı. Lütfen kontrol edip tekrar deneyin.');
+      console.error('Partner login error:', err);
+      setError('Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.');
       setLoading(false);
     }
   };
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-sky-600"></div>
+      </div>
+    );
+  }
+
+  if (status === 'authenticated' && session?.user?.role === 'PARTNER') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-sky-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-neutral-50">
@@ -79,65 +100,63 @@ export default function PartnerLoginPage() {
               TourTech Partner portalı ile tüm işlemlerinizi kolayca yönetin, rezervasyonları takip edin ve gelirlerinizi artırın.
             </p>
             
-            <div className="space-y-4">
-              {[
-                { icon: BriefcaseIcon,
-                  title: "Rezervasyon Yönetimi",
-                  desc: "Tüm rezervasyonları tek bir yerden kolayca yönetin."
-                },
-                { icon: ChartBarIcon,
-                  title: "Gelişmiş Raporlama",
-                  desc: "Detaylı performans analizleri ve finansal raporlar."
-                },
-                { icon: ClockIcon,
-                  title: "7/24 Destek",
-                  desc: "Uzman ekibimizden ihtiyacınız olduğunda destek alın."
-                }
-              ].map((feature, index) => (
-                <div 
-                    key={index} 
-                     className="group flex items-start bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/15 text-left shadow-sm transition-all duration-200 ease-out hover:bg-white/15 hover:border-white/25"
-                >
-                   <div className="bg-white/20 p-2.5 rounded-lg mr-4 mt-0.5 flex-shrink-0 shadow-sm">
-                    <feature.icon className="h-5 w-5 text-white opacity-90" />
-                  </div>
-                  <div>
-                     <h3 className="text-white font-semibold text-sm mb-0.5">{feature.title}</h3>
-                     <p className="text-sky-100/80 text-xs leading-snug">{feature.desc}</p>
-                  </div>
+            {[
+              { icon: BriefcaseIcon,
+                title: "Rezervasyon Yönetimi",
+                desc: "Tüm rezervasyonları tek bir yerden kolayca yönetin."
+              },
+              { icon: ChartBarIcon,
+                title: "Gelişmiş Raporlama",
+                desc: "Detaylı performans analizleri ve finansal raporlar."
+              },
+              { icon: ClockIcon,
+                title: "7/24 Destek",
+                desc: "Uzman ekibimizden ihtiyacınız olduğunda destek alın."
+              }
+            ].map((feature, index) => (
+              <div 
+                key={index} 
+                className="group flex items-start bg-white/10 backdrop-blur-sm p-4 rounded-lg border border-white/15 text-left shadow-sm transition-all duration-200 ease-out hover:bg-white/15 hover:border-white/25"
+              >
+                <div className="bg-white/20 p-2.5 rounded-lg mr-4 mt-0.5 flex-shrink-0 shadow-sm">
+                  <feature.icon className="h-5 w-5 text-white opacity-90" />
                 </div>
-              ))}
-            </div>
+                <div>
+                  <h3 className="text-white font-semibold text-sm mb-0.5">{feature.title}</h3>
+                  <p className="text-sky-100/80 text-xs leading-snug">{feature.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-6 sm:p-12 lg:p-16">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-16">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center lg:text-left">
             <Link href="/" className="inline-flex items-center mb-6 group">
-                <div className="mr-2.5 flex-shrink-0">
-                  <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-blue-600 rounded-lg flex items-center justify-center shadow group-hover:scale-105 transition-transform duration-200">
-                      <BuildingOfficeIcon className="w-4 h-4 text-white" />
-                   </div>
-                 </div>
-                <span className="text-xl font-semibold text-neutral-800 group-hover:text-sky-700 transition-colors">TourTech <span className="text-sky-600">Partner</span></span>
+              <div className="mr-2.5 flex-shrink-0">
+                <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-blue-600 rounded-lg flex items-center justify-center shadow group-hover:scale-105 transition-transform duration-200">
+                  <BuildingOfficeIcon className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <span className="text-xl font-semibold text-neutral-800 group-hover:text-sky-700 transition-colors">TourTech <span className="text-sky-600">Partner</span></span>
             </Link>
-             <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 mb-2 tracking-tight">
+            <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 mb-2 tracking-tight">
               İş Ortağı Girişi
             </h2>
-             <p className="text-sm text-neutral-500">
+            <p className="text-sm text-neutral-500">
               Hesabınıza giriş yaparak partner paneline erişin.
             </p>
           </div>
 
-           {error && (
-             <div className="mb-5 flex items-start bg-red-50/80 border border-red-200/80 text-red-800 px-4 py-3 rounded-lg text-xs shadow-sm">
-               <ExclamationCircleIconSolid className="w-4 h-4 mr-2 text-red-500 flex-shrink-0 mt-0.5"/>
-               <span className="leading-tight flex-1 -mt-0.5">{error}</span>
+          {error && (
+            <div className="mb-5 flex items-start bg-red-50/80 border border-red-200/80 text-red-800 px-4 py-3 rounded-lg text-xs shadow-sm">
+              <ExclamationCircleIconSolid className="w-4 h-4 mr-2 text-red-500 flex-shrink-0 mt-0.5"/>
+              <span className="leading-tight flex-1 -mt-0.5">{error}</span>
               <button 
                 onClick={() => setError('')} 
-                 className="ml-2 -mr-1 p-0.5 text-red-400 hover:text-red-600 transition-colors rounded-full hover:bg-red-100/70"
+                className="ml-2 -mr-1 p-0.5 text-red-400 hover:text-red-600 transition-colors rounded-full hover:bg-red-100/70"
                 aria-label="Hata mesajını kapat"
               >
                 <XMarkIcon className="h-3.5 w-3.5" />
@@ -145,19 +164,16 @@ export default function PartnerLoginPage() {
             </div>
           )}
           
-          <form 
-            className="space-y-5"
-            onSubmit={handleSubmit}
-          >
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
-               <label htmlFor="email" className="block text-xs font-medium text-neutral-700 mb-1.5">
+              <label htmlFor="email" className="block text-xs font-medium text-neutral-700 mb-1.5">
                 E-posta Adresi
               </label>
               <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                     <EnvelopeIcon className="h-4 w-4 text-neutral-400" />
-                  </div>
-                 <input
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <EnvelopeIcon className="h-4 w-4 text-neutral-400" />
+                </div>
+                <input
                   id="email"
                   name="email"
                   type="email"
@@ -165,7 +181,7 @@ export default function PartnerLoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                   className={`block w-full rounded-lg border ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-300' : 'border-neutral-300 focus:border-sky-500 focus:ring-sky-300'} py-2.5 pl-9 pr-4 text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-offset-0 sm:text-sm transition duration-200 ease-in-out shadow-sm focus:bg-white`}
+                  className={`block w-full rounded-lg border ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-300' : 'border-neutral-300 focus:border-sky-500 focus:ring-sky-300'} py-2.5 pl-9 pr-4 text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-offset-0 sm:text-sm transition duration-200 ease-in-out shadow-sm focus:bg-white`}
                   placeholder="partner@sirketiniz.com"
                 />
               </div>
@@ -173,17 +189,17 @@ export default function PartnerLoginPage() {
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                   <label htmlFor="password" className="block text-xs font-medium text-neutral-700">
-                    Şifre
-                  </label>
-                   <Link href="/partner-forgot-password" className="text-xs font-medium text-sky-600 hover:text-sky-800 hover:underline underline-offset-2 transition-colors duration-150">
-                    Şifrenizi mi unuttunuz?
-                  </Link>
+                <label htmlFor="password" className="block text-xs font-medium text-neutral-700">
+                  Şifre
+                </label>
+                <Link href="/partner-forgot-password" className="text-xs font-medium text-sky-600 hover:text-sky-800 hover:underline underline-offset-2 transition-colors duration-150">
+                  Şifrenizi mi unuttunuz?
+                </Link>
               </div>
               <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                     <LockClosedIcon className="h-4 w-4 text-neutral-400" />
-                  </div>
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <LockClosedIcon className="h-4 w-4 text-neutral-400" />
+                </div>
                 <input
                   id="password"
                   name="password"
@@ -192,47 +208,48 @@ export default function PartnerLoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                   className={`block w-full rounded-lg border ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-300' : 'border-neutral-300 focus:border-sky-500 focus:ring-sky-300'} py-2.5 pl-9 pr-10 text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-offset-0 sm:text-sm transition duration-200 ease-in-out shadow-sm focus:bg-white`}
+                  className={`block w-full rounded-lg border ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-300' : 'border-neutral-300 focus:border-sky-500 focus:ring-sky-300'} py-2.5 pl-9 pr-10 text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-offset-0 sm:text-sm transition duration-200 ease-in-out shadow-sm focus:bg-white`}
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
-                   className="absolute inset-y-0 right-0 flex items-center px-3 text-neutral-400 hover:text-neutral-600 transition-colors rounded-r-lg"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-neutral-400 hover:text-neutral-600 transition-colors rounded-r-lg"
                   aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"}
                 >
-                   {showPassword ? <EyeSlashIconSolid className="h-5 w-5" /> : <EyeIconSolid className="h-5 w-5" />}
+                  {showPassword ? <EyeSlashIconSolid className="h-5 w-5" /> : <EyeIconSolid className="h-5 w-5" />}
                 </button>
               </div>
             </div>
 
             <div className="flex items-center justify-between pt-1">
-               <div className="flex items-center">
+              <div className="flex items-center">
                 <input
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                   className="h-3.5 w-3.5 rounded border-neutral-300 text-sky-600 focus:ring-sky-500 focus:ring-offset-0"
+                  className="h-3.5 w-3.5 rounded border-neutral-300 text-sky-600 focus:ring-sky-500 focus:ring-offset-0"
                 />
-                 <label htmlFor="remember-me" className="ml-2 block text-xs text-neutral-700 select-none">
+                <label htmlFor="remember-me" className="ml-2 block text-xs text-neutral-700 select-none">
                   Beni hatırla
                 </label>
               </div>
               <Link 
                 href="/partner-register" 
-                 className="text-xs font-medium text-sky-600 hover:text-sky-800 hover:underline underline-offset-2 transition-colors duration-150 flex items-center"
+                className="text-xs font-medium text-sky-600 hover:text-sky-800 hover:underline underline-offset-2 transition-colors duration-150 flex items-center"
               >
                 <span>Henüz partner değil misiniz?</span>
-                 <ArrowRightIconSolid className="ml-1 h-4 w-4" />
+                <ArrowRightIconSolid className="ml-1 h-4 w-4" />
               </Link>
             </div>
 
-            <div className="pt-2">
+            <div>
               <button
                 type="submit"
                 disabled={loading}
-                 className="group relative w-full flex items-center justify-center py-2.5 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all duration-200 ease-in-out shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] min-h-[40px]"
+                className="group relative w-full flex items-center justify-center py-2.5 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all duration-200 ease-in-out shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] min-h-[40px]"
               >
                 {loading ? (
                   <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

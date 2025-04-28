@@ -18,29 +18,40 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
+          throw new Error('E-posta ve şifre gerekli');
         }
 
         const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
+          where: { email: credentials.email },
+          include: {
+            hotels: true,
+            agencies: true,
+            tourOperators: true,
+            experiences: true,
           },
         });
 
-        if (!user || !user?.password) {
-          throw new Error("Invalid credentials");
+        if (!user || !user.password) {
+          throw new Error('Kullanıcı bulunamadı');
         }
 
-        const isCorrectPassword = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
+        const isValid = await bcrypt.compare(credentials.password, user.password);
 
-        if (!isCorrectPassword) {
-          throw new Error("Invalid credentials");
+        if (!isValid) {
+          throw new Error('Geçersiz şifre');
         }
 
-        return user;
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          image: user.image,
+          hotels: user.hotels,
+          agencies: user.agencies,
+          tourOperators: user.tourOperators,
+          experiences: user.experiences,
+        };
       },
     }),
   ],
