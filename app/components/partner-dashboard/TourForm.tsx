@@ -226,7 +226,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
               name="title"
               value={formData.title}
               onChange={handleChange}
-              className={`block w-full rounded-lg border ${errors.title ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+              className={`block w-full rounded-lg border ${errors.title ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
               placeholder="Muhteşem Kapadokya Turu"
             />
             {errors.title && <p className="mt-2 text-sm text-red-600">{errors.title}</p>}
@@ -242,7 +242,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
               rows={4}
               value={formData.description}
               onChange={handleChange}
-              className={`block w-full rounded-lg border ${errors.description ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+              className={`block w-full rounded-lg border ${errors.description ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
               placeholder="Turunuzu detaylı bir şekilde açıklayın..."
             />
             {errors.description && <p className="mt-2 text-sm text-red-600">{errors.description}</p>}
@@ -263,7 +263,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                   name="price"
                   value={formData.price || ''}
                   onChange={handleChange}
-                  className={`block w-full rounded-lg border ${errors.price ? 'border-red-500' : 'border-gray-300'} pl-8 pr-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+                  className={`block w-full rounded-lg border ${errors.price ? 'border-red-500' : 'border-gray-300'} pl-8 pr-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
                   placeholder="1500"
                   min="0"
                 />
@@ -281,7 +281,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                 name="location"
                 value={formData.location}
                 onChange={handleChange}
-                className={`block w-full rounded-lg border ${errors.location ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+                className={`block w-full rounded-lg border ${errors.location ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
                 placeholder="İstanbul"
               />
               {errors.location && <p className="mt-2 text-sm text-red-600">{errors.location}</p>}
@@ -299,7 +299,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                 name="duration"
                 value={formData.duration || ''}
                 onChange={handleChange}
-                className={`block w-full rounded-lg border ${errors.duration ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+                className={`block w-full rounded-lg border ${errors.duration ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
                 placeholder="8"
                 min="1"
               />
@@ -316,7 +316,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                 name="maxParticipants"
                 value={formData.maxParticipants || ''}
                 onChange={handleChange}
-                className={`block w-full rounded-lg border ${errors.maxParticipants ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+                className={`block w-full rounded-lg border ${errors.maxParticipants ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
                 placeholder="20"
                 min="1"
               />
@@ -386,7 +386,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                       type="text"
                       value={newInclude}
                       onChange={(e) => setNewInclude(e.target.value)}
-                      className="shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg"
+                      className="shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg text-gray-900"
                       placeholder="Örn. Profesyonel rehberlik"
                     />
                     <button
@@ -423,7 +423,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                       type="text"
                       value={newExclude}
                       onChange={(e) => setNewExclude(e.target.value)}
-                      className="shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg"
+                      className="shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg text-gray-900"
                       placeholder="Örn. Kişisel harcamalar"
                     />
                     <button
@@ -478,7 +478,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                         type="text"
                         value={day.title}
                         onChange={(e) => handleItineraryChange(index, 'title', e.target.value)}
-                        className="mt-1 shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg"
+                        className="mt-1 shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg text-gray-900"
                       />
                     </div>
                     <button
@@ -498,7 +498,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                       rows={4}
                       value={day.description}
                       onChange={(e) => handleItineraryChange(index, 'description', e.target.value)}
-                      className="mt-1 shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg"
+                      className="mt-1 shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg text-gray-900"
                       placeholder="Bu günün programını detaylı anlatın..."
                     />
                   </div>
