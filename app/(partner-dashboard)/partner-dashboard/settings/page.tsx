@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UserCircleIcon, KeyIcon, BellIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
+import { useSession } from 'next-auth/react';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -64,6 +65,11 @@ export default function SettingsPage() {
 }
 
 function ProfileSettings() {
+  const { data: session } = useSession();
+  // Split name for Ad/Soyad if possible
+  const fullName = session?.user?.name || '';
+  const [firstName, ...lastNameArr] = fullName.split(' ');
+  const lastName = lastNameArr.join(' ');
   return (
     <div>
       <h2 className="text-xl font-semibold text-gray-800 mb-8 pb-2 border-b border-gray-200">Profil</h2>
@@ -91,7 +97,7 @@ function ProfileSettings() {
             <input
               type="text"
               id="firstName"
-              defaultValue="Ahmet"
+              defaultValue={firstName || 'Ahmet'}
               className="w-full rounded-md bg-white border border-gray-300 text-gray-800 shadow-sm px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
             />
           </div>
@@ -102,7 +108,7 @@ function ProfileSettings() {
             <input
               type="text"
               id="lastName"
-              defaultValue="Yılmaz"
+              defaultValue={lastName || 'Yılmaz'}
               className="w-full rounded-md bg-white border border-gray-300 text-gray-800 shadow-sm px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
             />
           </div>
@@ -113,7 +119,7 @@ function ProfileSettings() {
             <input
               type="email"
               id="email"
-              defaultValue="ahmet@ornek.com"
+              defaultValue={session?.user?.email || 'ahmet@ornek.com'}
               className="w-full rounded-md bg-white border border-gray-300 text-gray-800 shadow-sm px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
             />
           </div>
@@ -164,7 +170,7 @@ function ProfileSettings() {
           ></textarea>
         </div>
 
-        <div className="border-t border-gray-200 pt-8 mt-8">
+        <div className="border-t border-gray-200 pt-8">
           <h3 className="text-lg font-medium text-gray-800 mb-6">Kişisel Tercihler</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -437,6 +443,20 @@ function NotificationSettings() {
 }
 
 function CompanySettings() {
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/partner/me')
+      .then(res => res.json())
+      .then(data => {
+        setCompanyInfo(data);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <div>Yükleniyor...</div>;
+
   return (
     <div>
       <h2 className="text-xl font-semibold text-gray-800 mb-8 pb-2 border-b border-gray-200">Şirket Bilgileri</h2>
@@ -519,7 +539,7 @@ function CompanySettings() {
             id="company-description"
             rows={4}
             className="w-full rounded-md bg-white border border-gray-300 text-gray-800 shadow-sm px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-            defaultValue="Benzersiz tur deneyimleri sunan lider tur operatörü. 10 yılı aşkın deneyimimizle müşterilerimize unutulmaz anılar yaratıyoruz."
+            defaultValue={companyInfo?.description || 'Benzersiz tur deneyimleri sunan lider tur operatörü. 10 yılı aşkın deneyimimizle müşterilerimize unutulmaz anılar yaratıyoruz.'}
           ></textarea>
         </div>
         

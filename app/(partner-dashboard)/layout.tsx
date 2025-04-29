@@ -22,7 +22,7 @@ import {
   BellIcon,
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 
 interface SidebarLink {
   name: string;
@@ -48,6 +48,7 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const pathname = usePathname();
+  const { data: session } = useSession();
   
   // Mobil cihazlarda menü açıldığında sayfanın kaydırılmasını engelle
   useEffect(() => {
@@ -148,11 +149,11 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
             <div className="flex items-center p-3 bg-blue-50 rounded-lg">
               <div className="flex-shrink-0">
                 <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold">
-                  PT
+                  {(session?.user?.name || 'Partner').split(' ').map(part => part[0]).join('').toUpperCase()}
                 </div>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900">Partner Test</p>
+                <p className="text-sm font-medium text-gray-900">{session?.user?.name || 'Partner'}</p>
                 <p className="text-xs text-gray-500">Yönetici</p>
               </div>
             </div>
@@ -343,9 +344,9 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
                   }}
                 >
                   <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold mr-1">
-                    PT
+                    {(session?.user?.name || 'Partner').split(' ').map(part => part[0]).join('').toUpperCase()}
                   </div>
-                  <span className="hidden md:block text-sm font-medium">Partner Test</span>
+                  <span className="hidden md:block text-sm font-medium">{session?.user?.name || 'Partner'}</span>
                   <svg className="h-5 w-5 ml-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -354,8 +355,8 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
                 {showProfileMenu && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50 origin-top-right">
                     <div className="p-3 border-b border-gray-200">
-                      <p className="text-sm font-medium text-gray-900">Partner Test</p>
-                      <p className="text-xs text-gray-500">partner@turladur.com</p>
+                      <p className="text-sm font-medium text-gray-900">{session?.user?.name || 'Partner'}</p>
+                      <p className="text-xs text-gray-500">{session?.user?.email || ''}</p>
                     </div>
                     <div className="py-1">
                       <Link href="/partner-dashboard/settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
