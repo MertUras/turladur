@@ -66,6 +66,31 @@ export default function SettingsPage() {
 
 function ProfileSettings() {
   const { data: session } = useSession();
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [about, setAbout] = useState('');
+
+  useEffect(() => {
+    fetch('/api/partner/me')
+      .then(res => {
+        if (!res.ok) throw new Error('API error');
+        return res.json();
+      })
+      .then(data => {
+        setCompanyInfo(data);
+        setAbout(data?.description || '');
+        setLoading(false);
+      })
+      .catch(() => {
+        setError(true);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) return <div>Yükleniyor...</div>;
+  if (error) return <div className="text-gray-900">Şirket bilgileri yüklenemedi.</div>;
+
   // Split name for Ad/Soyad if possible
   const fullName = session?.user?.name || '';
   const [firstName, ...lastNameArr] = fullName.split(' ');
@@ -165,7 +190,8 @@ function ProfileSettings() {
           <textarea
             id="bio"
             rows={4}
-            defaultValue="10 yıllık seyahat ve turizm deneyimi ile İstanbul'da yaşıyorum. Yeni ve heyecan verici tur deneyimleri oluşturmak için tutkulu bir şekilde çalışıyorum."
+            value={about}
+            onChange={e => setAbout(e.target.value)}
             className="w-full rounded-md bg-white border border-gray-300 text-gray-800 shadow-sm px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
           ></textarea>
         </div>
@@ -210,7 +236,15 @@ function ProfileSettings() {
 
         <div className="mt-8 pt-6 border-t border-gray-200">
           <button
-            type="submit"
+            type="button"
+            onClick={async () => {
+              await fetch('/api/partner/me', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description: about }),
+              });
+              // İsteğe bağlı: başarı mesajı veya yeniden yükleme
+            }}
             className="w-full md:w-auto px-6 py-3 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition shadow-sm flex items-center justify-center"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -650,6 +684,23 @@ function CompanySettings() {
                 className="w-full rounded-md bg-white border border-gray-300 text-gray-800 shadow-sm px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
               />
             </div>
+          </div>
+        </div>
+
+        <div className="border-t border-gray-200 pt-8">
+          <h3 className="text-lg font-medium text-gray-800 mb-6">Hakkında</h3>
+          
+          <div>
+            <label htmlFor="about" className="block text-sm font-medium text-gray-700 mb-1">
+              Hakkında
+            </label>
+            <textarea
+              id="about"
+              name="about"
+              rows={4}
+              defaultValue={companyInfo?.description || ''}
+              className="w-full rounded-md bg-white border border-gray-300 text-gray-800 shadow-sm px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+            />
           </div>
         </div>
 
