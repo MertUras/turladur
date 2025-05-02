@@ -24,11 +24,13 @@ export async function GET(request: Request) {
     const minRating = searchParams.get('minRating');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const partnerId = searchParams.get('partnerId');
 
     const skip = (page - 1) * limit;
 
     const where: Prisma.TourWhereInput = {
       AND: [
+        ...(partnerId ? [{ tourOperatorId: partnerId }] : []),
         {
           OR: [
             { name: { contains: search, mode: 'insensitive' } },

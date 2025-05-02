@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import TourForm, { TourFormData } from '@/app/components/partner-dashboard/TourForm';
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, InformationCircleIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import { useSession } from 'next-auth/react';
 
 interface FormData extends Partial<TourFormData> {
   [key: string]: any;
@@ -12,19 +13,25 @@ interface FormData extends Partial<TourFormData> {
 
 export default function CreateTourPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStep, setFormStep] = useState<'basic' | 'details'>('basic');
   const [formData, setFormData] = useState<FormData>({});
 
   const handleSubmit = async (data: any) => {
     setIsSubmitting(true);
-    
-    // Formun son adımında mıyız kontrol et
+    // partnerId'yi her ihtimale karşı burada da ekle
+    const payload = {
+      ...data,
+      tourOperatorId: session?.user?.id,
+    };
     if (formStep === 'details') {
       try {
-        // Burada API çağrısı yapılabilir
-        console.log('Form data submitted:', data);
-        // Başarılı işlemden sonra yönlendirme
+        await fetch('/api/tours', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
         router.push('/partner-dashboard/tours');
       } catch (error) {
         console.error('Error submitting form:', error);
@@ -32,9 +39,8 @@ export default function CreateTourPage() {
         setIsSubmitting(false);
       }
     } else {
-      // Sonraki adıma geç
-      setFormData(data);
       setFormStep('details');
+      setFormData(data);
       setIsSubmitting(false);
     }
   };
@@ -92,6 +98,7 @@ export default function CreateTourPage() {
                 onSubmit={handleSubmit} 
                 isSubmitting={isSubmitting}
                 currentStep={formStep}
+                partnerId={session?.user?.id}
               />
             </div>
           </div>

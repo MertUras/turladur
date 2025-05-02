@@ -24,9 +24,10 @@ export interface TourFormData {
 
 interface TourFormProps {
   initialData?: Partial<TourFormData>;
-  onSubmit: (data: TourFormData) => void;
+  onSubmit: (data: any) => void;
   isSubmitting?: boolean;
   currentStep?: 'basic' | 'details';
+  partnerId?: string;
 }
 
 const defaultFormData: TourFormData = {
@@ -43,7 +44,7 @@ const defaultFormData: TourFormData = {
   status: 'draft'
 };
 
-export default function TourForm({ initialData, onSubmit, isSubmitting = false, currentStep = 'basic' }: TourFormProps) {
+export default function TourForm({ initialData, onSubmit, isSubmitting = false, currentStep = 'basic', partnerId }: TourFormProps) {
   const [formData, setFormData] = useState<TourFormData>({ ...defaultFormData, ...initialData });
   const [newInclude, setNewInclude] = useState('');
   const [newExclude, setNewExclude] = useState('');
@@ -207,7 +208,8 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
     e.preventDefault();
     
     if (validateForm()) {
-      onSubmit(formData);
+      const submitData = partnerId ? { ...formData, tourOperatorId: partnerId } : formData;
+      onSubmit(submitData);
     }
   };
 

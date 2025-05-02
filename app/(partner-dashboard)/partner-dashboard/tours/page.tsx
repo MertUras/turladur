@@ -13,6 +13,7 @@ import {
   DocumentTextIcon,
   ArrowPathIcon 
 } from '@heroicons/react/24/outline';
+import { useSession } from 'next-auth/react';
 
 // Örnek veri
 const demoTours: Omit<TourCardProps, 'onEdit' | 'onDelete'>[] = [
@@ -91,6 +92,7 @@ const demoTours: Omit<TourCardProps, 'onEdit' | 'onDelete'>[] = [
 ];
 
 export default function ToursPage() {
+  const { data: session } = useSession();
   const [tours, setTours] = useState(demoTours);
   const [filteredTours, setFilteredTours] = useState(demoTours);
   const [isLoading, setIsLoading] = useState(false);
@@ -106,21 +108,41 @@ export default function ToursPage() {
                     tours.filter(tour => tour.rating).length;
 
   useEffect(() => {
-    // API'den veri çekme simülasyonu
     const fetchTours = async () => {
       try {
         setIsLoading(true);
-        // Gerçek API çağrısı burada yapılacak
-        await new Promise(resolve => setTimeout(resolve, 500)); // Gecikme simülasyonu
+        const res = await fetch(`/api/tours?partnerId=${session?.user?.id}`);
+        const data = await res.json();
+        if (Array.isArray(data.tours) && data.tours.length > 0) {
+          // Backend'den gelen veriyi TourCard'ın beklediği yapıya dönüştür
+          const mappedTours = data.tours.map((tour: any) => ({
+            id: tour.id,
+            title: tour.name,
+            price: tour.price ? `${tour.price}₺` : '',
+            location: tour.departureCity || tour.region || tour.location || '',
+            duration: tour.duration ? `${tour.duration} saat` : '',
+            maxParticipants: tour.maxParticipants || 0,
+            imageUrl: Array.isArray(tour.images) && tour.images.length > 0 ? tour.images[0] : 'https://source.unsplash.com/random/800x600/?travel',
+            status: tour.status || 'active',
+            rating: tour.rating || 0,
+            reservationCount: tour.reservationCount || 0,
+          }));
+          setTours(mappedTours);
+          setFilteredTours(mappedTours);
+        } else {
+          setTours(demoTours);
+          setFilteredTours(demoTours);
+        }
         setIsLoading(false);
       } catch (error) {
-        console.error('Turlar yüklenirken hata oluştu:', error);
+        setTours(demoTours);
+        setFilteredTours(demoTours);
         setIsLoading(false);
       }
     };
-
-    fetchTours();
-  }, []);
+    if (session?.user?.id) fetchTours();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]);
 
   // Filtreleme işlemi
   const handleFilterChange = (filters: TourFiltersType) => {
