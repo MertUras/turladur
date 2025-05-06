@@ -12,22 +12,45 @@ export default function PartnerNavbar() {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-12">
                     {/* Logo */}
-                    <Link href="/" className="flex items-center group">
-                        <div className="relative h-8 w-8 mr-2 flex-shrink-0">
-                            <Image
-                                src="/images/logo.png"
-                                alt="TourTech Partner"
-                                fill
-                                className="object-contain transition-transform duration-300 group-hover:scale-105"
-                            />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-lg font-semibold text-neutral-800 transition-colors duration-300 group-hover:text-sky-700">
-                                TourTech
-                            </span>
-                            <span className="text-xs text-sky-600 tracking-wide font-medium">Partner Portal</span>
-                        </div>
-                    </Link>
+                    <div className="flex items-center space-x-4">
+                        {/* Partner Portal Logo */}
+                        <Link href="/partner-login" className="flex items-center group flex-shrink-0">
+                            <div className="relative h-8 w-8 mr-2">
+                                <Image
+                                    src="/images/logo.png"
+                                    alt="TourTech Partner"
+                                    fill
+                                    className="object-contain transition-transform duration-300 group-hover:scale-105"
+                                />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-lg font-semibold text-neutral-800 transition-colors duration-300 group-hover:text-sky-700">
+                                    Turladur
+                                </span>
+                                <span className="text-xs text-sky-600 tracking-wide font-medium">Partner Portal</span>
+                            </div>
+                        </Link>
+
+                        {/* Slash */}
+                        <div className="text-2xl font-light text-neutral-400">/</div>
+
+                        {/* Normal User Logo */}
+                        <Link href="/" className="flex items-center group flex-shrink-0">
+                            <div className="relative h-8 w-8 mr-2">
+                                <Image
+                                    src="/images/logo.png"
+                                    alt="TourTech"
+                                    fill
+                                    className="object-contain transition-transform duration-300 group-hover:scale-105"
+                                />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-lg font-semibold text-neutral-800 transition-colors duration-300 group-hover:text-sky-700">
+                                    Turladur
+                                </span>
+                            </div>
+                        </Link>
+                    </div>
 
                     {/* Auth Links */}
                     <div className="flex items-center space-x-2">
