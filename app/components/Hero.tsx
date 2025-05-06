@@ -396,7 +396,7 @@ export default function Hero() {
   // --- End Modal Render Fonksiyonu --- 
 
   return (
-    <section className="relative mt-16 md:mt-0 min-h-[650px] h-[85vh] max-h-[900px] w-full overflow-hidden flex items-center justify-center">
+    <section className="relative mt-0 min-h-[650px] h-[85vh] max-h-[900px] w-full overflow-hidden flex items-center justify-center">
       {/* Arka Plan Görseli */}
       <div className="absolute inset-0 w-full h-full">
          <Image

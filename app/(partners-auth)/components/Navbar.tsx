@@ -18,7 +18,7 @@ export default function PartnerNavbar() {
                             <div className="relative h-8 w-8 mr-2">
                                 <Image
                                     src="/images/logo.png"
-                                    alt="TourTech Partner"
+                                    alt="Turladur Partner"
                                     fill
                                     className="object-contain transition-transform duration-300 group-hover:scale-105"
                                 />
@@ -39,7 +39,7 @@ export default function PartnerNavbar() {
                             <div className="relative h-8 w-8 mr-2">
                                 <Image
                                     src="/images/logo.png"
-                                    alt="TourTech"
+                                    alt="Turladur"
                                     fill
                                     className="object-contain transition-transform duration-300 group-hover:scale-105"
                                 />

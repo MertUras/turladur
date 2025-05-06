@@ -127,7 +127,7 @@ export default function LoginPage() {
                        </svg>
                    </div>
                  </div>
-                <span className="text-xl font-semibold text-neutral-800 group-hover:text-sky-700 transition-colors">TourTech</span>
+                <span className="text-xl font-semibold text-neutral-800 group-hover:text-sky-700 transition-colors">Turladur</span>
              </Link>
              <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 mb-2 tracking-tight">
               Hesabınıza Giriş Yapın

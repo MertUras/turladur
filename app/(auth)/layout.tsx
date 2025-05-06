@@ -1,4 +1,4 @@
-import Navbar from "./components/Navbar";
+import Header from "../components/Header";
 
 export default function AuthLayout({
   children,
@@ -7,7 +7,7 @@ export default function AuthLayout({
 }) {
   return (
     <main className="min-h-screen">
-      <Navbar />
+      <Header />
       {children}
     </main>
   );
