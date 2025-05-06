@@ -119,7 +119,10 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
               <div className="h-8 w-8 text-white rounded-md flex items-center justify-center">
                 <Image src="/images/logo.png" alt="TurlaDur Logo" width={32} height={32} />
               </div>
-              <span className="ml-2.5 text-lg font-semibold text-gray-900">TurlaDur</span>
+              <div className="ml-2.5 flex flex-col">
+                <span className="text-lg font-semibold text-neutral-800">Turladur</span>
+                <span className="text-xs text-sky-600 tracking-wide font-medium">Partner Portal</span>
+              </div>
             </div>
           </div>
           <button

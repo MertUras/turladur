@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn, useSession, signOut } from 'next-auth/react';
 import {
   ArrowRightIcon as ArrowRightIconSolid,
   EyeIcon as EyeIconSolid,
@@ -35,8 +35,15 @@ export default function PartnerLoginPage() {
   const { data: session, status } = useSession();
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.role === 'PARTNER') {
-      router.push('/partner-dashboard');
+    if (status === 'authenticated') {
+      if (session?.user?.provider === 'credentials') {
+        signOut({ redirect: false });
+        return;
+      }
+      
+      if (session?.user?.role === 'TOUR_OPERATOR') {
+        router.push('/partner-dashboard');
+      }
     }
   }, [status, session, router]);
 
@@ -50,11 +57,14 @@ export default function PartnerLoginPage() {
         email,
         password,
         redirect: false,
+        callbackUrl: '/partner-dashboard',
       });
 
       if (result?.error) {
-        setError('E-posta veya şifre hatalı. Lütfen kontrol edin.');
+        setError(result.error);
         setLoading(false);
+      } else {
+        router.push('/partner-dashboard');
       }
     } catch (err) {
       console.error('Partner login error:', err);

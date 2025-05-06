@@ -41,9 +41,9 @@ const routes = [
 
 export default function Destinations() {
   return (
-    <section className="py-24 md:py-32 bg-neutral-50 border-t border-neutral-200/60">
+    <section className="py-12 md:py-16 bg-neutral-50 border-t border-neutral-200/60">
       <div className="container mx-auto px-6 max-w-7xl">
-        <div className="text-center max-w-3xl mx-auto mb-16">
+        <div className="text-center max-w-3xl mx-auto mb-12">
           <div className="inline-flex items-center justify-center px-3 py-1 bg-sky-100 rounded-full text-sky-700 font-medium text-xs mb-6">
              Popüler Turlar
            </div>

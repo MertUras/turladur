@@ -2,79 +2,123 @@ import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { NextRequest } from 'next/server';
 
-// Auth gerektiren sayfalar
-const authRequiredPaths = [
+// Partner sayfaları için gerekli yollar
+const partnerAuthRequiredPaths = [
+  '/partner-dashboard',
+  '/partner-dashboard/tours',
+  '/partner-dashboard/reservations',
+  '/partner-dashboard/customers',
+  '/partner-dashboard/financials',
+  '/partner-dashboard/reports',
+  '/partner-dashboard/reviews',
+  '/partner-dashboard/settings',
+  '/partner-dashboard/help',
+];
+
+// Normal kullanıcı sayfaları için gerekli yollar
+const userAuthRequiredPaths = [
   '/profile',
   '/bookings',
   '/favorites',
-  '/settings',
-  '/dashboard',
-  '/partner-dashboard',
+  '/reviews',
 ];
 
-// Middleware
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  
-  // next-auth'tan JWT tokeni al
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-  
-  // Kullanıcı giriş yapmış mı?
-  const isAuthenticated = !!token;
-  
-  // Kullanıcı giriş yapmışsa login ve register sayfalarına erişemez
-  if (isAuthenticated && (pathname === '/login' || pathname === '/register' || pathname === '/forgot-password' || pathname === '/partner-login' || pathname === '/partner-register')) {
-    // Eğer kullanıcı TOUR_OPERATOR rolüne sahipse partner dashboard'a yönlendir
-    if (token?.role === 'TOUR_OPERATOR') {
-      return NextResponse.redirect(new URL('/partner-dashboard', request.url));
-    }
-    
-    // Callback URL kontrolü
-    const callbackUrl = request.nextUrl.searchParams.get('callbackUrl');
-    if (callbackUrl) {
-      return NextResponse.redirect(new URL(callbackUrl, request.url));
-    }
-    
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-  
-  // Kullanıcı giriş yapmadan auth gerektiren sayfalara erişemez
-  if (!isAuthenticated && authRequiredPaths.some(path => pathname.startsWith(path))) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
+// Partner kullanıcılarının erişemeyeceği sayfalar
+const partnerRestrictedPaths = [
+  '/login',
+  '/register',
+  '/profile',
+  '/bookings',
+  '/favorites',
+  '/reviews',
+];
 
-  // Partner dashboard için özel kontrol
-  if (pathname.startsWith('/partner-dashboard')) {
+export async function middleware(request: NextRequest) {
+  const token = await getToken({ req: request });
+  const { pathname } = request.nextUrl;
+
+  // Partner sayfalarına erişim kontrolü
+  if (partnerAuthRequiredPaths.some(path => pathname.startsWith(path))) {
     if (!token) {
       return NextResponse.redirect(new URL('/partner-login', request.url));
     }
-    
-    if (token.role !== 'TOUR_OPERATOR') {
+
+    // Partner olmayan kullanıcıları engelle
+    if (token.provider !== 'partner-credentials') {
       return NextResponse.redirect(new URL('/', request.url));
     }
+
+    return NextResponse.next();
   }
-  
+
+  // Normal kullanıcı sayfalarına erişim kontrolü
+  if (userAuthRequiredPaths.some(path => pathname.startsWith(path))) {
+    if (!token) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    // Partner kullanıcılarını engelle
+    if (token.provider === 'partner-credentials') {
+      return NextResponse.redirect(new URL('/partner-dashboard', request.url));
+    }
+
+    return NextResponse.next();
+  }
+
+  // Partner kullanıcılarının erişemeyeceği sayfalar için kontrol
+  if (partnerRestrictedPaths.some(path => pathname === path || pathname.startsWith(path))) {
+    if (token && token.provider === 'partner-credentials') {
+      return NextResponse.redirect(new URL('/partner-dashboard', request.url));
+    }
+  }
+
+  // Partner giriş/kayıt sayfalarına erişim kontrolü
+  if (pathname.startsWith('/partner-login') || pathname.startsWith('/partner-register')) {
+    if (token) {
+      if (token.provider === 'partner-credentials') {
+        return NextResponse.redirect(new URL('/partner-dashboard', request.url));
+      } else {
+        return NextResponse.redirect(new URL('/', request.url));
+      }
+    }
+    return NextResponse.next();
+  }
+
+  // Normal kullanıcı giriş/kayıt sayfalarına erişim kontrolü
+  if (pathname.startsWith('/login') || pathname.startsWith('/register')) {
+    if (token) {
+      if (token.provider === 'partner-credentials') {
+        return NextResponse.redirect(new URL('/partner-dashboard', request.url));
+      } else {
+        return NextResponse.redirect(new URL('/', request.url));
+      }
+    }
+    return NextResponse.next();
+  }
+
+  // Ana sayfa ve diğer sayfalar için partner oturumunu temizle
+  if (token && token.provider === 'partner-credentials') {
+    const response = NextResponse.next();
+    response.cookies.delete('next-auth.session-token');
+    response.cookies.delete('next-auth.callback-url');
+    response.cookies.delete('next-auth.csrf-token');
+    return response;
+  }
+
   return NextResponse.next();
 }
 
-// Middleware sadece bu yollarda çalışacak
 export const config = {
   matcher: [
-    '/login', 
-    '/register', 
-    '/forgot-password',
+    '/',
+    '/partner-dashboard/:path*',
     '/partner-login',
     '/partner-register',
     '/profile/:path*',
     '/bookings/:path*',
     '/favorites/:path*',
-    '/settings/:path*',
-    '/dashboard/:path*',
-    '/partner-dashboard/:path*',
+    '/reviews/:path*',
+    '/login',
+    '/register',
   ],
 }; 

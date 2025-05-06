@@ -1,15 +1,20 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "../prisma";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
-  // Credentails provider'ı kullanırken adapter'ı kullanmıyoruz
-  // Bu async_hooks hatası ile ilgili bir çözüm
-  // adapter: PrismaAdapter(prisma),
+  session: {
+    strategy: "jwt",
+  },
+  pages: {
+    signIn: "/login",
+    error: "/login",
+  },
   providers: [
+    // Normal kullanıcılar için credentials provider
     CredentialsProvider({
+      id: "credentials",
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
@@ -18,16 +23,13 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error('E-posta ve şifre gerekli');
+          throw new Error('Email ve şifre gerekli');
         }
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
           include: {
-            hotels: true,
-            agencies: true,
             tourOperators: true,
-            experiences: true,
           },
         });
 
@@ -35,9 +37,14 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Kullanıcı bulunamadı');
         }
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        // Partner kullanıcılarını engelle
+        if (user.role === 'TOUR_OPERATOR') {
+          throw new Error('Bu giriş partner kullanıcıları için değil. Lütfen partner girişi yapın.');
+        }
 
-        if (!isValid) {
+        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+
+        if (!isPasswordValid) {
           throw new Error('Geçersiz şifre');
         }
 
@@ -46,34 +53,70 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
-          image: user.image,
-          hotels: user.hotels,
-          agencies: user.agencies,
-          tourOperators: user.tourOperators,
-          experiences: user.experiences,
+          provider: 'credentials',
+        };
+      },
+    }),
+    // Partner kullanıcıları için credentials provider
+    CredentialsProvider({
+      id: "partner-credentials",
+      name: "partner-credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+        remember: { label: "Remember me", type: "checkbox" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error('Email ve şifre gerekli');
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+          include: {
+            tourOperators: true,
+          },
+        });
+
+        if (!user || !user.password) {
+          throw new Error('Kullanıcı bulunamadı');
+        }
+
+        // Sadece partner kullanıcılarına izin ver
+        if (user.role !== 'TOUR_OPERATOR') {
+          throw new Error('Bu giriş sadece partner kullanıcıları içindir. Lütfen normal kullanıcı girişi yapın.');
+        }
+
+        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+
+        if (!isPasswordValid) {
+          throw new Error('Geçersiz şifre');
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          provider: 'partner-credentials',
         };
       },
     }),
   ],
-  pages: {
-    signIn: "/login",
-  },
-  session: {
-    strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 gün
-  },
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.provider = user.provider;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
+      if (token) {
+        session.user.id = token.id;
+        session.user.role = token.role;
+        session.user.provider = token.provider;
       }
       return session;
     },

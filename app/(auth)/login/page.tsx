@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn, useSession, signOut } from 'next-auth/react';
 import { ArrowRightIcon, EyeIcon, EyeSlashIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 import { ArrowRightIcon as ArrowRightIconSolid, EyeIcon as EyeIconSolid, EyeSlashIcon as EyeSlashIconSolid, ExclamationCircleIcon as ExclamationCircleIconSolid, XMarkIcon as XMarkIconSolid } from '@heroicons/react/20/solid';
 import { EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/outline';
@@ -32,6 +32,19 @@ export default function LoginPage() {
     }
   }, [status, router, session]);
 
+  useEffect(() => {
+    if (status === 'authenticated') {
+      if (session?.user?.provider === 'partner-credentials') {
+        signOut({ redirect: false });
+        return;
+      }
+      
+      if (session?.user?.role !== 'TOUR_OPERATOR') {
+        router.push('/');
+      }
+    }
+  }, [status, router, session]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -46,7 +59,7 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('E-posta veya şifre hatalı');
+        setError(result.error);
       }
     } catch (err) {
       setError('Giriş yapılırken bir hata oluştu');

@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import DealsPopup from "./DealsPopup";
-import { TagIcon, UserIcon, /* UserPlusIcon, */ XMarkIcon, ChevronDownIcon, /* MapIcon, */ /* BuildingOfficeIcon, */ /* GlobeAltIcon, */ /* SparklesIcon, */ /* InformationCircleIcon, */ /* EnvelopeIcon, */ Bars3Icon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { TagIcon, UserIcon, /* UserPlusIcon, */ XMarkIcon, ChevronDownIcon, /* MapIcon, */ BuildingOfficeIcon, /* GlobeAltIcon, */ /* SparklesIcon, */ /* InformationCircleIcon, */ /* EnvelopeIcon, */ Bars3Icon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { useSession, signOut } from "next-auth/react";
 
 export default function Header() {
@@ -141,23 +141,42 @@ export default function Header() {
       <div className="container mx-auto px-6"> {/* Padding px-6 olarak güncellendi */}
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
-          <Link href="/" className="flex items-center group flex-shrink-0">
-            <div className="relative h-8 w-8 mr-2"> {/* Boyut ayarlandı */}
-              <Image
-                src="/images/logo.png" // Logo yolu kontrol edilmeli
-                alt="TourTech Logo"
-                width={32}
-                height={32}
-                className="transition-transform duration-300 group-hover:scale-105"
-              />
-            </div>
-            <span className={`text-xl font-semibold ${logoColor} transition-colors duration-300 tracking-tight`}>
-              Turladur
-            </span>
-          </Link>
+          <div className="flex items-center space-x-4">
+            {/* Ana Logo */}
+            <Link href="/" className="flex items-center group flex-shrink-0">
+              <div className="relative h-8 w-8 mr-2">
+                <Image
+                  src="/images/logo.png"
+                  alt="TourTech Logo"
+                  width={32}
+                  height={32}
+                  className="transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+              <span className={`text-xl font-semibold ${logoColor} transition-colors duration-300 tracking-tight`}>
+                Turladur
+              </span>
+            </Link>
+
+            {/* Slash */}
+            <div className={`text-2xl font-light ${logoColor}`}>/</div>
+
+            {/* Partner Portal Logo */}
+            <Link href="/partner-login" className="flex items-center group flex-shrink-0">
+              <div className="flex-shrink-0 flex items-center">
+                <div className="h-8 w-8 text-white rounded-md flex items-center justify-center">
+                  <Image src="/images/logo.png" alt="TurlaDur Logo" width={32} height={32} />
+                </div>
+                <div className="ml-2.5 flex flex-col">
+                  <span className={`text-lg font-semibold ${logoColor}`}>Turladur</span>
+                  <span className={`text-xs ${shouldAppearScrolled ? 'text-sky-600' : 'text-white'} tracking-wide font-medium`}>Partner Portal</span>
+                </div>
+              </div>
+            </Link>
+          </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center space-x-1.5"> {/* Spacing ayarlandı */}
+          <nav className="hidden lg:flex items-center space-x-1">
             {/* Turlar Dropdown */} 
             <div className="relative group dropdown-container">
               <button
@@ -177,13 +196,12 @@ export default function Header() {
                   <Link href="/tour-operator" className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-sky-700 hover:bg-sky-50 rounded transition-colors duration-150">Tur Operatörleri</Link>
                   <Link href="/tours?duration=1" className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-sky-700 hover:bg-sky-50 rounded transition-colors duration-150">Günübirlik Turlar</Link>
                   <Link href="/tours?duration=7" className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-sky-700 hover:bg-sky-50 rounded transition-colors duration-150">Haftalık Turlar</Link>
-                  <Link href="/tours?featured=true" className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-sky-700 hover:bg-sky-50 rounded transition-colors duration-150">Öne Çıkan Turlar</Link>
                 </div>
               )}
             </div>
 
             {/* Aktiviteler Dropdown */} 
-             <div className="relative group dropdown-container">
+            <div className="relative group dropdown-container">
               <button
                 onClick={() => toggleDropdown('activities')}
                 className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${linkColor} ${linkHoverColor} ${linkBgHoverColor}`}
@@ -194,7 +212,7 @@ export default function Header() {
                 />
               </button>
               {activeDropdown === 'activities' && (
-                 <div className="absolute left-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 p-1.5 z-50 animate-fadeIn">
+                <div className="absolute left-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 p-1.5 z-50 animate-fadeIn">
                   <Link href="/activities" className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-sky-700 hover:bg-sky-50 rounded transition-colors duration-150">Tüm Aktiviteler</Link>
                   <div className="border-t border-neutral-100 my-1"></div>
                   <Link href="/gastronomi" className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-sky-700 hover:bg-sky-50 rounded transition-colors duration-150">Gastronomi</Link>
@@ -227,7 +245,7 @@ export default function Header() {
               Fırsatlar
             </button>
 
-             {/* Arama Butonu */} 
+            {/* Arama Butonu */} 
             <button
               onClick={toggleSearch}
               className={`search-button ml-1 p-2 rounded-full transition-colors duration-200 ${iconColor} ${iconHoverColor} ${iconBgHoverColor}`}
@@ -493,6 +511,14 @@ export default function Header() {
                   onClick={() => setIsMenuOpen(false)}
                 >
                   İletişim
+                </Link>
+                <Link
+                  href="/partner-login"
+                   className="block py-2.5 px-3 text-sm font-medium text-neutral-700 hover:bg-sky-50/70 hover:text-sky-700 rounded-md transition-colors flex items-center"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <BuildingOfficeIcon className="w-4 h-4 mr-1.5" />
+                  Partner Portal
                 </Link>
                 <button
                   onClick={() => { openDealsPopup(); setIsMenuOpen(false); }}
