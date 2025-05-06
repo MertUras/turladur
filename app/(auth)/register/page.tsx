@@ -170,7 +170,6 @@ export default function RegisterPage() {
                   </div>
                 </div>
                 <span className="text-xl font-semibold text-neutral-800 group-hover:text-sky-700 transition-colors">Turladur</span>
-                <span className="text-lg font-semibold text-neutral-800 group-hover:text-sky-700 transition-colors">Turladur</span>
             </Link>
             <h2 className="text-xl md:text-2xl font-bold text-neutral-900 mb-1.5 tracking-tight">
               Hesap Oluşturun

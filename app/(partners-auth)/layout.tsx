@@ -1,10 +1,16 @@
-import Header from "../components/Header";
+import PartnerNavbar from "./components/Navbar";
 
-export default function PartnersLayout({ children }: { children: React.ReactNode }) {
-    return (
-        <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50/50">
-            <Header />
-            {children}
-        </main>
-    );
+export default function PartnerAuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="h-screen overflow-hidden bg-neutral-50">
+      <PartnerNavbar />
+      <main className="h-[calc(100vh-3.5rem)]">
+        {children}
+      </main>
+    </div>
+  );
 }
