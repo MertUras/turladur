@@ -191,7 +191,7 @@ export default function AboutPage() {
               <span className="text-sky-600">Teknolojiyle</span> Şekillendiriyoruz
             </h1>
             <p className="text-lg text-neutral-600 mb-10 leading-relaxed max-w-3xl mx-auto">
-              2013'ten beri Türkiye'nin öncü turizm teknoloji sağlayıcısı olarak, sektöre ilham veren yenilikçi ve sürdürülebilir çözümler üretiyoruz.
+              2025'te başlayacak yolculuğumuzda, turizm sektörünü teknolojiyle buluşturarak yenilikçi ve sürdürülebilir çözümler üretmeyi hedefliyoruz.
             </p>
              {/* Buton stillerini güncelle */}
              <div className="flex flex-wrap gap-3 justify-center">
@@ -253,10 +253,10 @@ export default function AboutPage() {
                 Türkiye'nin Lider Turizm Teknoloji Sağlayıcısı
               </h2>
               <p className="text-base text-neutral-600 mb-5 leading-relaxed">
-                TourTech A.Ş., turizm sektörünü teknolojiyle buluşturarak kurumsal müşterilerimize ve bireysel kullanıcılara katma değerli çözümler sunar. Yüksek teknolojili sistemlerimiz ve kullanıcı odaklı platformlarımızla sektörde dönüşüm yaratıyoruz.
+                TourTech, turizm sektörünün dijital dönüşümüne öncülük eden yenilikçi bir teknoloji platformudur. Yapay zeka destekli çözümlerimiz ve kullanıcı odaklı yaklaşımımızla, seyahat deneyimini daha kişiselleştirilmiş ve verimli hale getiriyoruz.
               </p>
               <p className="text-base text-neutral-600 leading-relaxed">
-                 Gelişmiş veri analitiği altyapımız ve uzman ekibimizle seyahat deneyimini yeniden tanımlıyoruz.
+                Türkiye'nin benzersiz destinasyonlarını dünyaya tanıtırken, yerel ekonomilere katkı sağlıyor ve sürdürülebilir turizmi destekliyoruz.
               </p>
                {/* İsteğe bağlı olarak ek butonlar veya linkler eklenebilir */}
              </div>
