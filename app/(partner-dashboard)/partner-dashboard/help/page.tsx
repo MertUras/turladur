@@ -13,8 +13,8 @@ export default function HelpPage() {
   
   const faqs: FaqItem[] = [
     {
-      question: 'TourTech panelini nasıl kullanabilirim?',
-      answer: 'TourTech panel, turlarınızı yönetmek için tasarlanmış kullanıcı dostu bir arayüzdür. Sol taraftaki menüden istediğiniz bölüme tıklayarak ilgili özelliklere erişebilirsiniz. Örneğin, Turlarım menüsüne tıklayarak turlarınızı görüntüleyebilir ve yönetebilirsiniz.'
+      question: 'Turladur panelini nasıl kullanabilirim?',
+      answer: 'Turladur panel, turlarınızı yönetmek için tasarlanmış kullanıcı dostu bir arayüzdür. Sol taraftaki menüden istediğiniz bölüme tıklayarak ilgili özelliklere erişebilirsiniz. Örneğin, Turlarım menüsüne tıklayarak turlarınızı görüntüleyebilir ve yönetebilirsiniz.'
     },
     {
       question: 'Yeni bir tur nasıl oluştururum?',
@@ -109,7 +109,7 @@ export default function HelpPage() {
             Sorularınız ve önerileriniz için bize e-posta gönderebilirsiniz. En kısa sürede yanıt vermeye çalışacağız.
           </p>
           <a 
-            href="mailto:destek@tourtech.com" 
+            href="mailto:destek@turladur.com" 
             className="block w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md transition text-center"
           >
             E-posta Gönder
@@ -129,7 +129,7 @@ export default function HelpPage() {
           </li>
           <li className="flex">
             <span className="font-medium w-32">E-posta:</span>
-            <span>destek@tourtech.com</span>
+            <span>destek@turladur.com</span>
           </li>
           <li className="flex">
             <span className="font-medium w-32">Adres:</span>
@@ -143,7 +143,7 @@ export default function HelpPage() {
       </div>
       
       <div className="text-center">
-        <p className="text-gray-500 text-sm">TourTech © 2023. Tüm hakları saklıdır.</p>
+        <p className="text-gray-500 text-sm">Turladur © 2023. Tüm hakları saklıdır.</p>
       </div>
     </div>
   );

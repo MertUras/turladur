@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'Kültür Turları | TourTech - Türkiye\'nin Lider Turizm Teknolojileri Şirketi',
+  title: 'Kültür Turları | Turladur - Türkiye\'nin Lider Turizm Teknolojileri Şirketi',
   description: 'Türkiye\'nin zengin tarihini ve kültürel mirasını keşfedin. Antik kentler, müzeler, tarihi yapılar ve yerel yaşam deneyimleri.',
 };
 

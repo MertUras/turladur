@@ -17,8 +17,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 export const metadata: Metadata = {
-  title: 'Popüler Rotalar | TourTech - Türkiye\'nin Lider Turizm Teknolojileri Şirketi',
-  description: 'TourTech ile Türkiye\'nin en popüler turizm rotalarını keşfedin. Kapadokya, Likya Yolu, Pamukkale ve daha fazlası için tur seçeneklerini inceleyin.',
+  title: 'Popüler Rotalar | Turladur - Türkiye\'nin Lider Turizm Teknolojileri Şirketi',
+  description: 'Turladur ile Türkiye\'nin en popüler turizm rotalarını keşfedin. Kapadokya, Likya Yolu, Pamukkale ve daha fazlası için tur seçeneklerini inceleyin.',
 };
 
 // Popüler Rotalar
@@ -191,7 +191,7 @@ export default function RoutesPage() {
                 <span className="text-blue-400">Popüler Rotaları</span>
               </h1>
               <p className="text-xl text-gray-300 mb-8 leading-relaxed max-w-2xl">
-                Birbirinden güzel doğal ve tarihi destinasyonlar, benzersiz yolculuk deneyimleri ve unutulmaz anılar için aradığınız rotaları TourTech ile keşfedin.
+                Birbirinden güzel doğal ve tarihi destinasyonlar, benzersiz yolculuk deneyimleri ve unutulmaz anılar için aradığınız rotaları Turladur ile keşfedin.
               </p>
               <div className="flex flex-wrap gap-4">
                 <a 
@@ -419,7 +419,7 @@ export default function RoutesPage() {
       <section className="py-16 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">TourTech Rotalar</h2>
+            <h2 className="text-3xl font-bold mb-4">Turladur Rotalar</h2>
             <p className="text-lg text-blue-100">
               Türkiye'nin en kapsamlı ve detaylı rota arşivi
             </p>

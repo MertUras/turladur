@@ -25,8 +25,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 export const metadata: Metadata = {
-  title: 'Hakkımızda | TourTech - Premium Turizm Teknolojileri',
-  description: 'TourTech\'in vizyonu, değerleri ve başarı öyküsü. Turizm sektörünü teknolojiyle dönüştüren lider şirketimizin kurumsal kimliğini keşfedin.',
+  title: 'Hakkımızda | Turladur - Premium Turizm Teknolojileri',
+  description: 'Turladur\'in vizyonu, değerleri ve başarı öyküsü. Turizm sektörünü teknolojiyle dönüştüren lider şirketimizin kurumsal kimliğini keşfedin.',
 };
 
 // Kurumsal Değerlerimiz

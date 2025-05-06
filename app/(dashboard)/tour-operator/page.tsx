@@ -162,7 +162,7 @@ export default function TourOperatorsPage() {
               Güvenilir Tur Operatörleri ile <br /> Hayallerinize Yolculuk
             </h1>
             <p className="text-lg md:text-xl text-indigo-200/90 mb-10 max-w-2xl mx-auto">
-              TourTech platformunda, özenle seçilmiş ve onaylanmış tur operatörleri ile unutulmaz seyahat deneyimleri sizi bekliyor.
+              Turladur platformunda, özenle seçilmiş ve onaylanmış tur operatörleri ile unutulmaz seyahat deneyimleri sizi bekliyor.
             </p>
             
             <div className="max-w-2xl mx-auto relative z-10">
@@ -537,7 +537,7 @@ export default function TourOperatorsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
             <div className="lg:col-span-2">
               <p className="text-gray-600 mb-6 leading-relaxed">
-                 TourTech, seyahat planlarınızı güvenle yapabilmeniz için Türkiye'nin en saygın ve profesyonel tur operatörlerini bir araya getirir. Platformumuzdaki her operatör, hizmet kalitesi, yasal uygunluk ve müşteri memnuniyeti açısından dikkatle seçilir ve düzenli olarak değerlendirilir.
+                 Turladur, seyahat planlarınızı güvenle yapabilmeniz için Türkiye'nin en saygın ve profesyonel tur operatörlerini bir araya getirir. Platformumuzdaki her operatör, hizmet kalitesi, yasal uygunluk ve müşteri memnuniyeti açısından dikkatle seçilir ve düzenli olarak değerlendirilir.
               </p>
               
               <div className="mb-8">
@@ -561,7 +561,7 @@ export default function TourOperatorsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div className="bg-indigo-50/60 rounded-lg p-4 border border-indigo-100">
                    <h4 className="font-semibold text-indigo-800 mb-1.5 flex items-center text-sm">
-                     <BadgeCheck size={16} className="mr-1.5" /> TourTech Onaylı
+                     <BadgeCheck size={16} className="mr-1.5" /> Turladur Onaylı
                    </h4>
                    <p className="text-xs text-indigo-700 leading-relaxed">
                      Onaylı operatörler, yüksek hizmet standartlarımızı karşılayan, güvenilir ve müşteri odaklı iş ortaklarımızdır.
@@ -610,10 +610,10 @@ export default function TourOperatorsPage() {
           <div className="max-w-3xl mx-auto space-y-5">
             {[
               { question: "Tur operatörlerini nasıl karşılaştırabilirim?", answer: "Platformumuzdaki filtreleme (puan, sertifika, tur sayısı vb.) ve sıralama seçeneklerini kullanarak operatörleri karşılaştırabilirsiniz. Ayrıca operatör detay sayfalarında müşteri yorumlarını ve hizmet detaylarını inceleyebilirsiniz." },
-              { question: "Rezervasyon sonrası operatörle nasıl iletişime geçebilirim?", answer: "Onaylanan rezervasyonunuz sonrası operatörün doğrudan iletişim bilgileri (telefon, e-posta) size iletilir. Ayrıca TourTech platformu üzerinden de mesajlaşma imkanınız bulunmaktadır." },
-              { question: "TourTech Onaylı (Sertifikalı) operatör ne anlama geliyor?", answer: "Bu operatörler, TourTech tarafından belirlenen hizmet kalitesi, yasal uygunluk ve müşteri memnuniyeti standartlarını karşıladıkları için onaylanmıştır. Bu, daha güvenilir bir seyahat deneyimi anlamına gelir." },
+              { question: "Rezervasyon sonrası operatörle nasıl iletişime geçebilirim?", answer: "Onaylanan rezervasyonunuz sonrası operatörün doğrudan iletişim bilgileri (telefon, e-posta) size iletilir. Ayrıca Turladur platformu üzerinden de mesajlaşma imkanınız bulunmaktadır." },
+              { question: "Turladur Onaylı (Sertifikalı) operatör ne anlama geliyor?", answer: "Bu operatörler, Turladur tarafından belirlenen hizmet kalitesi, yasal uygunluk ve müşteri memnuniyeti standartlarını karşıladıkları için onaylanmıştır. Bu, daha güvenilir bir seyahat deneyimi anlamına gelir." },
               { question: "İptal ve değişiklik politikaları standart mı?", answer: "Hayır, her tur operatörünün ve hatta her turun farklı iptal/değişiklik koşulları olabilir. Rezervasyon yapmadan önce tur detay sayfasındaki ve operatör profilindeki ilgili politikaları dikkatlice okumanız önemlidir." },
-              { question: "Seyahatim sırasında bir sorun yaşarsam ne yapmalıyım?", answer: "Öncelikle doğrudan tur operatörünüzle iletişime geçmenizi öneririz. Çözüm bulamadığınız durumlarda TourTech Müşteri Destek ekibimiz 7/24 size yardımcı olmak için hazırdır. İletişim bilgilerimize web sitemizden ulaşabilirsiniz." }
+              { question: "Seyahatim sırasında bir sorun yaşarsam ne yapmalıyım?", answer: "Öncelikle doğrudan tur operatörünüzle iletişime geçmenizi öneririz. Çözüm bulamadığınız durumlarda Turladur Müşteri Destek ekibimiz 7/24 size yardımcı olmak için hazırdır. İletişim bilgilerimize web sitemizden ulaşabilirsiniz." }
             ].map((faq, index) => (
               <details 
                 key={index} 

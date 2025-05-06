@@ -134,7 +134,7 @@ export default function PartnerRegisterPage() {
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 p-12 text-center">
           <div className="max-w-lg">
             <h2 className="text-4xl xl:text-5xl font-bold text-white mb-5 leading-tight tracking-normal">
-              TourTech Partner Ağına Katılın
+              Turladur Partner Ağına Katılın
             </h2>
             <p className="text-lg text-sky-100/90 mb-10 font-light">
               Binlerce turistin seyahat planlarını yönetin, gelirinizi artırın ve işinizi büyütün.
@@ -152,13 +152,13 @@ export default function PartnerRegisterPage() {
                   <BuildingOfficeIcon className="w-4 h-4 text-white" />
                 </div>
               </div>
-              <span className="text-xl font-semibold text-neutral-800 group-hover:text-sky-700 transition-colors">TourTech <span className="text-sky-600">Partner</span></span>
+              <span className="text-xl font-semibold text-neutral-800 group-hover:text-sky-700 transition-colors">Turladur <span className="text-sky-600">Partner</span></span>
             </Link>
             <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 mb-3 tracking-tight">
               İş Ortağı Hesabı Oluşturun
             </h2>
             <p className="text-sm text-neutral-500">
-              TourTech partner ağına katılarak işinizi büyütün.
+              Turladur partner ağına katılarak işinizi büyütün.
             </p>
           </div>
 

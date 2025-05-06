@@ -107,7 +107,7 @@ export default function PartnerLoginPage() {
               Partner Portalına Hoş Geldiniz
             </h2>
             <p className="text-lg text-sky-100/90 mb-10 font-light">
-              TourTech Partner portalı ile tüm işlemlerinizi kolayca yönetin, rezervasyonları takip edin ve gelirlerinizi artırın.
+              Turladur Partner portalı ile tüm işlemlerinizi kolayca yönetin, rezervasyonları takip edin ve gelirlerinizi artırın.
             </p>
             
             {[
@@ -150,7 +150,7 @@ export default function PartnerLoginPage() {
                   <BuildingOfficeIcon className="w-4 h-4 text-white" />
                 </div>
               </div>
-              <span className="text-xl font-semibold text-neutral-800 group-hover:text-sky-700 transition-colors">TourTech <span className="text-sky-600">Partner</span></span>
+              <span className="text-xl font-semibold text-neutral-800 group-hover:text-sky-700 transition-colors">Turladur <span className="text-sky-600">Partner</span></span>
             </Link>
             <h2 className="text-2xl md:text-3xl font-bold text-neutral-900 mb-2 tracking-tight">
               İş Ortağı Girişi
