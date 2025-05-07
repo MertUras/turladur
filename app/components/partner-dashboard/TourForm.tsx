@@ -20,6 +20,20 @@ export interface TourFormData {
   excludes: string[];
   itinerary: { title: string; description: string }[];
   status: 'active' | 'draft' | 'archived';
+  departureCity: string;
+  region: string;
+  transportation: string;
+  period: string;
+  tourType: string;
+  accommodationType: string;
+  difficultyLevel: string;
+  ageRestriction: number;
+  languages: string[];
+  tags: string[];
+  startDate: string;
+  endDate: string;
+  discount: number;
+  destinations: string[];
 }
 
 interface TourFormProps {
@@ -41,7 +55,21 @@ const defaultFormData: TourFormData = {
   includes: ['Rehber', 'Ulaşım', 'Öğle yemeği'],
   excludes: ['Akşam yemeği', 'Kişisel harcamalar'],
   itinerary: [{ title: '1. Gün', description: '' }],
-  status: 'draft'
+  status: 'draft',
+  departureCity: '',
+  region: '',
+  transportation: '',
+  period: '',
+  tourType: '',
+  accommodationType: '',
+  difficultyLevel: '',
+  ageRestriction: 0,
+  languages: ['Türkçe'],
+  tags: [],
+  startDate: '',
+  endDate: '',
+  discount: 0,
+  destinations: []
 };
 
 export default function TourForm({ initialData, onSubmit, isSubmitting = false, currentStep = 'basic', partnerId }: TourFormProps) {
@@ -195,9 +223,24 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
     if (!formData.title) newErrors.title = 'Tur adı gerekli';
     if (!formData.description) newErrors.description = 'Açıklama gerekli';
     if (!formData.price) newErrors.price = 'Fiyat gerekli';
-    if (!formData.location) newErrors.location = 'Konum gerekli';
+    if (!formData.departureCity) newErrors.departureCity = 'Kalkış şehri gerekli';
+    if (!formData.region) newErrors.region = 'Bölge gerekli';
     if (!formData.duration) newErrors.duration = 'Süre gerekli';
+    if (!formData.maxParticipants) newErrors.maxParticipants = 'Maksimum katılımcı sayısı gerekli';
+    if (!formData.startDate) newErrors.startDate = 'Başlangıç tarihi gerekli';
+    if (!formData.endDate) newErrors.endDate = 'Bitiş tarihi gerekli';
+    if (!formData.transportation) newErrors.transportation = 'Ulaşım tipi gerekli';
+    if (!formData.tourType) newErrors.tourType = 'Tur tipi gerekli';
     if (formData.images.length === 0) newErrors.images = 'En az bir resim gerekli';
+    
+    // Tarih kontrolü
+    if (formData.startDate && formData.endDate) {
+      const start = new Date(formData.startDate);
+      const end = new Date(formData.endDate);
+      if (start > end) {
+        newErrors.endDate = 'Bitiş tarihi başlangıç tarihinden sonra olmalıdır';
+      }
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -274,26 +317,66 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
             </div>
 
             <div>
-              <label htmlFor="location" className="mb-2 block text-sm font-medium text-gray-900">
-                Konum <span className="text-red-500">*</span>
+              <label htmlFor="discount" className="mb-2 block text-sm font-medium text-gray-900">
+                İndirim Oranı (%)
+              </label>
+              <div className="relative">
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                  <span className="text-gray-500">%</span>
+                </div>
+                <input
+                  type="number"
+                  id="discount"
+                  name="discount"
+                  value={formData.discount || ''}
+                  onChange={handleChange}
+                  className="block w-full rounded-lg border border-gray-300 pr-8 pl-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                  placeholder="0"
+                  min="0"
+                  max="100"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <label htmlFor="departureCity" className="mb-2 block text-sm font-medium text-gray-900">
+                Kalkış Şehri <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                id="location"
-                name="location"
-                value={formData.location}
+                id="departureCity"
+                name="departureCity"
+                value={formData.departureCity}
                 onChange={handleChange}
-                className={`block w-full rounded-lg border ${errors.location ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
+                className={`block w-full rounded-lg border ${errors.departureCity ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
                 placeholder="İstanbul"
               />
-              {errors.location && <p className="mt-2 text-sm text-red-600">{errors.location}</p>}
+              {errors.departureCity && <p className="mt-2 text-sm text-red-600">{errors.departureCity}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="region" className="mb-2 block text-sm font-medium text-gray-900">
+                Bölge <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="region"
+                name="region"
+                value={formData.region}
+                onChange={handleChange}
+                className={`block w-full rounded-lg border ${errors.region ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
+                placeholder="Marmara"
+              />
+              {errors.region && <p className="mt-2 text-sm text-red-600">{errors.region}</p>}
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <label htmlFor="duration" className="mb-2 block text-sm font-medium text-gray-900">
-                Süre (Saat) <span className="text-red-500">*</span>
+                Süre (Gün) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -302,7 +385,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                 value={formData.duration || ''}
                 onChange={handleChange}
                 className={`block w-full rounded-lg border ${errors.duration ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
-                placeholder="8"
+                placeholder="3"
                 min="1"
               />
               {errors.duration && <p className="mt-2 text-sm text-red-600">{errors.duration}</p>}
@@ -324,6 +407,139 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
               />
               {errors.maxParticipants && <p className="mt-2 text-sm text-red-600">{errors.maxParticipants}</p>}
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <label htmlFor="startDate" className="mb-2 block text-sm font-medium text-gray-900">
+                Başlangıç Tarihi <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                id="startDate"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleChange}
+                className={`block w-full rounded-lg border ${errors.startDate ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
+              />
+              {errors.startDate && <p className="mt-2 text-sm text-red-600">{errors.startDate}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="endDate" className="mb-2 block text-sm font-medium text-gray-900">
+                Bitiş Tarihi <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                id="endDate"
+                name="endDate"
+                value={formData.endDate}
+                onChange={handleChange}
+                className={`block w-full rounded-lg border ${errors.endDate ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
+              />
+              {errors.endDate && <p className="mt-2 text-sm text-red-600">{errors.endDate}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <label htmlFor="transportation" className="mb-2 block text-sm font-medium text-gray-900">
+                Ulaşım Tipi <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="transportation"
+                name="transportation"
+                value={formData.transportation}
+                onChange={handleChange}
+                className={`block w-full rounded-lg border ${errors.transportation ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
+              >
+                <option value="">Seçiniz</option>
+                <option value="Otobüs">Otobüs</option>
+                <option value="Uçak">Uçak</option>
+                <option value="Tren">Tren</option>
+                <option value="Minibüs">Minibüs</option>
+                <option value="Özel Araç">Özel Araç</option>
+              </select>
+              {errors.transportation && <p className="mt-2 text-sm text-red-600">{errors.transportation}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="tourType" className="mb-2 block text-sm font-medium text-gray-900">
+                Tur Tipi <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="tourType"
+                name="tourType"
+                value={formData.tourType}
+                onChange={handleChange}
+                className={`block w-full rounded-lg border ${errors.tourType ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
+              >
+                <option value="">Seçiniz</option>
+                <option value="Kültür Turu">Kültür Turu</option>
+                <option value="Doğa Turu">Doğa Turu</option>
+                <option value="Balayı Turu">Balayı Turu</option>
+                <option value="Yemek Turu">Yemek Turu</option>
+                <option value="Macera Turu">Macera Turu</option>
+                <option value="Günübirlik Tur">Günübirlik Tur</option>
+              </select>
+              {errors.tourType && <p className="mt-2 text-sm text-red-600">{errors.tourType}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <label htmlFor="accommodationType" className="mb-2 block text-sm font-medium text-gray-900">
+                Konaklama Tipi
+              </label>
+              <select
+                id="accommodationType"
+                name="accommodationType"
+                value={formData.accommodationType}
+                onChange={handleChange}
+                className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+              >
+                <option value="">Seçiniz</option>
+                <option value="Otel">Otel</option>
+                <option value="Pansiyon">Pansiyon</option>
+                <option value="Apart">Apart</option>
+                <option value="Butik Otel">Butik Otel</option>
+                <option value="Kamp">Kamp</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="difficultyLevel" className="mb-2 block text-sm font-medium text-gray-900">
+                Zorluk Seviyesi
+              </label>
+              <select
+                id="difficultyLevel"
+                name="difficultyLevel"
+                value={formData.difficultyLevel}
+                onChange={handleChange}
+                className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+              >
+                <option value="">Seçiniz</option>
+                <option value="Kolay">Kolay</option>
+                <option value="Orta">Orta</option>
+                <option value="Zor">Zor</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="ageRestriction" className="mb-2 block text-sm font-medium text-gray-900">
+              Yaş Sınırı
+            </label>
+            <input
+              type="number"
+              id="ageRestriction"
+              name="ageRestriction"
+              value={formData.ageRestriction || ''}
+              onChange={handleChange}
+              className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+              placeholder="0"
+              min="0"
+            />
           </div>
 
           <div>

@@ -3,13 +3,48 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+declare module "next-auth" {
+  interface User {
+    id: string;
+    email: string;
+    name?: string | null;
+    role: string;
+    provider: string;
+    isMainUser?: boolean;
+    tourOperatorId?: string;
+    permissions?: any;
+  }
+
+  interface Session {
+    user: User & {
+      id: string;
+      role: string;
+      provider: string;
+      isMainUser?: boolean;
+      tourOperatorId?: string;
+      permissions?: any;
+    };
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    role: string;
+    provider: string;
+    isMainUser?: boolean;
+    tourOperatorId?: string;
+    permissions?: any;
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
   pages: {
-    signIn: "/login",
-    error: "/login",
+    signIn: "/partner-login",
+    error: "/partner-login",
   },
   providers: [
     // Normal kullanıcılar için credentials provider
@@ -71,6 +106,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email ve şifre gerekli');
         }
 
+        // Önce ana kullanıcıyı kontrol et
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
           include: {
@@ -78,28 +114,47 @@ export const authOptions: NextAuthOptions = {
           },
         });
 
-        if (!user || !user.password) {
-          throw new Error('Kullanıcı bulunamadı');
+        if (user && user.password) {
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+
+          if (isPasswordValid && user.role === 'TOUR_OPERATOR') {
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              role: user.role,
+              provider: 'partner-credentials',
+              isMainUser: true,
+            };
+          }
         }
 
-        // Sadece partner kullanıcılarına izin ver
-        if (user.role !== 'TOUR_OPERATOR') {
-          throw new Error('Bu giriş sadece partner kullanıcıları içindir. Lütfen normal kullanıcı girişi yapın.');
+        // Ana kullanıcı bulunamazsa alt kullanıcıları kontrol et
+        const subUser = await prisma.subUser.findFirst({
+          where: { email: credentials.email },
+          include: {
+            tourOperator: true,
+          },
+        });
+
+        if (subUser && subUser.password) {
+          const isPasswordValid = await bcrypt.compare(credentials.password, subUser.password);
+
+          if (isPasswordValid && subUser.status === 'ACTIVE') {
+            return {
+              id: subUser.id,
+              email: subUser.email,
+              name: subUser.name,
+              role: subUser.role,
+              provider: 'partner-credentials',
+              isMainUser: false,
+              tourOperatorId: subUser.tourOperatorId,
+              permissions: subUser.permissions,
+            };
+          }
         }
 
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
-
-        if (!isPasswordValid) {
-          throw new Error('Geçersiz şifre');
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          provider: 'partner-credentials',
-        };
+        throw new Error('Geçersiz email veya şifre');
       },
     }),
   ],
@@ -109,6 +164,9 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = user.role;
         token.provider = user.provider;
+        token.isMainUser = user.isMainUser;
+        token.tourOperatorId = user.tourOperatorId;
+        token.permissions = user.permissions;
       }
       return token;
     },
@@ -117,6 +175,9 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id;
         session.user.role = token.role;
         session.user.provider = token.provider;
+        session.user.isMainUser = token.isMainUser;
+        session.user.tourOperatorId = token.tourOperatorId;
+        session.user.permissions = token.permissions;
       }
       return session;
     },

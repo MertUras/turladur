@@ -36,13 +36,10 @@ export default function PartnerLoginPage() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      if (session?.user?.provider === 'credentials') {
-        signOut({ redirect: false });
-        return;
-      }
-      
       if (session?.user?.role === 'TOUR_OPERATOR') {
         router.push('/partner-dashboard');
+      } else {
+        signOut({ redirect: false });
       }
     }
   }, [status, session, router]);
@@ -57,13 +54,12 @@ export default function PartnerLoginPage() {
         email,
         password,
         redirect: false,
-        callbackUrl: '/partner-dashboard',
       });
 
       if (result?.error) {
         setError(result.error);
         setLoading(false);
-      } else {
+      } else if (result?.ok) {
         router.push('/partner-dashboard');
       }
     } catch (err) {

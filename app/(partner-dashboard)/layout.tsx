@@ -20,7 +20,10 @@ import {
   ShieldCheckIcon,
   QuestionMarkCircleIcon,
   BellIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  GlobeAltIcon,
+  UserGroupIcon,
+  Cog6ToothIcon
 } from '@heroicons/react/24/outline';
 import { signOut, useSession } from 'next-auth/react';
 
@@ -32,14 +35,15 @@ interface SidebarLink {
 }
 
 const sidebarLinks: SidebarLink[] = [
-  { name: 'Ana Sayfa', href: '/partner-dashboard', icon: HomeIcon, description: 'Genel istatistikler ve özet' },
-  { name: 'Turlarım', href: '/partner-dashboard/tours', icon: BriefcaseIcon, description: 'Tur listesi ve yönetimi' },
-  { name: 'Rezervasyonlar', href: '/partner-dashboard/reservations', icon: CalendarIcon, description: 'Rezervasyon yönetimi' },
-  { name: 'Müşteriler', href: '/partner-dashboard/customers', icon: UsersIcon, description: 'Müşteri bilgileri' },
+  { name: 'Genel Bakış', href: '/partner-dashboard', icon: HomeIcon },
+  { name: 'Turlar', href: '/partner-dashboard/tours', icon: GlobeAltIcon },
+  { name: 'Rezervasyonlar', href: '/partner-dashboard/reservations', icon: CalendarIcon },
+  { name: 'Müşteriler', href: '/partner-dashboard/customers', icon: UsersIcon },
   { name: 'Finansal Durum', href: '/partner-dashboard/financials', icon: CurrencyDollarIcon, description: 'Gelir ve ödemeler' },
-  { name: 'Raporlar', href: '/partner-dashboard/reports', icon: ChartBarIcon, description: 'Performans raporları' },
+  { name: 'Raporlar', href: '/partner-dashboard/reports', icon: ChartBarIcon },
+  { name: 'Kullanıcılar', href: '/partner-dashboard/users', icon: UserGroupIcon },
   { name: 'Yorumlar', href: '/partner-dashboard/reviews', icon: ChatBubbleLeftEllipsisIcon, description: 'Müşteri değerlendirmeleri' },
-  { name: 'Ayarlar', href: '/partner-dashboard/settings', icon: CogIcon, description: 'Hesap ayarları' },
+  { name: 'Ayarlar', href: '/partner-dashboard/settings', icon: Cog6ToothIcon },
   { name: 'Yardım', href: '/partner-dashboard/help', icon: QuestionMarkCircleIcon, description: 'Destek ve yardım' },
 ];
 

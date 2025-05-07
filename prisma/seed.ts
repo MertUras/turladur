@@ -208,6 +208,9 @@ async function main() {
         description: 'Türkiye\'nin en büyük tur operatörlerinden biri',
         logo: '/images/tour-operators/anadolu-turizm.jpg',
         userId: users[0].id,
+        email: 'info@anadoluturizm.com',
+        website: 'https://anadoluturizm.com',
+        license: 'A-1234'
       },
     }),
     prisma.tourOperator.create({
@@ -216,6 +219,61 @@ async function main() {
         description: 'Ege bölgesinin önde gelen tur operatörü',
         logo: '/images/tour-operators/ege-tur.jpg',
         userId: users[1].id,
+        email: 'info@egetur.com',
+        website: 'https://egetur.com',
+        license: 'B-5678'
+      },
+    }),
+  ]);
+
+  // Alt kullanıcılar
+  const subUsers = await Promise.all([
+    prisma.subUser.create({
+      data: {
+        name: 'Ahmet Yılmaz',
+        email: 'ahmet@anadoluturizm.com',
+        password: await hash('123456', 12),
+        role: 'MANAGER',
+        status: 'ACTIVE',
+        permissions: {
+          tours: true,
+          reservations: true,
+          customers: true,
+          reports: true,
+        },
+        tourOperatorId: tourOperators[0].id,
+      },
+    }),
+    prisma.subUser.create({
+      data: {
+        name: 'Ayşe Demir',
+        email: 'ayse@anadoluturizm.com',
+        password: await hash('123456', 12),
+        role: 'USER',
+        status: 'ACTIVE',
+        permissions: {
+          tours: true,
+          reservations: true,
+          customers: false,
+          reports: false,
+        },
+        tourOperatorId: tourOperators[0].id,
+      },
+    }),
+    prisma.subUser.create({
+      data: {
+        name: 'Mehmet Kaya',
+        email: 'mehmet@egetur.com',
+        password: await hash('123456', 12),
+        role: 'MANAGER',
+        status: 'ACTIVE',
+        permissions: {
+          tours: true,
+          reservations: true,
+          customers: true,
+          reports: true,
+        },
+        tourOperatorId: tourOperators[1].id,
       },
     }),
   ]);

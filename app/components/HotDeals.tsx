@@ -3,29 +3,34 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPinIcon } from '@heroicons/react/24/outline';
+import { MapPinIcon, StarIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon } from '@heroicons/react/20/solid';
+import { motion } from 'framer-motion';
 
 // Simplified Deal type
 type Deal = {
   id: number;
   title: string;
   description: string;
-  salePrice: number; // Only keeping sale price
+  salePrice: number;
   image: string;
   location: string;
   category: 'popular' | 'lastMinute' | 'discount';
+  type: 'tour' | 'activity';
 };
 
-// Updated deals data (removed unused fields like originalPrice, discount, label, expiry, rating, reviewCount, remainingSpots)
+// Updated deals data with type field
 const allDeals: Deal[] = [
-  { id: 1, title: 'Kapadokya Balon Turu', description: 'Eşsiz peri bacaları manzarasında unutulmaz bir balon deneyimi yaşayın', salePrice: 2880, image: 'https://images.unsplash.com/photo-1570654230464-9e63b3497a1e', location: 'Kapadokya', category: 'popular' },
-  { id: 2, title: 'İstanbul Boğaz Turu', description: 'Tekne ile İstanbul Boğazının güzelliklerini keşfedin', salePrice: 840, image: 'https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b', location: 'İstanbul', category: 'lastMinute' },
-  { id: 3, title: 'Pamukkale & Hierapolis Turu', description: 'Doğal travertenleri ve antik kenti keşfedin', salePrice: 1530, image: 'https://images.unsplash.com/photo-1571215682738-574b686ecb0b', location: 'Denizli', category: 'popular' },
-  { id: 4, title: 'Efes Antik Kenti Turu', description: 'Dünyanın en iyi korunmuş antik kentlerinden birini ziyaret edin', salePrice: 1125, image: 'https://images.unsplash.com/photo-1555869433-94f21d89a10d', location: 'İzmir', category: 'lastMinute' },
-  { id: 5, title: 'Safranbolu Evleri Turu', description: 'UNESCO Dünya Mirası Listesinde yer alan tarihi evlerde bir gün geçirin', salePrice: 720, image: 'https://images.unsplash.com/photo-1600687621645-113ced83a0d5', location: 'Karabük', category: 'lastMinute' },
-  { id: 6, title: 'Fethiye & Ölüdeniz Tekne Turu', description: 'Berrak sularda yüzün ve muhteşem koyları keşfedin', salePrice: 1540, image: 'https://images.unsplash.com/photo-1519356162333-4d49ceade668', location: 'Muğla', category: 'discount' },
-  { id: 7, title: 'Göreme Açık Hava Müzesi', description: "Kapadokya'nın binlerce yıllık tarihi kiliselerini keşfedin", salePrice: 560, image: 'https://images.unsplash.com/photo-1563290173-a81f98c6183a', location: 'Nevşehir', category: 'discount' },
-  { id: 8, title: 'Antalya Körfezi Yat Turu', description: "Lüks bir yatla Akdeniz'in turkuaz sularında gezinin", salePrice: 2100, image: 'https://images.unsplash.com/photo-1544998340-82295f75cfec', location: 'Antalya', category: 'discount' }
+  // Turlar
+  { id: 1, title: 'Kapadokya Balon Turu', description: 'Eşsiz peri bacaları manzarasında unutulmaz bir balon deneyimi yaşayın', salePrice: 2880, image: 'https://images.unsplash.com/photo-1570654230464-9e63b3497a1e', location: 'Kapadokya', category: 'popular', type: 'tour' },
+  { id: 2, title: 'İstanbul Boğaz Turu', description: 'Tekne ile İstanbul Boğazının güzelliklerini keşfedin', salePrice: 840, image: 'https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b', location: 'İstanbul', category: 'lastMinute', type: 'tour' },
+  { id: 3, title: 'Pamukkale & Hierapolis Turu', description: 'Doğal travertenleri ve antik kenti keşfedin', salePrice: 1530, image: 'https://images.unsplash.com/photo-1571215682738-574b686ecb0b', location: 'Denizli', category: 'popular', type: 'tour' },
+  { id: 4, title: 'Efes Antik Kenti Turu', description: 'Dünyanın en iyi korunmuş antik kentlerinden birini ziyaret edin', salePrice: 1125, image: 'https://images.unsplash.com/photo-1555869433-94f21d89a10d', location: 'İzmir', category: 'lastMinute', type: 'tour' },
+  // Aktiviteler
+  { id: 5, title: 'Fethiye Yamaç Paraşütü', description: 'Babadağdan Ölüdeniz manzarasına karşı yamaç paraşütü deneyimi', salePrice: 1200, image: 'https://images.unsplash.com/photo-1600255821058-c4f89958d700', location: 'Fethiye', category: 'popular', type: 'activity' },
+  { id: 6, title: 'Köprülü Kanyon Rafting', description: 'Heyecan dolu rafting macerası', salePrice: 450, image: 'https://images.unsplash.com/photo-1530866495561-e3aa5c2461cd', location: 'Antalya', category: 'lastMinute', type: 'activity' },
+  { id: 7, title: 'Kaş Dalış Deneyimi', description: 'Akdenizin berrak sularında batıkları keşfedin', salePrice: 800, image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5', location: 'Kaş', category: 'discount', type: 'activity' },
+  { id: 8, title: 'Erciyes Kayak Turu', description: 'Her seviyeye uygun pistlerde kayak deneyimi', salePrice: 950, image: 'https://images.unsplash.com/photo-1605540436563-5bca919ae766', location: 'Kayseri', category: 'popular', type: 'activity' }
 ];
 
 // Simplified price formatter
@@ -39,16 +44,24 @@ const formatPrice = (price: number) => {
 
 type CategoryTab = 'popular' | 'lastMinute' | 'discount' | 'all';
 
-// Simplified category data (removed icons, description, color)
-const categoryData = [
+// Kategori verilerini ayrı ayrı tanımlayalım
+const tourCategories = [
   { id: 'all', title: 'Tüm Turlar' },
   { id: 'popular', title: 'En Popüler' },
   { id: 'lastMinute', title: 'Son Dakika' },
   { id: 'discount', title: 'İndirimli Turlar' }
 ];
 
+const activityCategories = [
+  { id: 'all', title: 'Tüm Aktiviteler' },
+  { id: 'popular', title: 'En Popüler' },
+  { id: 'lastMinute', title: 'Son Dakika' },
+  { id: 'discount', title: 'İndirimli Aktiviteler' }
+];
+
 export default function HotDeals() {
-  const [activeCategory, setActiveCategory] = useState<CategoryTab>('all');
+  const [activeTourCategory, setActiveTourCategory] = useState<CategoryTab>('all');
+  const [activeActivityCategory, setActiveActivityCategory] = useState<CategoryTab>('all');
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
 
@@ -74,128 +87,214 @@ export default function HotDeals() {
     };
   }, []);
 
-  // Filtered deals logic remains similar
-  const getFilteredDeals = () => {
-    if (activeCategory === 'all') return allDeals;
-    return allDeals.filter(deal => deal.category === activeCategory);
+  const getFilteredDeals = (type: 'tour' | 'activity', category: CategoryTab) => {
+    const typeFiltered = allDeals.filter(deal => deal.type === type);
+    if (category === 'all') return typeFiltered;
+    return typeFiltered.filter(deal => deal.category === category);
   };
-  const filteredDeals = getFilteredDeals();
 
-  // Simplified category change handler (no animation state)
-  const handleCategoryChange = (category: CategoryTab) => {
-    setActiveCategory(category);
-  };
+  const filteredTours = getFilteredDeals('tour', activeTourCategory);
+  const filteredActivities = getFilteredDeals('activity', activeActivityCategory);
 
   return (
     <section 
       ref={sectionRef}
-      className={`py-24 md:py-32 bg-neutral-50 transition-opacity duration-1000 ease-out ${isVisible ? 'opacity-100' : 'opacity-0 translate-y-4'}`}
+      className="py-20 md:py-28 bg-gradient-to-b from-neutral-50 via-white to-neutral-50"
     >
-      <div className="container px-6 mx-auto max-w-7xl">
-        <div className="text-center mb-16">
-           {/* Etiket stili güncellendi */}
-           <div className="inline-flex items-center justify-center px-3 py-1 bg-sky-100 rounded-full text-sky-700 font-medium text-xs mb-6">
-             Öne Çıkanlar
-           </div>
-           {/* Ana başlık stili güncellendi */}
-           <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
-            Sizin İçin Seçtiklerimiz
-          </h2>
-           {/* Açıklama stili güncellendi */}
-           <p className="text-lg text-neutral-600 max-w-2xl mx-auto">
-            En popüler, son dakika ve indirimli turlarımıza göz atın.
-          </p>
-        </div>
-        
-        {/* Kategori Sekmeleri - Stil güncellendi */}
-        <div className="flex justify-center border-b border-neutral-200 mb-12">
-          {categoryData.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => handleCategoryChange(category.id as CategoryTab)}
-               // Sekme butonu stili güncellendi (aktif/pasif)
-               className={`px-4 sm:px-5 py-2.5 text-sm font-medium transition-colors duration-200 border-b-2 -mb-px ${ 
-                activeCategory === category.id
-                  ? 'border-sky-600 text-sky-700 font-semibold' 
-                  : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:border-neutral-300'
-              }`}
+      <div className="container px-4 mx-auto max-w-7xl">
+        {/* Turlar Bölümü */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-24"
+        >
+          <div className="text-center mb-12">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+              className="inline-flex items-center justify-center px-3 py-1 bg-sky-100 rounded-full text-sky-700 font-medium text-xs mb-4"
             >
-              {category.title}
-            </button>
-          ))}
-        </div>
-        
-        {/* Fırsat Kartları - Stil güncellendi */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-          {filteredDeals.map((deal, index) => (
-            <div 
-              key={deal.id}
-               // Kart ana yapısı ve hover efekti güncellendi
-               className={`bg-white rounded-xl border border-neutral-200/80 shadow-sm hover:shadow-lg flex flex-col transition-all duration-300 ease-out group overflow-hidden ${isVisible ? `animate-fadeInUp delay-${index * 100}` : 'opacity-0 translate-y-3'}`}
+              Öne Çıkan Turlar
+            </motion.div>
+            <motion.h2 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4"
             >
-               {/* Kart Görseli */}
-               <div className="relative aspect-[4/3] w-full overflow-hidden flex-shrink-0">
-                <Image 
-                  src={deal.image} 
-                  alt={deal.title}
-                  fill
-                  priority={index < 4} // İlk 4 görseli öncelikli yükle
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                   // Hover efekti eklendi
-                   className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                />
-                 {/* Görsel üzerine overlay (isteğe bağlı) */}
-                 {/* <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div> */} 
-               </div>
-              
-               {/* Kart İçeriği */}
-               <div className="p-5 flex flex-col flex-grow">
-                  {/* Konum */}
-                  <div className="flex items-center text-xs text-neutral-500 mb-1.5">
-                   <MapPinIcon className="w-3.5 h-3.5 mr-1 text-neutral-400 flex-shrink-0" />
-                   <span>{deal.location}</span>
-                 </div>
-                  {/* Başlık */}
-                  <h3 className="text-base font-semibold text-neutral-800 mb-2 leading-snug group-hover:text-sky-700 transition-colors">
-                   {/* Başlığın tamamını göstermek için truncate kaldırıldı */} 
-                   {deal.title}
-                 </h3>
-                  {/* Açıklama */}
-                  <p className="text-xs text-neutral-600 mb-4 flex-grow line-clamp-2 leading-relaxed">
-                   {deal.description}
-                 </p>
-                
-                 {/* Fiyat */}
-                 <div className="mb-4 mt-auto pt-4 border-t border-neutral-100">
-                    <span className="text-xl font-bold text-neutral-900">
-                      {formatPrice(deal.salePrice)}
-                    </span>
-                    <span className="text-xs text-neutral-500 ml-1">/ kişi</span>
-                 </div>
-                
-                 {/* Buton */}
-                 <Link 
-                  href={`/tour/${deal.id}`}
-                   // Buton stili güncellendi
-                   className="block w-full text-center px-4 py-2 bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors font-medium rounded-lg shadow-sm text-sm"
-                 >
-                  Detayları Gör
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        {/* Tümünü Gör Butonu - Stil güncellendi */}
-        <div className="mt-16 md:mt-20 text-center">
-          <Link 
-            href="/tours"
-             className="inline-block px-7 py-3 bg-white text-sky-700 border border-neutral-300 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors font-medium rounded-lg shadow-sm text-sm"
+              Sizin İçin Seçtiğimiz Turlar
+            </motion.h2>
+          </div>
+          
+          <div className="flex flex-wrap justify-center gap-2 mb-10">
+            {tourCategories.map((category) => (
+              <motion.button
+                key={category.id}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setActiveTourCategory(category.id as CategoryTab)}
+                className={`px-5 py-2 text-sm font-medium transition-all duration-200 rounded-full ${
+                  activeTourCategory === category.id
+                    ? 'bg-sky-600 text-white shadow-md shadow-sky-200'
+                    : 'bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200'
+                }`}
+              >
+                {category.title}
+              </motion.button>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {filteredTours.map((deal, index) => (
+              <DealCard key={deal.id} deal={deal} index={index} isVisible={isVisible} />
+            ))}
+          </div>
+          
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
+            className="mt-12 text-center"
           >
-            Tüm Turları Görüntüle
-          </Link>
-        </div>
+            <Link 
+              href="/tours"
+              className="inline-flex items-center px-6 py-3 bg-sky-600 text-white hover:bg-sky-700 rounded-lg transition-all duration-200 font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 text-sm"
+            >
+              Tüm Turları Görüntüle
+              <ArrowRightIcon className="w-4 h-4 ml-2" />
+            </Link>
+          </motion.div>
+        </motion.div>
+
+        {/* Aktiviteler Bölümü */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
+          <div className="text-center mb-12">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.5, duration: 0.4 }}
+              className="inline-flex items-center justify-center px-3 py-1 bg-sky-100 rounded-full text-sky-700 font-medium text-xs mb-4"
+            >
+              Öne Çıkan Aktiviteler
+            </motion.div>
+            <motion.h2 
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+              className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4"
+            >
+              Macera Dolu Aktiviteler
+            </motion.h2>
+          </div>
+          
+          <div className="flex flex-wrap justify-center gap-2 mb-10">
+            {activityCategories.map((category) => (
+              <motion.button
+                key={category.id}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setActiveActivityCategory(category.id as CategoryTab)}
+                className={`px-5 py-2 text-sm font-medium transition-all duration-200 rounded-full ${
+                  activeActivityCategory === category.id
+                    ? 'bg-sky-600 text-white shadow-md shadow-sky-200'
+                    : 'bg-white text-neutral-600 hover:bg-neutral-50 border border-neutral-200'
+                }`}
+              >
+                {category.title}
+              </motion.button>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {filteredActivities.map((deal, index) => (
+              <DealCard key={deal.id} deal={deal} index={index} isVisible={isVisible} />
+            ))}
+          </div>
+          
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9, duration: 0.5 }}
+            className="mt-12 text-center"
+          >
+            <Link 
+              href="/activities"
+              className="inline-flex items-center px-6 py-3 bg-sky-600 text-white hover:bg-sky-700 rounded-lg transition-all duration-200 font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 text-sm"
+            >
+              Tüm Aktiviteleri Görüntüle
+              <ArrowRightIcon className="w-4 h-4 ml-2" />
+            </Link>
+          </motion.div>
+        </motion.div>
       </div>
     </section>
+  );
+}
+
+// DealCard bileşeni
+function DealCard({ deal, index, isVisible }: { deal: Deal; index: number; isVisible: boolean }) {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1, duration: 0.5 }}
+      whileHover={{ y: -4 }}
+      className="bg-white rounded-lg border border-neutral-200/80 shadow-sm hover:shadow-md flex flex-col transition-all duration-300 ease-out group overflow-hidden"
+    >
+      <div className="relative aspect-[4/3] w-full overflow-hidden">
+        <Image 
+          src={deal.image} 
+          alt={deal.title}
+          fill
+          priority={index < 4}
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+          className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      </div>
+      
+      <div className="p-4 flex flex-col flex-grow">
+        <div className="flex items-center gap-3 text-xs text-neutral-500 mb-2">
+          <div className="flex items-center">
+            <MapPinIcon className="w-3.5 h-3.5 mr-1 text-neutral-400" />
+            <span>{deal.location}</span>
+          </div>
+          <div className="flex items-center">
+            <StarIcon className="w-3.5 h-3.5 mr-1 text-amber-400" />
+            <span>4.8</span>
+          </div>
+        </div>
+        
+        <h3 className="text-base font-semibold text-neutral-800 mb-2 leading-snug group-hover:text-sky-700 transition-colors">
+          {deal.title}
+        </h3>
+        
+        <p className="text-xs text-neutral-600 mb-3 flex-grow line-clamp-2 leading-relaxed">
+          {deal.description}
+        </p>
+        
+        <div className="mb-3 mt-auto pt-3 border-t border-neutral-100">
+          <div className="flex items-baseline justify-between">
+            <span className="text-lg font-bold text-neutral-900">
+              {formatPrice(deal.salePrice)}
+            </span>
+            <span className="text-xs text-neutral-500">/ kişi</span>
+          </div>
+        </div>
+        
+        <Link 
+          href={`/${deal.type === 'tour' ? 'tour' : 'activity'}/${deal.id}`}
+          className="block w-full text-center px-3 py-2 bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all duration-200 font-medium rounded-lg shadow-sm hover:shadow-md text-sm"
+        >
+          Detayları Gör
+        </Link>
+      </div>
+    </motion.div>
   );
 } 

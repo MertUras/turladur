@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../node_modules/.prisma/client"
@@ -14,48 +8,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Kullanıcı modeli
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  password      String?
-  image         String?
-  role          UserRole  @default(USER)
-  verificationToken String?
+  id                       String           @id @default(cuid())
+  name                     String?
+  email                    String           @unique
+  emailVerified            DateTime?
+  password                 String?
+  image                    String?
+  role                     UserRole         @default(USER)
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+  verificationToken        String?
   verificationTokenExpires DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // İlişkiler
-  hotels        Hotel[]
-  agencies      Agency[]
-  tourOperators TourOperator[]
-  experiences   Experience[]
-  bookings      Booking[]
-  reviews       Review[]
-  activityReviews ActivityReview[]
-  posts         Post[]
-  comments      Comment[]
+  activityReviews          ActivityReview[]
+  agencies                 Agency[]
+  bookings                 Booking[]
+  comments                 Comment[]
+  experiences              Experience[]
+  hotels                   Hotel[]
+  posts                    Post[]
+  reviews                  Review[]
+  tourOperators            TourOperator[]
 
   @@map("users")
 }
 
-enum UserRole {
-  USER
-  HOTEL_ADMIN
-  AGENCY_ADMIN
-  TOUR_OPERATOR
-  EXPERIENCE_PROVIDER
-  ADMIN
-}
-
-// Otel modeli
 model Hotel {
   id           String    @id @default(cuid())
   name         String
-  description  String?   @db.Text
+  description  String?
   address      String?
   city         String?
   country      String?
@@ -73,57 +54,41 @@ model Hotel {
   checkOutTime String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-
-  // İlişkiler
-  userId   String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rooms    Room[]
-  bookings Booking[]
-  reviews  Review[]
+  userId       String
+  bookings     Booking[]
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews      Review[]
+  rooms        Room[]
 
   @@map("hotels")
 }
 
-enum HotelType {
-  HOTEL
-  BOUTIQUE_HOTEL
-  RESORT
-  HOSTEL
-  APARTMENT
-  VILLA
-  GUESTHOUSE
-}
-
-// Oda modeli
 model Room {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
-  description String?  @db.Text
+  description String?
   type        String?
   capacity    Int
   price       Float
   discount    Float?
   size        Float?
   bedType     String?
-  images      Json     @default("[]")
-  amenities   Json     @default("{}")
-  available   Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // İlişkiler
-  hotelId   String
-  hotel     Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  bookings  Booking[]
+  images      Json      @default("[]")
+  amenities   Json      @default("{}")
+  available   Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  hotelId     String
+  bookings    Booking[]
+  hotel       Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
 
   @@map("rooms")
 }
 
-// Acente modeli
 model Agency {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
-  description String?  @db.Text
+  description String?
   address     String?
   city        String?
   country     String?
@@ -132,134 +97,138 @@ model Agency {
   website     String?
   logo        String?
   license     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // İlişkiler
-  userId   String
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookings Booking[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
 
   @@map("agencies")
 }
 
-// Tur operatörü modeli
 model TourOperator {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
-  description String?  @db.Text
+  description String?
   address     String?
   city        String?
   country     String?
   phone       String?
-  email       String?
+  email       String    @unique
   website     String?
   logo        String?
   license     String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // İlişkiler
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tours  Tour[]
-  bookings Booking[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String
+  bookings    Booking[]
+  subUsers    SubUser[]
+  user        User      @relation(fields: [userId], references: [id])
+  tours       Tour[]
 
   @@map("tour_operators")
 }
 
-// Tur modeli
-model Tour {
-  id              String   @id @default(cuid())
-  name            String
-  description     String?
-  duration        Int
-  price           Float
-  discount        Float?
-  startDate       DateTime?
-  endDate         DateTime?
-  maxParticipants Int?
-  destinations    Json     @default("[]")
-  inclusions      Json     @default("[]")
-  exclusions      Json     @default("[]")
-  itinerary       Json?
-  images          Json     @default("[]")
-  featured        Boolean  @default(false)
-  departureCity   String?
-  region          String?
-  transportation  String?
-  period          String?
-  rating          Float?   @default(0)
-  tourType        String?
-  accommodationType String?
-  difficultyLevel String?
-  ageRestriction  Int?
-  isPopular       Boolean  @default(false)
-  isLastMinute    Boolean  @default(false)
-  isEarlyBird     Boolean  @default(false)
-  languages       Json     @default("[]")
-  tags            Json     @default("[]")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+model SubUser {
+  id             String       @id @default(cuid())
+  tourOperatorId String
+  name           String
+  email          String
+  password       String
+  role           String       @default("USER")
+  permissions    Json
+  status         String       @default("ACTIVE")
+  lastLoginAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  tourOperator   TourOperator @relation(fields: [tourOperatorId], references: [id])
 
-  // İlişkiler
-  tourOperatorId String?
-  tourOperator   TourOperator? @relation(fields: [tourOperatorId], references: [id])
-  bookings       Booking[]
+  @@unique([tourOperatorId, email])
+  @@map("sub_users")
+}
+
+model Tour {
+  id                String        @id @default(cuid())
+  name              String
+  description       String?
+  duration          Int
+  price             Float
+  discount          Float?
+  startDate         DateTime?
+  endDate           DateTime?
+  maxParticipants   Int?
+  destinations      Json          @default("[]")
+  inclusions        Json          @default("[]")
+  exclusions        Json          @default("[]")
+  itinerary         Json?
+  images            Json          @default("[]")
+  featured          Boolean       @default(false)
+  departureCity     String?
+  region            String?
+  transportation    String?
+  period            String?
+  rating            Float?        @default(0)
+  tourType          String?
+  accommodationType String?
+  difficultyLevel   String?
+  ageRestriction    Int?
+  isPopular         Boolean       @default(false)
+  isLastMinute      Boolean       @default(false)
+  isEarlyBird       Boolean       @default(false)
+  languages         Json          @default("[]")
+  tags              Json          @default("[]")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  tourOperatorId    String?
+  bookings          Booking[]
+  tourOperator      TourOperator? @relation(fields: [tourOperatorId], references: [id])
 
   @@map("tours")
 }
 
-// Deneyim modeli
 model Experience {
-  id              String   @id @default(cuid())
+  id              String           @id @default(cuid())
   title           String
-  description     String   @db.Text
-  longDescription String   @db.Text
+  description     String
+  longDescription String
   imageUrl        String
-  gallery         Json     @default("[]") // string[]
+  gallery         Json             @default("[]")
   location        String
   duration        String
-  rating          Float    @default(0)
-  reviewCount     Int      @default(0)
-  popularityRate  Float    @default(0)
+  rating          Float            @default(0)
+  reviewCount     Int              @default(0)
+  popularityRate  Float            @default(0)
   price           Float
   category        String
-  included        Json     @default("[]") // string[]
-  notIncluded     Json     @default("[]") // string[]
-  highlights      Json     @default("[]") // string[]
-  schedule        Json     @default("[]") // Array<{ time: string; activity: string }>
-  featured        Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  // İlişkiler
-  userId   String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reviews  ActivityReview[]
-  bookings Booking[]
-  generalReviews Review[]
+  included        Json             @default("[]")
+  notIncluded     Json             @default("[]")
+  highlights      Json             @default("[]")
+  schedule        Json             @default("[]")
+  featured        Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  userId          String
+  reviews         ActivityReview[]
+  bookings        Booking[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generalReviews  Review[]
 
   @@map("experiences")
 }
 
-// Aktivite yorumları modeli
 model ActivityReview {
-  id        String   @id @default(cuid())
-  rating    Float
-  comment   String   @db.Text
-  date      DateTime @default(now())
-  
-  // İlişkiler
+  id           String     @id @default(cuid())
+  rating       Float
+  comment      String
+  date         DateTime   @default(now())
   userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   experienceId String
   experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("activity_reviews")
 }
 
-// Rezervasyon modeli
 model Booking {
   id              String        @id @default(cuid())
   bookingNumber   String        @unique
@@ -273,24 +242,101 @@ model Booking {
   specialRequests String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
-
-  // İlişkiler
-  userId       String
-  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hotelId      String?
-  hotel        Hotel?      @relation(fields: [hotelId], references: [id])
-  roomId       String?
-  room         Room?       @relation(fields: [roomId], references: [id])
-  tourId       String?
-  tour         Tour?       @relation(fields: [tourId], references: [id])
-  experienceId String?
-  experience   Experience? @relation(fields: [experienceId], references: [id])
-  agencyId     String?
-  agency       Agency?     @relation(fields: [agencyId], references: [id])
-  tourOperatorId String?
-  tourOperator   TourOperator? @relation(fields: [tourOperatorId], references: [id])
+  userId          String
+  hotelId         String?
+  roomId          String?
+  tourId          String?
+  experienceId    String?
+  agencyId        String?
+  tourOperatorId  String?
+  agency          Agency?       @relation(fields: [agencyId], references: [id])
+  experience      Experience?   @relation(fields: [experienceId], references: [id])
+  hotel           Hotel?        @relation(fields: [hotelId], references: [id])
+  room            Room?         @relation(fields: [roomId], references: [id])
+  tour            Tour?         @relation(fields: [tourId], references: [id])
+  tourOperator    TourOperator? @relation(fields: [tourOperatorId], references: [id])
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("bookings")
+}
+
+model Review {
+  id           String      @id @default(cuid())
+  rating       Int
+  comment      String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  userId       String
+  hotelId      String?
+  experienceId String?
+  experience   Experience? @relation(fields: [experienceId], references: [id])
+  hotel        Hotel?      @relation(fields: [hotelId], references: [id])
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model Post {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  content     String
+  excerpt     String?
+  coverImage  String?
+  published   Boolean    @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  authorId    String
+  comments    Comment[]
+  author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  categories  Category[] @relation("CategoryToPost")
+
+  @@map("posts")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  posts       Post[]   @relation("CategoryToPost")
+
+  @@map("categories")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  authorId  String
+  postId    String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+enum UserRole {
+  USER
+  HOTEL_ADMIN
+  AGENCY_ADMIN
+  TOUR_OPERATOR
+  EXPERIENCE_PROVIDER
+  ADMIN
+}
+
+enum HotelType {
+  HOTEL
+  BOUTIQUE_HOTEL
+  RESORT
+  HOSTEL
+  APARTMENT
+  VILLA
+  GUESTHOUSE
 }
 
 enum BookingStatus {
@@ -305,76 +351,4 @@ enum PaymentStatus {
   PARTIALLY_PAID
   PAID
   REFUNDED
-}
-
-// Değerlendirme modeli
-model Review {
-  id        String   @id @default(cuid())
-  rating    Int
-  comment   String?  @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // İlişkiler
-  userId       String
-  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hotelId      String?
-  hotel        Hotel?      @relation(fields: [hotelId], references: [id])
-  experienceId String?
-  experience   Experience? @relation(fields: [experienceId], references: [id])
-
-  @@map("reviews")
-}
-
-// Blog modeli
-model Post {
-  id          String   @id @default(cuid())
-  title       String
-  slug        String   @unique
-  content     String   @db.Text
-  excerpt     String?  @db.Text
-  coverImage  String?
-  published   Boolean  @default(false)
-  publishedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // İlişkiler
-  authorId   String
-  author     User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  categories Category[]
-  comments   Comment[]
-
-  @@map("posts")
-}
-
-// Kategori modeli
-model Category {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
-  description String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // İlişkiler
-  posts Post[]
-
-  @@map("categories")
-}
-
-// Yorum modeli
-model Comment {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // İlişkiler
-  authorId String
-  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  postId   String
-  post     Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@map("comments")
 }
