@@ -36,10 +36,10 @@ export default function PartnerLoginPage() {
 
   useEffect(() => {
     if (status === 'authenticated') {
-      if (session?.user?.role === 'TOUR_OPERATOR') {
+      if (session?.user?.provider === 'partner-credentials') {
         router.push('/partner-dashboard');
       } else {
-        signOut({ redirect: false });
+        signOut({ redirect: false, callbackUrl: '/partner-login' });
       }
     }
   }, [status, session, router]);
@@ -50,6 +50,8 @@ export default function PartnerLoginPage() {
     setError('');
 
     try {
+      await signOut({ redirect: false });
+
       const result = await signIn('partner-credentials', {
         email,
         password,

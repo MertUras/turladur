@@ -110,6 +110,15 @@ export default function Header() {
     setIsMenuOpen(false);
   };
 
+  const handleAuthClick = (e: React.MouseEvent) => {
+    if (session?.user?.provider === 'partner-credentials') {
+      e.preventDefault();
+      signOut({ redirect: false }).then(() => {
+        window.location.href = e.currentTarget.getAttribute('href') || '/';
+      });
+    }
+  };
+
   // Hangi sayfalarda başlangıçta açık renk header kullanılacağını belirle
   const lightBackgroundRoutes = ['/about', '/contact', '/profile', '/bookings', '/login', '/register', '/partner-login', '/partner-register'];
   const forceScrolledAppearance = lightBackgroundRoutes.includes(pathname);
@@ -133,6 +142,15 @@ export default function Header() {
   const authImageBg = shouldAppearScrolled ? "bg-neutral-200 text-neutral-600" : "bg-white/20 text-white";
   const authChevronColor = shouldAppearScrolled ? "text-neutral-500" : "text-neutral-300";
   const pulseBg = shouldAppearScrolled ? 'bg-neutral-200' : 'bg-white/20';
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      if (session?.user?.provider === 'partner-credentials') {
+        signOut({ redirect: false });
+        return;
+      }
+    }
+  }, [status, session]);
 
   return (
     <header
@@ -262,7 +280,7 @@ export default function Header() {
                  <div className={`h-8 w-20 rounded-md animate-pulse ${pulseBg}`}></div>
                  <div className={`h-8 w-20 rounded-md animate-pulse ${pulseBg}`}></div>
               </div>
-            ) : status === "authenticated" ? (
+            ) : status === "authenticated" && session?.user?.provider !== 'partner-credentials' ? (
               <div className="relative group dropdown-container">
                 <button
                    className={`flex items-center space-x-2 p-1 rounded-full text-sm font-medium transition-colors duration-200 ${linkColor} ${authButtonBgHover}`}
@@ -305,12 +323,14 @@ export default function Header() {
                 <Link
                   href="/login"
                    className={`px-3.5 py-1 rounded-md text-sm font-medium border transition-colors duration-200 ${buttonSecondaryBorder}`}
+                  onClick={handleAuthClick}
                 >
                   Giriş Yap
                 </Link>
                 <Link
                   href="/register"
                    className={`px-3.5 py-1 rounded-md text-sm font-medium transition-all duration-300 transform hover:scale-[1.03] shadow-sm ${buttonPrimaryBg} ${buttonPrimaryText}`}
+                  onClick={handleAuthClick}
                 >
                   Kayıt Ol
                 </Link>
@@ -407,7 +427,7 @@ export default function Header() {
                     <div className="h-10 bg-neutral-200 animate-pulse rounded-md"></div>
                     <div className="h-10 bg-neutral-200 animate-pulse rounded-md"></div>
                   </div>
-              ) : status === "authenticated" ? (
+              ) : status === "authenticated" && session?.user?.provider !== 'partner-credentials' ? (
                  <Link href="/profile" className="flex items-center space-x-3 p-3 mb-3 rounded-lg hover:bg-sky-50/70 transition-colors" onClick={() => setIsMenuOpen(false)}>
                   {session.user?.image ? (
                     <Image
@@ -432,14 +452,20 @@ export default function Header() {
                   <Link
                     href="/login"
                      className="px-4 py-2 rounded-md text-sm font-medium text-center border border-sky-600 text-sky-600 hover:bg-sky-50/70 transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
+                    onClick={(e) => {
+                      handleAuthClick(e);
+                      setIsMenuOpen(false);
+                    }}
                   >
                     Giriş Yap
                   </Link>
                   <Link
                     href="/register"
                      className="px-4 py-2 rounded-md text-sm font-medium text-center bg-sky-600 text-white hover:bg-sky-700 transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
+                    onClick={(e) => {
+                      handleAuthClick(e);
+                      setIsMenuOpen(false);
+                    }}
                   >
                     Kayıt Ol
                   </Link>

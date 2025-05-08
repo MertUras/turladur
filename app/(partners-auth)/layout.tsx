@@ -1,3 +1,4 @@
+import AuthProvider from "@/components/providers/AuthProvider";
 import PartnerNavbar from "./components/Navbar";
 
 export default function PartnerAuthLayout({
@@ -6,11 +7,11 @@ export default function PartnerAuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="h-screen overflow-hidden bg-neutral-50">
-      <PartnerNavbar />
-      <main className="h-[calc(100vh-3.5rem)]">
-        {children}
-      </main>
-    </div>
+    <AuthProvider>
+      <div className="h-screen flex flex-col">
+        <PartnerNavbar />
+        <main className="flex-1 overflow-hidden">{children}</main>
+      </div>
+    </AuthProvider>
   );
 }
