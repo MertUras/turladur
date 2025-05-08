@@ -119,6 +119,14 @@ export default function Header() {
     }
   };
 
+  const handlePartnerPortalClick = () => {
+    if (session?.user?.provider === 'partner-credentials') {
+      window.location.href = '/partner-dashboard';
+    } else {
+      window.location.href = '/partner-login';
+    }
+  };
+
   // Hangi sayfalarda başlangıçta açık renk header kullanılacağını belirle
   const lightBackgroundRoutes = ['/about', '/contact', '/profile', '/bookings', '/login', '/register', '/partner-login', '/partner-register'];
   const forceScrolledAppearance = lightBackgroundRoutes.includes(pathname);
@@ -180,7 +188,17 @@ export default function Header() {
             <div className={`text-2xl font-light ${logoColor}`}>/</div>
 
             {/* Partner Portal Logo */}
-            <Link href="/partner-login" className="flex items-center group flex-shrink-0">
+            <div 
+              role="button"
+              tabIndex={0}
+              className="flex items-center group flex-shrink-0 cursor-pointer"
+              onClick={handlePartnerPortalClick}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  handlePartnerPortalClick();
+                }
+              }}
+            >
               <div className="flex-shrink-0 flex items-center">
                 <div className="h-8 w-8 text-white rounded-md flex items-center justify-center">
                   <Image src="/images/logo.png" alt="TurlaDur Logo" width={32} height={32} />
@@ -190,7 +208,7 @@ export default function Header() {
                   <span className={`text-xs ${shouldAppearScrolled ? 'text-sky-600' : 'text-white'} tracking-wide font-medium`}>Partner Portal</span>
                 </div>
               </div>
-            </Link>
+            </div>
           </div>
 
           {/* Desktop Navigation */}
@@ -538,14 +556,24 @@ export default function Header() {
                 >
                   İletişim
                 </Link>
-                <Link
-                  href="/partner-login"
-                   className="block py-2.5 px-3 text-sm font-medium text-neutral-700 hover:bg-sky-50/70 hover:text-sky-700 rounded-md transition-colors flex items-center"
-                  onClick={() => setIsMenuOpen(false)}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="w-full text-left block py-2.5 px-3 text-sm font-medium text-neutral-700 hover:bg-sky-50/70 hover:text-sky-700 rounded-md transition-colors flex items-center cursor-pointer"
+                  onClick={() => {
+                    handlePartnerPortalClick();
+                    setIsMenuOpen(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handlePartnerPortalClick();
+                      setIsMenuOpen(false);
+                    }
+                  }}
                 >
                   <BuildingOfficeIcon className="w-4 h-4 mr-1.5" />
                   Partner Portal
-                </Link>
+                </div>
                 <button
                   onClick={() => { openDealsPopup(); setIsMenuOpen(false); }}
                    className="w-full text-left flex items-center py-2.5 px-3 text-sm font-medium text-neutral-700 hover:bg-sky-50/70 hover:text-sky-700 rounded-md transition-colors"
