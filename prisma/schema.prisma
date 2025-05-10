@@ -148,40 +148,41 @@ model SubUser {
 }
 
 model Tour {
-  id                String        @id @default(cuid())
-  name              String
-  description       String?
-  duration          Int
-  price             Float
-  discount          Float?
-  startDate         DateTime?
-  endDate           DateTime?
-  maxParticipants   Int?
-  destinations      Json          @default("[]")
-  inclusions        Json          @default("[]")
-  exclusions        Json          @default("[]")
-  itinerary         Json?
-  images            Json          @default("[]")
-  featured          Boolean       @default(false)
-  departureCity     String?
-  region            String?
-  transportation    String?
-  period            String?
-  rating            Float?        @default(0)
-  tourType          String?
-  accommodationType String?
-  difficultyLevel   String?
-  ageRestriction    Int?
-  isPopular         Boolean       @default(false)
-  isLastMinute      Boolean       @default(false)
-  isEarlyBird       Boolean       @default(false)
-  languages         Json          @default("[]")
-  tags              Json          @default("[]")
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  tourOperatorId    String?
-  bookings          Booking[]
-  tourOperator      TourOperator? @relation(fields: [tourOperatorId], references: [id])
+  id                  String        @id @default(cuid())
+  name                String
+  description         String?
+  duration            Int
+  price               Float
+  discount            Float?
+  startDate           DateTime?
+  endDate             DateTime?
+  maxParticipants     Int?
+  destinations        Json          @default("[]")
+  inclusions          Json          @default("[]")
+  exclusions          Json          @default("[]")
+  itinerary           Json?
+  images              Json          @default("[]")
+  featured            Boolean       @default(false)
+  departureCity       String?
+  region              String?
+  transportation      String?
+  period              String?
+  rating              Float?        @default(0)
+  tourType            String?
+  accommodationType   String?
+  difficultyLevel     String?
+  ageRestriction      Int?
+  isPopular           Boolean       @default(false)
+  isLastMinute        Boolean       @default(false)
+  isEarlyBird         Boolean       @default(false)
+  languages           Json          @default("[]")
+  tags                Json          @default("[]")
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  tourOperatorId      String?
+  currentParticipants Int?          @default(0)
+  bookings            Booking[]
+  tourOperator        TourOperator? @relation(fields: [tourOperatorId], references: [id])
 
   @@map("tours")
 }

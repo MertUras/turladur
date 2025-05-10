@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import TourForm, { TourFormData } from '@/app/components/partner-dashboard/TourForm';
@@ -17,21 +17,49 @@ export default function CreateTourPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStep, setFormStep] = useState<'basic' | 'details'>('basic');
   const [formData, setFormData] = useState<FormData>({});
+  const [tourOperatorId, setTourOperatorId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTourOperator = async () => {
+      try {
+        const response = await fetch('/api/partner/me');
+        if (response.ok) {
+          const data = await response.json();
+          setTourOperatorId(data.id);
+        }
+      } catch (error) {
+        console.error('Error fetching tour operator:', error);
+      }
+    };
+
+    if (session) {
+      fetchTourOperator();
+    }
+  }, [session]);
 
   const handleSubmit = async (data: any) => {
     setIsSubmitting(true);
-    // partnerId'yi her ihtimale karşı burada da ekle
-    const payload = {
-      ...data,
-      tourOperatorId: session?.user?.id,
-    };
     if (formStep === 'details') {
       try {
-        await fetch('/api/tours', {
+        if (!tourOperatorId) {
+          throw new Error('Tur operatörü bilgisi bulunamadı');
+        }
+
+        const payload = {
+          ...data,
+          tourOperatorId,
+        };
+
+        const response = await fetch('/api/tours', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
+
+        if (!response.ok) {
+          throw new Error('Tur oluşturulurken bir hata oluştu');
+        }
+
         router.push('/partner-dashboard/tours');
       } catch (error) {
         console.error('Error submitting form:', error);
@@ -75,7 +103,7 @@ export default function CreateTourPage() {
         </div>
         <div className="mt-4 flex justify-between">
           <div className="flex items-center">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white">
+            <div className={`flex h-9 w-9 items-center justify-center rounded-full ${formStep === 'basic' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
               <CheckCircleIcon className="h-5 w-5" />
             </div>
             <span className="ml-2 font-medium text-gray-900">Temel Bilgiler</span>
@@ -98,7 +126,7 @@ export default function CreateTourPage() {
                 onSubmit={handleSubmit} 
                 isSubmitting={isSubmitting}
                 currentStep={formStep}
-                partnerId={session?.user?.id}
+                partnerId={tourOperatorId}
               />
             </div>
           </div>
@@ -155,23 +183,25 @@ export default function CreateTourPage() {
                 onClick={goBack}
                 className="flex items-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
               >
-                <ArrowLeftIcon className="mr-2 h-4 w-4" />
-                {formStep === 'basic' ? 'İptal' : 'Geri'}
+                <ArrowLeftIcon className="mr-2 h-5 w-5" />
+                Geri
               </button>
-
               <button
-                type="button"
-                onClick={() => {
-                  const formElement = document.querySelector('form');
-                  if (formElement) {
-                    formElement.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                  }
-                }}
-                className="flex items-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                type="submit"
+                form="tour-form"
                 disabled={isSubmitting}
+                className="flex items-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50"
               >
-                {isSubmitting ? 'İşleniyor...' : formStep === 'basic' ? 'Devam Et' : 'Turu Oluştur'}
-                {!isSubmitting && <ArrowRightIcon className="ml-2 h-4 w-4" />}
+                {formStep === 'basic' ? (
+                  <>
+                    Devam Et
+                    <ArrowRightIcon className="ml-2 h-5 w-5" />
+                  </>
+                ) : (
+                  <>
+                    {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
+                  </>
+                )}
               </button>
             </div>
           </div>

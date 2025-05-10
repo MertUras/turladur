@@ -53,8 +53,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/partner-login', request.url));
     }
 
-    if (token.role !== 'TOUR_OPERATOR') {
-      return NextResponse.redirect(new URL('/', request.url));
+    if (token.role !== 'TOUR_OPERATOR' || token.provider !== 'partner-credentials') {
+      return NextResponse.redirect(new URL('/partner-login', request.url));
     }
 
     // Alt kullanıcı yetki kontrolü

@@ -127,6 +127,21 @@ export async function POST(request: Request) {
       tags,
     } = body;
 
+    // Tur operatörünü kontrol et
+    const tourOperator = await prisma.tourOperator.findFirst({
+      where: {
+        id: tourOperatorId,
+        userId: session.user.id
+      }
+    });
+
+    if (!tourOperator) {
+      return NextResponse.json(
+        { error: 'Tur operatörü bulunamadı veya yetkiniz yok' },
+        { status: 403 }
+      );
+    }
+
     const tour = await prisma.tour.create({
       data: {
         name: title,
@@ -143,7 +158,7 @@ export async function POST(request: Request) {
         itinerary: itinerary || [],
         images: images || [],
         featured: featured || false,
-        tourOperatorId,
+        tourOperatorId: tourOperator.id,
         departureCity,
         region,
         transportation,
