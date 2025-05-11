@@ -88,7 +88,7 @@ interface TourPageProps {
 }
 
 interface ItineraryItem {
-  day: string;
+  title: string;
   description: string;
 }
 
@@ -174,7 +174,14 @@ export default function TourPage() {
   const tourOperator = dummyTourOperators.find((operator) => operator.id === tour.tourOperatorId);
   
   // Tur resimlerini parse et
-  const tourImages = parseJsonString<string[]>(tour.images, []);
+  const tourImages = [
+    'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1570654230464-9e63b3497a1e?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1585924257670-6b97a7fdfb0d?q=80&w=800&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?q=80&w=800&auto=format&fit=crop'
+  ];
   
   // Tur dahil olanlar ve olmayanlar
   const inclusions = parseJsonString<string[]>(tour.inclusions, []);
@@ -184,7 +191,7 @@ export default function TourPage() {
   const destinations = parseJsonString<string[]>(tour.destinations, []);
   
   // Tur programını parse et
-  const itinerary = parseJsonString<Record<string, string>>(tour.itinerary || '{}', {});
+  const itinerary = parseJsonString<Record<string, ItineraryItem>>(tour.itinerary || '{}', {});
 
   // Yıldızları render et
   const renderStars = (rating: number) => {
@@ -222,7 +229,7 @@ export default function TourPage() {
       <div className="relative h-[80vh] md:h-[90vh]">
         <div className="absolute inset-0 overflow-hidden">
           <Image
-            src={tourImages[0] || '/placeholder-image.jpg'}
+            src={tourImages[0]}
             alt={tour.name}
             fill
             priority
@@ -353,14 +360,7 @@ export default function TourPage() {
                 </h2>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5">
-                  {[
-                    'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=800&auto=format&fit=crop',
-                    'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?q=80&w=800&auto=format&fit=crop',
-                    'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?q=80&w=800&auto=format&fit=crop',
-                    'https://images.unsplash.com/photo-1570654230464-9e63b3497a1e?q=80&w=800&auto=format&fit=crop',
-                    'https://images.unsplash.com/photo-1585924257670-6b97a7fdfb0d?q=80&w=800&auto=format&fit=crop',
-                    'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?q=80&w=800&auto=format&fit=crop'
-                  ].map((image, index) => (
+                  {tourImages.map((image, index) => (
                   <div 
                     key={index} 
                     className={`group relative aspect-[4/3] rounded-xl sm:rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 ease-out ${index === 0 ? 'md:col-span-2 md:row-span-2 md:aspect-[8/6]' : ''}`}
@@ -407,7 +407,7 @@ export default function TourPage() {
               </div>
               
               <div className="space-y-10">
-                {Object.entries(itinerary).map(([day, description]: [string, string], index: number) => {
+                {Object.entries(itinerary).map(([day, content]: [string, ItineraryItem], index: number) => {
                   const dayNumber = (parseInt(day.replace('day', '')) + 1).toString();
                   return (
                     <div 
@@ -419,19 +419,19 @@ export default function TourPage() {
                         <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-sky-600 text-white font-semibold text-lg md:text-xl mr-4 flex-shrink-0 shadow-sm">
                           {dayNumber}
                         </div>
-                        <h3 className="text-xl md:text-2xl font-semibold text-sky-800">Gün {dayNumber}: {destinations[index % destinations.length] || 'Aktivite Günü'}</h3>
+                        <h3 className="text-xl md:text-2xl font-semibold text-sky-800">Gün {dayNumber}: {content.title || destinations[index % destinations.length] || 'Aktivite Günü'}</h3>
                       </div>
                       <div className="p-6 md:p-8">
                         <div className="flex flex-col lg:flex-row gap-8 lg:gap-10">
                           <div className="lg:w-2/3 xl:w-3/4">
-                            <p className="text-neutral-700 text-base leading-relaxed">{description}</p>
+                            <p className="text-neutral-700 text-base leading-relaxed">{content.description}</p>
                           </div>
                           <div className="lg:w-1/3 xl:w-1/4 flex-shrink-0">
                             {index < tourImages.length && (
                               <div className="relative h-60 rounded-lg overflow-hidden shadow-sm border border-neutral-100">
                                 <Image
                                   src={tourImages[index]}
-                                  alt={`Gün ${dayNumber} - ${destinations[index % destinations.length] || ''}`}
+                                  alt={`Gün ${dayNumber} - ${content.title || destinations[index % destinations.length] || ''}`}
                                   fill
                                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
                                   style={{ objectFit: "cover" }}
@@ -716,7 +716,7 @@ export default function TourPage() {
                           <div className="relative">
                             <div className="relative h-44 sm:h-52 w-full">
                               <Image
-                                src={otherTourImages[0] || '/placeholder-image.jpg'}
+                                src={tourImages[Math.floor(Math.random() * tourImages.length)]}
                                 alt={otherTour.name}
                                 fill
                                 sizes="(max-width: 640px) 100vw, 50vw"
