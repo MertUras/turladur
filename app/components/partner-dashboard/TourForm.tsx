@@ -15,6 +15,7 @@ export interface TourFormData {
   price: string;
   location: string;
   duration: string;
+  nights: string;
   maxParticipants: number;
   currentParticipants: number;
   images: ImageFile[];
@@ -32,8 +33,7 @@ export interface TourFormData {
   ageRestriction: number;
   languages: string[];
   tags: string[];
-  startDate: string;
-  endDate: string;
+  tourDates: { startDate: string; endDate: string }[];
   discount: number;
   destinations: string[];
   reviews: number;
@@ -84,6 +84,7 @@ const defaultFormData: TourFormData = {
   price: '',
   location: '',
   duration: '',
+  nights: '',
   maxParticipants: 0,
   currentParticipants: 0,
   images: [],
@@ -101,8 +102,7 @@ const defaultFormData: TourFormData = {
   ageRestriction: 0,
   languages: [],
   tags: [],
-  startDate: '',
-  endDate: '',
+  tourDates: [],
   discount: 0,
   destinations: [],
   reviews: 0,
@@ -137,8 +137,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
         ageRestriction: initialData.ageRestriction || 0,
         languages: initialData.languages || [],
         tags: initialData.tags || [],
-        startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : '',
-        endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : '',
+        tourDates: initialData.tourDates || [],
         discount: initialData.discount || 0,
         destinations: initialData.destinations || [],
         reviews: initialData.reviews || 0,
@@ -190,7 +189,49 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
   // Form değişikliklerini yönet
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
+    // Tur tipi değiştiğinde konaklama tipini sıfırla
+    if (name === 'tourType' && value === 'Günübirlik Tur') {
+      setFormData(prev => ({ 
+        ...prev, 
+        [name]: value,
+        accommodationType: '', // Konaklama tipini sıfırla
+        nights: '', // Gece sayısını sıfırla
+        duration: '1' // Süreyi 1 gün olarak ayarla
+      }));
+    } else {
     setFormData(prev => ({ ...prev, [name]: value }));
+    }
+
+    // Gece sayısı değiştiğinde gün sayısını güncelle
+    if (name === 'nights') {
+      const nights = parseInt(value);
+      if (!isNaN(nights)) {
+        const days = nights + 1; // Gece sayısı + 1 = Gün sayısı
+        setFormData(prev => ({ 
+          ...prev, 
+          nights: value,
+          duration: days.toString()
+        }));
+      }
+    }
+
+    // Başlangıç tarihi veya süre değiştiğinde bitiş tarihini güncelle
+    if (name === 'startDate' || name === 'duration') {
+      const startDate = name === 'startDate' ? new Date(value) : new Date(formData.startDate);
+      const duration = name === 'duration' ? parseInt(value) : parseInt(formData.duration);
+      
+      if (startDate && !isNaN(startDate.getTime()) && duration && !isNaN(duration)) {
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + duration - 1); // -1 çünkü başlangıç günü de dahil
+        setFormData(prev => ({ 
+          ...prev, 
+          [name]: value,
+          endDate: endDate.toISOString().split('T')[0]
+        }));
+      }
+    }
+
     // Hata varsa temizle
     if (errors[name as keyof TourFormData]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
@@ -289,6 +330,51 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
     }));
   };
 
+  // Yeni tur tarihi ekleme
+  const handleAddTourDate = () => {
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + parseInt(formData.nights));
+    
+    setFormData(prev => ({
+      ...prev,
+      tourDates: [...prev.tourDates, {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      }]
+    }));
+  };
+
+  // Tur tarihi silme
+  const handleRemoveTourDate = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      tourDates: prev.tourDates.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Tur tarihi güncelleme
+  const handleTourDateChange = (index: number, field: 'startDate' | 'endDate', value: string) => {
+    setFormData(prev => {
+      const newTourDates = [...prev.tourDates];
+      if (field === 'startDate') {
+        const startDate = new Date(value);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + parseInt(prev.nights));
+        newTourDates[index] = {
+          startDate: value,
+          endDate: endDate.toISOString().split('T')[0]
+        };
+      } else {
+        newTourDates[index] = {
+          ...newTourDates[index],
+          [field]: value
+        };
+      }
+      return { ...prev, tourDates: newTourDates };
+    });
+  };
+
   // Form doğrulama
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof TourFormData, string>> = {};
@@ -305,6 +391,9 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
     if (!formData.transportation) newErrors.transportation = 'Ulaşım tipi gerekli';
     if (!formData.tourType) newErrors.tourType = 'Tur tipi gerekli';
     if (formData.images.length === 0) newErrors.images = 'En az bir resim gerekli';
+    if (formData.tourDates.length === 0) {
+      newErrors.tourDates = 'En az bir tur tarihi eklemelisiniz';
+    }
     
     // Tarih kontrolü
     if (formData.startDate && formData.endDate) {
@@ -466,8 +555,26 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
+              <label htmlFor="nights" className="mb-2 block text-sm font-medium text-gray-900">
+                Gece Sayısı <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                id="nights"
+                name="nights"
+                value={formData.nights || ''}
+                onChange={handleChange}
+                disabled={formData.tourType === 'Günübirlik Tur'}
+                className={`block w-full rounded-lg border ${errors.nights ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 ${formData.tourType === 'Günübirlik Tur' ? 'bg-gray-100' : ''}`}
+                placeholder="3"
+                min="0"
+              />
+              {errors.nights && <p className="mt-2 text-sm text-red-600">{errors.nights}</p>}
+            </div>
+
+            <div>
               <label htmlFor="duration" className="mb-2 block text-sm font-medium text-gray-900">
-                Süre (Gün) <span className="text-red-500">*</span>
+                Gün Sayısı <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -475,13 +582,16 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                 name="duration"
                 value={formData.duration || ''}
                 onChange={handleChange}
-                className={`block w-full rounded-lg border ${errors.duration ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
-                placeholder="3"
+                disabled={true}
+                className={`block w-full rounded-lg border ${errors.duration ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 bg-gray-100`}
+                placeholder="4"
                 min="1"
               />
               {errors.duration && <p className="mt-2 text-sm text-red-600">{errors.duration}</p>}
             </div>
+            </div>
 
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <label htmlFor="maxParticipants" className="mb-2 block text-sm font-medium text-gray-900">
                 Maksimum Katılımcı <span className="text-red-500">*</span>
@@ -497,10 +607,8 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                 min="1"
               />
               {errors.maxParticipants && <p className="mt-2 text-sm text-red-600">{errors.maxParticipants}</p>}
-            </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <label htmlFor="currentParticipants" className="mb-2 block text-sm font-medium text-gray-900">
                 Mevcut Katılımcı
@@ -510,22 +618,6 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                 id="currentParticipants"
                 name="currentParticipants"
                 value={formData.currentParticipants || ''}
-                onChange={handleChange}
-                className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
-                placeholder="0"
-                min="0"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="reviews" className="mb-2 block text-sm font-medium text-gray-900">
-                Değerlendirme Sayısı
-              </label>
-              <input
-                type="number"
-                id="reviews"
-                name="reviews"
-                value={formData.reviews || ''}
                 onChange={handleChange}
                 className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
                 placeholder="0"
@@ -614,14 +706,15 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <label htmlFor="accommodationType" className="mb-2 block text-sm font-medium text-gray-900">
-                Konaklama Tipi
+                Konaklama Tipi {formData.tourType !== 'Günübirlik Tur' && <span className="text-red-500">*</span>}
               </label>
               <select
                 id="accommodationType"
                 name="accommodationType"
                 value={formData.accommodationType}
                 onChange={handleChange}
-                className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                disabled={formData.tourType === 'Günübirlik Tur'}
+                className={`block w-full rounded-lg border ${errors.accommodationType ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 ${formData.tourType === 'Günübirlik Tur' ? 'bg-gray-100' : ''}`}
               >
                 <option value="">Seçiniz</option>
                 <option value="Otel">Otel</option>
@@ -630,6 +723,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                 <option value="Butik Otel">Butik Otel</option>
                 <option value="Kamp">Kamp</option>
               </select>
+              {errors.accommodationType && <p className="mt-2 text-sm text-red-600">{errors.accommodationType}</p>}
             </div>
 
             <div>
@@ -889,6 +983,59 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
           </div>
         </>
       )}
+
+      {/* Tur Tarihleri Bölümü */}
+      <div className="bg-white shadow-sm rounded-lg p-8 border border-gray-100">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-medium text-gray-900">Tur Tarihleri</h2>
+          <button
+            type="button"
+            onClick={handleAddTourDate}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Tarih Ekle
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {formData.tourDates.map((date, index) => (
+            <div key={index} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Başlangıç Tarihi
+                </label>
+                <input
+                  type="date"
+                  value={date.startDate}
+                  onChange={(e) => handleTourDateChange(index, 'startDate', e.target.value)}
+                  className="block w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bitiş Tarihi
+                </label>
+                <input
+                  type="date"
+                  value={date.endDate}
+                  onChange={(e) => handleTourDateChange(index, 'endDate', e.target.value)}
+                  className="block w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleRemoveTourDate(index)}
+                className="text-gray-400 hover:text-gray-500 mt-6"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+          ))}
+          {errors.tourDates && (
+            <p className="mt-2 text-sm text-red-600">{errors.tourDates}</p>
+          )}
+        </div>
+      </div>
 
       {/* Form Gönderme */}
       <div className="flex justify-end pt-4">
