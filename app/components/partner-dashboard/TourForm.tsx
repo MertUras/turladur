@@ -4,8 +4,9 @@ import Image from 'next/image';
 import { useDropzone, FileWithPath } from 'react-dropzone';
 
 interface ImageFile {
-  file: File | FileWithPath;
-  preview: string;
+  url: string;
+  file: File | null;
+  preview?: string;
 }
 
 export interface TourFormData {
@@ -15,6 +16,7 @@ export interface TourFormData {
   location: string;
   duration: string;
   maxParticipants: number;
+  currentParticipants: number;
   images: ImageFile[];
   includes: string[];
   excludes: string[];
@@ -34,10 +36,42 @@ export interface TourFormData {
   endDate: string;
   discount: number;
   destinations: string[];
+  reviews: number;
+  isJointTour: boolean;
+  features: string[];
 }
 
 interface TourFormProps {
-  initialData?: Partial<TourFormData>;
+  initialData?: {
+    name?: string;
+    description?: string;
+    price?: number;
+    departureCity?: string;
+    duration?: number;
+    maxParticipants?: number;
+    currentParticipants?: number;
+    images?: string[];
+    inclusions?: string[];
+    exclusions?: string[];
+    itinerary?: { title: string; description: string }[];
+    featured?: boolean;
+    region?: string;
+    transportation?: string;
+    period?: string;
+    tourType?: string;
+    accommodationType?: string;
+    difficultyLevel?: string;
+    ageRestriction?: number;
+    languages?: string[];
+    tags?: string[];
+    startDate?: Date;
+    endDate?: Date;
+    discount?: number;
+    destinations?: string[];
+    reviews?: number;
+    isJointTour?: boolean;
+    features?: string[];
+  };
   onSubmit: (data: any) => void;
   isSubmitting?: boolean;
   currentStep?: 'basic' | 'details';
@@ -50,11 +84,12 @@ const defaultFormData: TourFormData = {
   price: '',
   location: '',
   duration: '',
-  maxParticipants: 10,
+  maxParticipants: 0,
+  currentParticipants: 0,
   images: [],
-  includes: ['Rehber', 'Ulaşım', 'Öğle yemeği'],
-  excludes: ['Akşam yemeği', 'Kişisel harcamalar'],
-  itinerary: [{ title: '1. Gün', description: '' }],
+  includes: [],
+  excludes: [],
+  itinerary: [],
   status: 'draft',
   departureCity: '',
   region: '',
@@ -64,24 +99,65 @@ const defaultFormData: TourFormData = {
   accommodationType: '',
   difficultyLevel: '',
   ageRestriction: 0,
-  languages: ['Türkçe'],
+  languages: [],
   tags: [],
   startDate: '',
   endDate: '',
   discount: 0,
-  destinations: []
+  destinations: [],
+  reviews: 0,
+  isJointTour: false,
+  features: []
 };
 
 export default function TourForm({ initialData, onSubmit, isSubmitting = false, currentStep = 'basic', partnerId }: TourFormProps) {
-  const [formData, setFormData] = useState<TourFormData>({ ...defaultFormData, ...initialData });
+  const [formData, setFormData] = useState<TourFormData>(() => {
+    if (initialData) {
+      return {
+        ...defaultFormData,
+        title: initialData.name || '',
+        description: initialData.description || '',
+        price: initialData.price?.toString() || '',
+        location: initialData.departureCity || '',
+        duration: initialData.duration?.toString() || '',
+        maxParticipants: initialData.maxParticipants || 0,
+        currentParticipants: initialData.currentParticipants || 0,
+        images: initialData.images?.map((url: string) => ({ url, file: null, preview: url })) || [],
+        includes: initialData.inclusions || [],
+        excludes: initialData.exclusions || [],
+        itinerary: initialData.itinerary || [],
+        status: initialData.featured ? 'active' : 'draft',
+        departureCity: initialData.departureCity || '',
+        region: initialData.region || '',
+        transportation: initialData.transportation || '',
+        period: initialData.period || '',
+        tourType: initialData.tourType || '',
+        accommodationType: initialData.accommodationType || '',
+        difficultyLevel: initialData.difficultyLevel || '',
+        ageRestriction: initialData.ageRestriction || 0,
+        languages: initialData.languages || [],
+        tags: initialData.tags || [],
+        startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : '',
+        endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : '',
+        discount: initialData.discount || 0,
+        destinations: initialData.destinations || [],
+        reviews: initialData.reviews || 0,
+        isJointTour: initialData.isJointTour || false,
+        features: initialData.features || []
+      };
+    }
+    return defaultFormData;
+  });
   const [newInclude, setNewInclude] = useState('');
   const [newExclude, setNewExclude] = useState('');
+  const [newFeature, setNewFeature] = useState('');
   const [errors, setErrors] = useState<Partial<Record<keyof TourFormData, string>>>({});
 
   const handleImagesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      const newImages = Array.from(files).map(file => ({
+      const newImages: ImageFile[] = Array.from(files).map(file => ({
+        url: URL.createObjectURL(file),
         file,
         preview: URL.createObjectURL(file)
       }));
@@ -98,7 +174,8 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
       'image/*': ['.jpeg', '.jpg', '.png', '.gif']
     },
     onDrop: (acceptedFiles) => {
-      const newImages = acceptedFiles.map(file => ({
+      const newImages: ImageFile[] = acceptedFiles.map(file => ({
+        url: URL.createObjectURL(file),
         file,
         preview: URL.createObjectURL(file)
       }));
@@ -192,24 +269,20 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
   };
 
   // Resim ekleme - gerçek uygulamada resim yükleme API'si kullanılır
-  const handleAddImage = () => {
-    // Demo için rasgele bir resim URL'i ekliyoruz
-    const randomId = Math.floor(Math.random() * 1000);
-    const placeholderUrl = `https://source.unsplash.com/random/800x600/?travel&sig=${randomId}`;
-    
-    // Sadece demo amaçlı olarak bir Blob oluşturup dosya gibi davranıyoruz
-    fetch(placeholderUrl)
-      .then(res => res.blob())
-      .then(blob => {
-        const file = new File([blob], `demo-image-${randomId}.jpg`, { type: 'image/jpeg' });
-        setFormData(prev => ({
-          ...prev,
-          images: [...prev.images, { file, preview: placeholderUrl }]
-        }));
-      });
+  const handleImageUpload = (files: File[]) => {
+    const newImages: ImageFile[] = files.map(file => ({
+      url: URL.createObjectURL(file),
+      file,
+      preview: URL.createObjectURL(file)
+    }));
+
+    setFormData(prev => ({
+      ...prev,
+      images: [...prev.images, ...newImages]
+    }));
   };
 
-  const handleRemoveImage = (index: number) => {
+  const handleImageRemove = (index: number) => {
     setFormData(prev => ({
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
@@ -254,6 +327,24 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
       const submitData = partnerId ? { ...formData, tourOperatorId: partnerId } : formData;
       onSubmit(submitData);
     }
+  };
+
+  // Yeni özellik ekleme
+  const handleAddFeature = () => {
+    if (newFeature.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        features: [...prev.features, newFeature.trim()]
+      }));
+      setNewFeature('');
+    }
+  };
+
+  const handleRemoveFeature = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      features: prev.features.filter((_, i) => i !== index)
+    }));
   };
 
   return (
@@ -406,6 +497,40 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                 min="1"
               />
               {errors.maxParticipants && <p className="mt-2 text-sm text-red-600">{errors.maxParticipants}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <label htmlFor="currentParticipants" className="mb-2 block text-sm font-medium text-gray-900">
+                Mevcut Katılımcı
+              </label>
+              <input
+                type="number"
+                id="currentParticipants"
+                name="currentParticipants"
+                value={formData.currentParticipants || ''}
+                onChange={handleChange}
+                className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                placeholder="0"
+                min="0"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="reviews" className="mb-2 block text-sm font-medium text-gray-900">
+                Değerlendirme Sayısı
+              </label>
+              <input
+                type="number"
+                id="reviews"
+                name="reviews"
+                value={formData.reviews || ''}
+                onChange={handleChange}
+                className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                placeholder="0"
+                min="0"
+              />
             </div>
           </div>
 
@@ -565,15 +690,14 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                   <div key={index} className="relative group">
                     <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200 relative">
                       <Image
-                        src={image.preview}
+                        src={image.preview || image.url || '/images/placeholder.jpg'}
                         alt={`Tour image ${index + 1}`}
                         fill
                         className="object-cover"
-                        sizes="(max-width: 768px) 50vw, 33vw"
                       />
                       <button
                         type="button"
-                        onClick={() => handleRemoveImage(index)}
+                        onClick={() => handleImageRemove(index)}
                         className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <XMarkIcon className="h-4 w-4 text-gray-500" />
@@ -722,6 +846,45 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Yeni Özellik Ekleme */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-900">
+              Tur Özellikleri
+            </label>
+            <div className="mt-2">
+              <div className="flex space-x-3">
+                <input
+                  type="text"
+                  value={newFeature}
+                  onChange={(e) => setNewFeature(e.target.value)}
+                  className="shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg text-gray-900"
+                  placeholder="Örn. Profesyonel rehberlik"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddFeature}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Ekle
+                </button>
+              </div>
+              <div className="mt-4 space-y-3">
+                {formData.features.map((feature, index) => (
+                  <div key={index} className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg text-sm">
+                    <span>{feature}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFeature(index)}
+                      className="text-gray-400 hover:text-gray-500"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </>
