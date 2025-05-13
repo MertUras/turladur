@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -90,9 +90,9 @@ interface Agency {
       uploadDate: string;
     }[];
   }[];
-  history?: {
+  history: {
     id: number;
-    action: 'create' | 'update' | 'approve' | 'reject' | 'suspend' | 'activate' | 'delete';
+    action: 'approve' | 'reject' | 'suspend' | 'activate' | 'create' | 'update' | 'delete';
     adminName: string;
     adminEmail: string;
     timestamp: string;
@@ -136,40 +136,64 @@ const AgencyManagement = () => {
   const [showAutoApprove, setShowAutoApprove] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAgency, setEditingAgency] = useState<Agency | null>(null);
-  const [agencies, setAgencies] = useState<Agency[]>([
-    {
-      id: 1,
-      name: 'Anadolu Turizm',
-      email: 'info@anadoluturizm.com',
-      phone: '+90 555 123 4567',
-      address: 'İstanbul, Türkiye',
-      status: 'approved',
-      registrationDate: '2024-01-15',
-      totalTours: 25,
-      totalReservations: 150,
-      averageRating: 4.5,
-      totalGuides: 8,
-      logo: 'https://ui-avatars.com/api/?name=Anadolu+Turizm&background=0D8ABC&color=fff',
-      description: 'Türkiye\'nin önde gelen tur operatörlerinden biri.',
-      documents: [
-        {
-          id: 1,
-          name: 'Ticaret Sicil Gazetesi',
-          type: 'pdf',
-          url: '#',
-          uploadDate: '2024-01-15'
-        },
-        {
-          id: 2,
-          name: 'Vergi Levhası',
-          type: 'pdf',
-          url: '#',
-          uploadDate: '2024-01-15'
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [pendingAgencies, setPendingAgencies] = useState<number>(0);
+
+  // Acenteleri yükle
+  useEffect(() => {
+    const loadAgencies = async () => {
+      try {
+        const response = await fetch('/api/admin/agencies');
+        if (!response.ok) {
+          throw new Error('Acenteler yüklenirken bir hata oluştu');
         }
-      ]
-    },
-    // Daha fazla örnek acente eklenebilir
-  ]);
+        const data = await response.json();
+        
+        // API'den gelen verileri Agency tipine dönüştür
+        const formattedAgencies: Agency[] = data.map((agency: any) => ({
+          id: agency.id,
+          name: agency.name,
+          email: agency.user.email,
+          phone: agency.phone,
+          address: agency.address,
+          status: agency.status.toLowerCase(),
+          registrationDate: new Date(agency.createdAt).toISOString(),
+          totalTours: agency.totalTours || 0,
+          totalReservations: agency.totalReservations || 0,
+          averageRating: agency.averageRating || 0,
+          totalGuides: agency.totalGuides || 0,
+          logo: agency.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(agency.name)}&background=0D8ABC&color=fff`,
+          description: agency.description,
+          history: agency.history || []
+        }));
+
+        setAgencies(formattedAgencies);
+      } catch (error) {
+        console.error('Acenteler yüklenirken hata:', error);
+        alert('Acenteler yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
+      }
+    };
+
+    loadAgencies();
+  }, []);
+
+  // Bekleyen acenteleri kontrol et
+  useEffect(() => {
+    const checkPendingAgencies = async () => {
+      try {
+        const response = await fetch('/api/admin/pending-agencies');
+        const data = await response.json();
+        setPendingAgencies(data.count);
+      } catch (error) {
+        console.error('Bekleyen acenteler kontrol edilirken hata:', error);
+      }
+    };
+
+    checkPendingAgencies();
+    // Her 5 dakikada bir kontrol et
+    const interval = setInterval(checkPendingAgencies, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Örnek tur verileri
   const tours: Tour[] = [
@@ -234,22 +258,37 @@ const AgencyManagement = () => {
     }
   };
 
-  const handleStatusChange = (agencyId: number, newStatus: Agency['status']) => {
-    const agency = agencies.find(a => a.id === agencyId);
-    if (!agency) return;
+  const handleStatusChange = async (agencyId: number, newStatus: Agency['status']) => {
+    try {
+      const response = await fetch('/api/admin/agencies', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: agencyId,
+          status: newStatus
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Durum güncellenirken bir hata oluştu');
+      }
+
+      const updatedAgency = await response.json();
 
     const now = new Date();
-    const historyEntry = {
+      const historyEntry: Agency['history'][0] = {
       id: Date.now(),
       action: newStatus === 'approved' ? 'approve' : 
               newStatus === 'rejected' ? 'reject' : 
               newStatus === 'suspended' ? 'suspend' : 'activate',
-      adminName: 'Admin Kullanıcı', // Bu kısım gerçek admin bilgisiyle değiştirilecek
-      adminEmail: 'admin@example.com', // Bu kısım gerçek admin bilgisiyle değiştirilecek
+        adminName: 'Admin Kullanıcı',
+        adminEmail: 'admin@example.com',
       timestamp: now.toISOString(),
-      previousStatus: agency.status,
+        previousStatus: agencies.find(a => a.id === agencyId)?.status,
       newStatus: newStatus,
-      details: `${agency.name} acentesinin durumu ${getStatusText(agency.status)}'den ${getStatusText(newStatus)}'e değiştirildi.`
+        details: `${agencies.find(a => a.id === agencyId)?.name} acentesinin durumu ${getStatusText(agencies.find(a => a.id === agencyId)?.status || '')}'den ${getStatusText(newStatus)}'e değiştirildi.`
     };
 
     setAgencies(agencies.map(agency => 
@@ -261,6 +300,17 @@ const AgencyManagement = () => {
           }
         : agency
     ));
+
+      // Bekleyen acente sayısını güncelle
+      if (newStatus === 'approved' || newStatus === 'rejected') {
+        const pendingResponse = await fetch('/api/admin/pending-agencies');
+        const pendingData = await pendingResponse.json();
+        setPendingAgencies(pendingData.count);
+      }
+    } catch (error) {
+      console.error('Durum güncellenirken hata:', error);
+      alert('Durum güncellenirken bir hata oluştu. Lütfen tekrar deneyin.');
+    }
   };
 
   const handleDeleteAgency = (agencyId: number) => {
@@ -269,11 +319,11 @@ const AgencyManagement = () => {
 
     if (window.confirm('Bu acenteyi silmek istediğinizden emin misiniz?')) {
       const now = new Date();
-      const historyEntry = {
+      const historyEntry: Agency['history'][0] = {
         id: Date.now(),
         action: 'delete',
-        adminName: 'Admin Kullanıcı', // Bu kısım gerçek admin bilgisiyle değiştirilecek
-        adminEmail: 'admin@example.com', // Bu kısım gerçek admin bilgisiyle değiştirilecek
+        adminName: 'Admin Kullanıcı',
+        adminEmail: 'admin@example.com',
         timestamp: now.toISOString(),
         details: `${agency.name} acentesi silindi.`
       };
@@ -332,7 +382,34 @@ const AgencyManagement = () => {
   };
 
   return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Bildirim Badge */}
+      {pendingAgencies > 0 && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className="bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center">
+            <span className="mr-2">{pendingAgencies}</span>
+            <span>Onay Bekleyen Acente</span>
+          </div>
+        </div>
+      )}
+
     <div className="space-y-6">
+        {/* Bekleyen Acenteler Bildirimi */}
+        {pendingAgencies > 0 && (
+          <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <ExclamationCircleIcon className="h-5 w-5 text-yellow-400" aria-hidden="true" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  {pendingAgencies} adet acente onay bekliyor. Lütfen kontrol edin.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
       {/* Başlık ve İstatistikler */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
@@ -586,6 +663,15 @@ const AgencyManagement = () => {
                           className="text-green-600 hover:text-green-900"
                           onClick={() => handleStatusChange(agency.id, 'approved')}
                           title="Aktifleştir"
+                        >
+                          <ArrowPathIcon className="h-5 w-5" />
+                        </button>
+                      )}
+                        {agency.status === 'rejected' && (
+                          <button
+                            className="text-green-600 hover:text-green-900"
+                            onClick={() => handleStatusChange(agency.id, 'approved')}
+                            title="Yeniden Onayla"
                         >
                           <ArrowPathIcon className="h-5 w-5" />
                         </button>
@@ -1375,7 +1461,7 @@ const AgencyManagement = () => {
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                     onClick={() => handleModalStatusChange(selectedAgency.id, 'approved')}
                   >
-                    Onayla
+                      Yeniden Onayla
                   </button>
                 )}
                 <button 
@@ -1394,6 +1480,7 @@ const AgencyManagement = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

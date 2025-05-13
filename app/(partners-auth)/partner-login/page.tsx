@@ -10,8 +10,12 @@ import {
   EyeIcon as EyeIconSolid,
   EyeSlashIcon as EyeSlashIconSolid,
   ExclamationCircleIcon as ExclamationCircleIconSolid,
-  XMarkIcon
-} from '@heroicons/react/20/solid'; 
+  XMarkIcon,
+  CheckCircleIcon as CheckCircleIconSolid,
+  ClockIcon as ClockIconSolid,
+  XCircleIcon as XCircleIconSolid,
+  ShieldExclamationIcon as ShieldExclamationIconSolid
+} from '@heroicons/react/20/solid';
 import {
   ArrowRightIcon,
   BuildingOfficeIcon,
@@ -30,6 +34,7 @@ export default function PartnerLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [accountStatus, setAccountStatus] = useState<'PENDING' | 'REJECTED' | 'SUSPENDED' | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -46,30 +51,66 @@ export default function PartnerLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    setLoading(true);
 
     try {
-      await signOut({ redirect: false });
-
       const result = await signIn('partner-credentials', {
         email,
         password,
         redirect: false,
+        callbackUrl: '/partner-dashboard'
       });
 
+      console.log('Giriş sonucu:', result); // Debug log
+
       if (result?.error) {
+        // API'den gelen hata mesajını kontrol et
+        if (result.error.includes('onaylanmamış')) {
+          setAccountStatus('PENDING');
+        } else if (result.error.includes('reddedilmiş')) {
+          setAccountStatus('REJECTED');
+        } else if (result.error.includes('askıya alınmış')) {
+          setAccountStatus('SUSPENDED');
+        }
         setError(result.error);
-        setLoading(false);
       } else if (result?.ok) {
-        router.push('/partner-dashboard');
+        router.push(result.url || '/partner-dashboard');
       }
-    } catch (err) {
-      console.error('Partner login error:', err);
-      setError('Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.');
+    } catch (error) {
+      console.error('Giriş hatası:', error); // Debug log
+      setError(error instanceof Error ? error.message : 'Bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+    } finally {
       setLoading(false);
     }
   };
+
+  const getStatusMessage = () => {
+    switch (accountStatus) {
+      case 'PENDING':
+        return {
+          icon: ClockIconSolid,
+          color: 'yellow',
+          message: 'Hesabınız onay bekliyor. Lütfen admin onayını bekleyin.'
+        };
+      case 'REJECTED':
+        return {
+          icon: XCircleIconSolid,
+          color: 'red',
+          message: 'Hesabınız reddedilmiş. Daha fazla bilgi için lütfen bizimle iletişime geçin.'
+        };
+      case 'SUSPENDED':
+        return {
+          icon: ShieldExclamationIconSolid,
+          color: 'orange',
+          message: 'Hesabınız askıya alınmış. Daha fazla bilgi için lütfen bizimle iletişime geçin.'
+        };
+      default:
+        return null;
+    }
+  };
+
+  const statusInfo = getStatusMessage();
 
   if (status === 'loading') {
     return (
@@ -159,11 +200,24 @@ export default function PartnerLoginPage() {
           </div>
 
           {error && (
-            <div className="mb-5 flex items-start bg-red-50/80 border border-red-200/80 text-red-800 px-4 py-3 rounded-lg text-xs shadow-sm">
-              <ExclamationCircleIconSolid className="w-4 h-4 mr-2 text-red-500 flex-shrink-0 mt-0.5"/>
+            <div className={`mb-5 flex items-start ${
+              accountStatus ? 
+                accountStatus === 'PENDING' ? 'bg-yellow-50/80 border-yellow-200/80 text-yellow-800' :
+                accountStatus === 'REJECTED' ? 'bg-red-50/80 border-red-200/80 text-red-800' :
+                'bg-orange-50/80 border-orange-200/80 text-orange-800' :
+                'bg-red-50/80 border-red-200/80 text-red-800'
+            } border px-4 py-3 rounded-lg text-xs shadow-sm`}>
+              {statusInfo ? (
+                <statusInfo.icon className={`w-4 h-4 mr-2 text-${statusInfo.color}-500 flex-shrink-0 mt-0.5`}/>
+              ) : (
+                <ExclamationCircleIconSolid className="w-4 h-4 mr-2 text-red-500 flex-shrink-0 mt-0.5"/>
+              )}
               <span className="leading-tight flex-1 -mt-0.5">{error}</span>
               <button 
-                onClick={() => setError('')} 
+                onClick={() => {
+                  setError('');
+                  setAccountStatus(null);
+                }} 
                 className="ml-2 -mr-1 p-0.5 text-red-400 hover:text-red-600 transition-colors rounded-full hover:bg-red-100/70"
                 aria-label="Hata mesajını kapat"
               >
@@ -248,29 +302,30 @@ export default function PartnerLoginPage() {
                 href="/partner-register" 
                 className="text-xs font-medium text-sky-600 hover:text-sky-800 hover:underline underline-offset-2 transition-colors duration-150 flex items-center"
               >
-                <span>Henüz partner değil misiniz?</span>
-                <ArrowRightIconSolid className="ml-1 h-4 w-4" />
+                Hesabınız yok mu?
+                <ArrowRightIconSolid className="ml-1 h-3.5 w-3.5" />
               </Link>
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="group relative w-full flex items-center justify-center py-2.5 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all duration-200 ease-in-out shadow-sm disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] min-h-[40px]"
-              >
-                {loading ? (
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : (
-                  <>
-                    Giriş Yap
-                  </>
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-lg text-white ${
+                loading ? 'bg-sky-400 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700'
+              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors duration-200 shadow-sm`}
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                  Giriş yapılıyor...
+                </>
+              ) : (
+                <>
+                  Giriş Yap
+                  <ArrowRightIconSolid className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </button>
           </form>
           
           <div className="mt-6">

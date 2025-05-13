@@ -47,24 +47,35 @@ export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request });
   const pathname = request.nextUrl.pathname;
 
+  console.log('Middleware çalışıyor:', { pathname, tokenExists: !!token }); // Debug log
+
   // Partner dashboard erişim kontrolü
   if (partnerAuthRequiredPaths.some(path => pathname.startsWith(path))) {
+    console.log('Partner yetkilendirmesi kontrol ediliyor:', { 
+      role: token?.role,
+      provider: token?.provider
+    }); // Debug log
+
     if (!token) {
+      console.log('Token bulunamadı, partner-login sayfasına yönlendiriliyor'); // Debug log
       return NextResponse.redirect(new URL('/partner-login', request.url));
     }
 
     if (token.role !== 'TOUR_OPERATOR' || token.provider !== 'partner-credentials') {
+      console.log('Geçersiz rol veya provider, partner-login sayfasına yönlendiriliyor'); // Debug log
       return NextResponse.redirect(new URL('/partner-login', request.url));
     }
 
     // Alt kullanıcı yetki kontrolü
     if (!token.isMainUser) {
+      console.log('Alt kullanıcı yetkileri kontrol ediliyor'); // Debug log
       const requiredPermissions = permissionRequiredPaths[pathname];
       if (requiredPermissions) {
         const hasPermission = requiredPermissions.some(
           (permission: string) => (token.permissions as Record<string, boolean>)?.[permission]
         );
         if (!hasPermission) {
+          console.log('Yetersiz yetki, ana sayfaya yönlendiriliyor'); // Debug log
           return NextResponse.redirect(new URL('/partner-dashboard', request.url));
         }
       }

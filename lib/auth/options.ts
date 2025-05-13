@@ -114,10 +114,47 @@ export const authOptions: NextAuthOptions = {
           },
         });
 
-        if (user && user.password) {
-          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+        console.log('Partner giriş denemesi:', { 
+          email: credentials.email,
+          userFound: !!user,
+          userRole: user?.role,
+          tourOperatorCount: user?.tourOperators?.length 
+        });
 
-          if (isPasswordValid && user.role === 'TOUR_OPERATOR') {
+        if (!user || !user.password) {
+          throw new Error('Geçersiz email veya şifre');
+        }
+
+        const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+
+        if (!isPasswordValid) {
+          throw new Error('Geçersiz email veya şifre');
+        }
+
+        if (user.role !== 'TOUR_OPERATOR') {
+          throw new Error('Bu hesap bir partner hesabı değil');
+        }
+
+        const tourOperator = user.tourOperators[0];
+        
+        if (!tourOperator) {
+          throw new Error('Partner hesabı bulunamadı');
+        }
+
+        console.log('Tour operator durumu:', { 
+          status: tourOperator.status,
+          companyName: tourOperator.companyName
+        });
+
+        // Duruma göre kontrol
+        switch (tourOperator.status) {
+          case 'pending':
+            throw new Error('Hesabınız henüz onaylanmamış. Lütfen admin onayını bekleyin.');
+          case 'rejected':
+            throw new Error('Hesabınız reddedilmiş. Daha fazla bilgi için lütfen bizimle iletişime geçin.');
+          case 'suspended':
+            throw new Error('Hesabınız askıya alınmış. Daha fazla bilgi için lütfen bizimle iletişime geçin.');
+          case 'approved':
             return {
               id: user.id,
               email: user.email,
@@ -125,36 +162,11 @@ export const authOptions: NextAuthOptions = {
               role: user.role,
               provider: 'partner-credentials',
               isMainUser: true,
+              tourOperatorId: tourOperator.id,
             };
-          }
+          default:
+            throw new Error('Geçersiz hesap durumu');
         }
-
-        // Ana kullanıcı bulunamazsa alt kullanıcıları kontrol et
-        const subUser = await prisma.subUser.findFirst({
-          where: { email: credentials.email },
-          include: {
-            tourOperator: true,
-          },
-        });
-
-        if (subUser && subUser.password) {
-          const isPasswordValid = await bcrypt.compare(credentials.password, subUser.password);
-
-          if (isPasswordValid && subUser.status === 'ACTIVE') {
-            return {
-              id: subUser.id,
-              email: subUser.email,
-              name: subUser.name,
-              role: subUser.role,
-              provider: 'partner-credentials',
-              isMainUser: false,
-              tourOperatorId: subUser.tourOperatorId,
-              permissions: subUser.permissions,
-            };
-          }
-        }
-
-        throw new Error('Geçersiz email veya şifre');
       },
     }),
   ],

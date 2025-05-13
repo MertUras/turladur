@@ -97,6 +97,7 @@ model Agency {
   website     String?
   logo        String?
   license     String?
+  status      String    @default("pending")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   userId      String
@@ -106,24 +107,32 @@ model Agency {
   @@map("agencies")
 }
 
+enum TourOperatorStatus {
+  pending
+  approved
+  rejected
+  suspended
+}
+
 model TourOperator {
-  id          String    @id @default(cuid())
-  name        String
+  id          String            @id @default(cuid())
+  companyName String
   description String?
   address     String?
   city        String?
   country     String?
   phone       String?
-  email       String    @unique
+  email       String            @unique
   website     String?
   logo        String?
   license     String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  status      TourOperatorStatus @default(pending)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   userId      String
   bookings    Booking[]
   subUsers    SubUser[]
-  user        User      @relation(fields: [userId], references: [id])
+  user        User              @relation(fields: [userId], references: [id])
   tours       Tour[]
 
   @@map("tour_operators")
