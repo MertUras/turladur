@@ -163,7 +163,7 @@ export default function PartnerRegisterPage() {
           </div>
 
           {error && (
-            <div className="mb-5 flex items-start bg-red-50/80 border border-red-200/80 text-red-800 px-4 py-3 rounded-lg text-xs shadow-sm">
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md mb-5 flex items-start bg-red-50/80 border border-red-200/80 text-red-800 px-4 py-3 rounded-lg text-xs shadow-sm">
               <XMarkIcon className="w-4 h-4 mr-2 text-red-500 flex-shrink-0 mt-0.5"/>
               <span className="leading-tight flex-1 -mt-0.5">{error}</span>
               <button 
