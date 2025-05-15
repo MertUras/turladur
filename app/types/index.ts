@@ -92,7 +92,7 @@ export interface Agency {
 // Tur Operatörü tipleri
 export interface TourOperator {
   id: string;
-  name: string;
+  companyName: string;
   description?: string;
   address?: string;
   city?: string;
@@ -147,7 +147,7 @@ export interface Tour {
   updatedAt: Date;
   tourOperator: {
     id: string;
-    name: string;
+    companyName: string;
     logo: string;
   };
 }

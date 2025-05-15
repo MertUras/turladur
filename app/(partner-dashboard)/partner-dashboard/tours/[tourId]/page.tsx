@@ -57,7 +57,7 @@ interface Tour {
   tourOperatorId: string;
   tourOperator: {
     id: string;
-    name: string;
+    companyName: string;
     logo: string | null;
   };
 }
@@ -344,7 +344,7 @@ export default function TourDetailPage({ params }: { params: { tourId: string } 
                 {tour.tourOperator.logo ? (
                   <Image
                     src={tour.tourOperator.logo}
-                    alt={tour.tourOperator.name}
+                    alt={tour.tourOperator.companyName}
                     width={48}
                     height={48}
                     className="rounded-lg"
@@ -352,12 +352,12 @@ export default function TourDetailPage({ params }: { params: { tourId: string } 
                 ) : (
                   <div className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center">
                     <span className="text-gray-400 text-lg font-medium">
-                      {tour.tourOperator.name.charAt(0)}
+                      {tour.tourOperator.companyName.charAt(0)}
                     </span>
                   </div>
                 )}
                 <div className="ml-4">
-                  <h3 className="text-sm font-medium text-gray-900">{tour.tourOperator.name}</h3>
+                  <h3 className="text-sm font-medium text-gray-900">{tour.tourOperator.companyName}</h3>
                 </div>
               </div>
             </div>

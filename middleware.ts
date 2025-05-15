@@ -61,7 +61,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/partner-login', request.url));
     }
 
-    if (token.role !== 'TOUR_OPERATOR' || token.provider !== 'partner-credentials') {
+    // Hem TOUR_OPERATOR hem de EXPERIENCE_PROVIDER rollerine izin ver
+    if ((token.role !== 'TOUR_OPERATOR' && token.role !== 'EXPERIENCE_PROVIDER') || token.provider !== 'partner-credentials') {
       console.log('Geçersiz rol veya provider, partner-login sayfasına yönlendiriliyor'); // Debug log
       return NextResponse.redirect(new URL('/partner-login', request.url));
     }

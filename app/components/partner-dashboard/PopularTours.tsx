@@ -41,7 +41,7 @@ export default function PopularTours({ tours }: PopularToursProps) {
           >
             <div className="relative h-48 rounded-lg overflow-hidden">
               <Image
-                src={tour.image}
+                src={typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : '/images/placeholder.jpg'}
                 alt={tour.title}
                 fill
                 className="object-cover group-hover:scale-105 transition-transform duration-200"

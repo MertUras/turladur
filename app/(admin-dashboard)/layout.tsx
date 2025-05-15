@@ -38,6 +38,7 @@ const sidebarLinks: SidebarLink[] = [
   { name: 'Dashboard', href: '/admin-dashboard', icon: HomeIcon, description: 'Genel istatistikler ve özet' },
   { name: 'Kullanıcı Yönetimi', href: '/admin-dashboard/users', icon: UsersIcon, description: 'Kullanıcı yönetimi' },
   { name: 'Tur Acentaları', href: '/admin-dashboard/agencies', icon: BuildingOfficeIcon, description: 'Tur acentaları yönetimi' },
+  { name: 'Aktivite Acentaları', href: '/admin-dashboard/activity-operators', icon: UserGroupIcon, description: 'Aktivite acentaları yönetimi' },
   { name: 'Tur Rehberleri', href: '/admin-dashboard/guides', icon: UserGroupIcon, description: 'Tur rehberleri yönetimi' },
   { name: 'Turlar', href: '/admin-dashboard/tours', icon: GlobeAltIcon, description: 'Tur yönetimi' },
   { name: 'Rezervasyonlar', href: '/admin-dashboard/reservations', icon: ClipboardDocumentListIcon, description: 'Rezervasyon yönetimi' },

@@ -106,19 +106,13 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email ve şifre gerekli');
         }
 
-        // Önce ana kullanıcıyı kontrol et
+        // Hem tour hem experience operatorları dahil et
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
           include: {
             tourOperators: true,
+            experienceOperators: true,
           },
-        });
-
-        console.log('Partner giriş denemesi:', { 
-          email: credentials.email,
-          userFound: !!user,
-          userRole: user?.role,
-          tourOperatorCount: user?.tourOperators?.length 
         });
 
         if (!user || !user.password) {
@@ -126,46 +120,63 @@ export const authOptions: NextAuthOptions = {
         }
 
         const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
-
         if (!isPasswordValid) {
           throw new Error('Geçersiz email veya şifre');
         }
 
-        if (user.role !== 'TOUR_OPERATOR') {
+        // Sadece partner rolleri
+        if (user.role === 'TOUR_OPERATOR') {
+          const tourOperator = user.tourOperators[0];
+          if (!tourOperator) {
+            throw new Error('Partner hesabı bulunamadı');
+          }
+          switch (tourOperator.status) {
+            case 'pending':
+              throw new Error('Hesabınız henüz onaylanmamış. Lütfen admin onayını bekleyin.');
+            case 'rejected':
+              throw new Error('Hesabınız reddedilmiş. Daha fazla bilgi için lütfen bizimle iletişime geçin.');
+            case 'suspended':
+              throw new Error('Hesabınız askıya alınmış. Daha fazla bilgi için lütfen bizimle iletişime geçin.');
+            case 'approved':
+              return {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                provider: 'partner-credentials',
+                isMainUser: true,
+                tourOperatorId: tourOperator.id,
+              };
+            default:
+              throw new Error('Geçersiz hesap durumu');
+          }
+        } else if (user.role === 'EXPERIENCE_PROVIDER') {
+          const experienceOperator = user.experienceOperators[0];
+          if (!experienceOperator) {
+            throw new Error('Partner hesabı bulunamadı');
+          }
+          switch (experienceOperator.status) {
+            case 'pending':
+              throw new Error('Hesabınız henüz onaylanmamış. Lütfen admin onayını bekleyin.');
+            case 'rejected':
+              throw new Error('Hesabınız reddedilmiş. Daha fazla bilgi için lütfen bizimle iletişime geçin.');
+            case 'suspended':
+              throw new Error('Hesabınız askıya alınmış. Daha fazla bilgi için lütfen bizimle iletişime geçin.');
+            case 'approved':
+              return {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                provider: 'partner-credentials',
+                isMainUser: true,
+                experienceOperatorId: experienceOperator.id,
+              };
+            default:
+              throw new Error('Geçersiz hesap durumu');
+          }
+        } else {
           throw new Error('Bu hesap bir partner hesabı değil');
-        }
-
-        const tourOperator = user.tourOperators[0];
-        
-        if (!tourOperator) {
-          throw new Error('Partner hesabı bulunamadı');
-        }
-
-        console.log('Tour operator durumu:', { 
-          status: tourOperator.status,
-          companyName: tourOperator.companyName
-        });
-
-        // Duruma göre kontrol
-        switch (tourOperator.status) {
-          case 'pending':
-            throw new Error('Hesabınız henüz onaylanmamış. Lütfen admin onayını bekleyin.');
-          case 'rejected':
-            throw new Error('Hesabınız reddedilmiş. Daha fazla bilgi için lütfen bizimle iletişime geçin.');
-          case 'suspended':
-            throw new Error('Hesabınız askıya alınmış. Daha fazla bilgi için lütfen bizimle iletişime geçin.');
-          case 'approved':
-            return {
-              id: user.id,
-              email: user.email,
-              name: user.name,
-              role: user.role,
-              provider: 'partner-credentials',
-              isMainUser: true,
-              tourOperatorId: tourOperator.id,
-            };
-          default:
-            throw new Error('Geçersiz hesap durumu');
         }
       },
     }),

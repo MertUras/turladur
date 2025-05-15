@@ -26,13 +26,15 @@ export async function POST(request: Request) {
       where: { email },
       include: {
         tourOperators: true,
+        experienceOperators: true,
       },
     });
     console.log('Bulunan kullanıcı:', { 
       userId: user?.id,
       userRole: user?.role,
       hasPassword: !!user?.password,
-      tourOperatorCount: user?.tourOperators?.length
+      tourOperatorCount: user?.tourOperators?.length,
+      experienceOperatorCount: user?.experienceOperators?.length
     }); // Debug log
 
     if (!user || !user.password) {
@@ -52,82 +54,150 @@ export async function POST(request: Request) {
       );
     }
 
-    if (user.role !== 'TOUR_OPERATOR') {
+    if (user.role === 'TOUR_OPERATOR') {
+      const tourOperator = user.tourOperators[0];
+      console.log('Tour operator bilgileri:', { 
+        id: tourOperator?.id,
+        status: tourOperator?.status,
+        companyName: tourOperator?.companyName
+      }); // Debug log
+
+      if (!tourOperator) {
+        return NextResponse.json(
+          { success: false, message: 'Partner hesabı bulunamadı.' },
+          { status: 404 }
+        );
+      }
+
+      // Status kontrolü
+      switch (tourOperator.status) {
+        case 'pending':
+          return NextResponse.json(
+            { success: false, message: 'Hesabınız henüz onaylanmamış. Lütfen admin onayını bekleyin.' },
+            { status: 403 }
+          );
+        case 'rejected':
+          return NextResponse.json(
+            { success: false, message: 'Hesabınız reddedilmiş. Daha fazla bilgi için lütfen bizimle iletişime geçin.' },
+            { status: 403 }
+          );
+        case 'suspended':
+          return NextResponse.json(
+            { success: false, message: 'Hesabınız askıya alınmış. Daha fazla bilgi için lütfen bizimle iletişime geçin.' },
+            { status: 403 }
+          );
+        case 'approved':
+          const token = jwt.sign(
+            {
+              id: user.id,
+              email: user.email,
+              role: user.role,
+              tourOperatorId: tourOperator.id,
+            },
+            process.env.JWT_SECRET || 'default-secret',
+            { expiresIn: '1d' }
+          );
+
+          console.log('Başarılı giriş, token oluşturuldu'); // Debug log
+
+          return NextResponse.json({
+            success: true,
+            message: 'Giriş başarılı!',
+            data: {
+              token,
+              user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+              },
+              tourOperator: {
+                id: tourOperator.id,
+                companyName: tourOperator.companyName,
+                status: tourOperator.status
+              }
+            }
+          });
+        default:
+          console.log('Geçersiz durum:', tourOperator.status); // Debug log
+          return NextResponse.json(
+            { success: false, message: 'Geçersiz hesap durumu.' },
+            { status: 400 }
+          );
+      }
+    } else if (user.role === 'EXPERIENCE_PROVIDER') {
+      const experienceOperator = user.experienceOperators[0];
+      console.log('Experience operator bilgileri:', { 
+        id: experienceOperator?.id,
+        status: experienceOperator?.status,
+        companyName: experienceOperator?.companyName
+      }); // Debug log
+
+      if (!experienceOperator) {
+        return NextResponse.json(
+          { success: false, message: 'Partner hesabı bulunamadı.' },
+          { status: 404 }
+        );
+      }
+
+      // Status kontrolü
+      switch (experienceOperator.status) {
+        case 'pending':
+          return NextResponse.json(
+            { success: false, message: 'Hesabınız henüz onaylanmamış. Lütfen admin onayını bekleyin.' },
+            { status: 403 }
+          );
+        case 'rejected':
+          return NextResponse.json(
+            { success: false, message: 'Hesabınız reddedilmiş. Daha fazla bilgi için lütfen bizimle iletişime geçin.' },
+            { status: 403 }
+          );
+        case 'suspended':
+          return NextResponse.json(
+            { success: false, message: 'Hesabınız askıya alınmış. Daha fazla bilgi için lütfen bizimle iletişime geçin.' },
+            { status: 403 }
+          );
+        case 'approved':
+          const token = jwt.sign(
+            {
+              id: user.id,
+              email: user.email,
+              role: user.role,
+              experienceOperatorId: experienceOperator.id,
+            },
+            process.env.JWT_SECRET || 'default-secret',
+            { expiresIn: '1d' }
+          );
+          return NextResponse.json({
+            success: true,
+            message: 'Giriş başarılı!',
+            data: {
+              token,
+              user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+              },
+              experienceOperator: {
+                id: experienceOperator.id,
+                companyName: experienceOperator.companyName,
+                status: experienceOperator.status
+              }
+            }
+          });
+        default:
+          console.log('Geçersiz durum:', experienceOperator.status); // Debug log
+          return NextResponse.json(
+            { success: false, message: 'Geçersiz hesap durumu.' },
+            { status: 400 }
+          );
+      }
+    } else {
       return NextResponse.json(
         { success: false, message: 'Bu hesap bir partner hesabı değil.' },
         { status: 403 }
       );
-    }
-
-    const tourOperator = user.tourOperators[0];
-    console.log('Tour operator bilgileri:', { 
-      id: tourOperator?.id,
-      status: tourOperator?.status,
-      companyName: tourOperator?.companyName
-    }); // Debug log
-
-    if (!tourOperator) {
-      return NextResponse.json(
-        { success: false, message: 'Partner hesabı bulunamadı.' },
-        { status: 404 }
-      );
-    }
-
-    // Status kontrolü
-    switch (tourOperator.status) {
-      case 'pending':
-        return NextResponse.json(
-          { success: false, message: 'Hesabınız henüz onaylanmamış. Lütfen admin onayını bekleyin.' },
-          { status: 403 }
-        );
-      case 'rejected':
-        return NextResponse.json(
-          { success: false, message: 'Hesabınız reddedilmiş. Daha fazla bilgi için lütfen bizimle iletişime geçin.' },
-          { status: 403 }
-        );
-      case 'suspended':
-        return NextResponse.json(
-          { success: false, message: 'Hesabınız askıya alınmış. Daha fazla bilgi için lütfen bizimle iletişime geçin.' },
-          { status: 403 }
-        );
-      case 'approved':
-        const token = jwt.sign(
-          {
-            id: user.id,
-            email: user.email,
-            role: user.role,
-            tourOperatorId: tourOperator.id,
-          },
-          process.env.JWT_SECRET || 'default-secret',
-          { expiresIn: '1d' }
-        );
-
-        console.log('Başarılı giriş, token oluşturuldu'); // Debug log
-
-        return NextResponse.json({
-          success: true,
-          message: 'Giriş başarılı!',
-          data: {
-            token,
-            user: {
-              id: user.id,
-              email: user.email,
-              name: user.name,
-              role: user.role,
-            },
-            tourOperator: {
-              id: tourOperator.id,
-              companyName: tourOperator.companyName,
-              status: tourOperator.status
-            }
-          }
-        });
-      default:
-        console.log('Geçersiz durum:', tourOperator.status); // Debug log
-        return NextResponse.json(
-          { success: false, message: 'Geçersiz hesap durumu.' },
-          { status: 400 }
-        );
     }
   } catch (error: unknown) {
     console.error('Partner login hatası:', error);

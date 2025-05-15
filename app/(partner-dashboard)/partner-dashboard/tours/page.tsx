@@ -50,7 +50,7 @@ interface Tour {
   tourOperatorId: string;
   tourOperator: {
     id: string;
-    name: string;
+    companyName: string;
     logo: string | null;
   };
 }

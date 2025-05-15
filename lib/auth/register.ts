@@ -1,10 +1,12 @@
 import { prisma } from "../prisma";
 import bcrypt from "bcryptjs";
+import type { UserRole } from "../types/index";
 
 type RegisterData = {
   name: string;
   email: string;
   password: string;
+  role?: UserRole;
 };
 
 export const validatePassword = (password: string) => {
@@ -43,7 +45,7 @@ export const hashPassword = async (password: string) => {
 };
 
 export const createUser = async (data: RegisterData) => {
-  const { name, email, password } = data;
+  const { name, email, password, role } = data;
   
   // E-posta kontrolü
   const emailExists = await checkEmailExists(email);
@@ -66,7 +68,7 @@ export const createUser = async (data: RegisterData) => {
       name,
       email,
       password: hashedPassword,
-      role: 'USER', // Varsayılan rol
+      role: (role as UserRole) || 'USER',
     },
     select: {
       id: true,

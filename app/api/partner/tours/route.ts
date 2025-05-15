@@ -32,8 +32,8 @@ export async function GET(request: Request) {
         tourOperator: {
           select: {
             id: true,
-            name: true,
-            logo: true
+            companyName: true,
+            logo: true,
           }
         }
       },

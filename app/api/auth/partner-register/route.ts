@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { email, password, companyName, phone, address } = await request.json();
+    const { email, password, companyName, phone, address, role } = await request.json();
 
     // Gerekli alanların kontrolü
     if (!email || !password || !companyName) {
@@ -49,26 +49,50 @@ export async function POST(request: Request) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Kullanıcı ve tour operator oluştur
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name: companyName,
-        role: 'TOUR_OPERATOR',
-        tourOperators: {
-          create: {
-            companyName,
-            email,
-            phone: phone || '',
-            address: address || '',
-            status: 'pending'
-          }
+    let user;
+    if ((role || 'TOUR_OPERATOR') === 'EXPERIENCE_PROVIDER') {
+      // Önce kullanıcıyı oluştur
+      user = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name: companyName,
+          role: 'EXPERIENCE_PROVIDER',
         }
-      },
-      include: {
-        tourOperators: true
-      }
-    });
+      });
+      // Sonra ExperienceOperator kaydını userId ile oluştur
+      await prisma.experienceOperator.create({
+        data: {
+          companyName,
+          email,
+          phone: phone || '',
+          address: address || '',
+          status: 'pending',
+          userId: user.id,
+        }
+      });
+    } else {
+      user = await prisma.user.create({
+        data: {
+          email,
+          password: hashedPassword,
+          name: companyName,
+          role: 'TOUR_OPERATOR',
+          tourOperators: {
+            create: {
+              companyName,
+              email,
+              phone: phone || '',
+              address: address || '',
+              status: 'pending'
+            }
+          }
+        },
+        include: {
+          tourOperators: true
+        }
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -77,7 +101,8 @@ export async function POST(request: Request) {
         id: user.id,
         email: user.email,
         companyName: user.name,
-        tourOperator: user.tourOperators[0]
+        role: user.role,
+        tourOperator: user.role === 'TOUR_OPERATOR' ? (user as any).tourOperators[0] : null
       }
     }, { status: 201 });
 

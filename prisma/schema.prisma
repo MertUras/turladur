@@ -9,15 +9,15 @@ datasource db {
 }
 
 model User {
-  id                       String           @id @default(cuid())
+  id                       String               @id @default(cuid())
   name                     String?
-  email                    String           @unique
+  email                    String               @unique
   emailVerified            DateTime?
   password                 String?
   image                    String?
-  role                     UserRole         @default(USER)
-  createdAt                DateTime         @default(now())
-  updatedAt                DateTime         @updatedAt
+  role                     UserRole             @default(USER)
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
   verificationToken        String?
   verificationTokenExpires DateTime?
   activityReviews          ActivityReview[]
@@ -29,6 +29,8 @@ model User {
   posts                    Post[]
   reviews                  Review[]
   tourOperators            TourOperator[]
+  status                   String               @default("pending")
+  experienceOperators      ExperienceOperator[]
 
   @@map("users")
 }
@@ -116,7 +118,7 @@ enum TourOperatorStatus {
 
 model TourOperator {
   id          String            @id @default(cuid())
-  companyName String
+  companyName String?
   description String?
   address     String?
   city        String?
@@ -197,31 +199,31 @@ model Tour {
 }
 
 model Experience {
-  id              String           @id @default(cuid())
-  title           String
-  description     String
-  longDescription String
-  imageUrl        String
-  gallery         Json             @default("[]")
-  location        String
-  duration        String
-  rating          Float            @default(0)
-  reviewCount     Int              @default(0)
-  popularityRate  Float            @default(0)
-  price           Float
-  category        String
-  included        Json             @default("[]")
-  notIncluded     Json             @default("[]")
-  highlights      Json             @default("[]")
-  schedule        Json             @default("[]")
-  featured        Boolean          @default(false)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  userId          String
-  reviews         ActivityReview[]
-  bookings        Booking[]
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  generalReviews  Review[]
+  id                  String             @id @default(cuid())
+  title               String
+  description         String
+  longDescription     String
+  imageUrl            String
+  gallery             Json               @default("[]")
+  location            String
+  duration            String
+  rating              Float              @default(0)
+  reviewCount         Int                @default(0)
+  popularityRate      Float              @default(0)
+  price               Float
+  category            String
+  included            Json               @default("[]")
+  notIncluded         Json               @default("[]")
+  highlights          Json               @default("[]")
+  schedule            Json               @default("[]")
+  featured            Boolean            @default(false)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  userId              String
+  reviews             ActivityReview[]
+  bookings            Booking[]
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generalReviews      Review[]
 
   @@map("experiences")
 }
@@ -361,4 +363,25 @@ enum PaymentStatus {
   PARTIALLY_PAID
   PAID
   REFUNDED
+}
+
+model ExperienceOperator {
+  id          String   @id @default(cuid())
+  companyName String?
+  description String?
+  address     String?
+  city        String?
+  country     String?
+  phone       String?
+  email       String   @unique
+  website     String?
+  logo        String?
+  license     String?
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("experience_operators")
 }

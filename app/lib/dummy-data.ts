@@ -217,7 +217,7 @@ export const dummyAgencies: Agency[] = [
 export const dummyTourOperators: TourOperator[] = [
   {
     id: '1',
-    name: 'Anadolu Turları',
+    companyName: 'Anadolu Turları',
     description: 'Anadolu\'nun kültürel ve tarihi zenginliklerini keşfedin',
     address: 'Atatürk Bulvarı No: 123',
     city: 'Ankara',
@@ -238,7 +238,7 @@ export const dummyTourOperators: TourOperator[] = [
   },
   {
     id: '2',
-    name: 'Akdeniz Gezileri',
+    companyName: 'Akdeniz Gezileri',
     description: 'Akdeniz\'in muhteşem kıyıları ve antik kentlerini keşfedin',
     address: 'Lara Caddesi No: 45',
     city: 'Antalya',
@@ -259,7 +259,7 @@ export const dummyTourOperators: TourOperator[] = [
   },
   {
     id: '3',
-    name: 'İstanbul Keşifleri',
+    companyName: 'İstanbul Keşifleri',
     description: 'İstanbul\'un tarihi ve kültürel zenginliğini profesyonel rehberlerle keşfedin',
     address: 'Beyoğlu Caddesi No: 78',
     city: 'İstanbul',
@@ -280,7 +280,7 @@ export const dummyTourOperators: TourOperator[] = [
   },
   {
     id: '4',
-    name: 'Karadeniz Yaylaları',
+    companyName: 'Karadeniz Yaylaları',
     description: 'Karadeniz\'in eşsiz doğası, yaylaları ve kültürünü keşfedin',
     address: 'Uzun Sokak No: 56',
     city: 'Trabzon',
@@ -301,7 +301,7 @@ export const dummyTourOperators: TourOperator[] = [
   },
   {
     id: '5',
-    name: 'Ege Kültür Turları',
+    companyName: 'Ege Kültür Turları',
     description: 'Ege\'nin antik kentleri ve eşsiz koylarını keşfedin',
     address: 'Kordon Caddesi No: 34',
     city: 'İzmir',

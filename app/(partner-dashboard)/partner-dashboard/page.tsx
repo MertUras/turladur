@@ -73,14 +73,23 @@ export default function PartnerDashboardPage() {
     fetchDashboardData();
   }, []);
 
+  const userRole = session?.user?.role;
   const quickAccessItems = [
-    { 
-      title: 'Yeni Tur Ekle', 
-      description: 'Yeni bir tur ekleyerek portföyünüzü genişletin', 
-      icon: BuildingStorefrontIcon, 
-      href: '/partner-dashboard/tours/create', 
-      color: 'blue' as const 
-    },
+    userRole === 'EXPERIENCE_PROVIDER'
+      ? {
+          title: 'Yeni Aktivite Ekle',
+          description: 'Yeni bir aktivite ekleyerek portföyünüzü genişletin',
+          icon: BuildingStorefrontIcon,
+          href: '/partner-dashboard/experiences/create',
+          color: 'blue' as const,
+        }
+      : {
+          title: 'Yeni Tur Ekle',
+          description: 'Yeni bir tur ekleyerek portföyünüzü genişletin',
+          icon: BuildingStorefrontIcon,
+          href: '/partner-dashboard/tours/create',
+          color: 'blue' as const,
+        },
     { 
       title: 'Raporları İncele', 
       description: 'İşletmenizin performansını detaylı raporlarla analiz edin', 

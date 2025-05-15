@@ -38,6 +38,7 @@ export default function PartnerRegisterPage() {
     website: '',
     description: '',
     termsAccepted: false,
+    role: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,6 +78,7 @@ export default function PartnerRegisterPage() {
           country: formData.country,
           website: formData.website,
           description: formData.description,
+          role: formData.role || undefined,
         }),
       });
 
@@ -264,6 +266,24 @@ export default function PartnerRegisterPage() {
                       placeholder="••••••••"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label htmlFor="role" className="block text-xs font-medium text-neutral-700 mb-1.5">
+                    Rol
+                  </label>
+                  <select
+                    id="role"
+                    name="role"
+                    required
+                    value={formData.role}
+                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                    className="block w-full rounded-lg border border-neutral-300 focus:border-sky-500 focus:ring-sky-300 py-2.5 pl-3 pr-4 text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-offset-0 sm:text-sm transition duration-200 ease-in-out shadow-sm focus:bg-white"
+                  >
+                    <option value="">Rol Seçiniz</option>
+                    <option value="TOUR_OPERATOR">Tur Operatörü</option>
+                    <option value="EXPERIENCE_PROVIDER">Aktivite Operatörü</option>
+                  </select>
                 </div>
               </>
             ) : (

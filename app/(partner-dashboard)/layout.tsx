@@ -32,16 +32,18 @@ interface SidebarLink {
   href: string;
   icon: React.ElementType;
   description?: string;
+  roles?: string[];
 }
 
 const sidebarLinks: SidebarLink[] = [
   { name: 'Genel Bakış', href: '/partner-dashboard', icon: HomeIcon },
-  { name: 'Turlar', href: '/partner-dashboard/tours', icon: GlobeAltIcon },
+  { name: 'Turlar', href: '/partner-dashboard/tours', icon: GlobeAltIcon, roles: ['TOUR_OPERATOR'] },
+  { name: 'Aktiviteler', href: '/partner-dashboard/experiences', icon: GlobeAltIcon, roles: ['EXPERIENCE_PROVIDER'] },
   { name: 'Rezervasyonlar', href: '/partner-dashboard/reservations', icon: CalendarIcon },
   { name: 'Müşteriler', href: '/partner-dashboard/customers', icon: UsersIcon },
   { name: 'Finansal Durum', href: '/partner-dashboard/financials', icon: CurrencyDollarIcon, description: 'Gelir ve ödemeler' },
   { name: 'Raporlar', href: '/partner-dashboard/reports', icon: ChartBarIcon },
-  { name: 'Kullanıcılar', href: '/partner-dashboard/users', icon: UserGroupIcon },
+  { name: 'Kullanıcılar', href: '/partner-dashboard/users', icon: UserGroupIcon, roles: ['TOUR_OPERATOR'] },
   { name: 'Yorumlar', href: '/partner-dashboard/reviews', icon: ChatBubbleLeftEllipsisIcon, description: 'Müşteri değerlendirmeleri' },
   { name: 'Ayarlar', href: '/partner-dashboard/settings', icon: Cog6ToothIcon },
   { name: 'Yardım', href: '/partner-dashboard/help', icon: QuestionMarkCircleIcon, description: 'Destek ve yardım' },
@@ -53,7 +55,20 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
   const [showNotifications, setShowNotifications] = useState(false);
   const pathname = usePathname();
   const { data: session } = useSession();
+  const userRole = session?.user?.role as string;
   
+  // Partner olmayanları login sayfasına yönlendir
+  useEffect(() => {
+    if (session && userRole !== 'TOUR_OPERATOR' && userRole !== 'EXPERIENCE_PROVIDER') {
+      window.location.href = '/partner-login';
+    }
+  }, [session, userRole]);
+
+  const filteredSidebarLinks = sidebarLinks.filter(link => {
+    if (!link.roles) return true;
+    return link.roles.includes(userRole);
+  });
+
   // Mobil cihazlarda menü açıldığında sayfanın kaydırılmasını engelle
   useEffect(() => {
     if (sidebarOpen) {
@@ -171,7 +186,7 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
           </div>
           
           <nav className="space-y-1 px-3 flex-1">
-            {sidebarLinks.slice(0, 7).map((item) => {
+            {filteredSidebarLinks.slice(0, 7).map((item) => {
               const isActive = pathname === item.href;
               
               return (
@@ -202,7 +217,7 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
           </div>
           
           <nav className="space-y-1 px-3">
-            {sidebarLinks.slice(7).map((item) => {
+            {filteredSidebarLinks.slice(7).map((item) => {
               const isActive = pathname === item.href;
               
               return (
@@ -257,7 +272,7 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
             
             <div className="flex items-center">
               <h1 className="text-lg font-semibold text-gray-900 hidden sm:block">
-                {sidebarLinks.find(link => link.href === pathname)?.name || 'Partner Dashboard'}
+                {filteredSidebarLinks.find(link => link.href === pathname)?.name || 'Partner Dashboard'}
               </h1>
             </div>
 
