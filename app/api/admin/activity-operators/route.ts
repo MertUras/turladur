@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 export async function GET() {
   try {
     const activityOperators = await prisma.user.findMany({
-      where: { role: 'EXPERIENCE_PROVIDER', status: 'pending' },
+      where: { role: 'EXPERIENCE_PROVIDER' },
       select: {
         id: true,
         name: true,
