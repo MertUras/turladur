@@ -393,25 +393,24 @@ const AgencyManagement = () => {
         </div>
       )}
 
-    <div className="space-y-6">
-        {/* Bekleyen Acenteler Bildirimi */}
-        {pendingAgencies > 0 && (
-          <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <ExclamationCircleIcon className="h-5 w-5 text-yellow-400" aria-hidden="true" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-yellow-700">
-                  {pendingAgencies} adet acente onay bekliyor. Lütfen kontrol edin.
-                </p>
-              </div>
+      {/* Bekleyen Acenteler Bildirimi */}
+      {pendingAgencies > 0 && (
+        <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <ExclamationCircleIcon className="h-5 w-5 text-yellow-400" aria-hidden="true" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                {pendingAgencies} adet acente onay bekliyor. Lütfen kontrol edin.
+              </p>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
       {/* Başlık ve İstatistikler */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-blue-100">
@@ -458,10 +457,26 @@ const AgencyManagement = () => {
         </div>
       </div>
 
-      {/* Başlık ve İşlemler */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Tur Acentaları</h1>
-        <div className="flex gap-2">
+      {/* Arama, Filtre ve Butonlar */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+        <div className="flex-1">
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Acente adı, e-posta veya telefon ile ara..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 mt-2 md:mt-0">
+          <button className="px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 hover:bg-gray-50 text-gray-700">
+            <FunnelIcon className="h-5 w-5 text-gray-500" />
+            Filtreler
+            <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+          </button>
           <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 flex items-center gap-2">
             <ArrowDownTrayIcon className="h-5 w-5" />
             Dışa Aktar
@@ -815,364 +830,364 @@ const AgencyManagement = () => {
 
       {/* Acente Detay Modalı */}
       {selectedAgency && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-6">
-                <div className="flex items-center">
-                  <img
-                    src={selectedAgency.logo}
-                    alt={selectedAgency.name}
-                    className="h-16 w-16 rounded-full"
-                  />
-                  <div className="ml-4">
-                    <h2 className="text-xl font-bold text-gray-900">{selectedAgency.name}</h2>
-                    <p className="text-gray-500">{selectedAgency.email}</p>
-                  </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="fixed inset-0 bg-black opacity-30" />
+          <div className="relative bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6 z-10">
+            <div className="flex justify-between items-start mb-6">
+              <div className="flex items-center">
+                <img
+                  src={selectedAgency.logo}
+                  alt={selectedAgency.name}
+                  className="h-16 w-16 rounded-full"
+                />
+                <div className="ml-4">
+                  <h2 className="text-xl font-bold text-gray-900">{selectedAgency.name}</h2>
+                  <p className="text-gray-500">{selectedAgency.email}</p>
                 </div>
+              </div>
+              <button
+                className="text-gray-400 hover:text-gray-500"
+                onClick={() => setSelectedAgency(null)}
+              >
+                <XCircleIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Sekmeler */}
+            <div className="border-b border-gray-200 mb-6">
+              <nav className="-mb-px flex space-x-8 overflow-x-auto">
                 <button
-                  className="text-gray-400 hover:text-gray-500"
-                  onClick={() => setSelectedAgency(null)}
+                  className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+                    selectedTab === 'details'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  onClick={() => setSelectedTab('details')}
                 >
-                  <XCircleIcon className="h-6 w-6" />
+                  Detaylar
                 </button>
-              </div>
+                <button
+                  className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+                    selectedTab === 'tours'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  onClick={() => setSelectedTab('tours')}
+                >
+                  Turlar
+                </button>
+                <button
+                  className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+                    selectedTab === 'guides'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  onClick={() => setSelectedTab('guides')}
+                >
+                  Rehberler
+                </button>
+                <button
+                  className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+                    selectedTab === 'documents'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  onClick={() => setSelectedTab('documents')}
+                >
+                  Belgeler
+                </button>
+                <button
+                  className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+                    selectedTab === 'performance'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  onClick={() => setSelectedTab('performance')}
+                >
+                  Performans
+                </button>
+                <button
+                  className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+                    selectedTab === 'financial'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  onClick={() => setSelectedTab('financial')}
+                >
+                  Finansal
+                </button>
+                <button
+                  className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+                    selectedTab === 'feedback'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  onClick={() => setSelectedTab('feedback')}
+                >
+                  Geri Bildirimler
+                </button>
+                <button
+                  className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+                    selectedTab === 'contracts'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  onClick={() => setSelectedTab('contracts')}
+                >
+                  Sözleşmeler
+                </button>
+                <button
+                  className={`pb-4 px-1 border-b-2 font-medium text-sm ${
+                    selectedTab === 'history'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                  onClick={() => setSelectedTab('history')}
+                >
+                  İşlem Geçmişi
+                </button>
+              </nav>
+            </div>
 
-              {/* Sekmeler */}
-              <div className="border-b border-gray-200 mb-6">
-                <nav className="-mb-px flex space-x-8 overflow-x-auto">
-                  <button
-                    className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                      selectedTab === 'details'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedTab('details')}
-                  >
-                    Detaylar
-                  </button>
-                  <button
-                    className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                      selectedTab === 'tours'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedTab('tours')}
-                  >
-                    Turlar
-                  </button>
-                  <button
-                    className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                      selectedTab === 'guides'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedTab('guides')}
-                  >
-                    Rehberler
-                  </button>
-                  <button
-                    className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                      selectedTab === 'documents'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedTab('documents')}
-                  >
-                    Belgeler
-                  </button>
-                  <button
-                    className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                      selectedTab === 'performance'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedTab('performance')}
-                  >
-                    Performans
-                  </button>
-                  <button
-                    className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                      selectedTab === 'financial'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedTab('financial')}
-                  >
-                    Finansal
-                  </button>
-                  <button
-                    className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                      selectedTab === 'feedback'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedTab('feedback')}
-                  >
-                    Geri Bildirimler
-                  </button>
-                  <button
-                    className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                      selectedTab === 'contracts'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedTab('contracts')}
-                  >
-                    Sözleşmeler
-                  </button>
-                  <button
-                    className={`pb-4 px-1 border-b-2 font-medium text-sm ${
-                      selectedTab === 'history'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                    onClick={() => setSelectedTab('history')}
-                  >
-                    İşlem Geçmişi
-                  </button>
-                </nav>
-              </div>
-
-              {/* Sekme İçerikleri */}
-              {selectedTab === 'details' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">İletişim Bilgileri</h3>
-                      <div className="space-y-4">
-                        <div className="flex items-center">
-                          <PhoneIcon className="h-5 w-5 text-gray-400" />
-                          <span className="ml-3 text-sm text-gray-900">{selectedAgency.phone}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <EnvelopeIcon className="h-5 w-5 text-gray-400" />
-                          <span className="ml-3 text-sm text-gray-900">{selectedAgency.email}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <MapPinIcon className="h-5 w-5 text-gray-400" />
-                          <span className="ml-3 text-sm text-gray-900">{selectedAgency.address}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">İstatistikler</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-500">Toplam Tur</p>
-                          <p className="text-2xl font-semibold text-gray-900">{selectedAgency.totalTours}</p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-500">Toplam Rezervasyon</p>
-                          <p className="text-2xl font-semibold text-gray-900">{selectedAgency.totalReservations}</p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-500">Değerlendirme</p>
-                          <p className="text-2xl font-semibold text-gray-900">{selectedAgency.averageRating}</p>
-                        </div>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                          <p className="text-sm text-gray-500">Toplam Rehber</p>
-                          <p className="text-2xl font-semibold text-gray-900">{selectedAgency.totalGuides}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  {selectedAgency.description && (
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Açıklama</h3>
-                      <p className="text-sm text-gray-600">{selectedAgency.description}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {selectedTab === 'tours' && (
-                <div className="space-y-4">
-                  {tours.map((tour) => (
-                    <div key={tour.id} className="flex items-center p-4 bg-gray-50 rounded-lg">
-                      <img
-                        src={tour.image}
-                        alt={tour.name}
-                        className="h-16 w-16 rounded-lg object-cover"
-                      />
-                      <div className="ml-4 flex-1">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{tour.name}</p>
-                            <p className="text-xs text-gray-500">{tour.location}</p>
-                          </div>
-                          <div className="flex items-center">
-                            <StarIcon className="h-4 w-4 text-yellow-400" />
-                            <span className="ml-1 text-sm text-gray-600">{tour.averageRating}</span>
-                          </div>
-                        </div>
-                        <div className="mt-2 flex items-center justify-between text-sm">
-                          <div className="flex items-center space-x-4">
-                            <span className="text-gray-500">{tour.duration}</span>
-                            <span className="text-gray-500">{tour.price} TL</span>
-                          </div>
-                          <span className="text-gray-500">{tour.totalReservations} rezervasyon</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {selectedTab === 'guides' && (
-                <div className="space-y-4">
-                  {guides.map((guide) => (
-                    <div key={guide.id} className="flex items-center p-4 bg-gray-50 rounded-lg">
-                      <img
-                        src={guide.avatar}
-                        alt={guide.name}
-                        className="h-12 w-12 rounded-full"
-                      />
-                      <div className="ml-4 flex-1">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{guide.name}</p>
-                            <p className="text-xs text-gray-500">{guide.email}</p>
-                          </div>
-                          <div className="flex items-center">
-                            <StarIcon className="h-4 w-4 text-yellow-400" />
-                            <span className="ml-1 text-sm text-gray-600">{guide.averageRating}</span>
-                          </div>
-                        </div>
-                        <div className="mt-2 flex items-center justify-between text-sm">
-                          <div className="flex items-center space-x-4">
-                            <span className="text-gray-500">{guide.phone}</span>
-                            <span className="text-gray-500">{guide.totalTours} tur</span>
-                          </div>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            guide.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {guide.status === 'active' ? 'Aktif' : 'Pasif'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {selectedTab === 'documents' && (
-                <div className="space-y-4">
-                  {selectedAgency.documents?.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            {/* Sekme İçerikleri */}
+            {selectedTab === 'details' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">İletişim Bilgileri</h3>
+                    <div className="space-y-4">
                       <div className="flex items-center">
-                        <ShieldCheckIcon className="h-5 w-5 text-gray-400" />
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-900">{doc.name}</p>
-                          <p className="text-xs text-gray-500">Yüklenme: {doc.uploadDate}</p>
-                        </div>
+                        <PhoneIcon className="h-5 w-5 text-gray-400" />
+                        <span className="ml-3 text-sm text-gray-900">{selectedAgency.phone}</span>
                       </div>
-                      <button className="text-blue-600 hover:text-blue-900">
-                        <ArrowDownTrayIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {selectedTab === 'performance' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Aylık Gelir</h4>
-                      <div className="h-32">
-                        <div className="flex items-end h-full space-x-2">
-                          {selectedAgency.performance?.monthlyRevenue.map((value, index) => (
-                            <div
-                              key={index}
-                              className="flex-1 bg-blue-500 rounded-t"
-                              style={{ height: `${(value / Math.max(...selectedAgency.performance!.monthlyRevenue)) * 100}%` }}
-                            />
-                          ))}
-                        </div>
+                      <div className="flex items-center">
+                        <EnvelopeIcon className="h-5 w-5 text-gray-400" />
+                        <span className="ml-3 text-sm text-gray-900">{selectedAgency.email}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <MapPinIcon className="h-5 w-5 text-gray-400" />
+                        <span className="ml-3 text-sm text-gray-900">{selectedAgency.address}</span>
                       </div>
                     </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Aylık Rezervasyonlar</h4>
-                      <div className="h-32">
-                        <div className="flex items-end h-full space-x-2">
-                          {selectedAgency.performance?.monthlyBookings.map((value, index) => (
-                            <div
-                              key={index}
-                              className="flex-1 bg-green-500 rounded-t"
-                              style={{ height: `${(value / Math.max(...selectedAgency.performance!.monthlyBookings)) * 100}%` }}
-                            />
-                          ))}
-                        </div>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">İstatistikler</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <p className="text-sm text-gray-500">Toplam Tur</p>
+                        <p className="text-2xl font-semibold text-gray-900">{selectedAgency.totalTours}</p>
                       </div>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Aylık Değerlendirmeler</h4>
-                      <div className="h-32">
-                        <div className="flex items-end h-full space-x-2">
-                          {selectedAgency.performance?.monthlyRatings.map((value, index) => (
-                            <div
-                              key={index}
-                              className="flex-1 bg-yellow-500 rounded-t"
-                              style={{ height: `${(value / 5) * 100}%` }}
-                            />
-                          ))}
-                        </div>
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <p className="text-sm text-gray-500">Toplam Rezervasyon</p>
+                        <p className="text-2xl font-semibold text-gray-900">{selectedAgency.totalReservations}</p>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <p className="text-sm text-gray-500">Değerlendirme</p>
+                        <p className="text-2xl font-semibold text-gray-900">{selectedAgency.averageRating}</p>
+                      </div>
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <p className="text-sm text-gray-500">Toplam Rehber</p>
+                        <p className="text-2xl font-semibold text-gray-900">{selectedAgency.totalGuides}</p>
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
+                {selectedAgency.description && (
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Açıklama</h3>
+                    <p className="text-sm text-gray-600">{selectedAgency.description}</p>
+                  </div>
+                )}
+              </div>
+            )}
 
-              {selectedTab === 'financial' && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium text-gray-900">Finansal Raporlar</h3>
+            {selectedTab === 'tours' && (
+              <div className="space-y-4">
+                {tours.map((tour) => (
+                  <div key={tour.id} className="flex items-center p-4 bg-gray-50 rounded-lg">
+                    <img
+                      src={tour.image}
+                      alt={tour.name}
+                      className="h-16 w-16 rounded-lg object-cover"
+                    />
+                    <div className="ml-4 flex-1">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{tour.name}</p>
+                          <p className="text-xs text-gray-500">{tour.location}</p>
+                        </div>
+                        <div className="flex items-center">
+                          <StarIcon className="h-4 w-4 text-yellow-400" />
+                          <span className="ml-1 text-sm text-gray-600">{tour.averageRating}</span>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between text-sm">
+                        <div className="flex items-center space-x-4">
+                          <span className="text-gray-500">{tour.duration}</span>
+                          <span className="text-gray-500">{tour.price} TL</span>
+                        </div>
+                        <span className="text-gray-500">{tour.totalReservations} rezervasyon</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedTab === 'guides' && (
+              <div className="space-y-4">
+                {guides.map((guide) => (
+                  <div key={guide.id} className="flex items-center p-4 bg-gray-50 rounded-lg">
+                    <img
+                      src={guide.avatar}
+                      alt={guide.name}
+                      className="h-12 w-12 rounded-full"
+                    />
+                    <div className="ml-4 flex-1">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{guide.name}</p>
+                          <p className="text-xs text-gray-500">{guide.email}</p>
+                        </div>
+                        <div className="flex items-center">
+                          <StarIcon className="h-4 w-4 text-yellow-400" />
+                          <span className="ml-1 text-sm text-gray-600">{guide.averageRating}</span>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between text-sm">
+                        <div className="flex items-center space-x-4">
+                          <span className="text-gray-500">{guide.phone}</span>
+                          <span className="text-gray-500">{guide.totalTours} tur</span>
+                        </div>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          guide.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {guide.status === 'active' ? 'Aktif' : 'Pasif'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedTab === 'documents' && (
+              <div className="space-y-4">
+                {selectedAgency.documents?.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center">
+                      <ShieldCheckIcon className="h-5 w-5 text-gray-400" />
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900">{doc.name}</p>
+                        <p className="text-xs text-gray-500">Yüklenme: {doc.uploadDate}</p>
+                      </div>
+                    </div>
                     <button className="text-blue-600 hover:text-blue-900">
                       <ArrowDownTrayIcon className="h-5 w-5" />
                     </button>
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dönem</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gelir</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Komisyon</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net Kazanç</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Durum</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {selectedAgency.financialReports?.map((report) => (
-                          <tr key={report.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.period}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.revenue} TL</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.commission} TL</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.netIncome} TL</td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                report.status === 'paid' ? 'bg-green-100 text-green-800' :
-                                report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'
-                              }`}>
-                                {report.status === 'paid' ? 'Ödendi' :
-                                 report.status === 'pending' ? 'Beklemede' : 'Gecikmiş'}
-                              </span>
-                            </td>
-                          </tr>
+                ))}
+              </div>
+            )}
+
+            {selectedTab === 'performance' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Aylık Gelir</h4>
+                    <div className="h-32">
+                      <div className="flex items-end h-full space-x-2">
+                        {selectedAgency.performance?.monthlyRevenue.map((value, index) => (
+                          <div
+                            key={index}
+                            className="flex-1 bg-blue-500 rounded-t"
+                            style={{ height: `${(value / Math.max(...selectedAgency.performance!.monthlyRevenue)) * 100}%` }}
+                          />
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Aylık Rezervasyonlar</h4>
+                    <div className="h-32">
+                      <div className="flex items-end h-full space-x-2">
+                        {selectedAgency.performance?.monthlyBookings.map((value, index) => (
+                          <div
+                            key={index}
+                            className="flex-1 bg-green-500 rounded-t"
+                            style={{ height: `${(value / Math.max(...selectedAgency.performance!.monthlyBookings)) * 100}%` }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Aylık Değerlendirmeler</h4>
+                    <div className="h-32">
+                      <div className="flex items-end h-full space-x-2">
+                        {selectedAgency.performance?.monthlyRatings.map((value, index) => (
+                          <div
+                            key={index}
+                            className="flex-1 bg-yellow-500 rounded-t"
+                            style={{ height: `${(value / 5) * 100}%` }}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {selectedTab === 'feedback' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">Müşteri Geri Bildirimleri</h3>
+            {selectedTab === 'financial' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-gray-900">Finansal Raporlar</h3>
+                  <button className="text-blue-600 hover:text-blue-900">
+                    <ArrowDownTrayIcon className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dönem</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gelir</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Komisyon</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net Kazanç</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Durum</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {selectedAgency.financialReports?.map((report) => (
+                        <tr key={report.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.period}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.revenue} TL</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.commission} TL</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.netIncome} TL</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              report.status === 'paid' ? 'bg-green-100 text-green-800' :
+                              report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {report.status === 'paid' ? 'Ödendi' :
+                               report.status === 'pending' ? 'Beklemede' : 'Gecikmiş'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {selectedTab === 'feedback' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Müşteri Geri Bildirimleri</h3>
                       <div className="space-y-4">
                         {selectedAgency.feedback?.map((feedback) => (
                           <div key={feedback.id} className="bg-gray-50 p-4 rounded-lg">
@@ -1215,272 +1230,272 @@ const AgencyManagement = () => {
                     </div>
                   </div>
                 </div>
-              )}
+              
+            )}
 
-              {selectedTab === 'contracts' && (
+            {selectedTab === 'contracts' && (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-gray-900">Sözleşmeler</h3>
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Yeni Sözleşme
+                  </button>
+                </div>
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium text-gray-900">Sözleşmeler</h3>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                      Yeni Sözleşme
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    {selectedAgency.contracts?.map((contract) => (
-                      <div key={contract.id} className="bg-gray-50 p-4 rounded-lg">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-900">{contract.name}</h4>
-                            <p className="text-xs text-gray-500">
-                              {contract.startDate} - {contract.endDate}
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              contract.status === 'active' ? 'bg-green-100 text-green-800' :
-                              contract.status === 'expired' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {contract.status === 'active' ? 'Aktif' :
-                               contract.status === 'expired' ? 'Süresi Doldu' : 'Beklemede'}
-                            </span>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              contract.type === 'premium' ? 'bg-purple-100 text-purple-800' :
-                              contract.type === 'exclusive' ? 'bg-blue-100 text-blue-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {contract.type === 'premium' ? 'Premium' :
-                               contract.type === 'exclusive' ? 'Exclusive' : 'Standart'}
-                            </span>
-                          </div>
+                  {selectedAgency.contracts?.map((contract) => (
+                    <div key={contract.id} className="bg-gray-50 p-4 rounded-lg">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900">{contract.name}</h4>
+                          <p className="text-xs text-gray-500">
+                            {contract.startDate} - {contract.endDate}
+                          </p>
                         </div>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <p className="text-sm text-gray-500">Komisyon Oranı</p>
-                            <p className="text-sm font-medium text-gray-900">%{contract.commission}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Belgeler</p>
-                            <div className="mt-1 space-y-1">
-                              {contract.documents.map((doc) => (
-                                <div key={doc.id} className="flex items-center justify-between">
-                                  <span className="text-sm text-gray-600">{doc.name}</span>
-                                  <button className="text-blue-600 hover:text-blue-900">
-                                    <ArrowDownTrayIcon className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
+                        <div className="flex items-center space-x-2">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            contract.status === 'active' ? 'bg-green-100 text-green-800' :
+                            contract.status === 'expired' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {contract.status === 'active' ? 'Aktif' :
+                             contract.status === 'expired' ? 'Süresi Doldu' : 'Beklemede'}
+                          </span>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            contract.type === 'premium' ? 'bg-purple-100 text-purple-800' :
+                            contract.type === 'exclusive' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {contract.type === 'premium' ? 'Premium' :
+                             contract.type === 'exclusive' ? 'Exclusive' : 'Standart'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <p className="text-sm text-gray-500">Komisyon Oranı</p>
+                          <p className="text-sm font-medium text-gray-900">%{contract.commission}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Belgeler</p>
+                          <div className="mt-1 space-y-1">
+                            {contract.documents.map((doc) => (
+                              <div key={doc.id} className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">{doc.name}</span>
+                                <button className="text-blue-600 hover:text-blue-900">
+                                  <ArrowDownTrayIcon className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
+            )}
 
-              {selectedTab === 'history' && (
-                <div className="space-y-4">
-                  <div className="bg-white rounded-lg border border-gray-200">
-                    <div className="px-4 py-5 sm:p-6">
-                      <h3 className="text-lg font-medium text-gray-900 mb-4">İşlem Geçmişi</h3>
-                      <div className="flow-root">
-                        <ul className="-mb-8">
-                          {selectedAgency.history?.map((event, eventIdx) => (
-                            <li key={event.id}>
-                              <div className="relative pb-8">
-                                {eventIdx !== selectedAgency.history!.length - 1 ? (
-                                  <span
-                                    className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                                    aria-hidden="true"
-                                  />
-                                ) : null}
-                                <div className="relative flex space-x-3">
+            {selectedTab === 'history' && (
+              <div className="space-y-4">
+                <div className="bg-white rounded-lg border border-gray-200">
+                  <div className="px-4 py-5 sm:p-6">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">İşlem Geçmişi</h3>
+                    <div className="flow-root">
+                      <ul className="-mb-8">
+                        {selectedAgency.history?.map((event, eventIdx) => (
+                          <li key={event.id}>
+                            <div className="relative pb-8">
+                              {eventIdx !== selectedAgency.history!.length - 1 ? (
+                                <span
+                                  className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
+                                  aria-hidden="true"
+                                />
+                              ) : null}
+                              <div className="relative flex space-x-3">
+                                <div>
+                                  <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${
+                                    event.action === 'approve' || event.action === 'activate'
+                                      ? 'bg-green-500'
+                                      : event.action === 'reject' || event.action === 'delete'
+                                      ? 'bg-red-500'
+                                      : event.action === 'suspend'
+                                      ? 'bg-yellow-500'
+                                      : event.action === 'update'
+                                      ? 'bg-blue-500'
+                                      : 'bg-purple-500'
+                                  }`}>
+                                    {event.action === 'approve' || event.action === 'activate' ? (
+                                      <CheckCircleIcon className="h-5 w-5 text-white" />
+                                    ) : event.action === 'reject' || event.action === 'delete' ? (
+                                      <XCircleIcon className="h-5 w-5 text-white" />
+                                    ) : event.action === 'suspend' ? (
+                                      <ExclamationCircleIcon className="h-5 w-5 text-white" />
+                                    ) : event.action === 'update' ? (
+                                      <PencilSquareIcon className="h-5 w-5 text-white" />
+                                    ) : (
+                                      <PlusCircleIcon className="h-5 w-5 text-white" />
+                                    )}
+                                  </span>
+                                </div>
+                                <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
                                   <div>
-                                    <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${
-                                      event.action === 'approve' || event.action === 'activate'
-                                        ? 'bg-green-500'
-                                        : event.action === 'reject' || event.action === 'delete'
-                                        ? 'bg-red-500'
-                                        : event.action === 'suspend'
-                                        ? 'bg-yellow-500'
-                                        : event.action === 'update'
-                                        ? 'bg-blue-500'
-                                        : 'bg-purple-500'
-                                    }`}>
-                                      {event.action === 'approve' || event.action === 'activate' ? (
-                                        <CheckCircleIcon className="h-5 w-5 text-white" />
-                                      ) : event.action === 'reject' || event.action === 'delete' ? (
-                                        <XCircleIcon className="h-5 w-5 text-white" />
-                                      ) : event.action === 'suspend' ? (
-                                        <ExclamationCircleIcon className="h-5 w-5 text-white" />
-                                      ) : event.action === 'update' ? (
-                                        <PencilSquareIcon className="h-5 w-5 text-white" />
-                                      ) : (
-                                        <PlusCircleIcon className="h-5 w-5 text-white" />
-                                      )}
-                                    </span>
-                                  </div>
-                                  <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                                    <div>
-                                      <p className={`text-sm font-medium ${getActionColor(event.action)}`}>
-                                        {getActionText(event.action)}
-                                      </p>
+                                    <p className={`text-sm font-medium ${getActionColor(event.action)}`}>
+                                      {getActionText(event.action)}
+                                    </p>
+                                    <p className="mt-0.5 text-sm text-gray-500">
+                                      {event.details}
+                                    </p>
+                                    {event.previousStatus && event.newStatus && (
                                       <p className="mt-0.5 text-sm text-gray-500">
-                                        {event.details}
+                                        Durum: {getStatusText(event.previousStatus)} → {getStatusText(event.newStatus)}
                                       </p>
-                                      {event.previousStatus && event.newStatus && (
-                                        <p className="mt-0.5 text-sm text-gray-500">
-                                          Durum: {getStatusText(event.previousStatus)} → {getStatusText(event.newStatus)}
-                                        </p>
-                                      )}
-                                    </div>
-                                    <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                                      <div>
-                                        <p>{format(new Date(event.timestamp), 'dd MMMM yyyy HH:mm', { locale: tr })}</p>
-                                        <p className="mt-1">{event.adminName}</p>
-                                        <p className="text-xs">{event.adminEmail}</p>
-                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                                    <div>
+                                      <p>{format(new Date(event.timestamp), 'dd MMMM yyyy HH:mm', { locale: tr })}</p>
+                                      <p className="mt-1">{event.adminName}</p>
+                                      <p className="text-xs">{event.adminEmail}</p>
                                     </div>
                                   </div>
                                 </div>
                               </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
                 </div>
-              )}
-
-              {/* Otomatik Onay Sistemi */}
-              {selectedAgency.status === 'pending' && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">Otomatik Onay Sistemi</h3>
-                      <p className="text-sm text-gray-500">
-                        Bu acente için otomatik onay kriterlerini ayarlayın
-                      </p>
-                    </div>
-                    <button
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                      onClick={() => setShowAutoApprove(!showAutoApprove)}
-                    >
-                      {showAutoApprove ? 'Kapat' : 'Ayarla'}
-                    </button>
-                  </div>
-                  {showAutoApprove && (
-                    <div className="mt-4 space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Minimum Değerlendirme</label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="5"
-                          step="0.1"
-                          className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2"
-                          placeholder="4.0"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Minimum Tur Sayısı</label>
-                        <input
-                          type="number"
-                          min="0"
-                          className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2"
-                          placeholder="5"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Minimum Rezervasyon Sayısı</label>
-                        <input
-                          type="number"
-                          min="0"
-                          className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2"
-                          placeholder="20"
-                        />
-                      </div>
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <label className="ml-2 block text-sm text-gray-700">
-                          Belge kontrolünü otomatikleştir
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* İşlem Butonları */}
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                  onClick={() => setSelectedAgency(null)}
-                >
-                  Kapat
-                </button>
-                {selectedAgency.status === 'pending' && (
-                  <>
-                    <button 
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                      onClick={() => handleModalStatusChange(selectedAgency.id, 'approved')}
-                    >
-                      Onayla
-                    </button>
-                    <button 
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                      onClick={() => handleModalStatusChange(selectedAgency.id, 'rejected')}
-                    >
-                      Reddet
-                    </button>
-                  </>
-                )}
-                {selectedAgency.status === 'approved' && (
-                  <button 
-                    className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
-                    onClick={() => handleModalStatusChange(selectedAgency.id, 'suspended')}
-                  >
-                    Askıya Al
-                  </button>
-                )}
-                {selectedAgency.status === 'suspended' && (
-                  <button 
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    onClick={() => handleModalStatusChange(selectedAgency.id, 'approved')}
-                  >
-                    Aktifleştir
-                  </button>
-                )}
-                {selectedAgency.status === 'rejected' && (
-                  <button 
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                    onClick={() => handleModalStatusChange(selectedAgency.id, 'approved')}
-                  >
-                      Yeniden Onayla
-                  </button>
-                )}
-                <button 
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                  onClick={() => {
-                    if (window.confirm('Bu acenteyi silmek istediğinizden emin misiniz?')) {
-                      handleDeleteAgency(selectedAgency.id);
-                      setSelectedAgency(null);
-                    }
-                  }}
-                >
-                  Sil
-                </button>
               </div>
+            )}
+
+            {/* Otomatik Onay Sistemi */}
+            {selectedAgency.status === 'pending' && (
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-900">Otomatik Onay Sistemi</h3>
+                    <p className="text-sm text-gray-500">
+                      Bu acente için otomatik onay kriterlerini ayarlayın
+                    </p>
+                  </div>
+                  <button
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    onClick={() => setShowAutoApprove(!showAutoApprove)}
+                  >
+                    {showAutoApprove ? 'Kapat' : 'Ayarla'}
+                  </button>
+                </div>
+                {showAutoApprove && (
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Minimum Değerlendirme</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2"
+                        placeholder="4.0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Minimum Tur Sayısı</label>
+                      <input
+                        type="number"
+                        min="0"
+                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2"
+                        placeholder="5"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Minimum Rezervasyon Sayısı</label>
+                      <input
+                        type="number"
+                        min="0"
+                        className="mt-1 block w-full border border-gray-300 rounded-lg px-3 py-2"
+                        placeholder="20"
+                      />
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label className="ml-2 block text-sm text-gray-700">
+                        Belge kontrolünü otomatikleştir
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* İşlem Butonları */}
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                onClick={() => setSelectedAgency(null)}
+              >
+                Kapat
+              </button>
+              {selectedAgency.status === 'pending' && (
+                <>
+                  <button 
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    onClick={() => handleModalStatusChange(selectedAgency.id, 'approved')}
+                  >
+                    Onayla
+                  </button>
+                  <button 
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    onClick={() => handleModalStatusChange(selectedAgency.id, 'rejected')}
+                  >
+                    Reddet
+                  </button>
+                </>
+              )}
+              {selectedAgency.status === 'approved' && (
+                <button 
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
+                  onClick={() => handleModalStatusChange(selectedAgency.id, 'suspended')}
+                >
+                  Askıya Al
+                </button>
+              )}
+              {selectedAgency.status === 'suspended' && (
+                <button 
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  onClick={() => handleModalStatusChange(selectedAgency.id, 'approved')}
+                >
+                  Aktifleştir
+                </button>
+              )}
+              {selectedAgency.status === 'rejected' && (
+                <button 
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  onClick={() => handleModalStatusChange(selectedAgency.id, 'approved')}
+                >
+                    Yeniden Onayla
+                </button>
+              )}
+              <button 
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                onClick={() => {
+                  if (window.confirm('Bu acenteyi silmek istediğinizden emin misiniz?')) {
+                    handleDeleteAgency(selectedAgency.id);
+                    setSelectedAgency(null);
+                  }
+                }}
+              >
+                Sil
+              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
+   )}
     </div>
   );
 };
