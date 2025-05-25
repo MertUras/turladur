@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 
 export interface Activity {
     id: number;
@@ -640,20 +641,55 @@ Gün doğumunda başlayan bu büyülü yolculukta, Kapadokya'nın peribacaları,
     }
 ];
 
+function safeArray(val: any) {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+        try {
+            const parsed = JSON.parse(val);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+}
+
 export async function GET(
     request: Request,
     { params }: { params: { id: string } }
 ) {
-    const activity = activities.find(a => a.id === parseInt(params.id));
+    // Önce veritabanında arama
+    let activity = null;
+    try {
+        activity = await prisma.experience.findUnique({
+            where: { id: params.id },
+            include: { reviews: true },
+        });
+    } catch (e) {
+        // Prisma hatası olursa yoksay
+    }
 
-    if (!activity) {
+    if (activity) {
+        return NextResponse.json({
+            ...activity,
+            gallery: safeArray(activity.gallery),
+            included: safeArray(activity.included),
+            notIncluded: safeArray(activity.notIncluded),
+            highlights: safeArray(activity.highlights),
+            schedule: safeArray(activity.schedule),
+            reviews: Array.isArray(activity.reviews) ? activity.reviews : [],
+        });
+    }
+
+    // Eğer veritabanında yoksa, eski mock array'den aramaya devam et
+    const legacyActivity = activities.find(a => a.id === parseInt(params.id));
+    if (!legacyActivity) {
         return NextResponse.json(
             { error: 'Activity not found' },
             { status: 404 }
         );
     }
-
-    return NextResponse.json(activity);
+    return NextResponse.json(legacyActivity);
 }
 
 // API route for fetching related activities

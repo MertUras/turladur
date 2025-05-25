@@ -13,7 +13,7 @@ export async function GET() {
 
     const experiences = await prisma.experience.findMany({
       where: {
-        providerId: session.user.id,
+        userId: session.user.id,
       },
       orderBy: {
         createdAt: 'desc',
@@ -34,27 +34,48 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
+    console.log('Session:', session);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const json = await request.json();
+    console.log('Request body:', json);
+
+    // userId'yi email ile bul
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    });
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const experience = await prisma.experience.create({
       data: {
-        name: json.title,
+        title: json.name,
         description: json.description,
-        duration: parseInt(json.duration) || 1,
-        price: parseFloat(json.price),
+        longDescription: json.longDescription || '',
+        imageUrl: json.images?.[0] || '',
+        gallery: json.images || [],
         location: json.location,
-        featured: json.featured,
-        images: [json.imageUrl],
-        providerId: session.user.id,
+        duration: json.duration?.toString() || '1',
+        price: parseFloat(json.price),
+        category: json.category,
+        included: json.included || [],
+        notIncluded: json.notIncluded || [],
+        highlights: json.highlights || [],
+        schedule: json.schedule || [],
+        featured: json.featured ?? false,
+        userId: user.id,
       },
     });
 
     return NextResponse.json(experience);
   } catch (error) {
     console.error('Error creating experience:', error);
+    if (error instanceof Error) {
+      console.error(error.stack);
+    }
     return NextResponse.json(
       { error: 'Failed to create experience' },
       { status: 500 }

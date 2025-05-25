@@ -11,7 +11,7 @@ export default function CreateExperiencePage() {
   const handleSubmit = async (data: ExperienceFormData) => {
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/partner/experiences", {
+      const res = await fetch("/api/experiences", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
