@@ -22,28 +22,24 @@ export default function LoginPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      if (session.user.role === 'TOUR_OPERATOR') {
-        router.push('/partner-dashboard');
-      } else {
-        router.push('/');
-      }
+  const handlePartnerPortalClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (session?.user?.provider === 'partner-credentials') {
+      window.location.href = '/partner-dashboard';
+    } else {
+      window.location.href = '/partner-login';
     }
-  }, [status, router, session]);
+  };
 
   useEffect(() => {
     if (status === 'authenticated') {
       if (session?.user?.provider === 'partner-credentials') {
-        signOut({ redirect: false });
-        return;
-      }
-      
-      if (session?.user?.role !== 'TOUR_OPERATOR') {
-        router.push('/');
+        window.location.href = '/partner-dashboard';
+      } else {
+        window.location.href = '/';
       }
     }
-  }, [status, router, session]);
+  }, [status, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,6 +278,17 @@ export default function LoginPage() {
                 Google ile Devam Et
               </button>
             </div>
+          </div>
+
+          <div className="mt-6">
+            <Link
+              href="/partner-login"
+              onClick={handlePartnerPortalClick}
+              className="flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+            >
+              Partner Portalına Git
+              <ArrowRightIcon className="ml-2 -mr-1 h-4 w-4" />
+            </Link>
           </div>
         </div>
       </div>

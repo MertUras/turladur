@@ -204,7 +204,7 @@ async function main() {
   const tourOperators = await Promise.all([
     prisma.tourOperator.create({
       data: {
-        name: 'Anadolu Turizm',
+        companyName: 'Anadolu Turizm',
         description: 'Türkiye\'nin en büyük tur operatörlerinden biri',
         logo: '/images/tour-operators/anadolu-turizm.jpg',
         userId: users[0].id,
@@ -215,7 +215,7 @@ async function main() {
     }),
     prisma.tourOperator.create({
       data: {
-        name: 'Ege Tur',
+        companyName: 'Ege Tur',
         description: 'Ege bölgesinin önde gelen tur operatörü',
         logo: '/images/tour-operators/ege-tur.jpg',
         userId: users[1].id,

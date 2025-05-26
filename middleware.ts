@@ -47,13 +47,24 @@ export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request });
   const pathname = request.nextUrl.pathname;
 
-  console.log('Middleware çalışıyor:', { pathname, tokenExists: !!token }); // Debug log
+  console.log('Middleware çalışıyor:', { pathname, tokenExists: !!token, token }); // Debug log
 
+  // Partner kullanıcısı için otomatik yönlendirme
+  if (token?.provider === 'partner-credentials' && pathname === '/partner-login') {
+    const response = NextResponse.redirect(new URL('/partner-dashboard', request.url));
+    // Session bilgilerini koru
+    response.cookies.set('next-auth.session-token', request.cookies.get('next-auth.session-token')?.value || '');
+    return response;
+  }
+
+
+  
   // Partner dashboard erişim kontrolü
   if (partnerAuthRequiredPaths.some(path => pathname.startsWith(path))) {
     console.log('Partner yetkilendirmesi kontrol ediliyor:', { 
       role: token?.role,
-      provider: token?.provider
+      provider: token?.provider,
+      user: token?.user
     }); // Debug log
 
     if (!token) {
@@ -64,7 +75,10 @@ export async function middleware(request: NextRequest) {
     // Hem TOUR_OPERATOR hem de EXPERIENCE_PROVIDER rollerine izin ver
     if ((token.role !== 'TOUR_OPERATOR' && token.role !== 'EXPERIENCE_PROVIDER') || token.provider !== 'partner-credentials') {
       console.log('Geçersiz rol veya provider, partner-login sayfasına yönlendiriliyor'); // Debug log
-      return NextResponse.redirect(new URL('/partner-login', request.url));
+      const response = NextResponse.redirect(new URL('/partner-login', request.url));
+      // Session bilgilerini koru
+      response.cookies.set('next-auth.session-token', request.cookies.get('next-auth.session-token')?.value || '');
+      return response;
     }
 
     // Alt kullanıcı yetki kontrolü
