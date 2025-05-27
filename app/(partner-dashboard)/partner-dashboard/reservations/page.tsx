@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
+import { useSession } from 'next-auth/react';
 import { 
   MagnifyingGlassIcon, 
   FunnelIcon, 
@@ -15,143 +16,86 @@ import {
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import { Transition, Menu, Popover } from '@headlessui/react';
+import { formatDate, formatCurrency, getStatusClass, translateStatus } from '@/lib/utils';
 
-// Rezervasyon tipi tanımı
+interface ContactInfo {
+  email: string;
+  phone: string;
+}
+
 interface Reservation {
-  id: number;
+  id: string;
   referenceNumber: string;
   customerName: string;
   tourName: string;
   date: string;
   participants: number;
   totalPrice: number;
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
-  paymentStatus: 'paid' | 'partial' | 'unpaid' | 'refunded';
-  contactInfo: {
-    email: string;
-    phone: string;
-  };
+  status: string;
+  paymentStatus: string;
+  contactInfo: ContactInfo;
   notes?: string;
 }
 
 export default function ReservationsPage() {
+  const { data: session } = useSession();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [dateSort, setDateSort] = useState('desc');
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
-  
-  // Örnek rezervasyon verileri
-  const reservations: Reservation[] = [
-    {
-      id: 1,
-      referenceNumber: 'RES-2023-1001',
-      customerName: 'Ahmet Yılmaz',
-      tourName: 'Kapadokya Kültür Turu',
-      date: '2023-11-20',
-      participants: 2,
-      totalPrice: 3500,
-      status: 'confirmed',
-      paymentStatus: 'paid',
-      contactInfo: {
-        email: 'ahmet.yilmaz@example.com',
-        phone: '+90 555 123 4567'
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchReservations = async () => {
+      try {
+        setIsLoading(true);
+        const queryParams = new URLSearchParams({
+          search: searchTerm,
+          status: statusFilter,
+          payment: paymentFilter,
+          sort: dateSort
+        });
+
+        const response = await fetch(`/api/partner/reservations?${queryParams}`);
+        
+        if (!response.ok) {
+          throw new Error('Rezervasyonlar getirilemedi');
+        }
+
+        const data = await response.json();
+        setReservations(data);
+        setError(null);
+      } catch (err) {
+        setError('Rezervasyonlar yüklenirken bir hata oluştu');
+        console.error('Rezervasyon yükleme hatası:', err);
+      } finally {
+        setIsLoading(false);
       }
-    },
-    {
-      id: 2,
-      referenceNumber: 'RES-2023-1002',
-      customerName: 'Ayşe Kaya',
-      tourName: 'İstanbul Boğaz Turu',
-      date: '2023-11-18',
-      participants: 4,
-      totalPrice: 5200,
-      status: 'completed',
-      paymentStatus: 'paid',
-      contactInfo: {
-        email: 'ayse.kaya@example.com',
-        phone: '+90 555 234 5678'
-      },
-      notes: 'Gruba 1 çocuk dahil. Vejetaryen menü talep edildi.'
-    },
-    {
-      id: 3,
-      referenceNumber: 'RES-2023-1003',
-      customerName: 'Mehmet Demir',
-      tourName: 'Efes Antik Kenti Turu',
-      date: '2023-11-25',
-      participants: 3,
-      totalPrice: 4200,
-      status: 'pending',
-      paymentStatus: 'partial',
-      contactInfo: {
-        email: 'mehmet.demir@example.com',
-        phone: '+90 555 345 6789'
-      }
-    },
-    {
-      id: 4,
-      referenceNumber: 'RES-2023-1004',
-      customerName: 'Zeynep Şahin',
-      tourName: 'Pamukkale Günübirlik Turu',
-      date: '2023-11-10',
-      participants: 2,
-      totalPrice: 2800,
-      status: 'cancelled',
-      paymentStatus: 'refunded',
-      contactInfo: {
-        email: 'zeynep.sahin@example.com',
-        phone: '+90 555 456 7890'
-      },
-      notes: 'Sağlık sorunları nedeniyle iptal edildi.'
-    },
-    {
-      id: 5,
-      referenceNumber: 'RES-2023-1005',
-      customerName: 'Emre Yıldız',
-      tourName: 'Karadeniz Yaylalar Turu',
-      date: '2023-12-05',
-      participants: 5,
-      totalPrice: 8750,
-      status: 'confirmed',
-      paymentStatus: 'unpaid',
-      contactInfo: {
-        email: 'emre.yildiz@example.com',
-        phone: '+90 555 567 8901'
-      }
-    },
-    {
-      id: 6,
-      referenceNumber: 'RES-2023-1006',
-      customerName: 'Selin Aydın',
-      tourName: 'Fethiye Tekne Turu',
-      date: '2023-12-10',
-      participants: 2,
-      totalPrice: 3200,
-      status: 'confirmed',
-      paymentStatus: 'paid',
-      contactInfo: {
-        email: 'selin.aydin@example.com',
-        phone: '+90 555 678 9012'
-      }
-    },
-    {
-      id: 7,
-      referenceNumber: 'RES-2023-1007',
-      customerName: 'Burak Özkan',
-      tourName: 'Uludağ Kayak Turu',
-      date: '2023-12-18',
-      participants: 3,
-      totalPrice: 5400,
-      status: 'pending',
-      paymentStatus: 'partial',
-      contactInfo: {
-        email: 'burak.ozkan@example.com',
-        phone: '+90 555 789 0123'
-      },
-      notes: 'Kayak ekipmanları kiralama talebi var.'
+    };
+
+    if (session?.user) {
+      fetchReservations();
     }
-  ];
+  }, [session, searchTerm, statusFilter, paymentFilter, dateSort]);
+
+  const showReservationDetail = (reservation: Reservation) => {
+    setSelectedReservation(reservation);
+  };
+
+  if (!session?.user) {
+    return <div className="p-4">Lütfen giriş yapın</div>;
+  }
+
+  if (isLoading) {
+    return <div className="p-4">Yükleniyor...</div>;
+  }
+
+  if (error) {
+    return <div className="p-4 text-red-500">{error}</div>;
+  }
 
   // Filtreleme ve sıralama
   const filteredReservations = reservations
@@ -234,11 +178,6 @@ export default function ReservationsPage() {
       default:
         return status;
     }
-  };
-
-  // Rezervasyon detayını gösterme
-  const showReservationDetail = (reservation: Reservation) => {
-    setSelectedReservation(reservation);
   };
 
   // Para formatı

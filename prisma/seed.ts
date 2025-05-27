@@ -6,19 +6,23 @@ const prisma = new PrismaClient();
 async function main() {
   // Kullanıcılar
   const users = await Promise.all([
-    prisma.user.create({
-      data: {
+    prisma.user.upsert({
+      where: { email: 'admin@anadoluturizm.com' },
+      update: {},
+      create: {
         name: 'Anadolu Turizm Admin',
         email: 'admin@anadoluturizm.com',
-        password: 'hashedpassword123', // Gerçek uygulamada şifre hash'lenmelidir
+        password: 'hashedpassword123',
         role: 'TOUR_OPERATOR',
       },
     }),
-    prisma.user.create({
-      data: {
+    prisma.user.upsert({
+      where: { email: 'admin@egetur.com' },
+      update: {},
+      create: {
         name: 'Ege Tur Admin',
         email: 'admin@egetur.com',
-        password: 'hashedpassword123', // Gerçek uygulamada şifre hash'lenmelidir
+        password: 'hashedpassword123',
         role: 'TOUR_OPERATOR',
       },
     }),
@@ -202,26 +206,28 @@ async function main() {
 
   // Tur operatörleri
   const tourOperators = await Promise.all([
-    prisma.tourOperator.create({
-      data: {
+    prisma.tourOperator.upsert({
+      where: { email: 'operator@anadoluturizm.com' },
+      update: {},
+      create: {
         companyName: 'Anadolu Turizm',
-        description: 'Türkiye\'nin en büyük tur operatörlerinden biri',
-        logo: '/images/tour-operators/anadolu-turizm.jpg',
+        description: 'Türkiye\'nin önde gelen tur operatörlerinden',
+        email: 'operator@anadoluturizm.com',
+        status: 'approved',
         userId: users[0].id,
-        email: 'info@anadoluturizm.com',
-        website: 'https://anadoluturizm.com',
-        license: 'A-1234'
+        license: 'TURSAB-123',
       },
     }),
-    prisma.tourOperator.create({
-      data: {
+    prisma.tourOperator.upsert({
+      where: { email: 'operator@egetur.com' },
+      update: {},
+      create: {
         companyName: 'Ege Tur',
-        description: 'Ege bölgesinin önde gelen tur operatörü',
-        logo: '/images/tour-operators/ege-tur.jpg',
+        description: 'Ege bölgesinin uzman tur operatörü',
+        email: 'operator@egetur.com',
+        status: 'approved',
         userId: users[1].id,
-        email: 'info@egetur.com',
-        website: 'https://egetur.com',
-        license: 'B-5678'
+        license: 'TURSAB-456',
       },
     }),
   ]);

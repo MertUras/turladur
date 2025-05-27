@@ -134,7 +134,7 @@ export async function PUT(
         tourOperator: {
           select: {
             id: true,
-            name: true,
+            companyName: true,
             logo: true
           }
         }
