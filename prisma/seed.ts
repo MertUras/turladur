@@ -513,6 +513,50 @@ async function main() {
     }),
   ]);
 
+  // Onaylanmış test kullanıcıları
+  const testUsers = await Promise.all([
+    prisma.user.create({
+      data: {
+        name: 'Test Tur Operatörü',
+        email: 'test.operator@tourtech.com',
+        password: await hash('test123', 12),
+        role: 'TOUR_OPERATOR',
+      },
+    }),
+    prisma.user.create({
+      data: {
+        name: 'Test Aktivite Sağlayıcı',
+        email: 'test.activity@tourtech.com',
+        password: await hash('test123', 12),
+        role: 'EXPERIENCE_PROVIDER',
+      },
+    }),
+  ]);
+
+  // Onaylanmış test tur operatörü
+  await prisma.tourOperator.create({
+    data: {
+      companyName: 'Test Tur Şirketi',
+      description: 'Test amaçlı oluşturulmuş onaylı tur operatörü',
+      email: 'test.operator@tourtech.com',
+      status: 'approved',
+      userId: testUsers[0].id,
+      license: 'TEST-123',
+    },
+  });
+
+  // Onaylanmış test aktivite sağlayıcısı
+  await prisma.experienceOperator.create({
+    data: {
+      companyName: 'Test Aktivite Şirketi',
+      description: 'Test amaçlı oluşturulmuş onaylı aktivite sağlayıcısı',
+      email: 'test.activity@tourtech.com',
+      status: 'approved',
+      userId: testUsers[1].id,
+      license: 'TEST-456',
+    },
+  });
+
   console.log('Seed data başarıyla eklendi!');
 }
 
