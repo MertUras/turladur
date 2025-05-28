@@ -73,6 +73,7 @@ interface TourFormProps {
     reviews?: number;
     isJointTour?: boolean;
     features?: string[];
+    tourDates?: { startDate: string; endDate: string }[];
   };
   onSubmit: (data: any) => void;
   isSubmitting?: boolean;
@@ -364,7 +365,8 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
   const handleAddTourDate = () => {
     const startDate = new Date();
     const endDate = new Date();
-    endDate.setDate(endDate.getDate() + parseInt(formData.nights));
+    const nights = parseInt(formData.nights) || 0;
+    endDate.setDate(endDate.getDate() + nights);
     
     setFormData(prev => ({
       ...prev,
@@ -390,7 +392,9 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
       if (field === 'startDate') {
         const startDate = new Date(value);
         const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + parseInt(prev.nights));
+        // Gece sayısına göre bitiş tarihini hesapla
+        const nights = parseInt(prev.nights) || 0;
+        endDate.setDate(endDate.getDate() + nights);
         newTourDates[index] = {
           startDate: value,
           endDate: endDate.toISOString().split('T')[0]
@@ -416,22 +420,22 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
     if (!formData.region) newErrors.region = 'Bölge gerekli';
     if (!formData.duration) newErrors.duration = 'Süre gerekli';
     if (!formData.maxParticipants) newErrors.maxParticipants = 'Maksimum katılımcı sayısı gerekli';
-    if (!formData.startDate) newErrors.startDate = 'Başlangıç tarihi gerekli';
-    if (!formData.endDate) newErrors.endDate = 'Bitiş tarihi gerekli';
     if (!formData.transportation) newErrors.transportation = 'Ulaşım tipi gerekli';
     if (!formData.tourType) newErrors.tourType = 'Tur tipi gerekli';
     if (formData.images.length === 0) newErrors.images = 'En az bir resim gerekli';
+    
+    // Tur tarihleri kontrolü
     if (formData.tourDates.length === 0) {
       newErrors.tourDates = 'En az bir tur tarihi eklemelisiniz';
-    }
-    
-    // Tarih kontrolü
-    if (formData.startDate && formData.endDate) {
-      const start = new Date(formData.startDate);
-      const end = new Date(formData.endDate);
-      if (start > end) {
-        newErrors.endDate = 'Bitiş tarihi başlangıç tarihinden sonra olmalıdır';
-      }
+    } else {
+      // Her bir tur tarihinin geçerliliğini kontrol et
+      formData.tourDates.forEach((date, index) => {
+        const start = new Date(date.startDate);
+        const end = new Date(date.endDate);
+        if (start > end) {
+          newErrors.tourDates = `${index + 1}. tur tarihinde bitiş tarihi başlangıç tarihinden önce olamaz`;
+        }
+      });
     }
     
     setErrors(newErrors);
@@ -443,7 +447,20 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
     e.preventDefault();
     
     if (validateForm()) {
-      const submitData = partnerId ? { ...formData, tourOperatorId: partnerId } : formData;
+      const submitData = {
+        ...formData,
+        tourOperatorId: partnerId,
+        name: formData.title,
+        price: parseFloat(formData.price),
+        duration: parseInt(formData.duration),
+        maxParticipants: formData.maxParticipants,
+        inclusions: formData.includes,
+        exclusions: formData.excludes,
+        tourDates: formData.tourDates.map(date => ({
+          startDate: date.startDate,
+          endDate: date.endDate
+        }))
+      };
       onSubmit(submitData);
     }
   };

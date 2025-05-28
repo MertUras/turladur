@@ -172,6 +172,17 @@ export async function POST(request: Request) {
       },
     });
 
+    // Tur tarihlerini ekle
+    if (body.tourDates && Array.isArray(body.tourDates)) {
+      await prisma.tourDate.createMany({
+        data: body.tourDates.map((date: { startDate: string; endDate: string }) => ({
+          startDate: new Date(date.startDate),
+          endDate: new Date(date.endDate),
+          tourId: tour.id
+        }))
+      });
+    }
+
     return NextResponse.json(tour);
   } catch (error) {
     console.error('Error creating tour:', error);

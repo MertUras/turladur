@@ -141,6 +141,24 @@ export async function PUT(
       }
     });
 
+    // 1. Mevcut tarihleri sil
+await prisma.tourDate.deleteMany({
+  where: { tourId }
+});
+
+// 2. Yeni tarihleri ekle
+if (Array.isArray(data.tourDates)) {
+  await prisma.tourDate.createMany({
+    data: data.tourDates.map((date: { startDate: string; endDate: string }) => ({
+      startDate: new Date(date.startDate),
+      endDate: new Date(date.endDate),
+      tourId
+    }))
+  });
+}
+
+return NextResponse.json(updatedTour);
+
     return NextResponse.json(updatedTour);
   } catch (error) {
     console.error('Error updating tour:', error);
@@ -176,13 +194,24 @@ export async function DELETE(
       return NextResponse.json({ error: 'Partner not found' }, { status: 404 });
     }
 
-    // Turu bul ve partner'a ait olduğunu kontrol et
-    const tour = await prisma.tour.findFirst({
-      where: {
-        id: tourId,
-        tourOperatorId: partner.id
+// Turu bul ve partner'a ait olduğunu kontrol et
+const tour = await prisma.tour.findFirst({
+  where: {
+    id: tourId,
+    tourOperatorId: partner.id
+  },
+  include: {
+    tourOperator: {
+      select: {
+        id: true,
+        companyName: true,
+        logo: true
       }
-    });
+    },
+    tourDates: true // ← BURASI EKLENDİ
+  }
+});
+
 
     if (!tour) {
       return NextResponse.json({ error: 'Tour not found' }, { status: 404 });

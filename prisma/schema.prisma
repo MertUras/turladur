@@ -189,9 +189,21 @@ model Tour {
   currentParticipants Int?          @default(0)
   bookings            Booking[]
   tourOperator        TourOperator? @relation(fields: [tourOperatorId], references: [id])
+  tourDates TourDate[]
 
   @@map("tours")
 }
+
+model TourDate {
+  id        String   @id @default(cuid())
+  startDate DateTime
+  endDate   DateTime
+  tourId    String
+  tour      Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+
+  @@map("tour_dates")
+}
+
 
 model Experience {
   id              String           @id @default(cuid())
