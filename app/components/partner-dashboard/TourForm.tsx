@@ -39,6 +39,8 @@ export interface TourFormData {
   reviews: number;
   isJointTour: boolean;
   features: string[];
+  startDate: string;
+  endDate: string;
 }
 
 interface TourFormProps {
@@ -107,7 +109,9 @@ const defaultFormData: TourFormData = {
   destinations: [],
   reviews: 0,
   isJointTour: false,
-  features: []
+  features: [],
+  startDate: '',
+  endDate: ''
 };
 
 export default function TourForm({ initialData, onSubmit, isSubmitting = false, currentStep = 'basic', partnerId }: TourFormProps) {
@@ -142,7 +146,9 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
         destinations: initialData.destinations || [],
         reviews: initialData.reviews || 0,
         isJointTour: initialData.isJointTour || false,
-        features: initialData.features || []
+        features: initialData.features || [],
+        startDate: initialData.startDate?.toISOString().split('T')[0] || '',
+        endDate: initialData.endDate?.toISOString().split('T')[0] || ''
       };
     }
     return defaultFormData;
@@ -195,12 +201,36 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
       setFormData(prev => ({ 
         ...prev, 
         [name]: value,
-        accommodationType: '', // Konaklama tipini sıfırla
-        nights: '', // Gece sayısını sıfırla
-        duration: '1' // Süreyi 1 gün olarak ayarla
+        accommodationType: '', 
+        nights: '', 
+        duration: '1'
       }));
     } else {
-    setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData(prev => ({ ...prev, [name]: value }));
+
+      // Gece sayısı veya başlangıç tarihi değiştiğinde ve her ikisi de doluysa
+      if ((name === 'nights' || name === 'startDate') && formData.tourDates.length === 0) {
+        const nights = name === 'nights' ? value : formData.nights;
+        const startDate = name === 'startDate' ? value : formData.startDate;
+
+        if (nights && startDate) {
+          // Bitiş tarihini hesapla
+          const start = new Date(startDate);
+          const end = new Date(start);
+          end.setDate(end.getDate() + parseInt(nights));
+
+          // İlk turu otomatik olarak ekle
+          const formattedEndDate = end.toISOString().split('T')[0];
+          setFormData(prev => ({
+            ...prev,
+            [name]: value,
+            tourDates: [{
+              startDate: startDate,
+              endDate: formattedEndDate
+            }]
+          }));
+        }
+      }
     }
 
     // Gece sayısı değiştiğinde gün sayısını güncelle
