@@ -62,6 +62,18 @@ export async function GET(request: Request) {
         where,
         include: {
           tourOperator: true,
+          tourDates: {
+            select: {
+              id: true,
+              startDate: true,
+              endDate: true,
+              price: true,
+              availableSeats: true
+            },
+            orderBy: {
+              startDate: 'asc'
+            }
+          }
         },
         orderBy: {
           [sortBy]: sortOrder,
@@ -125,6 +137,7 @@ export async function POST(request: Request) {
       ageRestriction,
       languages,
       tags,
+      tourDates
     } = body;
 
     // Tur operatörünü kontrol et
@@ -146,12 +159,12 @@ export async function POST(request: Request) {
       data: {
         name: title,
         description,
-        duration: parseInt(duration),
-        price: parseFloat(price),
-        discount: discount ? parseFloat(discount) : null,
+        duration: parseInt(duration.toString()),
+        price: parseFloat(price.toString()),
+        discount: discount ? parseFloat(discount.toString()) : null,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
-        maxParticipants: parseInt(maxParticipants),
+        maxParticipants: parseInt(maxParticipants.toString()),
         destinations: destinations || [],
         inclusions: includes || [],
         exclusions: excludes || [],
@@ -166,24 +179,40 @@ export async function POST(request: Request) {
         tourType,
         accommodationType,
         difficultyLevel,
-        ageRestriction: ageRestriction ? parseInt(ageRestriction) : null,
+        ageRestriction: ageRestriction ? parseInt(ageRestriction.toString()) : null,
         languages: languages || ['Türkçe'],
         tags: tags || [],
       },
     });
 
     // Tur tarihlerini ekle
-    if (body.tourDates && Array.isArray(body.tourDates)) {
+    if (tourDates && Array.isArray(tourDates) && tourDates.length > 0) {
       await prisma.tourDate.createMany({
-        data: body.tourDates.map((date: { startDate: string; endDate: string }) => ({
+        data: tourDates.map((date: { startDate: string; endDate: string; price: number; availableSeats: number }) => ({
           startDate: new Date(date.startDate),
           endDate: new Date(date.endDate),
+          price: parseFloat(date.price.toString()),
+          availableSeats: parseInt(date.availableSeats.toString()),
           tourId: tour.id
         }))
       });
     }
 
-    return NextResponse.json(tour);
+    const createdTour = await prisma.tour.findUnique({
+      where: { id: tour.id },
+      include: {
+        tourDates: true,
+        tourOperator: {
+          select: {
+            id: true,
+            companyName: true,
+            logo: true
+          }
+        }
+      }
+    });
+
+    return NextResponse.json(createdTour);
   } catch (error) {
     console.error('Error creating tour:', error);
     return NextResponse.json(

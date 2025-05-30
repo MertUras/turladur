@@ -35,6 +35,18 @@ export async function GET(request: Request) {
             companyName: true,
             logo: true,
           }
+        },
+        tourDates: {
+          select: {
+            id: true,
+            startDate: true,
+            endDate: true,
+            price: true,
+            availableSeats: true
+          },
+          orderBy: {
+            startDate: 'asc'
+          }
         }
       },
       orderBy: {

@@ -62,6 +62,13 @@ interface Tour {
     name: string;
     logo: string | null;
   };
+  tourDates: {
+    id: string;
+    startDate: Date;
+    endDate: Date;
+    price: number;
+    availableSeats: number;
+  }[];
 }
 
 interface FilterOptions {
@@ -1333,9 +1340,32 @@ export default function ToursPage() {
                       const tourOperator = dummyTourOperators.find(op => op.id === tour.tourOperatorId);
                       const remainingSpots = (tour.maxParticipants || 0) - (tour.currentParticipants || 0);
                       const startDate = new Date(tour.startDate || new Date());
-                      const discountedPrice = tour.discount && tour.price 
-                        ? tour.price * (1 - (tour.discount || 0) / 100) 
-                        : tour.price || 0;
+                      
+                      // En düşük fiyatlı tur tarihini bul
+                      const lowestPricedDate = tour.tourDates?.reduce((lowest, current) => {
+                        if (!lowest || current.price < lowest.price) {
+                          return current;
+                        }
+                        return lowest;
+                      }, null as (typeof tour.tourDates[0] | null));
+
+                      const price = lowestPricedDate?.price || tour.price;
+                      const discountedPrice = tour.discount && price 
+                        ? price * (1 - (tour.discount || 0) / 100) 
+                        : price;
+
+                      // En yakın tur tarihini bul
+                      const nextDate = tour.tourDates?.reduce((nearest, current) => {
+                        if (!nearest) return current;
+                        const nearestDate = new Date(nearest.startDate);
+                        const currentDate = new Date(current.startDate);
+                        const today = new Date();
+                        
+                        const nearestDiff = Math.abs(nearestDate.getTime() - today.getTime());
+                        const currentDiff = Math.abs(currentDate.getTime() - today.getTime());
+                        
+                        return currentDiff < nearestDiff ? current : nearest;
+                      }, null as (typeof tour.tourDates[0] | null));
 
                       return (
                         <Link key={tour.id} href={`/tour/${tour.id}`} className="block">
@@ -1471,13 +1501,13 @@ export default function ToursPage() {
                                 <div>
                                   {(tour.discount || 0) > 0 && (
                                     <span className="text-gray-500 text-sm line-through mr-2">
-                                      ₺{(tour.price || 0).toLocaleString()}
+                                      ₺{price.toLocaleString()}
                                     </span>
                                   )}
                                   <span className="text-xl font-bold text-blue-600">
                                     ₺{discountedPrice.toLocaleString()}
                                   </span>
-                                  <span className="text-gray-500 text-sm">/kişi</span>
+                                  <span className="text-gray-500 text-sm">'den başlayan</span>
                                 </div>
                                 <div
                                   className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors inline-flex items-center"
@@ -1500,9 +1530,32 @@ export default function ToursPage() {
                       const tourOperator = dummyTourOperators.find(op => op.id === tour.tourOperatorId);
                       const remainingSpots = (tour.maxParticipants || 0) - (tour.currentParticipants || 0);
                       const startDate = new Date(tour.startDate || new Date());
-                      const discountedPrice = tour.discount && tour.price 
-                        ? tour.price * (1 - (tour.discount || 0) / 100) 
-                        : tour.price || 0;
+                      
+                      // En düşük fiyatlı tur tarihini bul
+                      const lowestPricedDate = tour.tourDates?.reduce((lowest, current) => {
+                        if (!lowest || current.price < lowest.price) {
+                          return current;
+                        }
+                        return lowest;
+                      }, null as (typeof tour.tourDates[0] | null));
+
+                      const price = lowestPricedDate?.price || tour.price;
+                      const discountedPrice = tour.discount && price 
+                        ? price * (1 - (tour.discount || 0) / 100) 
+                        : price;
+
+                      // En yakın tur tarihini bul
+                      const nextDate = tour.tourDates?.reduce((nearest, current) => {
+                        if (!nearest) return current;
+                        const nearestDate = new Date(nearest.startDate);
+                        const currentDate = new Date(current.startDate);
+                        const today = new Date();
+                        
+                        const nearestDiff = Math.abs(nearestDate.getTime() - today.getTime());
+                        const currentDiff = Math.abs(currentDate.getTime() - today.getTime());
+                        
+                        return currentDiff < nearestDiff ? current : nearest;
+                      }, null as (typeof tour.tourDates[0] | null));
 
                       return (
                         <Link key={tour.id} href={`/tour/${tour.id}`} className="block">
@@ -1579,7 +1632,7 @@ export default function ToursPage() {
                                   <div className="flex items-baseline gap-2">
                                     <span className="text-xl font-bold text-blue-600">₺{discountedPrice.toLocaleString()}</span>
                                     {(tour.discount || 0) > 0 && (
-                                      <span className="text-sm text-gray-400 line-through">₺{(tour.price || 0).toLocaleString()}</span>
+                                      <span className="text-sm text-gray-400 line-through">₺{price.toLocaleString()}</span>
                                     )}
                                   </div>
                                   <div className="flex items-center gap-2">

@@ -195,11 +195,13 @@ model Tour {
 }
 
 model TourDate {
-  id        String   @id @default(cuid())
-  startDate DateTime
-  endDate   DateTime
-  tourId    String
-  tour      Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  startDate      DateTime
+  endDate        DateTime
+  price          Float
+  availableSeats Int
+  tourId         String
+  tour           Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
 
   @@map("tour_dates")
 }

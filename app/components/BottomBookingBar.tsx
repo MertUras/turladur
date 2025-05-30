@@ -12,8 +12,24 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline'
 
+interface TourDate {
+  id: string;
+  startDate: Date;
+  endDate: Date;
+  price: number;
+  availableSeats: number;
+}
+
+interface Tour {
+  id: string;
+  name: string;
+  price: number;
+  discount: number | null;
+  tourDates: TourDate[];
+}
+
 type Props = {
-  tour: any
+  tour: Tour
 }
 
 export default function BottomBookingBar({ tour }: Props) {
@@ -36,19 +52,21 @@ export default function BottomBookingBar({ tour }: Props) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [expanded])
   
-  const discountedPrice = tour.discount && tour.discount > 0 
-    ? (tour.price - (tour.price * (tour.discount / 100)))
-    : tour.price;
+  // En düşük fiyatlı tur tarihini bul
+  const lowestPricedDate = tour.tourDates?.reduce((lowest, current) => {
+    if (!lowest || current.price < lowest.price) {
+      return current;
+    }
+    return lowest;
+  }, null as TourDate | null);
+
+  const price = lowestPricedDate?.price || tour.price;
+  const discountedPrice = tour.discount && price 
+    ? price * (1 - (tour.discount / 100))
+    : price;
 
   const primaryButtonClasses = "inline-flex items-center justify-center px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out";
   const secondaryButtonClasses = "inline-flex items-center justify-center px-6 py-2.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 text-sm font-semibold rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-sky-500 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out";
-
-  const availableDates = tour.startDate ? [
-    new Date(tour.startDate),
-    new Date(new Date(tour.startDate).getTime() + 7 * 24 * 60 * 60 * 1000),
-    new Date(new Date(tour.startDate).getTime() + 14 * 24 * 60 * 60 * 1000),
-    new Date(new Date(tour.startDate).getTime() + 21 * 24 * 60 * 60 * 1000),
-  ] : [];
 
   const formatSelectedDate = (dateString: string | null) => {
     if (!dateString) return 'Tarih seçilmedi';
@@ -60,6 +78,15 @@ export default function BottomBookingBar({ tour }: Props) {
   };
 
   const totalPeople = typeof personCount === 'number' ? personCount : parseInt(personCount, 10) || 1;
+
+  // Seçilen tarihin fiyatını bul
+  const selectedDatePrice = selectedDate 
+    ? tour.tourDates.find(date => date.id === selectedDate)?.price || price
+    : price;
+
+  const selectedDateDiscountedPrice = tour.discount && selectedDatePrice
+    ? selectedDatePrice * (1 - (tour.discount / 100))
+    : selectedDatePrice;
 
   return (
     <>
@@ -97,33 +124,34 @@ export default function BottomBookingBar({ tour }: Props) {
               </h3>
               <p className="text-xs text-neutral-600 mb-3 flex-shrink-0">Müsait tarihler aşağıdadır.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-2.5 overflow-y-auto scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-neutral-100 scrollbar-thumb-rounded-full flex-grow pr-1">
-                {availableDates.length > 0 ? availableDates.map((date, index) => {
-                  const dateStr = date.toISOString();
-                  const formattedDate = date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
-                  const isLimited = index === 0;
+                {tour.tourDates.length > 0 ? tour.tourDates.map((date) => {
+                  const formattedStartDate = new Date(date.startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
+                  const formattedEndDate = new Date(date.endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
+                  const isLimited = date.availableSeats <= 5;
                   return (
-                    <div key={index} className="relative">
+                    <div key={date.id} className="relative">
                       <input 
                         type="radio" 
-                        id={`date-${index}`}
+                        id={`date-${date.id}`}
                         name="tourDate"
-                        value={dateStr}
+                        value={date.id}
                         className="peer hidden" 
-                        checked={selectedDate === dateStr}
-                        onChange={() => setSelectedDate(dateStr)}
-                        aria-labelledby={`date-label-${index}`}
+                        checked={selectedDate === date.id}
+                        onChange={() => setSelectedDate(date.id)}
+                        aria-labelledby={`date-label-${date.id}`}
                       />
                       <label 
-                        id={`date-label-${index}`}
-                        htmlFor={`date-${index}`} 
+                        id={`date-label-${date.id}`}
+                        htmlFor={`date-${date.id}`} 
                         className="flex flex-col p-2.5 bg-white border border-neutral-300 rounded-lg cursor-pointer peer-checked:border-sky-600 peer-checked:bg-sky-100 peer-checked:shadow-sm hover:bg-neutral-50/70 transition-colors duration-150 ease-out focus-within:ring-1 focus-within:ring-sky-500 text-left"
                       >
-                        <span className="text-sm font-medium text-neutral-800">{formattedDate}</span>
+                        <span className="text-sm font-medium text-neutral-800">{formattedStartDate} - {formattedEndDate}</span>
+                        <span className="text-xs text-sky-700 mt-1 font-medium">{date.price.toLocaleString('tr-TR')} ₺</span>
                         {isLimited && (
-                          <span className="text-[10px] text-red-600 mt-0.5 font-medium">Son yerler!</span>
+                          <span className="text-[10px] text-red-600 mt-0.5 font-medium">Son {date.availableSeats} yer!</span>
                         )}
                         {!isLimited && (
-                          <span className="text-[10px] text-emerald-600 mt-0.5 font-medium">Müsait</span>
+                          <span className="text-[10px] text-emerald-600 mt-0.5 font-medium">{date.availableSeats} kişilik kontenjan</span>
                         )}
                       </label>
                     </div>
@@ -201,12 +229,12 @@ export default function BottomBookingBar({ tour }: Props) {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1 pt-3 border-t border-neutral-200/80 flex-shrink-0">
             <div className="flex-1 pr-4 order-2 sm:order-1 text-center sm:text-left">
               <div className="flex items-baseline justify-center sm:justify-start gap-2 mb-0.5">
-                <span className="text-2xl font-bold text-sky-700">{discountedPrice.toLocaleString('tr-TR')} ₺</span>
+                <span className="text-2xl font-bold text-sky-700">{selectedDateDiscountedPrice.toLocaleString('tr-TR')} ₺</span>
                 {tour.discount && tour.discount > 0 && (
-                  <span className="text-sm text-neutral-400 line-through">{tour.price.toLocaleString('tr-TR')} ₺</span>
+                  <span className="text-sm text-neutral-400 line-through">{selectedDatePrice.toLocaleString('tr-TR')} ₺</span>
                 )}
               </div>
-              <span className="text-neutral-500 text-xs block">kişi başı</span>
+              <span className="text-neutral-500 text-xs block">toplam fiyat</span>
             </div>
             
             <div className="flex gap-3 items-center flex-shrink-0 order-1 sm:order-2">

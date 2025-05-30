@@ -79,6 +79,13 @@ interface Tour {
     logo: string | null;
     description: string | null;
   };
+  tourDates: {
+    id: string;
+    startDate: Date;
+    endDate: Date;
+    price: number;
+    availableSeats: number;
+  }[];
 }
 
 interface TourPageProps {
@@ -516,45 +523,45 @@ export default function TourPage() {
                       Anında Onay
                     </div>
                   </div>
-              </div>
+                </div>
               
-                {/* Simplified Pricing Area */}
+                {/* Tur Tarihleri */}
                 <div className="bg-neutral-50/60 p-6 rounded-lg border border-neutral-200/70 mb-6">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
-                      <span className="text-neutral-700 font-medium flex items-center text-base">
-                        <CurrencyDollarIcon className="h-5 w-5 mr-1.5 text-sky-600 flex-shrink-0" />
-                        <span>Kişi Başı Fiyat</span>
-                      </span>
-                      <div className="text-left sm:text-right">
-                        {tour.discount && tour.discount > 0 ? (
-                          <>
-                            <div className="flex items-center justify-start sm:justify-end gap-2 mb-1">
-                              <span className="line-through text-neutral-400 text-base">{tour.price.toLocaleString('tr-TR')} ₺</span>
-                              {/* Consistent Discount Badge */}
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200/70">
-                                %{tour.discount} İndirim
-                              </span>
+                  <div className="flex flex-col gap-4">
+                    {tour.tourDates.map((date) => {
+                      const isLimited = date.availableSeats <= 5;
+                      return (
+                        <div key={date.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-lg border border-neutral-200/70 hover:border-sky-200 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <CalendarDaysIcon className="h-5 w-5 text-sky-600 flex-shrink-0" />
+                            <div>
+                              <div className="text-sm font-medium text-neutral-900">
+                                {new Date(date.startDate).toLocaleDateString('tr-TR')} - {new Date(date.endDate).toLocaleDateString('tr-TR')}
+                              </div>
+                              <div className="text-xs text-neutral-500 mt-0.5">
+                                {date.availableSeats} kişilik kontenjan
+                              </div>
                             </div>
-                            {/* Updated Price Style */}
-                            <span className="text-2xl font-bold text-sky-700">{(tour.price - (tour.price * (tour.discount || 0) / 100)).toLocaleString('tr-TR')} ₺</span>
-                          </>
-                        ) : (
-                          <span className="text-2xl font-bold text-sky-700">{tour.price.toLocaleString('tr-TR')} ₺</span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Total Price - Kept simple */}
-                    <div className="mt-4 pt-4 border-t border-neutral-200/60">
-                      <div className="flex justify-between items-center gap-2">
-                        <span className="text-neutral-600 text-sm">Toplam ({tour.duration} gün):</span>
-                        <span className="font-semibold text-lg text-neutral-800">
-                          {tour.discount && tour.discount > 0 
-                            ? ((tour.price - (tour.price * (tour.discount || 0) / 100)) * tour.duration).toLocaleString('tr-TR') 
-                            : (tour.price * tour.duration).toLocaleString('tr-TR')} ₺
-                        </span>
-                      </div>
-                    </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-semibold text-sky-700">
+                              {tour.discount && tour.discount > 0 ? (
+                                <>
+                                  <span className="line-through text-neutral-400 text-base mr-2">{date.price.toLocaleString('tr-TR')} ₺</span>
+                                  <span>{(date.price * (1 - (tour.discount / 100))).toLocaleString('tr-TR')} ₺</span>
+                                </>
+                              ) : (
+                                `${date.price.toLocaleString('tr-TR')} ₺`
+                              )}
+                            </div>
+                            <button className="mt-2 px-4 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium rounded-lg transition-colors">
+                              Seç
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
                 
                 {/* Standardized Buttons */}

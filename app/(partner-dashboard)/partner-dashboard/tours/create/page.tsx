@@ -60,7 +60,9 @@ export default function CreateTourPage() {
           throw new Error('Tur oluşturulurken bir hata oluştu');
         }
 
+        await response.json();
         router.push('/partner-dashboard/tours');
+        return;
       } catch (error) {
         console.error('Error submitting form:', error);
       } finally {

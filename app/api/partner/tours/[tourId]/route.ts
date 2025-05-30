@@ -38,7 +38,7 @@ export async function GET(
         tourOperator: {
           select: {
             id: true,
-            name: true,
+            companyName: true,
             logo: true
           }
         }
@@ -208,7 +208,7 @@ const tour = await prisma.tour.findFirst({
         logo: true
       }
     },
-    tourDates: true // ← BURASI EKLENDİ
+    tourDates: true 
   }
 });
 

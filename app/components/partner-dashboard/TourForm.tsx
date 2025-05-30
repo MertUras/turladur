@@ -33,7 +33,7 @@ export interface TourFormData {
   ageRestriction: number;
   languages: string[];
   tags: string[];
-  tourDates: { startDate: string; endDate: string }[];
+  tourDates: { startDate: string; endDate: string; price: number; availableSeats: number }[];
   discount: number;
   destinations: string[];
   reviews: number;
@@ -142,7 +142,12 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
         ageRestriction: initialData.ageRestriction || 0,
         languages: initialData.languages || [],
         tags: initialData.tags || [],
-        tourDates: initialData.tourDates || [],
+        tourDates: initialData.tourDates?.map((date: any) => ({
+          startDate: date.startDate,
+          endDate: date.endDate,
+          price: date.price,
+          availableSeats: date.availableSeats
+        })) || [],
         discount: initialData.discount || 0,
         destinations: initialData.destinations || [],
         reviews: initialData.reviews || 0,
@@ -227,7 +232,9 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
             [name]: value,
             tourDates: [{
               startDate: startDate,
-              endDate: formattedEndDate
+              endDate: formattedEndDate,
+              price: parseFloat(formData.price) || 0,
+              availableSeats: formData.maxParticipants || 0
             }]
           }));
         }
@@ -372,7 +379,9 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
       ...prev,
       tourDates: [...prev.tourDates, {
         startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0]
+        endDate: endDate.toISOString().split('T')[0],
+        price: parseFloat(formData.price) || 0,
+        availableSeats: formData.maxParticipants || 0
       }]
     }));
   };
@@ -386,18 +395,28 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
   };
 
   // Tur tarihi güncelleme
-  const handleTourDateChange = (index: number, field: 'startDate' | 'endDate', value: string) => {
+  const handleTourDateChange = (index: number, field: 'startDate' | 'endDate' | 'price' | 'availableSeats', value: string) => {
     setFormData(prev => {
       const newTourDates = [...prev.tourDates];
       if (field === 'startDate') {
         const startDate = new Date(value);
         const endDate = new Date(startDate);
-        // Gece sayısına göre bitiş tarihini hesapla
         const nights = parseInt(prev.nights) || 0;
         endDate.setDate(endDate.getDate() + nights);
         newTourDates[index] = {
+          ...newTourDates[index],
           startDate: value,
           endDate: endDate.toISOString().split('T')[0]
+        };
+      } else if (field === 'price') {
+        newTourDates[index] = {
+          ...newTourDates[index],
+          price: parseFloat(value) || 0
+        };
+      } else if (field === 'availableSeats') {
+        newTourDates[index] = {
+          ...newTourDates[index],
+          availableSeats: parseInt(value) || 0
         };
       } else {
         newTourDates[index] = {
@@ -458,7 +477,9 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
         exclusions: formData.excludes,
         tourDates: formData.tourDates.map(date => ({
           startDate: date.startDate,
-          endDate: date.endDate
+          endDate: date.endDate,
+          price: date.price,
+          availableSeats: date.availableSeats
         }))
       };
       onSubmit(submitData);
@@ -1031,7 +1052,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
         </>
       )}
 
-      {/* Tur Tarihleri Bölümü */}
+      {/* Tur Tarihleri */}
       <div className="bg-white shadow-sm rounded-lg p-8 border border-gray-100">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-medium text-gray-900">Tur Tarihleri</h2>
@@ -1069,18 +1090,41 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                   className="block w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
                 />
               </div>
-              <button
-                type="button"
-                onClick={() => handleRemoveTourDate(index)}
-                className="text-gray-400 hover:text-gray-500 mt-6"
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fiyat (₺)
+                </label>
+                <input
+                  type="number"
+                  value={date.price}
+                  onChange={(e) => handleTourDateChange(index, 'price', e.target.value)}
+                  className="block w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                  min="0"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Kontenjan
+                </label>
+                <input
+                  type="number"
+                  value={date.availableSeats}
+                  onChange={(e) => handleTourDateChange(index, 'availableSeats', e.target.value)}
+                  className="block w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                  min="0"
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTourDate(index)}
+                  className="p-2 text-gray-400 hover:text-gray-500"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           ))}
-          {errors.tourDates && (
-            <p className="mt-2 text-sm text-red-600">{errors.tourDates}</p>
-          )}
         </div>
       </div>
 
