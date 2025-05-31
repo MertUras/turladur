@@ -16,6 +16,9 @@ export interface ExperienceFormData {
   highlights: string[];
   schedule: { time: string; activity: string }[];
   gallery: string[];
+  maxParticipants: number;
+  currentParticipants: number;
+  activityDates: { startDate: string; endDate: string; price: number; availableSeats: number }[];
 }
 
 interface ExperienceFormProps {
@@ -38,6 +41,9 @@ const defaultFormData: ExperienceFormData = {
   highlights: [],
   schedule: [],
   gallery: [],
+  maxParticipants: 1,
+  currentParticipants: 0,
+  activityDates: [],
 };
 
 const categories = [
@@ -59,10 +65,14 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [newDate, setNewDate] = useState({ startDate: '', endDate: '', price: 0, availableSeats: 1 });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: name === 'duration' || name === 'price' ? Number(value) : value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'duration' || name === 'price' || name === 'maxParticipants' || name === 'currentParticipants' ? Number(value) : value
+    }));
   };
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -172,6 +182,22 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
     fileInputRef.current?.click();
   };
 
+  const handleAddDate = () => {
+    if (!newDate.startDate || !newDate.endDate || newDate.price < 0 || newDate.availableSeats < 1) return;
+    setFormData(prev => ({
+      ...prev,
+      activityDates: [...prev.activityDates, { ...newDate }]
+    }));
+    setNewDate({ startDate: '', endDate: '', price: 0, availableSeats: 1 });
+  };
+
+  const handleRemoveDate = (idx: number) => {
+    setFormData(prev => ({
+      ...prev,
+      activityDates: prev.activityDates.filter((_, i) => i !== idx)
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.description || !formData.duration || !formData.price) {
@@ -241,6 +267,33 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
                   placeholder="Örn. 1500"
                 />
               </div>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block mb-1 font-semibold text-gray-700">Maksimum Katılımcı *</label>
+              <input
+                name="maxParticipants"
+                type="number"
+                min={1}
+                value={formData.maxParticipants}
+                onChange={handleChange}
+                required
+                className="w-full border border-neutral-300 rounded-lg px-4 py-2 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition"
+                placeholder="Örn. 20"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="block mb-1 font-semibold text-gray-700">Mevcut Katılımcı</label>
+              <input
+                name="currentParticipants"
+                type="number"
+                min={0}
+                value={formData.currentParticipants}
+                onChange={handleChange}
+                className="w-full border border-neutral-300 rounded-lg px-4 py-2 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition"
+                placeholder="Örn. 0"
+              />
             </div>
           </div>
         </div>
@@ -353,6 +406,39 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
                 <span className="font-mono text-xs mr-2">{item.time}</span>
                 <span>{item.activity}</span>
                 <button type="button" onClick={() => handleRemoveSchedule(idx)} className="ml-2 text-red-500"><XMarkIcon className="h-4 w-4" /></button>
+              </div>
+            ))}
+          </div>
+        </div>
+        <hr className="my-6 border-neutral-200" />
+        <h3 className="text-lg font-semibold text-sky-700 mb-2">Aktivite Tarihleri</h3>
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-4 items-end">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Başlangıç</label>
+              <input type="date" value={newDate.startDate} onChange={e => setNewDate(nd => ({ ...nd, startDate: e.target.value }))} className="border border-neutral-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Bitiş</label>
+              <input type="date" value={newDate.endDate} onChange={e => setNewDate(nd => ({ ...nd, endDate: e.target.value }))} className="border border-neutral-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Fiyat (₺)</label>
+              <input type="number" min={0} value={newDate.price} onChange={e => setNewDate(nd => ({ ...nd, price: Number(e.target.value) }))} className="border border-neutral-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition w-24" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Kontenjan</label>
+              <input type="number" min={1} value={newDate.availableSeats} onChange={e => setNewDate(nd => ({ ...nd, availableSeats: Number(e.target.value) }))} className="border border-neutral-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition w-20" />
+            </div>
+            <button type="button" onClick={handleAddDate} className="bg-sky-600 text-white px-3 py-2 rounded-lg hover:bg-sky-700 transition flex items-center"><PlusIcon className="h-5 w-5" /></button>
+          </div>
+          <div className="flex flex-col gap-2 mt-2">
+            {formData.activityDates.map((date, idx) => (
+              <div key={idx} className="flex items-center gap-4 bg-neutral-100 rounded-lg px-4 py-2">
+                <span className="text-sm text-gray-700">{date.startDate} - {date.endDate}</span>
+                <span className="text-sm text-gray-700">{date.price} ₺</span>
+                <span className="text-sm text-gray-700">{date.availableSeats} kişilik</span>
+                <button type="button" onClick={() => handleRemoveDate(idx)} className="ml-auto text-red-500 hover:text-red-700"><XMarkIcon className="h-5 w-5" /></button>
               </div>
             ))}
           </div>

@@ -182,14 +182,14 @@ model Tour {
   isEarlyBird         Boolean       @default(false)
   languages           Json          @default("[]")
   tags                Json          @default("[]")
-  availableDates      DateTime[]    @default([])
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   tourOperatorId      String?
   currentParticipants Int?          @default(0)
+  availableDates      DateTime[]    @default([])
   bookings            Booking[]
+  tourDates           TourDate[]
   tourOperator        TourOperator? @relation(fields: [tourOperatorId], references: [id])
-  tourDates TourDate[]
 
   @@map("tours")
 }
@@ -198,14 +198,25 @@ model TourDate {
   id             String   @id @default(cuid())
   startDate      DateTime
   endDate        DateTime
-  price          Float
-  availableSeats Int
   tourId         String
+  availableSeats Int
+  price          Float
   tour           Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
 
   @@map("tour_dates")
 }
 
+model ActivityDate {
+  id             String     @id @default(cuid())
+  startDate      DateTime
+  endDate        DateTime
+  price          Float
+  availableSeats Int
+  activityId     String
+  activity       Experience @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@map("activity_dates")
+}
 
 model Experience {
   id              String           @id @default(cuid())
@@ -229,6 +240,7 @@ model Experience {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   userId          String
+  activityDates   ActivityDate[]
   reviews         ActivityReview[]
   bookings        Booking[]
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)

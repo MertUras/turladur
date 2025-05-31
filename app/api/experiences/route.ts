@@ -70,6 +70,21 @@ export async function POST(request: Request) {
       },
     });
 
+    // Aktivite tarihlerini ekle
+    if (Array.isArray(json.activityDates) && json.activityDates.length > 0) {
+      await Promise.all(json.activityDates.map((date: any) =>
+        prisma.activityDate.create({
+          data: {
+            activityId: experience.id,
+            startDate: new Date(date.startDate),
+            endDate: new Date(date.endDate),
+            price: date.price,
+            availableSeats: date.availableSeats
+          }
+        })
+      ));
+    }
+
     return NextResponse.json(experience);
   } catch (error) {
     console.error('Error creating experience:', error);

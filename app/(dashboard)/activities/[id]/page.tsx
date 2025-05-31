@@ -32,6 +32,8 @@ interface Activity {
         comment: string;
         date: string;
     }>;
+    discount?: number;
+    activityDates: any[];
 }
 
 interface RelatedActivity {
@@ -57,6 +59,7 @@ export default function ActivityDetail() {
     const [selectedActivity, setSelectedActivity] = useState<RelatedActivity | null>(null);
     const [relatedActivities, setRelatedActivities] = useState<RelatedActivity[]>([]);
     const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+    const [activityDates, setActivityDates] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchActivity = async () => {
@@ -387,6 +390,62 @@ export default function ActivityDetail() {
                                     Seyahat Danışmanına Ulaş
                                 </button>
                             </div>
+
+                            {/* Rezervasyon ve Tarih/Fiyat Seçenekleri */}
+                            {activity?.activityDates && activity.activityDates.length > 0 && (
+                                <div className="bg-white rounded-xl p-6 border border-neutral-200/70 shadow-md w-full mb-8">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200/70">Ücretsiz İptal</span>
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-800 border border-sky-200/70">Anında Onay</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold mb-4 text-gray-900 flex items-center gap-2">
+                                        <Calendar className="w-6 h-6 text-blue-500" /> Rezervasyon
+                                    </h3>
+                                    <div className="flex flex-col gap-4">
+                                        {activity.activityDates.map((date) => {
+                                            const isLimited = date.availableSeats <= 5;
+                                            return (
+                                                <div key={date.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-neutral-50 rounded-lg border border-neutral-200/70 hover:border-blue-200 transition-colors">
+                                                    <div className="flex items-center gap-3">
+                                                        <Calendar className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                                                        <div>
+                                                            <div className="text-base font-semibold text-gray-900">
+                                                                {new Date(date.startDate).toLocaleDateString('tr-TR')} - {new Date(date.endDate).toLocaleDateString('tr-TR')}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500 mt-0.5">
+                                                                {date.availableSeats} kişilik kontenjan
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right flex flex-col items-end">
+                                                        <div className="text-lg font-bold text-blue-600 flex items-center gap-2">
+                                                            {activity.discount && activity.discount > 0 ? (
+                                                                <>
+                                                                    <span className="line-through text-neutral-400 text-base mr-1">{date.price.toLocaleString('tr-TR')}₺</span>
+                                                                    <span>{(date.price * (1 - (activity.discount / 100))).toLocaleString('tr-TR')}₺</span>
+                                                                </>
+                                                            ) : (
+                                                                `${date.price.toLocaleString('tr-TR')}₺`
+                                                            )}
+                                                        </div>
+                                                        <button className="mt-2 px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors">
+                                                            Seç
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="mt-6 space-y-3">
+                                        <button className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors flex items-center justify-center gap-2">
+                                            <Calendar className="w-5 h-5" /> Hızlı Rezervasyon
+                                        </button>
+                                        <button className="w-full border border-blue-500 text-blue-500 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.38V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h7.38M16 5v2m0 0v2m0-2h2m-2 0h-2" /></svg> Fiyat Bilgisi Al
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
                                 <h3 className="text-lg font-semibold mb-4 text-gray-900">Dahil Olan Hizmetler</h3>

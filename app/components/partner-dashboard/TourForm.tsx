@@ -904,7 +904,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                   <div className="mt-4 space-y-3">
                     {formData.includes.map((item, index) => (
                       <div key={index} className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg text-sm">
-                        <span>{item}</span>
+                        <span className="text-black">{item}</span>
                         <button
                           type="button"
                           onClick={() => handleRemoveInclude(index)}
@@ -941,7 +941,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                   <div className="mt-4 space-y-3">
                     {formData.excludes.map((item, index) => (
                       <div key={index} className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg text-sm">
-                        <span>{item}</span>
+                        <span className="text-black">{item}</span>
                         <button
                           type="button"
                           onClick={() => handleRemoveExclude(index)}
@@ -1036,7 +1036,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
               <div className="mt-4 space-y-3">
                 {formData.features.map((feature, index) => (
                   <div key={index} className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg text-sm">
-                    <span>{feature}</span>
+                    <span className="text-black">{feature}</span>
                     <button
                       type="button"
                       onClick={() => handleRemoveFeature(index)}

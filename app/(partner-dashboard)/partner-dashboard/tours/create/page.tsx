@@ -144,18 +144,37 @@ export default function CreateTourPage() {
                     <PhotoIcon className="h-14 w-14 text-gray-400" />
                   </div>
                   <h3 className="text-lg font-medium text-gray-900">
-                    {formData?.title || 'Tur başlığı'}
+                    {(formData?.title ?? '') || 'Tur başlığı'}
                   </h3>
                   <p className="text-sm text-gray-600 line-clamp-3">
-                    {formData?.description || 'Tur açıklaması burada görünecek...'}
+                    {(formData?.description ?? '') || 'Tur açıklaması burada görünecek...'}
                   </p>
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-gray-900">
-                      {formData?.price ? `${formData.price} ₺` : '0 ₺'}
+                      {formData?.price !== undefined && formData?.price !== null && formData?.price !== '' ? `${formData.price} ₺` : '0 ₺'}
                     </span>
                     <span className="text-sm text-gray-600">
-                      {formData?.duration || '0 saat'}
+                      {formData?.duration !== undefined && formData?.duration !== null && formData?.duration !== '' ? formData.duration : '0 saat'}
                     </span>
+                  </div>
+
+                  {/* Dahil Olanlar */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-1">Dahil Olanlar</h4>
+                    <ul className="space-y-1">
+                      {(formData?.includes || []).map((item: string, idx: number) => (
+                        <li key={idx} className="text-sm text-black">{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  {/* Dahil Olmayanlar */}
+                  <div className="mt-2">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-1">Dahil Olmayanlar</h4>
+                    <ul className="space-y-1">
+                      {(formData?.excludes || []).map((item: string, idx: number) => (
+                        <li key={idx} className="text-sm text-black">{item}</li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
               </div>

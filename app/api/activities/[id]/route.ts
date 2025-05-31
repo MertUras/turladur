@@ -654,16 +654,19 @@ function safeArray(val: any) {
     return [];
 }
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: Request, context: any) {
+    const params = await context.params;
+    const id = params?.id;
+    if (!id) {
+        return NextResponse.json({ error: 'No id provided' }, { status: 400 });
+    }
+
     // Önce veritabanında arama
     let activity = null;
     try {
         activity = await prisma.experience.findUnique({
-            where: { id: params.id },
-            include: { reviews: true },
+            where: { id },
+            include: { reviews: true, activityDates: true },
         });
     } catch (e) {
         // Prisma hatası olursa yoksay
@@ -678,11 +681,12 @@ export async function GET(
             highlights: safeArray(activity.highlights),
             schedule: safeArray(activity.schedule),
             reviews: Array.isArray(activity.reviews) ? activity.reviews : [],
+            activityDates: Array.isArray(activity.activityDates) ? activity.activityDates : [],
         });
     }
 
     // Eğer veritabanında yoksa, eski mock array'den aramaya devam et
-    const legacyActivity = activities.find(a => a.id === parseInt(params.id));
+    const legacyActivity = activities.find(a => String(a.id) === String(id));
     if (!legacyActivity) {
         return NextResponse.json(
             { error: 'Activity not found' },
