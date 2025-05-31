@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, RefObject } from 'react';
 import { CalendarIcon } from '@heroicons/react/24/outline';
 import { Calendar } from './Calendar';
 
@@ -14,6 +14,11 @@ interface DatePickerProps {
   placeholder?: string;
 }
 
+// window'a özel bir property ekleyeceğimiz için typescript'e bildir
+declare global {
+  interface Window { __openCalendar__?: any }
+}
+
 export function DatePicker({
   label,
   value,
@@ -24,7 +29,35 @@ export function DatePicker({
   placeholder = 'Tarih seçin'
 }: DatePickerProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const triggerRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  
+  // Aynı anda sadece bir takvim popup'ı açık olsun
+  useEffect(() => {
+    const handleCloseAll = () => {
+      setIsCalendarOpen(false);
+    };
+    window.addEventListener('calendar-close-all', handleCloseAll);
+    return () => {
+      window.removeEventListener('calendar-close-all', handleCloseAll);
+    };
+  }, []);
+  
+  // Dışarı tıklanınca veya başka bir takvim açılınca popup'ı kapat
+  useEffect(() => {
+    if (!isCalendarOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      if (
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target as Node)
+      ) {
+        setIsCalendarOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', handleClick);
+    return () => {
+      window.removeEventListener('mousedown', handleClick);
+    };
+  }, [isCalendarOpen]);
   
   // Tarihi formatla
   const formatDisplayDate = (dateString: string) => {
@@ -43,6 +76,8 @@ export function DatePicker({
     });
   };
   
+  const handleCloseCalendar = () => setIsCalendarOpen(false);
+  
   return (
     <div className="relative">
       <label htmlFor={`date-${label}`} className="block text-sm font-medium text-gray-700 mb-2">
@@ -56,7 +91,12 @@ export function DatePicker({
             ? 'bg-gray-100 border-gray-200 cursor-not-allowed' 
             : 'bg-white border-gray-300 cursor-pointer hover:border-blue-500'
         } transition-colors`}
-        onClick={() => !disabled && setIsCalendarOpen(true)}
+        onClick={() => {
+          if (!disabled) {
+            window.dispatchEvent(new Event('calendar-close-all'));
+            setTimeout(() => setIsCalendarOpen(true), 0);
+          }
+        }}
       >
         <div className="flex items-center px-3 py-2">
           <CalendarIcon className="h-4 w-4 text-gray-400 mr-2" />
@@ -88,8 +128,8 @@ export function DatePicker({
         minDate={minDate}
         maxDate={maxDate}
         isOpen={isCalendarOpen}
-        onClose={() => setIsCalendarOpen(false)}
-        triggerRef={triggerRef}
+        onClose={handleCloseCalendar}
+        triggerRef={triggerRef as RefObject<HTMLDivElement>}
         label={label}
       />
     </div>

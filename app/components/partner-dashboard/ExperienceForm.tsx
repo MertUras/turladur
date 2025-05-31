@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { PhotoIcon, XMarkIcon, PlusIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
+import { DatePicker } from '../../components/booking/DatePicker';
 
 export interface ExperienceFormData {
   name: string;
@@ -416,11 +417,22 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
           <div className="flex flex-wrap gap-4 items-end">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Başlangıç</label>
-              <input type="date" value={newDate.startDate} onChange={e => setNewDate(nd => ({ ...nd, startDate: e.target.value }))} className="border border-neutral-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition" />
+              <DatePicker
+                label=""
+                value={newDate.startDate}
+                onChange={date => setNewDate(nd => ({ ...nd, startDate: date }))}
+                placeholder="gg.aa.yyyy"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Bitiş</label>
-              <input type="date" value={newDate.endDate} onChange={e => setNewDate(nd => ({ ...nd, endDate: e.target.value }))} className="border border-neutral-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition" />
+              <DatePicker
+                label=""
+                value={newDate.endDate}
+                onChange={date => setNewDate(nd => ({ ...nd, endDate: date }))}
+                placeholder="gg.aa.yyyy"
+                minDate={newDate.startDate}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Fiyat (₺)</label>

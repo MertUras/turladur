@@ -37,9 +37,13 @@ export function Calendar({
   triggerRef,
   label
 }: CalendarProps) {
+  // Tüm hook'lar componentin başında olmalı
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarDays, setCalendarDays] = useState<Date[]>([]);
   const calendarRef = useRef<HTMLDivElement>(null);
+  const [popupStyle, setPopupStyle] = useState<any>({});
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   
   // Takvim günlerini hesapla
   useEffect(() => {
@@ -83,24 +87,28 @@ export function Calendar({
     setCalendarDays([...prevMonthDays, ...currentMonthDays, ...nextMonthDays]);
   }, [currentMonth]);
   
-  // Dışarı tıklandığında kapat
+  // Takvim açıkken dışarı tıklanınca kapat
   useEffect(() => {
+    if (!isOpen) return;
     const handleClickOutside = (event: MouseEvent) => {
+      // Eğer calendarRef veya triggerRef yoksa da kapat
       if (
-        calendarRef.current && 
-        !calendarRef.current.contains(event.target as Node) &&
-        triggerRef.current && 
-        !triggerRef.current.contains(event.target as Node)
+        (!calendarRef.current || !triggerRef.current) ||
+        (
+          calendarRef.current &&
+          !calendarRef.current.contains(event.target as Node) &&
+          triggerRef.current &&
+          !triggerRef.current.contains(event.target as Node)
+        )
       ) {
-        onClose();
+        if (typeof onClose === 'function') onClose();
       }
     };
-    
-    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [onClose, triggerRef]);
+  }, [isOpen, onClose, triggerRef]);
   
   // Önceki aya git
   const goToPrevMonth = () => {
@@ -119,9 +127,8 @@ export function Calendar({
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const formattedDate = `${year}-${month}-${day}`;
-    
     onChange(formattedDate);
-    onClose();
+    if (typeof onClose === 'function') onClose();
   };
   
   // Tarih seçilebilir mi kontrol et
@@ -191,132 +198,149 @@ export function Calendar({
     );
   };
   
-  if (!isOpen) return null;
+  // Takvim popup'ı için position: fixed ve doğru pozisyon
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const calendarHeight = 360; // px, takvim kutusunun yaklaşık yüksekliği
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      let top = rect.bottom + 6;
+      let left = rect.left;
+      // Eğer aşağıda yeterli yer yoksa yukarıya aç
+      if (spaceBelow < calendarHeight && spaceAbove > calendarHeight) {
+        top = rect.top - calendarHeight - 6;
+      }
+      setPopupStyle({
+        position: 'fixed',
+        top: top,
+        left: left,
+        zIndex: 99999,
+        width: 320,
+        minWidth: rect.width,
+        maxWidth: 340,
+        pointerEvents: 'auto',
+      });
+    }
+  }, [isOpen, triggerRef]);
   
-  // Portal kullanarak takvimi render et
+  // Eğer triggerRef yoksa veya pozisyon hesaplanamıyorsa hiç render etme
+  if (!isOpen || !triggerRef.current || !popupStyle || typeof popupStyle.top !== 'number' || typeof popupStyle.left !== 'number') return null;
+  
+  if (!mounted) return null;
   return createPortal(
-    <div 
-      className="fixed z-50"
-      style={{ 
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        maxHeight: '90vh',
-        overflow: 'auto'
-      }}
+    <div
+      ref={calendarRef}
+      style={popupStyle}
+      className="w-[320px] bg-white rounded-xl shadow-2xl p-3 border border-neutral-200"
       aria-labelledby={`${label}-calendar`}
       role="dialog"
       aria-modal="true"
     >
-      <div 
-        ref={calendarRef}
-        className="bg-white rounded-xl shadow-2xl p-4 w-[320px]"
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h2 id={`${label}-calendar`} className="text-base font-semibold text-gray-900">
-            {label}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500"
-          >
-            <XMarkIcon className="h-4 w-4" />
-          </button>
+      <div className="flex items-center justify-between mb-3">
+        <h2 id={`${label}-calendar`} className="text-base font-semibold text-gray-900">
+          {label}
+        </h2>
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); if (typeof onClose === 'function') onClose(); }}
+          className="text-gray-400 hover:text-gray-500"
+        >
+          <XMarkIcon className="h-4 w-4" />
+        </button>
+      </div>
+      
+      {/* Ay ve yıl navigasyonu */}
+      <div className="flex items-center justify-between mb-3">
+        <button
+          type="button"
+          onClick={goToPrevMonth}
+          className="p-1.5 rounded-full hover:bg-gray-100"
+        >
+          <ChevronLeftIcon className="h-4 w-4 text-gray-600" />
+        </button>
+        
+        <div className="text-base font-medium text-gray-900">
+          {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
         </div>
         
-        {/* Ay ve yıl navigasyonu */}
-        <div className="flex items-center justify-between mb-3">
-          <button
-            type="button"
-            onClick={goToPrevMonth}
-            className="p-1.5 rounded-full hover:bg-gray-100"
-          >
-            <ChevronLeftIcon className="h-4 w-4 text-gray-600" />
-          </button>
-          
-          <div className="text-base font-medium text-gray-900">
-            {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+        <button
+          type="button"
+          onClick={goToNextMonth}
+          className="p-1.5 rounded-full hover:bg-gray-100"
+        >
+          <ChevronRightIcon className="h-4 w-4 text-gray-600" />
+        </button>
+      </div>
+      
+      {/* Haftanın günleri */}
+      <div className="grid grid-cols-7 gap-0.5 mb-1">
+        {DAYS.map((day) => (
+          <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
+            {day}
           </div>
+        ))}
+      </div>
+      
+      {/* Takvim günleri */}
+      <div className="grid grid-cols-7 gap-1">
+        {calendarDays.map((date, index) => {
+          const selectable = isDateSelectable(date);
+          const selected = isDateSelected(date);
+          const currentMonth = isCurrentMonth(date);
+          const today = isToday(date);
           
-          <button
-            type="button"
-            onClick={goToNextMonth}
-            className="p-1.5 rounded-full hover:bg-gray-100"
-          >
-            <ChevronRightIcon className="h-4 w-4 text-gray-600" />
-          </button>
-        </div>
-        
-        {/* Haftanın günleri */}
-        <div className="grid grid-cols-7 gap-0.5 mb-1">
-          {DAYS.map((day) => (
-            <div key={day} className="text-center text-xs font-medium text-gray-500 py-1">
-              {day}
-            </div>
-          ))}
-        </div>
-        
-        {/* Takvim günleri */}
-        <div className="grid grid-cols-7 gap-1">
-          {calendarDays.map((date, index) => {
-            const selectable = isDateSelectable(date);
-            const selected = isDateSelected(date);
-            const currentMonth = isCurrentMonth(date);
-            const today = isToday(date);
+          return (
+            <button
+              key={index}
+              type="button"
+              disabled={!selectable || isCheckInDate(date)}
+              onClick={() => selectable && handleDateSelect(date)}
+              className={cn(
+                "h-10 w-full rounded-full flex items-center justify-center text-sm relative",
+                !currentMonth && "text-gray-400",
+                currentMonth && !selected && !today && !isCheckInDate(date) && "text-gray-900",
+                today && !selected && !isCheckInDate(date) && "bg-blue-50 text-blue-600",
+                selected && "bg-blue-600 text-white",
+                isCheckInDate(date) && "bg-green-100 text-green-800 border border-green-300",
+                selectable && !selected && !isCheckInDate(date) && "hover:bg-gray-100",
+                !selectable && "opacity-50 cursor-not-allowed bg-gray-100"
+              )}
+            >
+              {date.getDate()}
+              {isCheckInDate(date) && (
+                <span className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-medium text-green-800 whitespace-nowrap">
+                  Giriş Tarihi
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      
+      {/* Bugüne git butonu */}
+      <div className="mt-4 flex justify-center">
+        <button
+          type="button"
+          onClick={() => {
+            const today = new Date();
             
-            return (
-              <button
-                key={index}
-                type="button"
-                disabled={!selectable || isCheckInDate(date)}
-                onClick={() => selectable && handleDateSelect(date)}
-                className={cn(
-                  "h-10 w-full rounded-full flex items-center justify-center text-sm relative",
-                  !currentMonth && "text-gray-400",
-                  currentMonth && !selected && !today && !isCheckInDate(date) && "text-gray-900",
-                  today && !selected && !isCheckInDate(date) && "bg-blue-50 text-blue-600",
-                  selected && "bg-blue-600 text-white",
-                  isCheckInDate(date) && "bg-green-100 text-green-800 border border-green-300",
-                  selectable && !selected && !isCheckInDate(date) && "hover:bg-gray-100",
-                  !selectable && "opacity-50 cursor-not-allowed bg-gray-100"
-                )}
-              >
-                {date.getDate()}
-                {isCheckInDate(date) && (
-                  <span className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-medium text-green-800 whitespace-nowrap">
-                    Giriş Tarihi
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        
-        {/* Bugüne git butonu */}
-        <div className="mt-4 flex justify-center">
-          <button
-            type="button"
-            onClick={() => {
-              const today = new Date();
-              
-              // Bugünün tarihini YYYY-MM-DD formatına çevir
-              const year = today.getFullYear();
-              const month = String(today.getMonth() + 1).padStart(2, '0');
-              const day = String(today.getDate()).padStart(2, '0');
-              const formattedToday = `${year}-${month}-${day}`;
-              
-              if (isDateSelectable(today)) {
-                handleDateSelect(today);
-              } else {
-                setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-              }
-            }}
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Bugüne Git
-          </button>
-        </div>
+            // Bugünün tarihini YYYY-MM-DD formatına çevir
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const formattedToday = `${year}-${month}-${day}`;
+            
+            if (isDateSelectable(today)) {
+              handleDateSelect(today);
+            } else {
+              setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+            }
+          }}
+          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+        >
+          Bugüne Git
+        </button>
       </div>
     </div>,
     document.body

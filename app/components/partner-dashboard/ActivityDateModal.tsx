@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { DatePicker } from '../../components/booking/DatePicker';
 
 interface ActivityDateModalProps {
   isOpen: boolean;
@@ -70,17 +71,16 @@ export default function ActivityDateModal({
               >
                 Başlangıç Tarihi
               </label>
-              <input
-                type="date"
-                id="startDate"
-                name="startDate"
-                value={formData.startDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, startDate: e.target.value })
-                }
-                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
-                required
-              />
+              <div className="relative">
+                <DatePicker
+                  label=""
+                  value={formData.startDate}
+                  onChange={(date) => setFormData({ ...formData, startDate: date })}
+                  placeholder="gg.aa.yyyy"
+                />
+                <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200">
+                </div>
+              </div>
             </div>
 
             <div>
@@ -90,17 +90,16 @@ export default function ActivityDateModal({
               >
                 Bitiş Tarihi
               </label>
-              <input
-                type="date"
-                id="endDate"
-                name="endDate"
-                value={formData.endDate}
-                onChange={(e) =>
-                  setFormData({ ...formData, endDate: e.target.value })
-                }
-                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
-                required
-              />
+              <div className="relative">
+                <DatePicker
+                  label=""
+                  value={formData.endDate}
+                  onChange={(date) => setFormData({ ...formData, endDate: date })}
+                  placeholder="gg.aa.yyyy"
+                  minDate={formData.startDate}
+                />
+                <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200"></div>
+              </div>
             </div>
 
             <div>
@@ -122,7 +121,7 @@ export default function ActivityDateModal({
                   onChange={(e) =>
                     setFormData({ ...formData, price: parseFloat(e.target.value) })
                   }
-                  className="block w-full rounded-lg border border-gray-300 bg-white pl-8 pr-4 py-2.5 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+                  className="block w-full rounded-lg border border-gray-300 bg-white pl-8 pr-4 py-2.5 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-300 sm:text-sm transition"
                   min="0"
                   step="0.01"
                   required
@@ -148,7 +147,7 @@ export default function ActivityDateModal({
                     availableSeats: parseInt(e.target.value)
                   })
                 }
-                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-300 sm:text-sm transition"
                 min="1"
                 required
               />
@@ -158,13 +157,13 @@ export default function ActivityDateModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition"
               >
                 İptal
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition shadow"
               >
                 Kaydet
               </button>
