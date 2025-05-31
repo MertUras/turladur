@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PhotoIcon, XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import { useDropzone, FileWithPath } from 'react-dropzone';
+import { DatePicker } from '../../components/booking/DatePicker';
 
 interface ImageFile {
   url: string;
@@ -272,6 +273,14 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
 
     // Hata varsa temizle
     if (errors[name as keyof TourFormData]) {
+      setErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  // DatePicker için özel handler
+  const handleDateFieldChange = (name: 'startDate' | 'endDate', value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
   };
@@ -699,14 +708,16 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
               <label htmlFor="startDate" className="mb-2 block text-sm font-medium text-gray-900">
                 Başlangıç Tarihi <span className="text-red-500">*</span>
               </label>
-              <input
-                type="date"
-                id="startDate"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleChange}
-                className={`block w-full rounded-lg border ${errors.startDate ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
-              />
+              <div className="relative">
+                <DatePicker
+                  label=""
+                  value={formData.startDate}
+                  onChange={(val) => handleDateFieldChange('startDate', val)}
+                  placeholder="gg.aa.yyyy"
+                />
+                <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200">
+                </div>
+              </div>
               {errors.startDate && <p className="mt-2 text-sm text-red-600">{errors.startDate}</p>}
             </div>
 
@@ -714,14 +725,16 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
               <label htmlFor="endDate" className="mb-2 block text-sm font-medium text-gray-900">
                 Bitiş Tarihi <span className="text-red-500">*</span>
               </label>
-              <input
-                type="date"
-                id="endDate"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleChange}
-                className={`block w-full rounded-lg border ${errors.endDate ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
-              />
+              <div className="relative">
+                <DatePicker
+                  label=""
+                  value={formData.endDate}
+                  onChange={(val) => handleDateFieldChange('endDate', val)}
+                  placeholder="gg.aa.yyyy"
+                  minDate={formData.startDate}
+                />
+                <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200"></div>
+              </div>
               {errors.endDate && <p className="mt-2 text-sm text-red-600">{errors.endDate}</p>}
             </div>
           </div>
@@ -1072,23 +1085,30 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Başlangıç Tarihi
                 </label>
-                <input
-                  type="date"
-                  value={date.startDate}
-                  onChange={(e) => handleTourDateChange(index, 'startDate', e.target.value)}
-                  className="block w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
-                />
+                <div className="relative">
+                  <DatePicker
+                    label=""
+                    value={date.startDate}
+                    onChange={(val) => handleTourDateChange(index, 'startDate', val)}
+                    placeholder="gg.aa.yyyy"
+                  />
+                  <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200"></div>
+                </div>
               </div>
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Bitiş Tarihi
                 </label>
-                <input
-                  type="date"
-                  value={date.endDate}
-                  onChange={(e) => handleTourDateChange(index, 'endDate', e.target.value)}
-                  className="block w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
-                />
+                <div className="relative">
+                  <DatePicker
+                    label=""
+                    value={date.endDate}
+                    onChange={(val) => handleTourDateChange(index, 'endDate', val)}
+                    placeholder="gg.aa.yyyy"
+                    minDate={date.startDate}
+                  />
+                  <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200"></div>
+                </div>
               </div>
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-1">

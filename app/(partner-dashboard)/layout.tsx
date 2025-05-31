@@ -117,7 +117,7 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
   }, [showProfileMenu, showNotifications]);
 
   return (
-    <div className="h-screen flex bg-gray-50">
+    <div className="min-h-screen flex bg-gray-50">
       {/* Mobil menü arkaplanı */}
       {sidebarOpen && (
         <div 
@@ -257,7 +257,7 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
       </div>
 
       {/* Ana içerik */}
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-col flex-1">
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="flex h-16 items-center justify-between px-4 md:px-6">
             <div className="flex items-center lg:hidden">
@@ -409,7 +409,7 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto bg-gray-50">
+        <main className="flex-1 bg-gray-50">
           <div className="py-6 px-4 sm:px-6 lg:px-8">
             {children}
           </div>
