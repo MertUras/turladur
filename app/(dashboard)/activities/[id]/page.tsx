@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Clock, MapPin, Users, Calendar, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Star, Clock, MapPin, Users, Calendar, ChevronLeft, ChevronRight, X, Heart, Share2 } from 'lucide-react';
 import Marquee from "react-fast-marquee";
 
 interface Activity {
@@ -109,21 +109,118 @@ export default function ActivityDetail() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Hero Section */}
-            <div className="relative h-[60vh] w-full">
-                <Image
-                    src={activity.imageUrl}
-                    alt={activity.title}
-                    fill
-                    className="object-cover"
-                    priority
-                />
-                <div className="absolute inset-0 bg-black/30" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center text-white">
-                        <h1 className="text-5xl font-bold mb-4">{activity.title}</h1>
-                        <p className="text-xl">{activity.description}</p>
+            {/* Hero Section - Tur Detayına Benzetilmiş */}
+            <div className="relative h-[80vh] md:h-[90vh]">
+                <div className="absolute inset-0 overflow-hidden">
+                    <Image
+                        src={activity.imageUrl}
+                        alt={activity.title}
+                        fill
+                        priority
+                        style={{ objectFit: "cover" }}
+                        className="brightness-70 transform scale-100"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
+                </div>
+                {/* Badge ve Başlık */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                    <div className="mb-4 flex flex-col items-center gap-2">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200/70">{activity.popularityRate > 80 ? 'Popüler Seçim' : 'Aktivite'}</span>
                     </div>
+                    <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 drop-shadow-lg">{activity.title}</h1>
+                    <p className="text-xl md:text-2xl text-white/90 mb-6 max-w-2xl mx-auto drop-shadow">{activity.description}</p>
+                    {/* Özet Bilgi Kutuları */}
+                    <div className="flex flex-wrap items-center justify-center gap-6 mb-8">
+                        <div className="flex items-center gap-2 text-white/90 bg-white/10 px-4 py-2 rounded-lg">
+                            <Clock className="w-5 h-5 text-white" />
+                            <span className="text-base font-medium">{activity.duration}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-white/90 bg-white/10 px-4 py-2 rounded-lg">
+                            <Users className="w-5 h-5 text-white" />
+                            <span className="text-base font-medium">Maks. {activity.activityDates && activity.activityDates.length > 0 && activity.activityDates[0].availableSeats ? activity.activityDates[0].availableSeats : 10} kişi</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-white/90 bg-white/10 px-4 py-2 rounded-lg">
+                            <MapPin className="w-5 h-5 text-white" />
+                            <span className="text-base font-medium">{activity.location}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-white/90 bg-white/10 px-4 py-2 rounded-lg">
+                            <Star className="w-5 h-5 text-yellow-400" />
+                            <span className="text-base font-medium">{activity.rating} ({activity.reviewCount} yorum)</span>
+                        </div>
+                    </div>
+                    {/* Butonlar */}
+                    <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+                        <Link
+                            href="#"
+                            className="inline-flex items-center justify-center px-7 py-3 bg-sky-600 hover:bg-sky-700 text-white text-base font-semibold rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out"
+                        >
+                            <MapPin className="h-5 w-5 mr-2" />
+                            <span>Aktivite Programı</span>
+                        </Link>
+                        <Link
+                            href="#"
+                            className="inline-flex items-center justify-center px-7 py-3 bg-white/10 backdrop-blur-lg text-sky-300 hover:bg-sky-400/10 border border-sky-400/40 hover:border-sky-300/60 text-base font-semibold rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/50 focus:ring-sky-400 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out"
+                        >
+                            <Calendar className="h-5 w-5 mr-2" />
+                            <span>Rezervasyon Yap</span>
+                        </Link>
+                    </div>
+                </div>
+                {/* Alt bilgi barı (Tur Detayları gibi) */}
+                <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-md py-4 border-t border-white/10">
+                  <div className="container px-4 mx-auto">
+                    <div className="flex flex-wrap items-center justify-center lg:justify-between gap-x-6 gap-y-3">
+                      {/* Süre */}
+                      <div className="flex items-center text-white gap-2.5 group">
+                        <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
+                          <Clock className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Süre</p>
+                          <p className="text-sm font-semibold">{activity.duration}</p>
+                        </div>
+                      </div>
+                      {/* Kontenjan */}
+                      <div className="flex items-center text-white gap-2.5 group">
+                        <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
+                          <Users className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Grup</p>
+                          <p className="text-sm font-semibold">Maks. {activity.activityDates && activity.activityDates.length > 0 && activity.activityDates[0].availableSeats ? activity.activityDates[0].availableSeats : 10} kişi</p>
+                        </div>
+                      </div>
+                      {/* Konum */}
+                      <div className="flex items-center text-white gap-2.5 group">
+                        <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
+                          <MapPin className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Konum</p>
+                          <p className="text-sm font-semibold truncate max-w-[150px]">{activity.location}</p>
+                        </div>
+                      </div>
+                      {/* Puan */}
+                      <div className="flex items-center text-white gap-2.5 group">
+                        <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
+                          <Star className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Puan</p>
+                          <p className="text-sm font-semibold">{activity.rating}/5</p>
+                        </div>
+                      </div>
+                      {/* Action Icons */}
+                      <div className="flex items-center space-x-2 ml-auto">
+                        <button className="p-2.5 rounded-lg text-white bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/50 focus:ring-white/50" aria-label="Favorilere Ekle">
+                          <Heart className="h-5 w-5 text-white" strokeWidth={2.2} fill="none" />
+                        </button>
+                        <button className="p-2.5 rounded-lg text-white bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/50 focus:ring-white/50" aria-label="Paylaş">
+                          <Share2 className="h-5 w-5 text-white" strokeWidth={2.2} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
             </div>
 
@@ -131,28 +228,6 @@ export default function ActivityDetail() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main Content */}
                     <div className="lg:col-span-2">
-                        {/* Quick Info */}
-                        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="flex items-center gap-2">
-                                    <MapPin className="w-5 h-5 text-blue-500" />
-                                    <span className="text-gray-900">{activity.location}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Clock className="w-5 h-5 text-blue-500" />
-                                    <span className="text-gray-900">{activity.duration}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Star className="w-5 h-5 text-yellow-400" />
-                                    <span className="text-gray-900">{activity.rating} ({activity.reviewCount} yorum)</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Users className="w-5 h-5 text-blue-500" />
-                                    <span className="text-gray-900">{activity.popularityRate}% popülerlik</span>
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Description */}
                         <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
                             <h2 className="text-2xl font-semibold mb-4 text-gray-900">Aktivite Hakkında</h2>
