@@ -149,17 +149,14 @@ export function Calendar({
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
-    
     // Minimum tarih kontrolü
-    if (minDate && dateStr < minDate) {
+    if (minDate && minDate !== '' && dateStr < minDate) {
       return false;
     }
-    
     // Maksimum tarih kontrolü
-    if (maxDate && dateStr > maxDate) {
+    if (maxDate && maxDate !== '' && dateStr > maxDate) {
       return false;
     }
-    
     // Seçilebilir
     return true;
   };

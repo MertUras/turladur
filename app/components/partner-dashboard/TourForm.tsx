@@ -279,7 +279,10 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
 
   // DatePicker için özel handler
   const handleDateFieldChange = (name: 'startDate' | 'endDate', value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      return updated;
+    });
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
