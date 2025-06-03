@@ -41,6 +41,7 @@ declare module "next-auth/jwt" {
 export const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 gün
   },
   pages: {
     signIn: "/partner-login",
@@ -182,12 +183,13 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.role = user.role;
         token.provider = user.provider;
         token.isMainUser = user.isMainUser;
         token.permissions = user.permissions;
+        token.tourOperatorId = user.tourOperatorId;
       }
       return token;
     },
@@ -197,8 +199,25 @@ export const authOptions: NextAuthOptions = {
         session.user.provider = token.provider;
         session.user.isMainUser = token.isMainUser;
         session.user.permissions = token.permissions;
+        session.user.tourOperatorId = token.tourOperatorId;
       }
       return session;
+    },
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+  jwt: {
+    secret: process.env.NEXTAUTH_SECRET,
+    maxAge: 30 * 24 * 60 * 60, // 30 gün
+  },
+  cookies: {
+    sessionToken: {
+      name: 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
     },
   },
   debug: process.env.NODE_ENV === 'development',

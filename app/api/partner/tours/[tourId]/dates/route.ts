@@ -112,7 +112,9 @@ export async function POST(
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         price: parseFloat(data.price),
-        availableSeats: parseInt(data.availableSeats)
+        availableSeats: parseInt(data.availableSeats),
+        discount: data.discount ? parseFloat(data.discount) : 0,
+        isActive: data.isActive !== undefined ? data.isActive : true
       }
     });
 
@@ -182,7 +184,9 @@ export async function PUT(
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         price: parseFloat(data.price),
-        availableSeats: parseInt(data.availableSeats)
+        availableSeats: parseInt(data.availableSeats),
+        discount: data.discount ? parseFloat(data.discount) : 0,
+        isActive: data.isActive !== undefined ? data.isActive : true
       }
     });
 

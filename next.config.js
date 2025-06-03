@@ -55,7 +55,13 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
-    domains: ['images.unsplash.com', 'source.unsplash.com', 'avatar.vercel.sh'],
+    domains: [
+      'res.cloudinary.com',
+      'images.unsplash.com',
+      'plus.unsplash.com',
+      'example.com',
+      'avatar.vercel.sh'
+    ],
   },
   webpack: (config, { isServer }) => {
     // Node modüllerini client-side transpilation'dan hariç tut
@@ -77,6 +83,9 @@ const nextConfig = {
     
     return config;
   },
+  experimental: {
+    serverActions: true,
+  }
 }
 
 module.exports = nextConfig; 

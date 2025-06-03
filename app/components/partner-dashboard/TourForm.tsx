@@ -3,11 +3,45 @@ import { PhotoIcon, XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import { useDropzone, FileWithPath } from 'react-dropzone';
 import { DatePicker } from '../../components/booking/DatePicker';
+import PickupPointForm from './PickupPointForm';
 
 interface ImageFile {
   url: string;
   file: File | null;
   preview?: string;
+}
+
+interface TourDate {
+  startDate: string;
+  endDate: string;
+  price: string;
+  availableSeats: string;
+  soldSeats: number;
+  waitingList: number;
+  discount: number;
+  minParticipants: string;
+  maxParticipants: string;
+  earlyBirdDiscount: number;
+  lastMinuteDiscount: number;
+  earlyBirdDeadline: string;
+  lastMinuteStart: string;
+  notes: string;
+  status: 'ACTIVE' | 'FULL' | 'CANCELLED' | 'COMPLETED' | 'WAITING_LIST' | 'NOT_ENOUGH_PARTICIPANTS';
+}
+
+interface PickupPoint {
+  id?: string;
+  city: string;
+  location: string;
+  time: string;
+  description?: string;
+  order: number;
+  isActive: boolean;
+}
+
+interface Destination {
+  city: string;
+  description?: string;
 }
 
 export interface TourFormData {
@@ -34,15 +68,18 @@ export interface TourFormData {
   ageRestriction: number;
   languages: string[];
   tags: string[];
-  tourDates: { startDate: string; endDate: string; price: number; availableSeats: number }[];
+  tourDates: TourDate[];
   discount: number;
-  destinations: string[];
+  destinations: Destination[];
   reviews: number;
   isJointTour: boolean;
   features: string[];
   startDate: string;
   endDate: string;
-  accommodationName?: string;
+  accommodationName: string;
+  meetingPoint: string;
+  meetingTime: string;
+  pickupPoints: PickupPoint[];
 }
 
 interface TourFormProps {
@@ -76,6 +113,10 @@ interface TourFormProps {
     isJointTour?: boolean;
     features?: string[];
     tourDates?: { startDate: string; endDate: string }[];
+    meetingPoint?: string;
+    meetingTime?: string;
+    pickupPoints?: PickupPoint[];
+    nights?: string;
   };
   onSubmit: (data: any) => void;
   isSubmitting?: boolean;
@@ -107,7 +148,23 @@ const defaultFormData: TourFormData = {
   ageRestriction: 0,
   languages: [],
   tags: [],
-  tourDates: [],
+  tourDates: [{
+    startDate: '',
+    endDate: '',
+    price: '',
+    availableSeats: '',
+    soldSeats: 0,
+    waitingList: 0,
+    discount: 0,
+    minParticipants: '',
+    maxParticipants: '',
+    earlyBirdDiscount: 0,
+    lastMinuteDiscount: 0,
+    earlyBirdDeadline: '',
+    lastMinuteStart: '',
+    notes: '',
+    status: 'ACTIVE'
+  }],
   discount: 0,
   destinations: [],
   reviews: 0,
@@ -116,11 +173,32 @@ const defaultFormData: TourFormData = {
   startDate: '',
   endDate: '',
   accommodationName: '',
+  meetingPoint: '',
+  meetingTime: '',
+  pickupPoints: []
 };
 
-export default function TourForm({ initialData, onSubmit, isSubmitting = false, currentStep = 'basic', partnerId }: TourFormProps) {
+export default function TourForm({ initialData, onSubmit, isSubmitting: externalIsSubmitting = false, currentStep: initialStep = 'basic', partnerId }: TourFormProps) {
   const [formData, setFormData] = useState<TourFormData>(() => {
     if (initialData) {
+      const tourDates = initialData.tourDates?.map((date: any) => ({
+        startDate: date.startDate || '',
+        endDate: date.endDate || '',
+        price: date.price?.toString() || '0',
+        availableSeats: date.availableSeats?.toString() || '0',
+        soldSeats: date.soldSeats || 0,
+        waitingList: date.waitingList || 0,
+        discount: date.discount || 0,
+        minParticipants: date.minParticipants?.toString() || '',
+        maxParticipants: date.maxParticipants?.toString() || '',
+        earlyBirdDiscount: date.earlyBirdDiscount || 0,
+        lastMinuteDiscount: date.lastMinuteDiscount || 0,
+        earlyBirdDeadline: date.earlyBirdDeadline || '',
+        lastMinuteStart: date.lastMinuteStart || '',
+        notes: date.notes || '',
+        status: date.status || 'ACTIVE'
+      })) || [defaultFormData.tourDates[0]];
+
       return {
         ...defaultFormData,
         title: initialData.name || '',
@@ -145,28 +223,42 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
         ageRestriction: initialData.ageRestriction || 0,
         languages: initialData.languages || [],
         tags: initialData.tags || [],
-        tourDates: initialData.tourDates?.map((date: any) => ({
-          startDate: date.startDate,
-          endDate: date.endDate,
-          price: date.price,
-          availableSeats: date.availableSeats
-        })) || [],
+        tourDates,
         discount: initialData.discount || 0,
-        destinations: initialData.destinations || [],
+        destinations: initialData.destinations?.map((dest: any) => ({
+          city: dest.city || '',
+          description: dest.description || ''
+        })) || [],
         reviews: initialData.reviews || 0,
         isJointTour: initialData.isJointTour || false,
         features: initialData.features || [],
         startDate: initialData.startDate?.toISOString().split('T')[0] || '',
         endDate: initialData.endDate?.toISOString().split('T')[0] || '',
         accommodationName: '',
+        meetingPoint: initialData.meetingPoint || '',
+        meetingTime: initialData.meetingTime || '',
+        pickupPoints: initialData.pickupPoints || [],
+        nights: initialData.nights?.toString() || ''
       };
     }
     return defaultFormData;
   });
+  const [step, setStep] = useState(initialStep);
   const [newInclude, setNewInclude] = useState('');
   const [newExclude, setNewExclude] = useState('');
   const [newFeature, setNewFeature] = useState('');
   const [errors, setErrors] = useState<Partial<Record<keyof TourFormData, string>>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Validasyon hatalarını konsola yazdır
+  const logValidationErrors = (errors: Partial<Record<keyof TourFormData, string>>) => {
+    console.log('Validasyon Hataları:', errors);
+    // Her bir hata için detaylı log
+    Object.entries(errors).forEach(([field, error]) => {
+      console.log(`${field}: ${error}`);
+    });
+  };
 
   const handleImagesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -218,43 +310,23 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
     } else {
       setFormData(prev => {
         let updated = { ...prev, [name]: value };
-        // Eğer gün sayısı değiştiyse ve başlangıç tarihi doluysa bitiş tarihini otomatik hesapla
+        
+        // Eğer gün sayısı değiştiyse ve başlangıç tarihi doluysa tüm tur tarihlerini güncelle
         if (name === 'duration' && prev.startDate) {
-          const startDate = new Date(prev.startDate);
           const duration = parseInt(value);
-          if (!isNaN(duration) && prev.startDate) {
+          if (!isNaN(duration)) {
+            updated.tourDates = prev.tourDates.map(date => {
+              if (date.startDate) {
+                const startDate = new Date(date.startDate);
             const endDate = new Date(startDate);
             endDate.setDate(startDate.getDate() + duration - 1);
-            updated.endDate = endDate.toISOString().split('T')[0];
-          }
-        }
-        return updated;
-      });
-
-      // Gece sayısı veya başlangıç tarihi değiştiğinde ve her ikisi de doluysa
-      if ((name === 'nights' || name === 'startDate') && formData.tourDates.length === 0) {
-        const nights = name === 'nights' ? value : formData.nights;
-        const startDate = name === 'startDate' ? value : formData.startDate;
-
-        if (nights && startDate) {
-          // Bitiş tarihini hesapla
-          const start = new Date(startDate);
-          const end = new Date(start);
-          end.setDate(end.getDate() + parseInt(nights));
-
-          // İlk turu otomatik olarak ekle
-          const formattedEndDate = end.toISOString().split('T')[0];
-          setFormData(prev => ({
-            ...prev,
-            [name]: value,
-            tourDates: [{
-              startDate: startDate,
-              endDate: formattedEndDate,
-              price: parseFloat(formData.price) || 0,
-              availableSeats: formData.maxParticipants || 0
-            }]
-          }));
-        }
+                return {
+                  ...date,
+                  endDate: endDate.toISOString().split('T')[0]
+                };
+              }
+              return date;
+            });
       }
     }
 
@@ -262,29 +334,32 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
     if (name === 'nights') {
       const nights = parseInt(value);
       if (!isNaN(nights)) {
-        const days = nights + 1; // Gece sayısı + 1 = Gün sayısı
-        setFormData(prev => ({ 
-          ...prev, 
-          nights: value,
+            const days = nights + 1;
+            updated = {
+              ...updated,
           duration: days.toString()
-        }));
-      }
-    }
-
-    // Başlangıç tarihi veya süre değiştiğinde bitiş tarihini güncelle
-    if (name === 'startDate' || name === 'duration') {
-      const startDate = name === 'startDate' ? new Date(value) : new Date(formData.startDate);
-      const duration = name === 'duration' ? parseInt(value) : parseInt(formData.duration);
-      
-      if (startDate && !isNaN(startDate.getTime()) && duration && !isNaN(duration)) {
+            };
+            
+            // Eğer başlangıç tarihleri varsa, tüm tur tarihlerinin bitiş tarihlerini güncelle
+            if (updated.tourDates.some(date => date.startDate)) {
+              updated.tourDates = updated.tourDates.map(date => {
+                if (date.startDate) {
+                  const startDate = new Date(date.startDate);
         const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + duration - 1); // -1 çünkü başlangıç günü de dahil
-        setFormData(prev => ({ 
-          ...prev, 
-          [name]: value,
+                  endDate.setDate(startDate.getDate() + days - 1);
+                  return {
+                    ...date,
           endDate: endDate.toISOString().split('T')[0]
-        }));
-      }
+                  };
+                }
+                return date;
+              });
+            }
+          }
+        }
+
+        return updated;
+      });
     }
 
     // Hata varsa temizle
@@ -297,28 +372,28 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
   const handleDateFieldChange = (name: 'startDate' | 'endDate', value: string) => {
     setFormData(prev => {
       let updated = { ...prev, [name]: value };
-      // Eğer başlangıç tarihi değiştiyse ve gün sayısı doluysa bitiş tarihini otomatik hesapla
+      
+      // Eğer başlangıç tarihi değiştiyse ve gün sayısı doluysa tüm tur tarihlerinin bitiş tarihlerini güncelle
       if (name === 'startDate' && prev.duration) {
-        const startDate = new Date(value);
         const duration = parseInt(prev.duration);
         if (!isNaN(duration) && value) {
+          const startDate = new Date(value);
           const endDate = new Date(startDate);
           endDate.setDate(startDate.getDate() + duration - 1);
           updated.endDate = endDate.toISOString().split('T')[0];
+          
+          // Tüm tur tarihlerini güncelle
+          updated.tourDates = prev.tourDates.map(date => ({
+            ...date,
+            startDate: value,
+            endDate: endDate.toISOString().split('T')[0]
+          }));
         }
       }
-      // Eğer bitiş tarihi değiştiyse ve başlangıç tarihi varsa, gün sayısını otomatik hesapla
-      if (name === 'endDate' && prev.startDate && value) {
-        const startDate = new Date(prev.startDate);
-        const endDate = new Date(value);
-        const diffTime = endDate.getTime() - startDate.getTime();
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        if (diffDays > 0) {
-          updated.duration = diffDays.toString();
-        }
-      }
+      
       return updated;
     });
+    
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: undefined }));
     }
@@ -382,9 +457,31 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
   };
 
   const handleAddItineraryDay = () => {
+    if (formData.itinerary.length >= parseInt(formData.duration)) {
+      alert('Maksimum gün sayısına ulaştınız!');
+      return;
+    }
+
+    const dayIndex = formData.itinerary.length;
+    const tourDate = formData.tourDates[0]; // İlk tur tarihini baz alıyoruz
+    let dayDate = '';
+    
+    if (tourDate && tourDate.startDate) {
+      const date = new Date(tourDate.startDate);
+      date.setDate(date.getDate() + dayIndex);
+      dayDate = date.toLocaleDateString('tr-TR', { 
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
+
     setFormData(prev => ({
       ...prev,
-      itinerary: [...prev.itinerary, { title: `${prev.itinerary.length + 1}. Gün`, description: '' }]
+      itinerary: [...prev.itinerary, { 
+        title: `${dayIndex + 1}. Gün - ${dayDate}`, 
+        description: '' 
+      }]
     }));
   };
 
@@ -418,19 +515,27 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
 
   // Yeni tur tarihi ekleme
   const handleAddTourDate = () => {
-    const startDate = new Date();
-    const endDate = new Date();
-    const nights = parseInt(formData.nights) || 0;
-    endDate.setDate(endDate.getDate() + nights);
+    const newTourDate: TourDate = {
+      startDate: '',
+      endDate: '',
+      price: formData.price || '0',
+      availableSeats: formData.maxParticipants.toString() || '0',
+      soldSeats: 0,
+      waitingList: 0,
+      discount: 0,
+      minParticipants: formData.maxParticipants.toString() || '',
+      maxParticipants: formData.maxParticipants.toString() || '',
+      earlyBirdDiscount: 0,
+      lastMinuteDiscount: 0,
+      earlyBirdDeadline: '',
+      lastMinuteStart: '',
+      notes: '',
+      status: 'ACTIVE'
+    };
     
     setFormData(prev => ({
       ...prev,
-      tourDates: [...prev.tourDates, {
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
-        price: parseFloat(formData.price) || 0,
-        availableSeats: formData.maxParticipants || 0
-      }]
+      tourDates: [...prev.tourDates, newTourDate]
     }));
   };
 
@@ -443,94 +548,223 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
   };
 
   // Tur tarihi güncelleme
-  const handleTourDateChange = (index: number, field: 'startDate' | 'endDate' | 'price' | 'availableSeats', value: string) => {
+  const handleTourDateChange = (index: number, field: keyof TourDate, value: string) => {
     setFormData(prev => {
       const newTourDates = [...prev.tourDates];
+      
+      // Başlangıç tarihi değiştiğinde
       if (field === 'startDate') {
         const startDate = new Date(value);
+        const duration = parseInt(prev.duration);
+        if (!isNaN(duration) && value) {
         const endDate = new Date(startDate);
-        const nights = parseInt(prev.nights) || 0;
-        endDate.setDate(endDate.getDate() + nights);
+          endDate.setDate(startDate.getDate() + duration - 1);
         newTourDates[index] = {
           ...newTourDates[index],
           startDate: value,
           endDate: endDate.toISOString().split('T')[0]
         };
-      } else if (field === 'price') {
-        newTourDates[index] = {
-          ...newTourDates[index],
-          price: parseFloat(value) || 0
-        };
-      } else if (field === 'availableSeats') {
-        newTourDates[index] = {
-          ...newTourDates[index],
-          availableSeats: parseInt(value) || 0
-        };
-      } else {
+          return { ...prev, tourDates: newTourDates };
+        }
+      }
+      
         newTourDates[index] = {
           ...newTourDates[index],
           [field]: value
         };
-      }
       return { ...prev, tourDates: newTourDates };
     });
   };
 
   // Form doğrulama
-  const validateForm = (): boolean => {
+  const validateBasicForm = (): boolean => {
     const newErrors: Partial<Record<keyof TourFormData, string>> = {};
     
-    if (!formData.title) newErrors.title = 'Tur adı gerekli';
-    if (!formData.description) newErrors.description = 'Açıklama gerekli';
-    if (!formData.price) newErrors.price = 'Fiyat gerekli';
-    if (!formData.departureCity) newErrors.departureCity = 'Kalkış şehri gerekli';
-    if (!formData.region) newErrors.region = 'Bölge gerekli';
-    if (!formData.duration) newErrors.duration = 'Süre gerekli';
+    // Temel validasyonlar
+    if (!formData.title?.trim()) newErrors.title = 'Tur adı gerekli';
+    if (!formData.description?.trim()) newErrors.description = 'Açıklama gerekli';
+    if (!formData.price?.trim()) newErrors.price = 'Fiyat gerekli';
+    if (!formData.departureCity?.trim()) newErrors.departureCity = 'Kalkış şehri gerekli';
+    if (!formData.duration?.trim()) newErrors.duration = 'Süre gerekli';
     if (!formData.maxParticipants) newErrors.maxParticipants = 'Maksimum katılımcı sayısı gerekli';
-    if (!formData.transportation) newErrors.transportation = 'Ulaşım tipi gerekli';
-    if (!formData.tourType) newErrors.tourType = 'Tur tipi gerekli';
+    if (!formData.transportation?.trim()) newErrors.transportation = 'Ulaşım tipi gerekli';
+    if (!formData.tourType?.trim()) newErrors.tourType = 'Tur tipi gerekli';
     if (formData.images.length === 0) newErrors.images = 'En az bir resim gerekli';
+    
+    // Konaklama tipi kontrolü (günübirlik tur değilse)
+    if (formData.tourType !== 'Günübirlik Tur' && !formData.accommodationType?.trim()) {
+      newErrors.accommodationType = 'Konaklama tipi gerekli';
+    }
+
+    setErrors(newErrors);
+    logValidationErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateDetailsForm = (): boolean => {
+    const newErrors: Partial<Record<keyof TourFormData, string>> = {};
     
     // Tur tarihleri kontrolü
     if (formData.tourDates.length === 0) {
       newErrors.tourDates = 'En az bir tur tarihi eklemelisiniz';
     } else {
-      // Her bir tur tarihinin geçerliliğini kontrol et
       formData.tourDates.forEach((date, index) => {
-        const start = new Date(date.startDate);
-        const end = new Date(date.endDate);
-        if (start > end) {
-          newErrors.tourDates = `${index + 1}. tur tarihinde bitiş tarihi başlangıç tarihinden önce olamaz`;
+        if (!date.startDate) {
+          newErrors.tourDates = `${index + 1}. tur için başlangıç tarihi gerekli`;
+          return;
+        }
+        if (!date.endDate) {
+          newErrors.tourDates = `${index + 1}. tur için bitiş tarihi gerekli`;
+          return;
+        }
+        if (!date.price || parseFloat(date.price) <= 0) {
+          newErrors.tourDates = `${index + 1}. tur için geçerli bir fiyat girilmeli`;
+          return;
+        }
+        if (!date.availableSeats || parseInt(date.availableSeats) <= 0) {
+          newErrors.tourDates = `${index + 1}. tur için geçerli bir kontenjan girilmeli`;
+          return;
+        }
+
+        // Diğer kontroller...
+      });
+    }
+
+    // Yolcu alma noktaları kontrolü
+    if (formData.pickupPoints.length === 0) {
+      newErrors.pickupPoints = 'En az bir yolcu alma noktası eklemelisiniz';
+    } else {
+      formData.pickupPoints.forEach((point, index) => {
+        if (!point.city?.trim()) {
+          newErrors.pickupPoints = `${index + 1}. noktada şehir bilgisi gerekli`;
+          return;
+        }
+        if (!point.location?.trim()) {
+          newErrors.pickupPoints = `${index + 1}. noktada konum bilgisi gerekli`;
+          return;
+        }
+        if (!point.time?.trim()) {
+          newErrors.pickupPoints = `${index + 1}. noktada saat bilgisi gerekli`;
+          return;
         }
       });
     }
     
     setErrors(newErrors);
+    logValidationErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const validateForm = (): boolean => {
+    return step === 'basic' ? validateBasicForm() : validateDetailsForm();
+  };
+
   // Form gönderimi
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     
     if (validateForm()) {
-      const submitData = {
-        ...formData,
-        tourOperatorId: partnerId,
-        name: formData.title,
-        price: parseFloat(formData.price),
+      try {
+        setIsSubmitting(true);
+        console.log('Form gönderimi başlıyor...');
+
+        const formDataToSubmit = {
+          title: formData.title,
+          description: formData.description,
         duration: parseInt(formData.duration),
-        maxParticipants: formData.maxParticipants,
-        inclusions: formData.includes,
-        exclusions: formData.excludes,
+          nights: parseInt(formData.nights || '0'),
+          price: parseFloat(formData.price),
+          maxParticipants: parseInt(formData.maxParticipants.toString()),
+          currentParticipants: parseInt(formData.currentParticipants.toString()),
+          images: formData.images.map(img => img.url),
+          includes: formData.includes,
+          excludes: formData.excludes,
+          features: formData.features,
+          itinerary: formData.itinerary,
+          featured: false,
+          tourOperatorId: partnerId,
+          departureCity: formData.departureCity,
+          transportation: formData.transportation,
+          period: formData.period,
+          tourType: formData.tourType,
+          accommodationType: formData.accommodationType,
+          difficultyLevel: formData.difficultyLevel,
+          ageRestriction: formData.ageRestriction ? parseInt(formData.ageRestriction.toString()) : null,
+          languages: formData.languages,
+          tags: formData.tags,
+          data: {
+            meetingPoint: formData.meetingPoint,
+            meetingTime: formData.meetingTime,
+            features: formData.features,
+            nights: formData.nights
+          },
+          destinations: formData.destinations,
         tourDates: formData.tourDates.map(date => ({
-          startDate: date.startDate,
-          endDate: date.endDate,
-          price: date.price,
-          availableSeats: date.availableSeats
-        }))
-      };
-      onSubmit(submitData);
+            startDate: date.startDate ? new Date(date.startDate).toISOString() : null,
+            endDate: date.endDate ? new Date(date.endDate).toISOString() : null,
+            price: parseFloat(date.price),
+            availableSeats: parseInt(date.availableSeats),
+            soldSeats: parseInt(date.soldSeats.toString()),
+            waitingList: parseInt(date.waitingList.toString()),
+            discount: parseFloat(date.discount.toString()),
+            minParticipants: date.minParticipants ? parseInt(date.minParticipants) : null,
+            maxParticipants: date.maxParticipants ? parseInt(date.maxParticipants) : null,
+            earlyBirdDiscount: parseFloat(date.earlyBirdDiscount.toString()),
+            lastMinuteDiscount: parseFloat(date.lastMinuteDiscount.toString()),
+            earlyBirdDeadline: date.earlyBirdDeadline ? new Date(date.earlyBirdDeadline).toISOString() : null,
+            lastMinuteStart: date.lastMinuteStart ? new Date(date.lastMinuteStart).toISOString() : null,
+            notes: date.notes || '',
+            status: date.status || 'ACTIVE'
+          })),
+          pickupPoints: formData.pickupPoints.map((point, index) => ({
+            city: point.city,
+            location: point.location,
+            time: point.time,
+            description: point.description || '',
+            order: index,
+            isActive: true
+          })),
+          availableDates: formData.tourDates.map(d => new Date(d.startDate))
+        };
+
+        console.log('Gönderilecek veriler:', formDataToSubmit);
+
+        const response = await fetch('/api/tours', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formDataToSubmit),
+          credentials: 'include'
+        });
+
+        const responseData = await response.json();
+        console.log('API Yanıtı:', responseData);
+
+        if (!response.ok) {
+          throw new Error(responseData?.error ?? responseData?.message ?? 'Sunucudan bilinmeyen bir hata döndü');
+        }
+
+        if (!responseData.id) {
+          throw new Error('Tur ID bulunamadı');
+        }
+
+        // Başarılı yanıt
+        console.log('Form başarıyla gönderildi. Tur ID:', responseData.id);
+        window.location.href = `/partner-dashboard/tours/${responseData.id}`;
+
+      } catch (error) {
+        console.error('Form gönderimi hatası:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Tur oluşturulurken bir hata oluştu. Lütfen tüm alanları kontrol edip tekrar deneyiniz.';
+        setSubmitError(errorMessage);
+        alert(errorMessage);
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      console.log('Form validasyonu başarısız');
+      setSubmitError('Lütfen form alanlarını kontrol ediniz.');
     }
   };
 
@@ -552,6 +786,23 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
     }));
   };
 
+  // Yolcu alma noktalarını yönet
+  const handlePickupPointsChange = (points: PickupPoint[]) => {
+    setFormData(prev => ({
+      ...prev,
+      pickupPoints: points
+    }));
+  };
+
+  // Destinasyonları yönet
+  const handleDestinationsChange = (index: number, field: keyof Destination, value: string) => {
+    setFormData(prev => {
+      const newDestinations = [...prev.destinations];
+      newDestinations[index] = { ...newDestinations[index], [field]: value };
+      return { ...prev, destinations: newDestinations };
+    });
+  };
+
   // Bugünün tarihini YYYY-MM-DD formatında al
   const today = new Date();
   const yyyy = today.getFullYear();
@@ -560,10 +811,29 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
   const todayStr = `${yyyy}-${mm}-${dd}`;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <div className="space-y-8">
+      {/* Hata Mesajları */}
+      {submitError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Hata! </strong>
+          <span className="block sm:inline">{submitError}</span>
+          {Object.entries(errors).length > 0 && (
+            <ul className="mt-2 list-disc list-inside">
+              {Object.entries(errors).map(([field, error]) => (
+                <li key={field} className="text-sm">
+                  {error}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
       {/* Temel Bilgiler */}
-      {currentStep === 'basic' && (
-        <div className="space-y-6">
+        {step === 'basic' && (
+          <div className="space-y-6 bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900">Temel Bilgiler</h2>
           <div>
             <label htmlFor="title" className="mb-2 block text-sm font-medium text-gray-900">
               Tur Başlığı <span className="text-red-500">*</span>
@@ -949,265 +1219,402 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
               </div>
             )}
           </div>
+
+            {/* Buluşma Noktası ve Saati */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div>
+                <label htmlFor="meetingPoint" className="mb-2 block text-sm font-medium text-gray-900">
+                  Buluşma Noktası
+                </label>
+                <input
+                  type="text"
+                  id="meetingPoint"
+                  name="meetingPoint"
+                  value={formData.meetingPoint || ''}
+                  onChange={handleChange}
+                  className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                  placeholder="Örn: Havalimanı Dış Hatlar Terminali"
+                />
+              </div>
+              <div>
+                <label htmlFor="meetingTime" className="mb-2 block text-sm font-medium text-gray-900">
+                  Buluşma Saati
+                </label>
+                <input
+                  type="time"
+                  id="meetingTime"
+                  name="meetingTime"
+                  value={formData.meetingTime || ''}
+                  onChange={handleChange}
+                  className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                />
+              </div>
+            </div>
+
+            {/* Yolcu Alma Noktaları */}
+            <div className="space-y-6 bg-white shadow rounded-lg p-6">
+              <h2 className="text-lg font-medium text-gray-900">Yolcu Alma Noktaları</h2>
+              <PickupPointForm
+                pickupPoints={formData.pickupPoints}
+                onChange={handlePickupPointsChange}
+              />
+          </div>
         </div>
       )}
 
-      {/* Detaylar Bölümü */}
-      {currentStep === 'details' && (
-        <>
-          {/* Dahil Olanlar & Olmayanlar */}
-          <div className="bg-white shadow-sm rounded-lg p-8 border border-gray-100">
-            <h2 className="text-lg font-medium text-gray-900 mb-5">Dahil Olanlar & Olmayanlar</h2>
+        {/* Detaylar */}
+        {step === 'details' && (
+          <div className="space-y-6 bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-medium text-gray-900">Detaylar</h2>
             
-            <div className="grid grid-cols-1 gap-y-8 gap-x-8 sm:grid-cols-2">
               {/* Dahil Olanlar */}
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Dahil Olanlar</h3>
-                <div className="mt-2">
-                  <div className="flex space-x-3">
+              <label className="block text-sm font-medium text-gray-900">Dahil Olanlar</label>
+              <div className="mt-2 flex items-center gap-2">
                     <input
                       type="text"
                       value={newInclude}
                       onChange={(e) => setNewInclude(e.target.value)}
-                      className="shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg text-gray-900"
-                      placeholder="Örn. Profesyonel rehberlik"
+                  className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
+                  placeholder="Örn: Kahvaltı"
                     />
                     <button
                       type="button"
                       onClick={handleAddInclude}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700"
                     >
                       Ekle
                     </button>
                   </div>
-                  <div className="mt-4 space-y-3">
+              <div className="mt-2 flex flex-wrap gap-2">
                     {formData.includes.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg text-sm">
-                        <span className="text-black">{item}</span>
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800"
+                  >
+                    {item}
                         <button
                           type="button"
                           onClick={() => handleRemoveInclude(index)}
-                          className="text-gray-400 hover:text-gray-500"
+                      className="text-gray-500 hover:text-red-500"
                         >
-                          <XMarkIcon className="h-5 w-5" />
+                      <XMarkIcon className="h-4 w-4" />
                         </button>
-                      </div>
+                  </span>
                     ))}
-                  </div>
                 </div>
               </div>
 
               {/* Dahil Olmayanlar */}
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Dahil Olmayanlar</h3>
-                <div className="mt-2">
-                  <div className="flex space-x-3">
+              <label className="block text-sm font-medium text-gray-900">Dahil Olmayanlar</label>
+              <div className="mt-2 flex items-center gap-2">
                     <input
                       type="text"
                       value={newExclude}
                       onChange={(e) => setNewExclude(e.target.value)}
-                      className="shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg text-gray-900"
-                      placeholder="Örn. Kişisel harcamalar"
+                  className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
+                  placeholder="Örn: Akşam yemeği"
                     />
                     <button
                       type="button"
                       onClick={handleAddExclude}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700"
                     >
                       Ekle
                     </button>
                   </div>
-                  <div className="mt-4 space-y-3">
+              <div className="mt-2 flex flex-wrap gap-2">
                     {formData.excludes.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg text-sm">
-                        <span className="text-black">{item}</span>
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800"
+                  >
+                    {item}
                         <button
                           type="button"
                           onClick={() => handleRemoveExclude(index)}
-                          className="text-gray-400 hover:text-gray-500"
+                      className="text-gray-500 hover:text-red-500"
                         >
-                          <XMarkIcon className="h-5 w-5" />
+                      <XMarkIcon className="h-4 w-4" />
                         </button>
-                      </div>
+                  </span>
                     ))}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Program (Itinerary) */}
-          <div className="bg-white shadow-sm rounded-lg p-8 border border-gray-100 mt-8">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-medium text-gray-900">Tur Programı</h2>
-              <button
-                type="button"
-                onClick={handleAddItineraryDay}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Gün Ekle
-              </button>
-            </div>
-            
-            <div className="space-y-6">
+            {/* Program */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900">Program</label>
+              <div className="mt-4 space-y-4">
               {formData.itinerary.map((day, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-full sm:w-1/3 mr-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Başlık
-                      </label>
+                  <div key={index} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="flex-1 space-y-2">
                       <input
                         type="text"
                         value={day.title}
                         onChange={(e) => handleItineraryChange(index, 'title', e.target.value)}
-                        className="mt-1 shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg text-gray-900"
+                        className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
+                        placeholder="Gün başlığı"
+                      />
+                      <textarea
+                        value={day.description}
+                        onChange={(e) => handleItineraryChange(index, 'description', e.target.value)}
+                        className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
+                        rows={3}
+                        placeholder="Gün detayları"
                       />
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveItineraryDay(index)}
-                      className="text-gray-400 hover:text-gray-500"
-                      disabled={formData.itinerary.length === 1}
+                      className="p-2 text-gray-500 hover:text-red-500"
                     >
                       <XMarkIcon className="h-5 w-5" />
                     </button>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Açıklama
-                    </label>
-                    <textarea
-                      rows={4}
-                      value={day.description}
-                      onChange={(e) => handleItineraryChange(index, 'description', e.target.value)}
-                      className="mt-1 shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg text-gray-900"
-                      placeholder="Bu günün programını detaylı anlatın..."
-                    />
-                  </div>
                 </div>
               ))}
+                <button
+                  type="button"
+                  onClick={handleAddItineraryDay}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Gün Ekle
+                </button>
             </div>
           </div>
 
-          {/* Yeni Özellik Ekleme */}
+            {/* Özellikler */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-900">
-              Tur Özellikleri
-            </label>
-            <div className="mt-2">
-              <div className="flex space-x-3">
+              <label className="block text-sm font-medium text-gray-900">Özellikler</label>
+              <div className="mt-2 flex items-center gap-2">
                 <input
                   type="text"
                   value={newFeature}
                   onChange={(e) => setNewFeature(e.target.value)}
-                  className="shadow-sm px-4 py-3 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg text-gray-900"
-                  placeholder="Örn. Profesyonel rehberlik"
+                  className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-3 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-gray-900"
+                  placeholder="Örn: Wi-Fi"
                 />
                 <button
                   type="button"
                   onClick={handleAddFeature}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700"
                 >
                   Ekle
                 </button>
               </div>
-              <div className="mt-4 space-y-3">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {formData.features.map((feature, index) => (
-                  <div key={index} className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-lg text-sm">
-                    <span className="text-black">{feature}</span>
+                  <span
+                    key={index}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800"
+                  >
+                    {feature}
                     <button
                       type="button"
                       onClick={() => handleRemoveFeature(index)}
-                      className="text-gray-400 hover:text-gray-500"
+                      className="text-gray-500 hover:text-red-500"
                     >
-                      <XMarkIcon className="h-5 w-5" />
+                      <XMarkIcon className="h-4 w-4" />
                     </button>
-                  </div>
+                  </span>
                 ))}
               </div>
             </div>
           </div>
-        </>
       )}
 
       {/* Tur Tarihleri */}
-      <div className="bg-white shadow-sm rounded-lg p-8 border border-gray-100">
-        <div className="flex items-center justify-between mb-5">
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-medium text-gray-900">Tur Tarihleri</h2>
           <button
             type="button"
             onClick={handleAddTourDate}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-indigo-700 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            Tarih Ekle
+              <PlusIcon className="w-5 h-5 mr-2" />
+              Yeni Tarih Ekle
           </button>
         </div>
 
-        <div className="space-y-4">
+          <div className="space-y-6">
           {formData.tourDates.map((date, index) => (
-            <div key={index} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Başlangıç Tarihi
-                </label>
-                <div className="relative">
-                  <DatePicker
-                    label=""
+              <div key={index} className="bg-gray-50 border rounded-lg shadow-sm">
+                <div className="px-4 py-4 border-b border-gray-200 bg-white">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-base font-medium text-gray-900">
+                      Tur Tarihi #{index + 1}
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTourDate(index)}
+                      className="text-gray-500 hover:text-red-500"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 space-y-4">
+                  {/* Temel Bilgiler */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Başlangıç Tarihi</label>
+                      <input
+                        type="date"
                     value={date.startDate}
-                    onChange={(val) => handleTourDateChange(index, 'startDate', val)}
-                    placeholder="gg.aa.yyyy"
+                        onChange={(e) => handleTourDateChange(index, 'startDate', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                   />
-                  <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200"></div>
                 </div>
-              </div>
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bitiş Tarihi
-                </label>
-                <div className="relative">
-                  <DatePicker
-                    label=""
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Bitiş Tarihi</label>
+                      <input
+                        type="date"
                     value={date.endDate}
-                    onChange={(val) => handleTourDateChange(index, 'endDate', val)}
-                    placeholder="gg.aa.yyyy"
-                    minDate={date.startDate}
+                        onChange={(e) => handleTourDateChange(index, 'endDate', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                   />
-                  <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200"></div>
                 </div>
-              </div>
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fiyat (₺)
-                </label>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Fiyat</label>
                 <input
                   type="number"
                   value={date.price}
                   onChange={(e) => handleTourDateChange(index, 'price', e.target.value)}
-                  className="block w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                   min="0"
                 />
               </div>
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Kontenjan
-                </label>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Kontenjan</label>
                 <input
                   type="number"
                   value={date.availableSeats}
                   onChange={(e) => handleTourDateChange(index, 'availableSeats', e.target.value)}
-                  className="block w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                   min="0"
                 />
               </div>
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTourDate(index)}
-                  className="p-2 text-gray-400 hover:text-gray-500"
-                >
-                  <XMarkIcon className="h-5 w-5" />
-                </button>
+                  </div>
+
+                  {/* Katılımcı Bilgileri */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Satılan Koltuk</label>
+                      <input
+                        type="number"
+                        value={date.soldSeats}
+                        onChange={(e) => handleTourDateChange(index, 'soldSeats', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Bekleme Listesi</label>
+                      <input
+                        type="number"
+                        value={date.waitingList}
+                        onChange={(e) => handleTourDateChange(index, 'waitingList', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+                        min="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Min. Katılımcı</label>
+                      <input
+                        type="number"
+                        value={date.minParticipants}
+                        onChange={(e) => handleTourDateChange(index, 'minParticipants', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+                        min="1"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Max. Katılımcı</label>
+                      <input
+                        type="number"
+                        value={date.maxParticipants}
+                        onChange={(e) => handleTourDateChange(index, 'maxParticipants', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+                        min="1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* İndirim Bilgileri */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Erken Rezervasyon İndirimi (%)</label>
+                      <input
+                        type="number"
+                        value={date.earlyBirdDiscount}
+                        onChange={(e) => handleTourDateChange(index, 'earlyBirdDiscount', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+                        min="0"
+                        max="100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Son Dakika İndirimi (%)</label>
+                      <input
+                        type="number"
+                        value={date.lastMinuteDiscount}
+                        onChange={(e) => handleTourDateChange(index, 'lastMinuteDiscount', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+                        min="0"
+                        max="100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Erken Rez. Son Tarih</label>
+                      <input
+                        type="date"
+                        value={date.earlyBirdDeadline}
+                        onChange={(e) => handleTourDateChange(index, 'earlyBirdDeadline', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Son Dakika Başlangıç</label>
+                      <input
+                        type="date"
+                        value={date.lastMinuteStart}
+                        onChange={(e) => handleTourDateChange(index, 'lastMinuteStart', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Durum ve Notlar */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Durum</label>
+                      <select
+                        value={date.status}
+                        onChange={(e) => handleTourDateChange(index, 'status', e.target.value as TourDate['status'])}
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+                      >
+                        <option value="ACTIVE">Aktif</option>
+                        <option value="FULL">Dolu</option>
+                        <option value="CANCELLED">İptal</option>
+                        <option value="COMPLETED">Tamamlandı</option>
+                        <option value="WAITING_LIST">Bekleme Listesi</option>
+                        <option value="NOT_ENOUGH_PARTICIPANTS">Yetersiz Katılımcı</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-1">Notlar</label>
+                      <textarea
+                        value={date.notes}
+                        onChange={(e) => handleTourDateChange(index, 'notes', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+                        rows={2}
+                      />
+                    </div>
+                  </div>
               </div>
             </div>
           ))}
@@ -1215,21 +1622,66 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
       </div>
 
       {/* Form Gönderme */}
-      <div className="flex justify-end pt-4">
+        <div className="flex justify-between pt-4">
         <button
           type="button"
-          className="px-5 py-2.5 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 mr-4"
+            onClick={() => window.history.back()}
+            disabled={isSubmitting}
+            className="px-5 py-2.5 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
           İptal
+          </button>
+          
+          <div className="flex gap-4">
+            {step === 'basic' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (validateForm()) {
+                    window.scrollTo(0, 0);
+                    setStep('details');
+                  }
+                }}
+                disabled={isSubmitting}
+                className="px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+              >
+                Devam Et
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.scrollTo(0, 0);
+                    setStep('basic');
+                  }}
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                >
+                  Geri Dön
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
+                  className="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Kaydediliyor...
+                    </>
+                  ) : (
+                    'Kaydet'
+                  )}
         </button>
+              </>
+            )}
+          </div>
       </div>
     </form>
+    </div>
   );
 } 

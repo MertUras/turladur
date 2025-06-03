@@ -104,6 +104,7 @@ export async function PUT(
         name: data.name,
         description: data.description,
         duration: data.duration,
+        nights: data.nights ? parseInt(data.nights.toString()) : null,
         price: data.price,
         discount: data.discount,
         startDate: data.startDate ? new Date(data.startDate) : null,
@@ -112,6 +113,7 @@ export async function PUT(
         destinations: data.destinations,
         inclusions: data.inclusions,
         exclusions: data.exclusions,
+        features: data.features || [],
         itinerary: data.itinerary,
         images: data.images,
         featured: data.featured,
@@ -128,6 +130,8 @@ export async function PUT(
         isEarlyBird: data.isEarlyBird,
         languages: data.languages,
         tags: data.tags,
+        meetingPoint: data.meetingPoint || null,
+        meetingTime: data.meetingTime || null,
         updatedAt: new Date()
       },
       include: {
@@ -142,24 +146,72 @@ export async function PUT(
     });
 
     // 1. Mevcut tarihleri sil
-await prisma.tourDate.deleteMany({
-  where: { tourId }
-});
+    await prisma.tourDate.deleteMany({
+      where: { tourId }
+    });
 
-// 2. Yeni tarihleri ekle
-if (Array.isArray(data.tourDates)) {
-  await prisma.tourDate.createMany({
-    data: data.tourDates.map((date: { startDate: string; endDate: string }) => ({
-      startDate: new Date(date.startDate),
-      endDate: new Date(date.endDate),
-      tourId
-    }))
-  });
-}
+    // 2. Yeni tarihleri ekle
+    if (Array.isArray(data.tourDates)) {
+      await prisma.tourDate.createMany({
+        data: data.tourDates.map((date: any) => ({
+          startDate: new Date(date.startDate),
+          endDate: new Date(date.endDate),
+          price: parseFloat(date.price.toString()),
+          availableSeats: parseInt(date.availableSeats.toString()),
+          soldSeats: date.soldSeats || 0,
+          waitingList: date.waitingList || 0,
+          discount: date.discount || 0,
+          minParticipants: date.minParticipants ? parseInt(date.minParticipants) : null,
+          maxParticipants: date.maxParticipants ? parseInt(date.maxParticipants) : null,
+          earlyBirdDiscount: date.earlyBirdDiscount || 0,
+          lastMinuteDiscount: date.lastMinuteDiscount || 0,
+          earlyBirdDeadline: date.earlyBirdDeadline ? new Date(date.earlyBirdDeadline) : null,
+          lastMinuteStart: date.lastMinuteStart ? new Date(date.lastMinuteStart) : null,
+          notes: date.notes || '',
+          status: date.status || 'ACTIVE',
+          isActive: true,
+          tourId
+        }))
+      });
+    }
 
-return NextResponse.json(updatedTour);
+    // 3. Mevcut yolcu alma noktalarını sil
+    await prisma.tourPickupPoint.deleteMany({
+      where: { tourId }
+    });
 
-    return NextResponse.json(updatedTour);
+    // 4. Yeni yolcu alma noktalarını ekle
+    if (Array.isArray(data.pickupPoints)) {
+      await prisma.tourPickupPoint.createMany({
+        data: data.pickupPoints.map((point: any, index: number) => ({
+          tourId,
+          city: point.city,
+          location: point.location,
+          time: point.time,
+          description: point.description || null,
+          order: index,
+          isActive: true
+        }))
+      });
+    }
+
+    // Güncellenmiş turu tüm ilişkileriyle birlikte getir
+    const finalTour = await prisma.tour.findUnique({
+      where: { id: tourId },
+      include: {
+        tourDates: true,
+        pickupPoints: true,
+        tourOperator: {
+          select: {
+            id: true,
+            companyName: true,
+            logo: true
+          }
+        }
+      }
+    });
+
+    return NextResponse.json(finalTour);
   } catch (error) {
     console.error('Error updating tour:', error);
     return NextResponse.json(

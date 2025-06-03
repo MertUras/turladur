@@ -126,6 +126,8 @@ model TourOperator {
   userId      String
   status      TourOperatorStatus @default(pending)
   companyName String?
+  rating      Float?             @default(0)
+  certified   Boolean            @default(false)
   bookings    Booking[]
   subUsers    SubUser[]
   user        User               @relation(fields: [userId], references: [id])
@@ -152,56 +154,92 @@ model SubUser {
   @@map("sub_users")
 }
 
+model TourAccommodation {
+  id          String   @id @default(cuid())
+  name        String
+  image       String
+  location    String
+  type        String
+  rating      Float    @default(0)
+  features    Json     @default("[]")
+  description String?
+  tourId      String   @unique
+  tour        Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tour_accommodations")
+}
+
 model Tour {
-  id                  String        @id @default(cuid())
+  id                  String           @id @default(cuid())
   name                String
   description         String?
   duration            Int
+  nights              Int?
   price               Float
   discount            Float?
   startDate           DateTime?
   endDate             DateTime?
   maxParticipants     Int?
-  destinations        Json          @default("[]")
-  inclusions          Json          @default("[]")
-  exclusions          Json          @default("[]")
+  destinations        Json            @default("[]")
+  inclusions          Json            @default("[]")
+  exclusions          Json            @default("[]")
+  features            Json            @default("[]")
   itinerary           Json?
-  images              Json          @default("[]")
-  featured            Boolean       @default(false)
+  images              Json            @default("[]")
+  featured            Boolean         @default(false)
   departureCity       String?
   region              String?
   transportation      String?
   period              String?
-  rating              Float?        @default(0)
+  rating              Float?          @default(0)
   tourType            String?
   accommodationType   String?
   difficultyLevel     String?
-  ageRestriction      Int?
-  isPopular           Boolean       @default(false)
-  isLastMinute        Boolean       @default(false)
-  isEarlyBird         Boolean       @default(false)
-  languages           Json          @default("[]")
-  tags                Json          @default("[]")
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  tourOperatorId      String?
-  currentParticipants Int?          @default(0)
-  availableDates      DateTime[]    @default([])
-  bookings            Booking[]
-  tourDates           TourDate[]
-  tourOperator        TourOperator? @relation(fields: [tourOperatorId], references: [id])
+  ageRestriction     Int?
+  isPopular          Boolean         @default(false)
+  isLastMinute       Boolean         @default(false)
+  isEarlyBird        Boolean         @default(false)
+  languages          Json            @default("[]")
+  tags               Json            @default("[]")
+  meetingPoint       String?
+  meetingTime        String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  tourOperatorId     String?
+  currentParticipants Int?           @default(0)
+  availableDates     DateTime[]      @default([])
+  bookings           Booking[]
+  tourDates          TourDate[]
+  pickupPoints       TourPickupPoint[]
+  tourOperator       TourOperator?   @relation(fields: [tourOperatorId], references: [id])
+  accommodation      TourAccommodation?
 
   @@map("tours")
 }
 
 model TourDate {
-  id             String   @id @default(cuid())
-  startDate      DateTime
-  endDate        DateTime
-  tourId         String
-  availableSeats Int
-  price          Float
-  tour           Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  id                  String         @id @default(cuid())
+  startDate           DateTime
+  endDate             DateTime
+  price               Float
+  availableSeats      Int
+  soldSeats           Int?          @default(0)
+  waitingList         Int?          @default(0)
+  minParticipants     Int?
+  maxParticipants     Int?
+  earlyBirdDiscount   Float?
+  lastMinuteDiscount  Float?
+  earlyBirdDeadline   DateTime?
+  lastMinuteStart     DateTime?
+  status              String        @default("ACTIVE")
+  notes               String?
+  isActive            Boolean        @default(true)
+  tourId              String
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  tour                Tour           @relation(fields: [tourId], references: [id], onDelete: Cascade)
 
   @@map("tour_dates")
 }
@@ -374,6 +412,20 @@ model ExperienceOperator {
   @@map("experience_operators")
 }
 
+model TourPickupPoint {
+  id          String   @id @default(cuid())
+  tourId      String
+  city        String
+  location    String
+  time        String
+  description String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  tour        Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+
+  @@map("tour_pickup_points")
+}
+
 enum TourOperatorStatus {
   pending
   approved
@@ -412,4 +464,13 @@ enum PaymentStatus {
   PARTIALLY_PAID
   PAID
   REFUNDED
+}
+
+enum TourDateStatus {
+  ACTIVE
+  FULL
+  CANCELLED
+  COMPLETED
+  WAITING_LIST
+  NOT_ENOUGH_PARTICIPANTS
 }

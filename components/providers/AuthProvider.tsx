@@ -8,12 +8,15 @@ import { signOut } from "next-auth/react";
 function AuthContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     const isPartnerPath = pathname?.startsWith('/partner');
     const isAuthPath = pathname?.startsWith('/login') || pathname?.startsWith('/register');
     const isPartnerAuthPath = pathname?.startsWith('/partner-login') || pathname?.startsWith('/partner-register');
+
+    // Session durumunu kontrol et
+    if (status === 'loading') return;
 
     // Partner oturumu varsa ve partner login/register sayfalarındaysak dashboard'a yönlendir
     if (session?.user?.provider === 'partner-credentials' && isPartnerAuthPath) {
@@ -21,17 +24,32 @@ function AuthContent({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Normal kullanıcı oturumu varsa ve partner sayfasındaysak oturumu sonlandır
-    if (isPartnerPath && !isPartnerAuthPath && session?.user?.provider !== 'partner-credentials') {
-      signOut({ redirect: false });
-    }
-
-    // Partner oturumu varsa ve normal kullanıcı sayfasındaysak oturumu koru
-    // Partner oturumu varsa ve partner dashboard'a erişmeye çalışıyorsa direkt yönlendir
-    if (session?.user?.provider === 'partner-credentials' && pathname === '/partner-dashboard') {
+    // Partner oturumu yoksa ve partner sayfalarına erişmeye çalışıyorsa login'e yönlendir
+    if (isPartnerPath && !isPartnerAuthPath && !session?.user?.provider) {
+      router.push('/partner-login');
       return;
     }
-  }, [pathname, session, router]);
+
+    // Normal kullanıcı oturumu varsa ve partner sayfasındaysak oturumu sonlandır
+    if (isPartnerPath && !isPartnerAuthPath && session?.user?.provider !== 'partner-credentials') {
+      signOut({ 
+        redirect: false,
+        callbackUrl: '/partner-login'
+      });
+      return;
+    }
+
+    // Session süresi kontrolü
+    const sessionExpiry = session?.expires ? new Date(session.expires) : null;
+    if (sessionExpiry && new Date() > sessionExpiry) {
+      signOut({ 
+        redirect: false,
+        callbackUrl: isPartnerPath ? '/partner-login' : '/login'
+      });
+      return;
+    }
+
+  }, [pathname, session, status, router]);
 
   return <>{children}</>;
 }
@@ -42,7 +60,7 @@ export default function AuthProvider({
   children: React.ReactNode;
 }) {
   return (
-    <SessionProvider refetchInterval={0} refetchOnWindowFocus={false}>
+    <SessionProvider>
       <AuthContent>{children}</AuthContent>
     </SessionProvider>
   );
