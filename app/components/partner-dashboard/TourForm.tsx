@@ -42,6 +42,7 @@ export interface TourFormData {
   features: string[];
   startDate: string;
   endDate: string;
+  accommodationName?: string;
 }
 
 interface TourFormProps {
@@ -113,7 +114,8 @@ const defaultFormData: TourFormData = {
   isJointTour: false,
   features: [],
   startDate: '',
-  endDate: ''
+  endDate: '',
+  accommodationName: '',
 };
 
 export default function TourForm({ initialData, onSubmit, isSubmitting = false, currentStep = 'basic', partnerId }: TourFormProps) {
@@ -155,7 +157,8 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
         isJointTour: initialData.isJointTour || false,
         features: initialData.features || [],
         startDate: initialData.startDate?.toISOString().split('T')[0] || '',
-        endDate: initialData.endDate?.toISOString().split('T')[0] || ''
+        endDate: initialData.endDate?.toISOString().split('T')[0] || '',
+        accommodationName: '',
       };
     }
     return defaultFormData;
@@ -304,7 +307,16 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
           updated.endDate = endDate.toISOString().split('T')[0];
         }
       }
-      // Eğer bitiş tarihi değiştiyse sadece onu güncelle
+      // Eğer bitiş tarihi değiştiyse ve başlangıç tarihi varsa, gün sayısını otomatik hesapla
+      if (name === 'endDate' && prev.startDate && value) {
+        const startDate = new Date(prev.startDate);
+        const endDate = new Date(value);
+        const diffTime = endDate.getTime() - startDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        if (diffDays > 0) {
+          updated.duration = diffDays.toString();
+        }
+      }
       return updated;
     });
     if (errors[name]) {
@@ -764,9 +776,10 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                 <DatePicker
                   label=""
                   value={formData.endDate}
-                  onChange={(val) => handleDateFieldChange('endDate', val)}
+                  onChange={() => {}}
                   placeholder="gg.aa.yyyy"
                   minDate={formData.startDate || todayStr}
+                  disabled={true}
                 />
                 <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200"></div>
               </div>
@@ -820,61 +833,79 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div>
-              <label htmlFor="accommodationType" className="mb-2 block text-sm font-medium text-gray-900">
-                Konaklama Tipi {formData.tourType !== 'Günübirlik Tur' && <span className="text-red-500">*</span>}
-              </label>
-              <select
-                id="accommodationType"
-                name="accommodationType"
-                value={formData.accommodationType}
-                onChange={handleChange}
-                disabled={formData.tourType === 'Günübirlik Tur'}
-                className={`block w-full rounded-lg border ${errors.accommodationType ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 ${formData.tourType === 'Günübirlik Tur' ? 'bg-gray-100' : ''}`}
-              >
-                <option value="">Seçiniz</option>
-                <option value="Otel">Otel</option>
-                <option value="Pansiyon">Pansiyon</option>
-                <option value="Apart">Apart</option>
-                <option value="Butik Otel">Butik Otel</option>
-                <option value="Kamp">Kamp</option>
-              </select>
-              {errors.accommodationType && <p className="mt-2 text-sm text-red-600">{errors.accommodationType}</p>}
+            <div className="grid grid-cols-2 gap-4 items-end">
+              <div>
+                <label htmlFor="accommodationType" className="mb-2 block text-sm font-medium text-gray-900">
+                  Konaklama Tipi {formData.tourType !== 'Günübirlik Tur' && <span className="text-red-500">*</span>}
+                </label>
+                <select
+                  id="accommodationType"
+                  name="accommodationType"
+                  value={formData.accommodationType}
+                  onChange={handleChange}
+                  disabled={formData.tourType === 'Günübirlik Tur'}
+                  className={`block w-full rounded-lg border ${errors.accommodationType ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 ${formData.tourType === 'Günübirlik Tur' ? 'bg-gray-100' : ''}`}
+                >
+                  <option value="">Seçiniz</option>
+                  <option value="Otel">Otel</option>
+                  <option value="Pansiyon">Pansiyon</option>
+                  <option value="Apart">Apart</option>
+                  <option value="Butik Otel">Butik Otel</option>
+                  <option value="Kamp">Kamp</option>
+                </select>
+                {errors.accommodationType && <p className="mt-2 text-sm text-red-600">{errors.accommodationType}</p>}
+              </div>
+              <div>
+                <label htmlFor="accommodationName" className="mb-2 block text-sm font-medium text-gray-900">
+                  Konaklama: {formData.accommodationType || ''}
+                </label>
+                <input
+                  type="text"
+                  id="accommodationName"
+                  name="accommodationName"
+                  value={formData.accommodationName || ''}
+                  onChange={e => setFormData(prev => ({ ...prev, accommodationName: e.target.value }))}
+                  className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                  placeholder={`Konaklama adı örn. A Oteli`}
+                  required
+                />
+              </div>
             </div>
 
-            <div>
-              <label htmlFor="difficultyLevel" className="mb-2 block text-sm font-medium text-gray-900">
-                Zorluk Seviyesi
-              </label>
-              <select
-                id="difficultyLevel"
-                name="difficultyLevel"
-                value={formData.difficultyLevel}
-                onChange={handleChange}
-                className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
-              >
-                <option value="">Seçiniz</option>
-                <option value="Kolay">Kolay</option>
-                <option value="Orta">Orta</option>
-                <option value="Zor">Zor</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4 items-end">
+              <div>
+                <label htmlFor="difficultyLevel" className="mb-2 block text-sm font-medium text-gray-900">
+                  Zorluk Seviyesi
+                </label>
+                <select
+                  id="difficultyLevel"
+                  name="difficultyLevel"
+                  value={formData.difficultyLevel}
+                  onChange={handleChange}
+                  className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                >
+                  <option value="">Seçiniz</option>
+                  <option value="Kolay">Kolay</option>
+                  <option value="Orta">Orta</option>
+                  <option value="Zor">Zor</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="ageRestriction" className="mb-2 block text-sm font-medium text-gray-900">
+                  Yaş Sınırı
+                </label>
+                <input
+                  type="number"
+                  id="ageRestriction"
+                  name="ageRestriction"
+                  value={formData.ageRestriction || ''}
+                  onChange={handleChange}
+                  className="block w-28 rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
             </div>
-          </div>
-
-          <div>
-            <label htmlFor="ageRestriction" className="mb-2 block text-sm font-medium text-gray-900">
-              Yaş Sınırı
-            </label>
-            <input
-              type="number"
-              id="ageRestriction"
-              name="ageRestriction"
-              value={formData.ageRestriction || ''}
-              onChange={handleChange}
-              className="block w-full rounded-lg border border-gray-300 px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900"
-              placeholder="0"
-              min="0"
-            />
           </div>
 
           <div>
