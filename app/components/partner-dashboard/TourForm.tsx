@@ -213,7 +213,20 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
         duration: '1'
       }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setFormData(prev => {
+        let updated = { ...prev, [name]: value };
+        // Eğer gün sayısı değiştiyse ve başlangıç tarihi doluysa bitiş tarihini otomatik hesapla
+        if (name === 'duration' && prev.startDate) {
+          const startDate = new Date(prev.startDate);
+          const duration = parseInt(value);
+          if (!isNaN(duration) && prev.startDate) {
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + duration - 1);
+            updated.endDate = endDate.toISOString().split('T')[0];
+          }
+        }
+        return updated;
+      });
 
       // Gece sayısı veya başlangıç tarihi değiştiğinde ve her ikisi de doluysa
       if ((name === 'nights' || name === 'startDate') && formData.tourDates.length === 0) {
@@ -262,7 +275,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
       
       if (startDate && !isNaN(startDate.getTime()) && duration && !isNaN(duration)) {
         const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + duration - 1); // -1 çünkü başlangıç günü de dahil
+        endDate.setDate(startDate.getDate() + duration - 1); // -1 çünkü başlangıç günü de dahil
         setFormData(prev => ({ 
           ...prev, 
           [name]: value,
@@ -280,7 +293,18 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
   // DatePicker için özel handler
   const handleDateFieldChange = (name: 'startDate' | 'endDate', value: string) => {
     setFormData(prev => {
-      const updated = { ...prev, [name]: value };
+      let updated = { ...prev, [name]: value };
+      // Eğer başlangıç tarihi değiştiyse ve gün sayısı doluysa bitiş tarihini otomatik hesapla
+      if (name === 'startDate' && prev.duration) {
+        const startDate = new Date(value);
+        const duration = parseInt(prev.duration);
+        if (!isNaN(duration) && value) {
+          const endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + duration - 1);
+          updated.endDate = endDate.toISOString().split('T')[0];
+        }
+      }
+      // Eğer bitiş tarihi değiştiyse sadece onu güncelle
       return updated;
     });
     if (errors[name]) {
@@ -516,6 +540,13 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
     }));
   };
 
+  // Bugünün tarihini YYYY-MM-DD formatında al
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const todayStr = `${yyyy}-${mm}-${dd}`;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* Temel Bilgiler */}
@@ -717,6 +748,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                   value={formData.startDate}
                   onChange={(val) => handleDateFieldChange('startDate', val)}
                   placeholder="gg.aa.yyyy"
+                  minDate={todayStr}
                 />
                 <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200">
                 </div>
@@ -734,7 +766,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting = false, 
                   value={formData.endDate}
                   onChange={(val) => handleDateFieldChange('endDate', val)}
                   placeholder="gg.aa.yyyy"
-                  minDate={formData.startDate}
+                  minDate={formData.startDate || todayStr}
                 />
                 <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200"></div>
               </div>
