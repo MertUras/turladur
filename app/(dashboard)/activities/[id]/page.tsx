@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Clock, MapPin, Users, Calendar, ChevronLeft, ChevronRight, X, Heart, Share2 } from 'lucide-react';
+import { Star, Clock, MapPin, Users, Calendar, ChevronLeft, ChevronRight, X, Heart, Share2, Building2 } from 'lucide-react';
 import Marquee from "react-fast-marquee";
 
 interface Activity {
@@ -34,6 +34,9 @@ interface Activity {
     }>;
     discount?: number;
     activityDates: any[];
+    meetingPoint?: string;
+    meetingPointAddress?: string;
+    operator: any;
 }
 
 interface RelatedActivity {
@@ -143,6 +146,19 @@ export default function ActivityDetail() {
                             <MapPin className="w-5 h-5 text-white" />
                             <span className="text-base font-medium">{activity.location}</span>
                         </div>
+                        {activity.meetingPoint && activity.meetingPoint.trim() !== '' && (
+                            <div className="flex items-center gap-2 text-white/90 bg-white/10 px-4 py-2 rounded-lg">
+                                <a
+                                    href={activity.meetingPoint}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 text-sky-200 hover:text-sky-400 underline"
+                                >
+                                    <MapPin className="w-5 h-5 text-sky-200" />
+                                    <span>Buluşma Noktası (Google Maps)</span>
+                                </a>
+                            </div>
+                        )}
                         <div className="flex items-center gap-2 text-white/90 bg-white/10 px-4 py-2 rounded-lg">
                             <Star className="w-5 h-5 text-yellow-400" />
                             <span className="text-base font-medium">{activity.rating} ({activity.reviewCount} yorum)</span>
@@ -233,6 +249,38 @@ export default function ActivityDetail() {
                             <h2 className="text-2xl font-semibold mb-4 text-gray-900">Aktivite Hakkında</h2>
                             <p className="text-gray-800 whitespace-pre-line">{activity.longDescription}</p>
                         </div>
+
+                        {/* Modern Buluşma Noktası Kartı */}
+                        {(activity.meetingPointAddress || activity.location || activity.meetingPoint) && (
+                            <div className="bg-white rounded-2xl shadow-md border border-neutral-100/80 flex flex-col items-stretch mb-10 overflow-hidden w-full max-w-none">
+                                <div className="flex flex-col gap-2 p-6">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h2 className="text-2xl font-semibold text-gray-900">Buluşma Noktası</h2>
+                                    </div>
+                                    {activity.meetingPointAddress && (
+                                        <div className="text-base text-gray-700 font-medium whitespace-pre-line">
+                                            {activity.meetingPointAddress}
+                                        </div>
+                                    )}
+                                    {activity.location && (
+                                        <div className="text-base text-gray-500 font-normal">
+                                            <span className="font-semibold">Konum: </span>{activity.location}
+                                        </div>
+                                    )}
+                                    {activity.meetingPoint && activity.meetingPoint.trim() !== '' && (
+                                        <a
+                                            href={activity.meetingPoint}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 text-sky-700 hover:text-sky-900 underline text-base font-medium mt-2"
+                                        >
+                                            <MapPin className="w-5 h-5" />
+                                            Google Maps'te Aç
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Gallery */}
                         <div className="mb-12">
@@ -456,72 +504,86 @@ export default function ActivityDetail() {
                     {/* Sidebar */}
                     <div className="lg:col-span-1">
                         <div className="sticky top-8">
-                            <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                                <div className="text-3xl font-bold text-gray-900 mb-4">{activity.price.toLocaleString('tr-TR')}₺</div>
-                                <button className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold mb-4 hover:bg-blue-600 transition-colors">
-                                    Rezervasyon Yap
-                                </button>
-                                <button className="w-full border border-blue-500 text-blue-500 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors">
-                                    Seyahat Danışmanına Ulaş
-                                </button>
-                            </div>
-
-                            {/* Rezervasyon ve Tarih/Fiyat Seçenekleri */}
+                            {/* Modern Rezervasyon Kutusu */}
                             {activity?.activityDates && activity.activityDates.length > 0 && (
                                 <div className="bg-white rounded-xl p-6 border border-neutral-200/70 shadow-md w-full mb-8">
-                                    <div className="flex items-center gap-2 mb-4">
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200/70">Ücretsiz İptal</span>
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <Calendar className="w-7 h-7 text-blue-600" />
+                                        <h2 className="text-2xl font-semibold text-gray-900">Rezervasyon</h2>
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200/70 ml-auto">Ücretsiz İptal</span>
                                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-800 border border-sky-200/70">Anında Onay</span>
                                     </div>
-                                    <h3 className="text-xl font-bold mb-4 text-gray-900 flex items-center gap-2">
-                                        <Calendar className="w-6 h-6 text-blue-500" /> Rezervasyon
-                                    </h3>
                                     <div className="flex flex-col gap-4">
-                                        {activity.activityDates.map((date) => {
-                                            const isLimited = date.availableSeats <= 5;
-                                            return (
-                                                <div key={date.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-neutral-50 rounded-lg border border-neutral-200/70 hover:border-blue-200 transition-colors">
-                                                    <div className="flex items-center gap-3">
-                                                        <Calendar className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                                                        <div>
-                                                            <div className="text-base font-semibold text-gray-900">
-                                                                {new Date(date.startDate).toLocaleDateString('tr-TR')} - {new Date(date.endDate).toLocaleDateString('tr-TR')}
-                                                            </div>
-                                                            <div className="text-xs text-gray-500 mt-0.5">
-                                                                {date.availableSeats} kişilik kontenjan
-                                                            </div>
+                                        {activity.activityDates.map((date) => (
+                                            <div key={date.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-neutral-50 rounded-lg border border-neutral-200/70 hover:border-blue-200 transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <Calendar className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                                                    <div>
+                                                        <div className="text-base font-semibold text-gray-900">
+                                                            {new Date(date.startDate).toLocaleDateString('tr-TR')} - {new Date(date.endDate).toLocaleDateString('tr-TR')}
                                                         </div>
-                                                    </div>
-                                                    <div className="text-right flex flex-col items-end">
-                                                        <div className="text-lg font-bold text-blue-600 flex items-center gap-2">
-                                                            {activity.discount && activity.discount > 0 ? (
-                                                                <>
-                                                                    <span className="line-through text-neutral-400 text-base mr-1">{date.price.toLocaleString('tr-TR')}₺</span>
-                                                                    <span>{(date.price * (1 - (activity.discount / 100))).toLocaleString('tr-TR')}₺</span>
-                                                                </>
-                                                            ) : (
-                                                                `${date.price.toLocaleString('tr-TR')}₺`
-                                                            )}
+                                                        <div className="text-xs text-gray-500 mt-0.5">
+                                                            {date.availableSeats} kişilik kontenjan
                                                         </div>
-                                                        <button className="mt-2 px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors">
-                                                            Seç
-                                                        </button>
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
+                                                <div className="text-right flex flex-col items-end">
+                                                    <div className="text-2xl font-bold text-blue-600 flex items-center gap-2">
+                                                        {date.price.toLocaleString('tr-TR')}<span className="text-lg font-semibold">₺</span>
+                                                    </div>
+                                                    <button className="mt-2 px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors">
+                                                        Seç
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                     <div className="mt-6 space-y-3">
-                                        <button className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors flex items-center justify-center gap-2">
+                                        <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-lg">
                                             <Calendar className="w-5 h-5" /> Hızlı Rezervasyon
                                         </button>
-                                        <button className="w-full border border-blue-500 text-blue-500 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
+                                        <button className="w-full border border-blue-500 text-blue-500 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 text-lg">
                                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.38V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h7.38M16 5v2m0 0v2m0-2h2m-2 0h-2" /></svg> Fiyat Bilgisi Al
                                         </button>
                                     </div>
                                 </div>
                             )}
 
+                            {/* Aktivite Operatörü Kartı - DAHİL OLAN HİZMETLERİN ÜSTÜNE ALINDI */}
+                            {activity.operator && (
+                                <div className="bg-white rounded-xl shadow-sm border border-neutral-100/80 p-6 mb-8 flex flex-col gap-4">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <Building2 className="w-7 h-7 text-blue-600" />
+                                        <div className="text-2xl font-semibold text-gray-900">Aktivite Operatörü</div>
+                                    </div>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center">
+                                            {activity.operator.logo ? (
+                                                <img src={activity.operator.logo} alt={activity.operator.companyName || activity.operator.name} className="object-cover w-full h-full" />
+                                            ) : (
+                                                <span className="text-lg font-bold text-gray-400">{(activity.operator.companyName || activity.operator.name || '?')[0]}</span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <div className="text-lg font-bold text-gray-900">{activity.operator.companyName || activity.operator.name}</div>
+                                            <a href={`/activities?operator=${activity.operator.id}`} className="text-blue-600 hover:underline text-sm font-medium">Tüm aktivitelerini gör</a>
+                                        </div>
+                                    </div>
+                                    <div className="text-gray-700 text-sm mb-2">
+                                        {activity.operator.description || 'Operatör hakkında bilgi bulunmamaktadır.'}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <Star className="w-5 h-5 text-yellow-400" />
+                                        <span className="text-base font-semibold text-gray-800">{activity.operator.rating ? activity.operator.rating.toFixed(1) : '0.0'}</span>
+                                        <span className="text-sm text-gray-500">({activity.operator.reviewCount || 0} değerlendirme)</span>
+                                    </div>
+                                    <Link href={`/operator/${activity.operator.id}`} className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 border border-blue-500 text-blue-500 rounded-lg font-semibold hover:bg-blue-50 transition-colors">
+                                        <Building2 className="w-5 h-5" /> Operatör detayları
+                                    </Link>
+                                </div>
+                            )}
+
+                            {/* Dahil Olan Hizmetler */}
                             <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
                                 <h3 className="text-lg font-semibold mb-4 text-gray-900">Dahil Olan Hizmetler</h3>
                                 <ul className="space-y-2">

@@ -20,6 +20,7 @@ export interface ExperienceFormData {
   maxParticipants: number;
   currentParticipants: number;
   activityDates: { startDate: string; endDate: string; price: number; availableSeats: number }[];
+  meetingPoint?: string;
 }
 
 interface ExperienceFormProps {
@@ -45,6 +46,7 @@ const defaultFormData: ExperienceFormData = {
   maxParticipants: 1,
   currentParticipants: 0,
   activityDates: [],
+  meetingPoint: '',
 };
 
 const categories = [
@@ -342,6 +344,10 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
           <div>
             <label className="block mb-1 font-semibold text-gray-700">Lokasyon</label>
             <input name="location" value={formData.location} onChange={handleChange} className="w-full border border-neutral-300 rounded-lg px-4 py-2 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition" placeholder="Örn. Kapadokya, Nevşehir" />
+          </div>
+          <div>
+            <label className="block mb-1 font-semibold text-gray-700">Buluşma Noktası (Google Maps Linki)</label>
+            <input name="meetingPoint" value={formData.meetingPoint || ''} onChange={handleChange} className="w-full border border-neutral-300 rounded-lg px-4 py-2 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition" placeholder="https://maps.google.com/..." />
           </div>
         </div>
         <hr className="my-6 border-neutral-200" />

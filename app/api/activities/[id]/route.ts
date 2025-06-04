@@ -26,6 +26,8 @@ export interface Activity {
         comment: string;
         date: string;
     }>;
+    meetingPoint?: string;
+    meetingPointAddress?: string;
 }
 
 export const activities: Activity[] = [
@@ -666,13 +668,23 @@ export async function GET(request: Request, context: any) {
     try {
         activity = await prisma.experience.findUnique({
             where: { id },
-            include: { reviews: true, activityDates: true },
+            include: {
+                reviews: true,
+                activityDates: true,
+                user: {
+                    include: {
+                        experienceOperators: true
+                    }
+                }
+            },
         });
     } catch (e) {
         // Prisma hatası olursa yoksay
     }
 
     if (activity) {
+        // Operatör bilgisi
+        const operator = activity.user?.experienceOperators?.[0] || null;
         return NextResponse.json({
             ...activity,
             gallery: safeArray(activity.gallery),
@@ -682,6 +694,17 @@ export async function GET(request: Request, context: any) {
             schedule: safeArray(activity.schedule),
             reviews: Array.isArray(activity.reviews) ? activity.reviews : [],
             activityDates: Array.isArray(activity.activityDates) ? activity.activityDates : [],
+            meetingPoint: activity.meetingPoint || '',
+            meetingPointAddress: activity.meetingPointAddress || '',
+            operator: operator ? {
+                id: operator.id,
+                companyName: operator.companyName,
+                logo: operator.logo,
+                description: operator.description,
+                email: operator.email,
+                reviewCount: activity.reviewCount,
+                rating: activity.rating
+            } : null
         });
     }
 

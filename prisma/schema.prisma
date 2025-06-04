@@ -205,6 +205,7 @@ model Tour {
   tags               Json            @default("[]")
   meetingPoint       String?
   meetingTime        String?
+  meetingPointAddress String?      // Açık adres (buluşma noktası)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
   tourOperatorId     String?
@@ -283,6 +284,8 @@ model Experience {
   bookings        Booking[]
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   generalReviews  Review[]
+  meetingPoint    String?          // Google Maps linki (buluşma noktası)
+  meetingPointAddress String?      // Açık adres (buluşma noktası)
 
   @@map("experiences")
 }

@@ -67,6 +67,7 @@ export async function POST(request: Request) {
         schedule: json.schedule || [],
         featured: json.featured ?? false,
         userId: user.id,
+        meetingPoint: json.meetingPoint || null,
       },
     });
 

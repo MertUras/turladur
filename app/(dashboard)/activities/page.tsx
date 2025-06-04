@@ -8,7 +8,7 @@ import { Loader2, MapPin, Clock, ChevronLeft, ChevronRight, Search, Star, Filter
 import { cn } from "@/lib/utils";
 
 interface Experience {
-    id: number;
+    id: string;
     title: string;
     description: string;
     imageUrl: string;
@@ -127,7 +127,7 @@ export default function ActivitiesPage() {
                 // Fallback to demo data in case of error
                 const demoExperiences = [
                     {
-                        id: 1,
+                        id: "1",
                         title: "Kapadokya Balon Turu",
                         description: "Eşsiz peri bacaları manzarasında unutulmaz bir balon deneyimi yaşayın",
                         imageUrl: "https://images.unsplash.com/photo-1641128324972-af3ef285b470?q=80&w=2070&auto=format&fit=crop",
@@ -144,7 +144,7 @@ export default function ActivitiesPage() {
                         experienceType: "balon-turu"
                     },
                     {
-                        id: 2,
+                        id: "2",
                         title: "Pamukkale & Hierapolis Turu",
                         description: "Doğal travertenleri ve antik kenti keşfedin",
                         imageUrl: "https://picsum.photos/800/500?random=2",
@@ -160,7 +160,7 @@ export default function ActivitiesPage() {
                         category: "doga"
                     },
                     {
-                        id: 3,
+                        id: "3",
                         title: "Efes Antik Kenti Turu",
                         description: "Dünyanın en iyi korunmuş antik kentlerinden birini ziyaret edin",
                         imageUrl: "https://picsum.photos/800/500?random=3",
@@ -176,7 +176,7 @@ export default function ActivitiesPage() {
                         category: "tarihi"
                     },
                     {
-                        id: 4,
+                        id: "4",
                         title: "İstanbul Boğaz Turu",
                         description: "Tekne ile İstanbul Boğazı'nı keşfedin",
                         imageUrl: "https://picsum.photos/800/500?random=4",
@@ -193,7 +193,7 @@ export default function ActivitiesPage() {
                         experienceType: "tekne-turu"
                     },
                     {
-                        id: 5,
+                        id: "5",
                         title: "Bodrum Tekne Turu",
                         description: "Mavi sularında yüzme molalarıyla Bodrum koylarını keşfedin",
                         imageUrl: "https://picsum.photos/800/500?random=5",
@@ -210,7 +210,7 @@ export default function ActivitiesPage() {
                         experienceType: "tekne-turu"
                     },
                     {
-                        id: 6,
+                        id: "6",
                         title: "Safranbolu Evleri Turu",
                         description: "UNESCO Dünya Mirası Listesi'nde yer alan tarihi evleri keşfedin",
                         imageUrl: "https://picsum.photos/800/500?random=6",
@@ -226,7 +226,7 @@ export default function ActivitiesPage() {
                         category: "tarihi"
                     },
                     {
-                        id: 7,
+                        id: "7",
                         title: "Fethiye Yamaç Paraşütü",
                         description: "Ölüdeniz manzarasında heyecan dolu bir yamaç paraşütü deneyimi.",
                         imageUrl: "https://images.unsplash.com/photo-1605539090181-d5d631629db1?q=80&w=2070&auto=format&fit=crop",
@@ -243,7 +243,7 @@ export default function ActivitiesPage() {
                         experienceType: "parasailing"
                     },
                     {
-                        id: 8,
+                        id: "8",
                         title: "Antalya Jeep Safari",
                         description: "Toros Dağları'nda macera dolu bir jeep safari turu.",
                         imageUrl: "https://images.unsplash.com/photo-1580654712642-f1643c51794a?q=80&w=2070&auto=format&fit=crop",
