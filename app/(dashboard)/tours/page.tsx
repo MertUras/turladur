@@ -23,6 +23,8 @@ import {
   Loader2
 } from "lucide-react";
 import React from "react";
+import { format } from 'date-fns';
+import { tr } from 'date-fns/locale';
 
 interface Tour {
   id: string;
@@ -96,6 +98,14 @@ interface FilterOptions {
   tags: string[];
   departurePoint: string | null;
 }
+
+// Fiyat formatlama yardımcı fonksiyonu
+const formatPrice = (price: number) => {
+  return price.toLocaleString('tr-TR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).replace(/,/g, '.');
+};
 
 export default function ToursPage() {
   const searchParams = useSearchParams();
@@ -592,11 +602,11 @@ export default function ToursPage() {
               <div>
                 {(tour.discount || 0) > 0 && (
                   <span className="text-gray-500 text-sm line-through mr-2">
-                    ₺{(tour.price || 0).toLocaleString()}
+                    ₺{formatPrice(tour.price || 0)}
                   </span>
                 )}
                 <span className="text-xl font-bold text-blue-600">
-                  ₺{discountedPrice.toLocaleString()}
+                  ₺{formatPrice(discountedPrice)}
                 </span>
                 <span className="text-gray-500 text-sm">/kişi</span>
               </div>
@@ -1339,8 +1349,24 @@ export default function ToursPage() {
                       const destinations = parseJsonString<string[]>(tour.destinations || '[]', []);
                       const tourOperator = dummyTourOperators.find(op => op.id === tour.tourOperatorId);
                       const remainingSpots = (tour.maxParticipants || 0) - (tour.currentParticipants || 0);
-                      const startDate = new Date(tour.startDate || new Date());
                       
+                      // En yakın tur tarihini bul
+                      const nextDate = tour.tourDates?.reduce((nearest, current) => {
+                        if (!nearest) return current;
+                        const nearestDate = new Date(nearest.startDate);
+                        const currentDate = new Date(current.startDate);
+                        const today = new Date();
+                        
+                        if (currentDate < today) return nearest;
+                        
+                        const nearestDiff = Math.abs(nearestDate.getTime() - today.getTime());
+                        const currentDiff = Math.abs(currentDate.getTime() - today.getTime());
+                        
+                        return currentDiff < nearestDiff ? current : nearest;
+                      }, null as (typeof tour.tourDates[0] | null));
+
+                      const startDate = nextDate ? new Date(nextDate.startDate) : new Date();
+
                       // En düşük fiyatlı tur tarihini bul
                       const lowestPricedDate = tour.tourDates?.reduce((lowest, current) => {
                         if (!lowest || current.price < lowest.price) {
@@ -1353,19 +1379,6 @@ export default function ToursPage() {
                       const discountedPrice = tour.discount && price 
                         ? price * (1 - (tour.discount || 0) / 100) 
                         : price;
-
-                      // En yakın tur tarihini bul
-                      const nextDate = tour.tourDates?.reduce((nearest, current) => {
-                        if (!nearest) return current;
-                        const nearestDate = new Date(nearest.startDate);
-                        const currentDate = new Date(current.startDate);
-                        const today = new Date();
-                        
-                        const nearestDiff = Math.abs(nearestDate.getTime() - today.getTime());
-                        const currentDiff = Math.abs(currentDate.getTime() - today.getTime());
-                        
-                        return currentDiff < nearestDiff ? current : nearest;
-                      }, null as (typeof tour.tourDates[0] | null));
 
                       return (
                         <Link key={tour.id} href={`/tour/${tour.id}`} className="block">
@@ -1461,7 +1474,10 @@ export default function ToursPage() {
                                   <div>
                                     <div className="text-xs text-gray-500">Tarih</div>
                                     <div className="text-sm font-medium">
-                                      {startDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                                      {nextDate 
+                                        ? format(startDate, 'd MMM', { locale: tr })
+                                        : '-'
+                                      }
                                     </div>
                                   </div>
                                 </div>
@@ -1501,13 +1517,13 @@ export default function ToursPage() {
                                 <div>
                                   {(tour.discount || 0) > 0 && (
                                     <span className="text-gray-500 text-sm line-through mr-2">
-                                      ₺{price.toLocaleString()}
+                                      ₺{formatPrice(tour.price || 0)}
                                     </span>
                                   )}
                                   <span className="text-xl font-bold text-blue-600">
-                                    ₺{discountedPrice.toLocaleString()}
+                                    ₺{formatPrice(discountedPrice)}
                                   </span>
-                                  <span className="text-gray-500 text-sm">'den başlayan</span>
+                                  <span className="text-gray-500 text-sm">/kişi</span>
                                 </div>
                                 <div
                                   className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors inline-flex items-center"
@@ -1529,8 +1545,24 @@ export default function ToursPage() {
                       const destinations = parseJsonString<string[]>(tour.destinations || '[]', []);
                       const tourOperator = dummyTourOperators.find(op => op.id === tour.tourOperatorId);
                       const remainingSpots = (tour.maxParticipants || 0) - (tour.currentParticipants || 0);
-                      const startDate = new Date(tour.startDate || new Date());
                       
+                      // En yakın tur tarihini bul
+                      const nextDate = tour.tourDates?.reduce((nearest, current) => {
+                        if (!nearest) return current;
+                        const nearestDate = new Date(nearest.startDate);
+                        const currentDate = new Date(current.startDate);
+                        const today = new Date();
+                        
+                        if (currentDate < today) return nearest;
+                        
+                        const nearestDiff = Math.abs(nearestDate.getTime() - today.getTime());
+                        const currentDiff = Math.abs(currentDate.getTime() - today.getTime());
+                        
+                        return currentDiff < nearestDiff ? current : nearest;
+                      }, null as (typeof tour.tourDates[0] | null));
+
+                      const startDate = nextDate ? new Date(nextDate.startDate) : new Date();
+
                       // En düşük fiyatlı tur tarihini bul
                       const lowestPricedDate = tour.tourDates?.reduce((lowest, current) => {
                         if (!lowest || current.price < lowest.price) {
@@ -1543,19 +1575,6 @@ export default function ToursPage() {
                       const discountedPrice = tour.discount && price 
                         ? price * (1 - (tour.discount || 0) / 100) 
                         : price;
-
-                      // En yakın tur tarihini bul
-                      const nextDate = tour.tourDates?.reduce((nearest, current) => {
-                        if (!nearest) return current;
-                        const nearestDate = new Date(nearest.startDate);
-                        const currentDate = new Date(current.startDate);
-                        const today = new Date();
-                        
-                        const nearestDiff = Math.abs(nearestDate.getTime() - today.getTime());
-                        const currentDiff = Math.abs(currentDate.getTime() - today.getTime());
-                        
-                        return currentDiff < nearestDiff ? current : nearest;
-                      }, null as (typeof tour.tourDates[0] | null));
 
                       return (
                         <Link key={tour.id} href={`/tour/${tour.id}`} className="block">
@@ -1630,9 +1649,9 @@ export default function ToursPage() {
 
                                 <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
                                   <div className="flex items-baseline gap-2">
-                                    <span className="text-xl font-bold text-blue-600">₺{discountedPrice.toLocaleString()}</span>
+                                    <span className="text-xl font-bold text-blue-600">₺{formatPrice(discountedPrice)}</span>
                                     {(tour.discount || 0) > 0 && (
-                                      <span className="text-sm text-gray-400 line-through">₺{price.toLocaleString()}</span>
+                                      <span className="text-sm text-gray-400 line-through">₺{formatPrice(price)}</span>
                                     )}
                                   </div>
                                   <div className="flex items-center gap-2">

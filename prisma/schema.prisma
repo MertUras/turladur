@@ -221,26 +221,27 @@ model Tour {
 }
 
 model TourDate {
-  id                  String         @id @default(cuid())
-  startDate           DateTime
-  endDate             DateTime
-  price               Float
-  availableSeats      Int
-  soldSeats           Int?          @default(0)
-  waitingList         Int?          @default(0)
-  minParticipants     Int?
-  maxParticipants     Int?
-  earlyBirdDiscount   Float?
-  lastMinuteDiscount  Float?
-  earlyBirdDeadline   DateTime?
-  lastMinuteStart     DateTime?
-  status              String        @default("ACTIVE")
-  notes               String?
-  isActive            Boolean        @default(true)
-  tourId              String
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
-  tour                Tour           @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  id                String            @id @default(cuid())
+  startDate         DateTime
+  endDate           DateTime
+  price             Float
+  availableSeats    Int
+  soldSeats         Int              @default(0)
+  waitingList       Int              @default(0)
+  minParticipants   Int?
+  maxParticipants   Int?
+  earlyBirdDiscount Float?
+  lastMinuteDiscount Float?
+  earlyBirdDeadline DateTime?
+  lastMinuteStart   DateTime?
+  status            String           @default("ACTIVE")
+  notes             String?
+  isActive          Boolean          @default(true)
+  tour              Tour             @relation(fields: [tourId], references: [id])
+  tourId            String
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  ageRanges         TourDateAgeRange[]
 
   @@map("tour_dates")
 }
@@ -427,6 +428,20 @@ model TourPickupPoint {
   tour        Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
 
   @@map("tour_pickup_points")
+}
+
+model TourDateAgeRange {
+  id          String   @id @default(cuid())
+  minAge      Int
+  description String?
+  pricingType String   // 'free' | 'half' | 'percentage' | 'fixed'
+  value       Float
+  tourDate    TourDate @relation(fields: [tourDateId], references: [id], onDelete: Cascade)
+  tourDateId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("tour_date_age_ranges")
 }
 
 enum TourOperatorStatus {

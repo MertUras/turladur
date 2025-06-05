@@ -27,6 +27,12 @@ interface TourDate {
   lastMinuteStart: string;
   notes: string;
   status: 'ACTIVE' | 'FULL' | 'CANCELLED' | 'COMPLETED' | 'WAITING_LIST' | 'NOT_ENOUGH_PARTICIPANTS';
+  ageRanges: {
+    minAge: number;
+    description: string;
+    pricingType: 'free' | 'half' | 'percentage' | 'fixed';
+    value: number;
+  }[];
 }
 
 interface PickupPoint {
@@ -163,7 +169,8 @@ const defaultFormData: TourFormData = {
     earlyBirdDeadline: '',
     lastMinuteStart: '',
     notes: '',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    ageRanges: []
   }],
   discount: 0,
   destinations: [],
@@ -196,7 +203,8 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
         earlyBirdDeadline: date.earlyBirdDeadline || '',
         lastMinuteStart: date.lastMinuteStart || '',
         notes: date.notes || '',
-        status: date.status || 'ACTIVE'
+        status: date.status || 'ACTIVE',
+        ageRanges: date.ageRanges || []
       })) || [defaultFormData.tourDates[0]];
 
       return {
@@ -530,7 +538,8 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
       earlyBirdDeadline: '',
       lastMinuteStart: '',
       notes: '',
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      ageRanges: []
     };
     
     setFormData(prev => ({
@@ -809,6 +818,46 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
   const mm = String(today.getMonth() + 1).padStart(2, '0');
   const dd = String(today.getDate()).padStart(2, '0');
   const todayStr = `${yyyy}-${mm}-${dd}`;
+
+  const handleAddAgeRange = (tourDateIndex: number) => {
+    const newFormData = { ...formData };
+    if (!newFormData.tourDates[tourDateIndex].ageRanges) {
+      newFormData.tourDates[tourDateIndex].ageRanges = [];
+    }
+    
+    newFormData.tourDates[tourDateIndex].ageRanges.push({
+      minAge: 0,
+      description: '',
+      pricingType: 'percentage',
+      value: 0
+    });
+    
+    setFormData(newFormData);
+  };
+
+  const handleRemoveAgeRange = (tourDateIndex: number, ageRangeIndex: number) => {
+    const newFormData = { ...formData };
+    newFormData.tourDates[tourDateIndex].ageRanges.splice(ageRangeIndex, 1);
+    setFormData(newFormData);
+  };
+
+  const handleAgeRangeChange = (
+    tourDateIndex: number,
+    ageRangeIndex: number,
+    field: keyof typeof formData.tourDates[number]['ageRanges'][number],
+    value: string | number
+  ) => {
+    const newFormData = { ...formData };
+    const ageRange = newFormData.tourDates[tourDateIndex].ageRanges[ageRangeIndex];
+    
+    if (field === 'minAge' || field === 'value') {
+      ageRange[field] = Number(value);
+    } else {
+      ageRange[field as 'description' | 'pricingType'] = value as string;
+    }
+    
+    setFormData(newFormData);
+  };
 
   return (
     <div className="space-y-8">
@@ -1440,21 +1489,19 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
         </div>
 
           <div className="space-y-6">
-          {formData.tourDates.map((date, index) => (
-              <div key={index} className="bg-gray-50 border rounded-lg shadow-sm">
-                <div className="px-4 py-4 border-b border-gray-200 bg-white">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-base font-medium text-gray-900">
-                      Tur Tarihi #{index + 1}
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveTourDate(index)}
-                      className="text-gray-500 hover:text-red-500"
-                    >
-                      <XMarkIcon className="h-5 w-5" />
-                    </button>
-                  </div>
+          {formData.tourDates.map((date, dateIndex) => (
+              <div key={dateIndex} className="border rounded-lg p-4 mb-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-base font-medium text-gray-900">
+                    Tur Tarihi #{dateIndex + 1}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTourDate(dateIndex)}
+                    className="text-gray-500 hover:text-red-500"
+                  >
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
                 </div>
 
                 <div className="p-4 space-y-4">
@@ -1465,7 +1512,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                       <input
                         type="date"
                     value={date.startDate}
-                        onChange={(e) => handleTourDateChange(index, 'startDate', e.target.value)}
+                        onChange={(e) => handleTourDateChange(dateIndex, 'startDate', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                   />
                 </div>
@@ -1474,7 +1521,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                       <input
                         type="date"
                     value={date.endDate}
-                        onChange={(e) => handleTourDateChange(index, 'endDate', e.target.value)}
+                        onChange={(e) => handleTourDateChange(dateIndex, 'endDate', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                   />
                 </div>
@@ -1483,7 +1530,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                 <input
                   type="number"
                   value={date.price}
-                  onChange={(e) => handleTourDateChange(index, 'price', e.target.value)}
+                  onChange={(e) => handleTourDateChange(dateIndex, 'price', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                   min="0"
                 />
@@ -1493,7 +1540,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                 <input
                   type="number"
                   value={date.availableSeats}
-                  onChange={(e) => handleTourDateChange(index, 'availableSeats', e.target.value)}
+                  onChange={(e) => handleTourDateChange(dateIndex, 'availableSeats', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                   min="0"
                 />
@@ -1507,7 +1554,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                       <input
                         type="number"
                         value={date.soldSeats}
-                        onChange={(e) => handleTourDateChange(index, 'soldSeats', e.target.value)}
+                        onChange={(e) => handleTourDateChange(dateIndex, 'soldSeats', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                         min="0"
                       />
@@ -1517,7 +1564,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                       <input
                         type="number"
                         value={date.waitingList}
-                        onChange={(e) => handleTourDateChange(index, 'waitingList', e.target.value)}
+                        onChange={(e) => handleTourDateChange(dateIndex, 'waitingList', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                         min="0"
                       />
@@ -1527,7 +1574,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                       <input
                         type="number"
                         value={date.minParticipants}
-                        onChange={(e) => handleTourDateChange(index, 'minParticipants', e.target.value)}
+                        onChange={(e) => handleTourDateChange(dateIndex, 'minParticipants', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                         min="1"
                       />
@@ -1537,7 +1584,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                       <input
                         type="number"
                         value={date.maxParticipants}
-                        onChange={(e) => handleTourDateChange(index, 'maxParticipants', e.target.value)}
+                        onChange={(e) => handleTourDateChange(dateIndex, 'maxParticipants', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                         min="1"
                       />
@@ -1551,7 +1598,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                       <input
                         type="number"
                         value={date.earlyBirdDiscount}
-                        onChange={(e) => handleTourDateChange(index, 'earlyBirdDiscount', e.target.value)}
+                        onChange={(e) => handleTourDateChange(dateIndex, 'earlyBirdDiscount', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                         min="0"
                         max="100"
@@ -1562,7 +1609,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                       <input
                         type="number"
                         value={date.lastMinuteDiscount}
-                        onChange={(e) => handleTourDateChange(index, 'lastMinuteDiscount', e.target.value)}
+                        onChange={(e) => handleTourDateChange(dateIndex, 'lastMinuteDiscount', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                         min="0"
                         max="100"
@@ -1573,7 +1620,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                       <input
                         type="date"
                         value={date.earlyBirdDeadline}
-                        onChange={(e) => handleTourDateChange(index, 'earlyBirdDeadline', e.target.value)}
+                        onChange={(e) => handleTourDateChange(dateIndex, 'earlyBirdDeadline', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                       />
                     </div>
@@ -1582,7 +1629,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                       <input
                         type="date"
                         value={date.lastMinuteStart}
-                        onChange={(e) => handleTourDateChange(index, 'lastMinuteStart', e.target.value)}
+                        onChange={(e) => handleTourDateChange(dateIndex, 'lastMinuteStart', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                       />
                     </div>
@@ -1594,7 +1641,7 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                       <label className="block text-sm font-medium text-gray-900 mb-1">Durum</label>
                       <select
                         value={date.status}
-                        onChange={(e) => handleTourDateChange(index, 'status', e.target.value as TourDate['status'])}
+                        onChange={(e) => handleTourDateChange(dateIndex, 'status', e.target.value as TourDate['status'])}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                       >
                         <option value="ACTIVE">Aktif</option>
@@ -1609,17 +1656,94 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                       <label className="block text-sm font-medium text-gray-900 mb-1">Notlar</label>
                       <textarea
                         value={date.notes}
-                        onChange={(e) => handleTourDateChange(index, 'notes', e.target.value)}
+                        onChange={(e) => handleTourDateChange(dateIndex, 'notes', e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
                         rows={2}
                       />
                     </div>
                   </div>
+
+                  <div className="mt-4">
+                    <h4 className="text-sm font-semibold mb-2">Yaş Aralıkları</h4>
+                    {date.ageRanges?.map((ageRange, ageIndex) => (
+                      <div key={ageIndex} className="flex gap-3 items-start mb-3">
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Minimum Yaş
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={ageRange.minAge}
+                            onChange={(e) => handleAgeRangeChange(dateIndex, ageIndex, 'minAge', e.target.value)}
+                            className="w-full px-3 py-2 border rounded-md"
+                          />
+                        </div>
+                        
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Açıklama
+                          </label>
+                          <input
+                            type="text"
+                            value={ageRange.description}
+                            onChange={(e) => handleAgeRangeChange(dateIndex, ageIndex, 'description', e.target.value)}
+                            className="w-full px-3 py-2 border rounded-md"
+                          />
+                        </div>
+                        
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Fiyatlandırma Tipi
+                          </label>
+                          <select
+                            value={ageRange.pricingType}
+                            onChange={(e) => handleAgeRangeChange(dateIndex, ageIndex, 'pricingType', e.target.value)}
+                            className="w-full px-3 py-2 border rounded-md"
+                          >
+                            <option value="free">Ücretsiz</option>
+                            <option value="half">Yarı Fiyat</option>
+                            <option value="percentage">Yüzde İndirim</option>
+                            <option value="fixed">Sabit Fiyat</option>
+                          </select>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Değer
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={ageRange.value}
+                            onChange={(e) => handleAgeRangeChange(dateIndex, ageIndex, 'value', e.target.value)}
+                            className="w-full px-3 py-2 border rounded-md"
+                          />
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAgeRange(dateIndex, ageIndex)}
+                          className="mt-6 p-2 text-red-600 hover:text-red-800"
+                        >
+                          <XMarkIcon className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ))}
+                    
+                    <button
+                      type="button"
+                      onClick={() => handleAddAgeRange(dateIndex)}
+                      className="mt-2 text-sm text-sky-600 hover:text-sky-800 font-medium"
+                    >
+                      + Yaş Aralığı Ekle
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
       {/* Form Gönderme */}
         <div className="flex justify-between pt-4">

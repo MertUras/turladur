@@ -55,6 +55,26 @@ interface Destination {
 
 type TourDestination = string | Destination;
 
+interface TourDate {
+  id: string;
+  startDate: Date;
+  endDate: Date;
+  price: number;
+  availableSeats: number;
+  ageRanges: {
+    id: string;
+    minAge: number;
+    description: string;
+    pricingType: 'free' | 'half' | 'percentage' | 'fixed';
+    value: number;
+  }[];
+  earlyBirdDiscount?: number;
+  earlyBirdDeadline?: string;
+  lastMinuteDiscount?: number;
+  lastMinuteStart?: string;
+  minParticipants?: number;
+}
+
 interface Tour {
   id: string;
   name: string;
@@ -89,13 +109,7 @@ interface Tour {
   updatedAt: Date;
   tourOperatorId: string;
   tourOperator: TourOperator;
-  tourDates: {
-    id: string;
-    startDate: Date;
-    endDate: Date;
-    price: number;
-    availableSeats: number;
-  }[];
+  tourDates: TourDate[];
   accommodation: {
     name: string;
     image: string;
@@ -147,24 +161,42 @@ export default function TourPage() {
   const [tour, setTour] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTourDate, setSelectedTourDate] = useState<TourDate | null>(null);
+  const [participants, setParticipants] = useState<{ [key: string]: number }>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
   const [tourCount, setTourCount] = useState(0);
   const [tourOperator, setTourOperator] = useState<TourOperator | null>(null);
   const [otherTours, setOtherTours] = useState<Tour[]>([]);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     const fetchTour = async () => {
       try {
         const response = await fetch(`/api/tours/${params.id}`);
-        if (!response.ok) {
-          throw new Error('Tur bulunamadı');
-        }
         const data = await response.json();
-        setTour(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Bir hata oluştu');
-      } finally {
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Tur detayları alınamadı');
+        }
+
+        // Tarihleri dönüştür
+        const transformedTour = {
+          ...data,
+          tourDates: data.tourDates.map((date: any) => ({
+            ...date,
+            startDate: new Date(date.startDate),
+            endDate: new Date(date.endDate),
+            earlyBirdDeadline: date.earlyBirdDeadline ? new Date(date.earlyBirdDeadline) : null,
+            lastMinuteStart: date.lastMinuteStart ? new Date(date.lastMinuteStart) : null
+          }))
+        };
+
+        setTour(transformedTour);
+        setLoading(false);
+      } catch (error) {
+        console.error('Tur detayları alınırken hata:', error);
+        setError('Tur detayları alınamadı');
         setLoading(false);
       }
     };
@@ -243,6 +275,14 @@ export default function TourPage() {
     }
   }, [tour?.tourOperator?.id, tour?.id]);
 
+  const handleDateSelect = (date: TourDate | null) => {
+    setSelectedTourDate(date);
+  };
+
+  const handleParticipantsChange = (newParticipants: { [key: string]: number }) => {
+    setParticipants(newParticipants);
+  };
+
   if (loading) {
     return <div>Yükleniyor...</div>;
   }
@@ -252,14 +292,7 @@ export default function TourPage() {
   }
   
   // Tur resimlerini parse et
-  const tourImages = [
-    'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1445019980597-93fa8acb246c?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1570654230464-9e63b3497a1e?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1585924257670-6b97a7fdfb0d?q=80&w=800&auto=format&fit=crop',
-    'https://images.unsplash.com/photo-1552733407-5d5c46c3bb3b?q=80&w=800&auto=format&fit=crop'
-  ];
+  const tourImages = Array.isArray(tour.images) ? tour.images.filter(Boolean) : [];
   
   // Tur dahil olanlar ve olmayanlar
   const inclusions = parseJsonString<string[]>(tour.inclusions, []);
@@ -313,14 +346,20 @@ export default function TourPage() {
       {/* Hero Section - ikas Style Refinement (SKY Theme) */}
       <div className="relative h-[80vh] md:h-[90vh]">
         <div className="absolute inset-0 overflow-hidden">
-          <Image
-            src={tourImages[0]}
-            alt={tour.name}
-            fill
-            priority
-            style={{ objectFit: "cover" }}
-            className="brightness-70 transform scale-100 animate-ken-burns-slow"
-          />
+          {tourImages.length > 0 ? (
+            <Image
+              src={tourImages[0]}
+              alt={tour.name}
+              fill
+              priority
+              style={{ objectFit: "cover" }}
+              className="brightness-70 transform scale-100 animate-ken-burns-slow"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+              <PhotoIcon className="w-20 h-20 text-gray-400" />
+            </div>
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
         </div>
         
@@ -961,7 +1000,7 @@ export default function TourPage() {
 
             {/* Sağ Kolon - Rezervasyon ve Bilgiler */}
             <div className="flex flex-col space-y-8 w-full max-w-[400px] mx-auto">
-              {/* Rezervasyon Kartı - ikas Style */}
+              {/* Rezervasyon Kartı */}
               <div 
                 id="booking" 
                 className="bg-white rounded-xl p-6 border border-neutral-200/70 shadow-md w-full top-24"
@@ -971,7 +1010,7 @@ export default function TourPage() {
                     <CalendarDaysIcon className="h-6 w-6 mr-2.5 text-sky-600 flex-shrink-0" />
                     <span>Rezervasyon</span>
                   </h2>
-                  {/* Simplified Badges */}
+                  {/* Badges */}
                   <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
                     <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200/70">
                       Ücretsiz İptal
@@ -981,57 +1020,88 @@ export default function TourPage() {
                     </div>
                   </div>
                 </div>
-              
+
                 {/* Tur Tarihleri */}
                 <div className="bg-neutral-50/60 p-6 rounded-lg border border-neutral-200/70 mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-neutral-800">Tur Tarihleri</h3>
+                    <div className="text-sm text-neutral-600">
+                      {tour.tourDates?.length || 0} tarih mevcut
+                    </div>
+                  </div>
                   <div className="flex flex-col gap-4">
-                    {tour.tourDates.map((date) => {
-                      const isLimited = date.availableSeats <= 5;
-                      return (
-                        <div key={date.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-lg border border-neutral-200/70 hover:border-sky-200 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <CalendarDaysIcon className="h-5 w-5 text-sky-600 flex-shrink-0" />
-                            <div>
-                              <div className="text-sm font-medium text-neutral-900">
-                                {new Date(date.startDate).toLocaleDateString('tr-TR')} - {new Date(date.endDate).toLocaleDateString('tr-TR')}
-                              </div>
-                              <div className="text-xs text-neutral-500 mt-0.5">
-                                {date.availableSeats} kişilik kontenjan
+                    {!tour.tourDates || tour.tourDates.length === 0 ? (
+                      <div className="text-center py-8">
+                        <CalendarDaysIcon className="h-12 w-12 text-neutral-400 mx-auto mb-3" />
+                        <p className="text-neutral-600">Şu anda mevcut tur tarihi bulunmamaktadır.</p>
+                      </div>
+                    ) : (
+                      tour.tourDates.map((date) => {
+                        const isLimited = date.availableSeats <= 5;
+                        const startDate = new Date(date.startDate);
+                        const endDate = new Date(date.endDate);
+                        const hasEarlyBirdDiscount = date.earlyBirdDiscount && date.earlyBirdDeadline && new Date() <= new Date(date.earlyBirdDeadline);
+                        const hasLastMinuteDiscount = date.lastMinuteDiscount && date.lastMinuteStart && new Date() >= new Date(date.lastMinuteStart);
+                        
+                        return (
+                          <button
+                            key={date.id}
+                            onClick={() => {
+                              handleDateSelect(date);
+                              setExpanded(true);
+                              const bottomBar = document.getElementById('booking-panel');
+                              if (bottomBar) {
+                                bottomBar.scrollIntoView({ behavior: 'smooth' });
+                              }
+                            }}
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-lg border border-neutral-200/70 hover:border-sky-200 transition-colors text-left w-full"
+                          >
+                            <div className="flex items-start gap-3">
+                              <CalendarDaysIcon className="h-5 w-5 text-sky-600 flex-shrink-0 mt-1" />
+                              <div>
+                                <div className="text-sm font-medium text-neutral-900">
+                                  {startDate.toLocaleDateString('tr-TR', { 
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                  })} - {endDate.toLocaleDateString('tr-TR', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                  })}
+                                </div>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${isLimited ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                    {isLimited ? `Son ${date.availableSeats} kontenjan!` : `${date.availableSeats} kişilik kontenjan`}
+                                  </span>
+                                  {hasEarlyBirdDiscount && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-700">
+                                      %{date.earlyBirdDiscount} Erken Rezervasyon
+                                    </span>
+                                  )}
+                                  {hasLastMinuteDiscount && (
+                                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700">
+                                      %{date.lastMinuteDiscount} Son Dakika
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-semibold text-sky-700">
-                              {tour.discount && tour.discount > 0 ? (
-                                <>
-                                  <span className="line-through text-neutral-400 text-base mr-2">{date.price.toLocaleString('tr-TR')} ₺</span>
-                                  <span>{(date.price * (1 - (tour.discount / 100))).toLocaleString('tr-TR')} ₺</span>
-                                </>
-                              ) : (
-                                `${date.price.toLocaleString('tr-TR')} ₺`
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="text-lg font-semibold text-sky-700">
+                                {date.price.toLocaleString('tr-TR')} ₺
+                              </div>
+                              {date.minParticipants && (
+                                <div className="text-xs text-neutral-500">
+                                  Minimum {date.minParticipants} kişi
+                                </div>
                               )}
                             </div>
-                            <button className="mt-2 px-4 py-1.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium rounded-lg transition-colors">
-                              Seç
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          </button>
+                        );
+                      })
+                    )}
                   </div>
-                </div>
-                
-                {/* Standardized Buttons */}
-                <div className="space-y-3">
-                  <button className={`${primaryButtonClasses} w-full justify-center py-3`}>
-                    <CalendarDaysIcon className="w-5 h-5 mr-2 flex-shrink-0" />
-                    <span>Hızlı Rezervasyon</span>
-                  </button>
-                  
-                  <button className={`${secondaryButtonClasses} w-full justify-center py-3`}>
-                    <EnvelopeIcon className="w-5 h-5 mr-2 flex-shrink-0" />
-                    <span>Fiyat Bilgisi Al</span>
-                  </button>
                 </div>
               </div>
 
@@ -1269,8 +1339,15 @@ export default function TourPage() {
         </button>
       </div>
       
-      {/* BottomBookingBar Component remains the same */}
-      <BottomBookingBar tour={tour} />
+      {/* BottomBookingBar Component */}
+      <BottomBookingBar
+        tour={tour}
+        onDateSelect={handleDateSelect}
+        onParticipantsChange={handleParticipantsChange}
+        isExpanded={expanded}
+        onExpandedChange={setExpanded}
+        selectedDate={selectedTourDate}
+      />
     </div>
   );
 } 

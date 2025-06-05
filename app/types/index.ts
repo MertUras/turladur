@@ -212,4 +212,38 @@ export interface Review {
   userId: string;
   hotelId?: string;
   experienceId?: string;
+}
+
+export interface TourDateAgeRange {
+  id: string;
+  minAge: number;
+  description?: string;
+  pricingType: 'free' | 'half' | 'percentage' | 'fixed';
+  value: number;
+  tourDateId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TourDate {
+  id: string;
+  startDate: Date;
+  endDate: Date;
+  price: number;
+  availableSeats: number;
+  soldSeats?: number;
+  waitingList?: number;
+  minParticipants?: number;
+  maxParticipants?: number;
+  earlyBirdDiscount?: number;
+  lastMinuteDiscount?: number;
+  earlyBirdDeadline?: Date;
+  lastMinuteStart?: Date;
+  status: string;
+  notes?: string;
+  isActive: boolean;
+  tourId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  ageRanges: TourDateAgeRange[];
 } 
