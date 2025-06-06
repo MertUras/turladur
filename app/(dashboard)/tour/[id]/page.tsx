@@ -162,13 +162,13 @@ export default function TourPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTourDate, setSelectedTourDate] = useState<TourDate | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const [participants, setParticipants] = useState<{ [key: string]: number }>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
   const [tourCount, setTourCount] = useState(0);
   const [tourOperator, setTourOperator] = useState<TourOperator | null>(null);
   const [otherTours, setOtherTours] = useState<Tour[]>([]);
-  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     const fetchTour = async () => {
@@ -277,6 +277,9 @@ export default function TourPage() {
 
   const handleDateSelect = (date: TourDate | null) => {
     setSelectedTourDate(date);
+    if (date) {
+      setExpanded(true);
+    }
   };
 
   const handleParticipantsChange = (newParticipants: { [key: string]: number }) => {
@@ -1048,11 +1051,6 @@ export default function TourPage() {
                             key={date.id}
                             onClick={() => {
                               handleDateSelect(date);
-                              setExpanded(true);
-                              const bottomBar = document.getElementById('booking-panel');
-                              if (bottomBar) {
-                                bottomBar.scrollIntoView({ behavior: 'smooth' });
-                              }
                             }}
                             className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-lg border border-neutral-200/70 hover:border-sky-200 transition-colors text-left w-full"
                           >

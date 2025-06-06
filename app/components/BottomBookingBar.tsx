@@ -241,9 +241,12 @@ export default function BottomBookingBar({
 
   // Fiyat formatlama yardımcı fonksiyonu
   const formatPrice = (price: number) => {
-    return price.toLocaleString('tr-TR', { 
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+    // Önce fiyatı 0.50'ye yuvarla
+    const roundedPrice = Math.round(price * 2) / 2;
+    
+    return roundedPrice.toLocaleString('tr-TR', { 
+      minimumFractionDigits: roundedPrice % 1 === 0 ? 0 : 2,
+      maximumFractionDigits: roundedPrice % 1 === 0 ? 0 : 2,
       useGrouping: true
     }).replace(/,/g, '.');
   };
@@ -298,7 +301,7 @@ export default function BottomBookingBar({
       return (
         <div key={range.id} className="text-xs text-neutral-600 flex justify-between">
           <span>{range.description} ({count} kişi)</span>
-          <span>{(priceForRange * count).toLocaleString('tr-TR')} ₺</span>
+          <span>{formatPrice(priceForRange * count)} ₺</span>
         </div>
       );
     });
@@ -394,7 +397,10 @@ export default function BottomBookingBar({
       >
         <div className="container mx-auto px-4 pt-6 pb-4 h-full flex flex-col relative">
           <button 
-            onClick={() => setExpanded(false)}
+            onClick={() => {
+              setExpanded(false);
+              onExpandedChange?.(false);
+            }}
             className="absolute top-3 right-3 p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-sky-500"
             aria-label="Paneli Kapat"
           >
