@@ -19,7 +19,7 @@ import { tr } from 'date-fns/locale'
 interface TourDateAgeRange {
   id: string;
   minAge: number;
-  description: string;
+  maxAge: number | null;
   pricingType: 'free' | 'half' | 'percentage' | 'fixed';
   value: number;
 }
@@ -300,7 +300,7 @@ export default function BottomBookingBar({
 
       return (
         <div key={range.id} className="text-xs text-neutral-600 flex justify-between">
-          <span>{range.description} ({count} kişi)</span>
+          <span>{formatAgeRange(range.minAge, range.maxAge)} ({count} kişi)</span>
           <span>{formatPrice(priceForRange * count)} ₺</span>
         </div>
       );
@@ -375,6 +375,14 @@ export default function BottomBookingBar({
     setExpanded(newExpanded);
     onExpandedChange?.(newExpanded);
   };
+
+  // Yaş aralığı gösterimi için yardımcı fonksiyon
+  function formatAgeRange(minAge: number, maxAge: number | null): string {
+    if (maxAge === null) {
+      return `${minAge}+`;
+    }
+    return `${minAge}-${maxAge}`;
+  }
 
   return (
     <>
@@ -536,7 +544,7 @@ export default function BottomBookingBar({
                     </div>
                   ) : (
                     selectedDateAgeRanges.map((range) => {
-                      const { hasEarlyBirdDiscount, hasLastMinuteDiscount } = checkDiscounts(currentSelectedDate);
+                      const { hasEarlyBirdDiscount, hasLastMinuteDiscount } = checkDiscounts(currentSelectedDate!);
                       const originalPrice = currentSelectedDate?.price || 0;
                       let basePrice = originalPrice;
 
@@ -550,7 +558,7 @@ export default function BottomBookingBar({
                         <div key={range.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-neutral-200 hover:border-neutral-300 transition-colors">
                           <div>
                             <span className="text-sm font-medium text-neutral-800">
-                              {range.description}
+                              {formatAgeRange(range.minAge, range.maxAge)} yaş
                             </span>
                             <div className="text-xs text-neutral-500 mt-0.5 flex items-center gap-2">
                               <span className={range.pricingType === 'free' ? 'text-emerald-600' : 'text-sky-600'} style={{ fontWeight: '500' }}>
@@ -573,17 +581,32 @@ export default function BottomBookingBar({
                               <span className="text-lg">-</span>
                             </button>
                             <input 
-                              type="number" 
-                              min="0"
-                              value={participants[range.id] || 0}
-                              onChange={(e) => handleParticipantChange(range.id, parseInt(e.target.value) || 0)}
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={participants[range.id] === 0 ? '0' : participants[range.id] || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || value === '0') {
+                                  handleParticipantChange(range.id, 0);
+                                  return;
+                                }
+                                if (!/^\d+$/.test(value)) return;
+                                const numValue = parseInt(value.replace(/^0+/, ''));
+                                if (currentSelectedDate && numValue <= currentSelectedDate.availableSeats) {
+                                  handleParticipantChange(range.id, numValue);
+                                }
+                              }}
                               className="w-16 text-center p-1.5 border border-neutral-300 rounded-lg text-sm font-medium text-neutral-800 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                             />
                             <button
                               type="button"
                               onClick={() => {
                                 const currentCount = participants[range.id] || 0;
-                                handleParticipantChange(range.id, currentCount + 1);
+                                const newCount = currentCount + 1;
+                                if (currentSelectedDate && newCount <= currentSelectedDate.availableSeats) {
+                                  handleParticipantChange(range.id, newCount);
+                                }
                               }}
                               className="w-8 h-8 flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors"
                             >
@@ -629,7 +652,7 @@ export default function BottomBookingBar({
                       return (
                         <div key={group.age} className="flex justify-between items-center text-xs">
                           <span className="text-neutral-500">
-                            {range.description} ({group.count} kişi)
+                            {formatAgeRange(range.minAge, range.maxAge)} ({group.count} kişi)
                           </span>
                           <span className="font-medium text-neutral-600">{priceText}</span>
                         </div>

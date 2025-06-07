@@ -7,25 +7,25 @@ const prisma = new PrismaClient();
 const defaultAgeRanges = [
   {
     minAge: 0,
-    description: '0-2 Yaş (Bebek)',
+    maxAge: 2,
     pricingType: 'free',
     value: 0
   },
   {
     minAge: 3,
-    description: '3-6 Yaş (Çocuk)',
+    maxAge: 6,
     pricingType: 'percentage',
     value: 50 // %50 indirim
   },
   {
     minAge: 7,
-    description: '7-12 Yaş (Çocuk)',
+    maxAge: 12,
     pricingType: 'percentage',
     value: 25 // %25 indirim
   },
   {
     minAge: 13,
-    description: '13+ Yaş (Yetişkin)',
+    maxAge: null,
     pricingType: 'fixed',
     value: 0 // Tam fiyat
   }
@@ -533,19 +533,12 @@ async function main() {
       data: {
         companyName: 'Turladur Turizm',
         description: 'Türkiye\'nin önde gelen tur operatörlerinden biri.',
-        email: 'info@turladur.com',
+        email: 'test.operator@tourtech.com',
         phone: '+90 555 123 4567',
         address: 'İstanbul, Türkiye',
         logo: 'https://picsum.photos/200',
         status: 'approved',
-        user: {
-          create: {
-            name: 'Turladur Admin',
-            email: 'admin@turladur.com',
-            password: 'hashedpassword123',
-            role: UserRole.TOUR_OPERATOR
-          }
-        }
+        userId: (await prisma.user.findUnique({ where: { email: 'test.operator@tourtech.com' } }))!.id
       }
     });
 
@@ -593,25 +586,25 @@ async function main() {
           ageRanges: [
             {
               minAge: 0,
-              description: '0-2 Yaş',
+              maxAge: 2,
               pricingType: 'free',
               value: 0
             },
             {
               minAge: 3,
-              description: '3-6 Yaş',
-              pricingType: 'half',
+              maxAge: 6,
+              pricingType: 'percentage',
               value: 50
             },
             {
               minAge: 7,
-              description: '7-12 Yaş',
+              maxAge: 12,
               pricingType: 'percentage',
               value: 25
             },
             {
               minAge: 13,
-              description: '13+ Yaş',
+              maxAge: null,
               pricingType: 'fixed',
               value: 8500
             }
@@ -636,25 +629,25 @@ async function main() {
           ageRanges: [
             {
               minAge: 0,
-              description: '0-2 Yaş',
+              maxAge: 2,
               pricingType: 'free',
               value: 0
             },
             {
               minAge: 3,
-              description: '3-6 Yaş',
-              pricingType: 'half',
+              maxAge: 6,
+              pricingType: 'percentage',
               value: 50
             },
             {
               minAge: 7,
-              description: '7-12 Yaş',
+              maxAge: 12,
               pricingType: 'percentage',
               value: 25
             },
             {
               minAge: 13,
-              description: '13+ Yaş',
+              maxAge: null,
               pricingType: 'fixed',
               value: 9350
             }
@@ -679,25 +672,25 @@ async function main() {
           ageRanges: [
             {
               minAge: 0,
-              description: '0-2 Yaş',
+              maxAge: 2,
               pricingType: 'free',
               value: 0
             },
             {
               minAge: 3,
-              description: '3-6 Yaş',
-              pricingType: 'half',
+              maxAge: 6,
+              pricingType: 'percentage',
               value: 50
             },
             {
               minAge: 7,
-              description: '7-12 Yaş',
+              maxAge: 12,
               pricingType: 'percentage',
               value: 25
             },
             {
               minAge: 13,
-              description: '13+ Yaş',
+              maxAge: null,
               pricingType: 'fixed',
               value: 9350
             }

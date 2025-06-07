@@ -433,7 +433,7 @@ model TourPickupPoint {
 model TourDateAgeRange {
   id          String   @id @default(cuid())
   minAge      Int
-  description String?
+  maxAge      Int?
   pricingType String   // 'free' | 'half' | 'percentage' | 'fixed'
   value       Float
   tourDate    TourDate @relation(fields: [tourDateId], references: [id], onDelete: Cascade)
@@ -442,6 +442,7 @@ model TourDateAgeRange {
   updatedAt   DateTime @updatedAt
 
   @@map("tour_date_age_ranges")
+  @@unique([tourDateId, minAge, maxAge])
 }
 
 enum TourOperatorStatus {

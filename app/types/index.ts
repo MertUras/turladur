@@ -217,7 +217,7 @@ export interface Review {
 export interface TourDateAgeRange {
   id: string;
   minAge: number;
-  description?: string;
+  maxAge: number | null;
   pricingType: 'free' | 'half' | 'percentage' | 'fixed';
   value: number;
   tourDateId: string;

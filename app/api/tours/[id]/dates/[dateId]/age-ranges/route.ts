@@ -40,12 +40,39 @@ export async function POST(
       );
     }
 
+    // Mevcut yaş aralıklarını kontrol et
+    const existingRanges = await prisma.tourDateAgeRange.findMany({
+      where: {
+        tourDateId: params.dateId
+      },
+      orderBy: {
+        minAge: 'asc'
+      }
+    });
+
+    // Çakışma kontrolü
+    const hasOverlap = existingRanges.some(range => {
+      const currentMin = data.minAge;
+      const currentMax = data.maxAge ?? Infinity;
+      const rangeMin = range.minAge;
+      const rangeMax = range.maxAge ?? Infinity;
+
+      return (currentMin <= rangeMax && currentMax >= rangeMin);
+    });
+
+    if (hasOverlap) {
+      return NextResponse.json(
+        { error: 'Bu yaş aralığı mevcut bir aralıkla çakışıyor' },
+        { status: 400 }
+      );
+    }
+
     // Yaş aralığı oluştur
     const ageRange = await prisma.tourDateAgeRange.create({
       data: {
         tourDateId: params.dateId,
         minAge: data.minAge,
-        description: data.description || '',
+        maxAge: data.maxAge,
         pricingType: data.pricingType,
         value: data.value
       }

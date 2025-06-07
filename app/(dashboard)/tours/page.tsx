@@ -469,7 +469,7 @@ export default function ToursPage() {
       : tour.price || 0;
 
     return (
-      <Link href={`/tour/${tour.id}`} className="block">
+      <Link key={tour.id} href={`/tour/${tour.id}`} className="block">
         <div 
           className="bg-white rounded-xl shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300 flex flex-col"
           role="article"

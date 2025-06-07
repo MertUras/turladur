@@ -64,7 +64,7 @@ interface TourDate {
   ageRanges: {
     id: string;
     minAge: number;
-    description: string;
+    maxAge: number | null;
     pricingType: 'free' | 'half' | 'percentage' | 'fixed';
     value: number;
   }[];
@@ -154,6 +154,27 @@ interface TourStop {
     address: string;
     coordinates?: [number, number];
   };
+}
+
+// Yaş aralığı gösterimi için yardımcı fonksiyon
+function formatAgeRange(minAge: number, maxAge: number | null): string {
+  if (maxAge === null) {
+    return `${minAge}+`;
+  }
+  return `${minAge}-${maxAge}`;
+}
+
+function formatPricing(pricingType: string, value: number, basePrice: number): string {
+  switch (pricingType) {
+    case 'free':
+      return 'Ücretsiz';
+    case 'percentage':
+      return `%${value} İndirimli`;
+    case 'fixed':
+      return `${value.toLocaleString('tr-TR')} ₺`;
+    default:
+      return `${value.toLocaleString('tr-TR')} ₺`;
+  }
 }
 
 export default function TourPage() {

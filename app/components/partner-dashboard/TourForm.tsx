@@ -11,6 +11,13 @@ interface ImageFile {
   preview?: string;
 }
 
+interface AgeRange {
+  minAge: number;
+  maxAge: number | null;
+  pricingType: 'free' | 'half' | 'percentage' | 'fixed';
+  value: number;
+}
+
 interface TourDate {
   startDate: string;
   endDate: string;
@@ -27,12 +34,7 @@ interface TourDate {
   lastMinuteStart: string;
   notes: string;
   status: 'ACTIVE' | 'FULL' | 'CANCELLED' | 'COMPLETED' | 'WAITING_LIST' | 'NOT_ENOUGH_PARTICIPANTS';
-  ageRanges: {
-    minAge: number;
-    description: string;
-    pricingType: 'free' | 'half' | 'percentage' | 'fixed';
-    value: number;
-  }[];
+  ageRanges: AgeRange[];
 }
 
 interface PickupPoint {
@@ -825,9 +827,16 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
       newFormData.tourDates[tourDateIndex].ageRanges = [];
     }
     
+    // Mevcut yaş aralıklarını sırala
+    const sortedRanges = [...newFormData.tourDates[tourDateIndex].ageRanges].sort((a, b) => a.minAge - b.minAge);
+    
+    // Son yaş aralığının bitiş yaşının bir fazlasını başlangıç yaşı olarak al
+    const lastRange = sortedRanges[sortedRanges.length - 1];
+    const startAge = lastRange ? (lastRange.maxAge ? lastRange.maxAge + 1 : lastRange.minAge + 1) : 0;
+    
     newFormData.tourDates[tourDateIndex].ageRanges.push({
-      minAge: 0,
-      description: '',
+      minAge: startAge,
+      maxAge: null,
       pricingType: 'percentage',
       value: 0
     });
@@ -835,27 +844,56 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
     setFormData(newFormData);
   };
 
-  const handleRemoveAgeRange = (tourDateIndex: number, ageRangeIndex: number) => {
-    const newFormData = { ...formData };
-    newFormData.tourDates[tourDateIndex].ageRanges.splice(ageRangeIndex, 1);
-    setFormData(newFormData);
+  const validateAgeRanges = (tourDateIndex: number) => {
+    const ranges = formData.tourDates[tourDateIndex].ageRanges;
+    const sortedRanges = [...ranges].sort((a, b) => a.minAge - b.minAge);
+    
+    for (let i = 0; i < sortedRanges.length - 1; i++) {
+      const currentRange = sortedRanges[i];
+      const nextRange = sortedRanges[i + 1];
+      
+      // Eğer mevcut aralığın bitişi, sonraki aralığın başlangıcından büyükse çakışma var
+      if (currentRange.maxAge && currentRange.maxAge >= nextRange.minAge) {
+        return false;
+      }
+    }
+    
+    return true;
   };
 
   const handleAgeRangeChange = (
     tourDateIndex: number,
     ageRangeIndex: number,
-    field: keyof typeof formData.tourDates[number]['ageRanges'][number],
-    value: string | number
+    field: keyof AgeRange,
+    value: string | number | null
   ) => {
     const newFormData = { ...formData };
     const ageRange = newFormData.tourDates[tourDateIndex].ageRanges[ageRangeIndex];
     
-    if (field === 'minAge' || field === 'value') {
+    if (field === 'minAge' || field === 'maxAge') {
+      const newValue = value === null ? null : Number(value);
+      
+      if (field === 'minAge') {
+        if (newValue === null) {
+          alert('Başlangıç yaşı boş bırakılamaz.');
+          return;
+        }
+        ageRange.minAge = newValue;
+      } else if (field === 'maxAge') {
+        ageRange.maxAge = newValue;
+      }
+    } else if (field === 'value') {
       ageRange[field] = Number(value);
-    } else {
-      ageRange[field as 'description' | 'pricingType'] = value as string;
+    } else if (field === 'pricingType') {
+      ageRange[field] = value as 'free' | 'half' | 'percentage' | 'fixed';
     }
     
+    setFormData(newFormData);
+  };
+
+  const handleRemoveAgeRange = (tourDateIndex: number, ageRangeIndex: number) => {
+    const newFormData = { ...formData };
+    newFormData.tourDates[tourDateIndex].ageRanges.splice(ageRangeIndex, 1);
     setFormData(newFormData);
   };
 
@@ -1666,40 +1704,62 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                   <div className="mt-4">
                     <h4 className="text-sm font-semibold mb-2">Yaş Aralıkları</h4>
                     {date.ageRanges?.map((ageRange, ageIndex) => (
-                      <div key={ageIndex} className="flex gap-3 items-start mb-3">
+                      <div key={ageIndex} className="flex gap-3 items-start mb-3 bg-white p-4 rounded-lg border border-neutral-200 shadow-sm">
                         <div className="flex-1">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Minimum Yaş
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={ageRange.minAge}
-                            onChange={(e) => handleAgeRangeChange(dateIndex, ageIndex, 'minAge', e.target.value)}
-                            className="w-full px-3 py-2 border rounded-md"
-                          />
-                        </div>
-                        
-                        <div className="flex-1">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Açıklama
+                          <label className="block text-xs font-medium text-neutral-600 mb-1">
+                            Başlangıç Yaşı
                           </label>
                           <input
                             type="text"
-                            value={ageRange.description}
-                            onChange={(e) => handleAgeRangeChange(dateIndex, ageIndex, 'description', e.target.value)}
-                            className="w-full px-3 py-2 border rounded-md"
+                            inputMode="numeric"
+                            pattern="\d*"
+                            value={ageRange.minAge || ''}
+                            disabled={ageIndex > 0}
+                            className={`w-full px-3 py-2 border border-neutral-300 rounded-md text-neutral-800 placeholder-neutral-400 ${
+                              ageIndex > 0 
+                                ? 'bg-neutral-100 cursor-not-allowed' 
+                                : 'focus:border-sky-500 focus:ring-1 focus:ring-sky-500'
+                            }`}
+                            placeholder={ageIndex === 0 ? "Örn: 3" : ""}
+                            onChange={(e) => {
+                              if (ageIndex === 0) {
+                                const value = e.target.value.replace(/^0+/, '');
+                                if (value === '' || /^\d+$/.test(value)) {
+                                  handleAgeRangeChange(dateIndex, ageIndex, 'minAge', value ? Number(value) : 0);
+                                }
+                              }
+                            }}
                           />
                         </div>
                         
                         <div className="flex-1">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-xs font-medium text-neutral-600 mb-1">
+                            Bitiş Yaşı
+                          </label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="\d*"
+                            value={ageRange.maxAge ?? ''}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/^0+/, '');
+                              if (value === '' || /^\d+$/.test(value)) {
+                                handleAgeRangeChange(dateIndex, ageIndex, 'maxAge', value ? Number(value) : null);
+                              }
+                            }}
+                            className="w-full px-3 py-2 border border-neutral-300 rounded-md text-neutral-800 placeholder-neutral-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                            placeholder="Örn: 6"
+                          />
+                        </div>
+                        
+                        <div className="flex-1">
+                          <label className="block text-xs font-medium text-neutral-600 mb-1">
                             Fiyatlandırma Tipi
                           </label>
                           <select
                             value={ageRange.pricingType}
                             onChange={(e) => handleAgeRangeChange(dateIndex, ageIndex, 'pricingType', e.target.value)}
-                            className="w-full px-3 py-2 border rounded-md"
+                            className="w-full px-3 py-2 border border-neutral-300 rounded-md text-neutral-800 bg-white focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
                           >
                             <option value="free">Ücretsiz</option>
                             <option value="half">Yarı Fiyat</option>
@@ -1709,34 +1769,52 @@ export default function TourForm({ initialData, onSubmit, isSubmitting: external
                         </div>
                         
                         <div className="flex-1">
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Değer
+                          <label className="block text-xs font-medium text-neutral-600 mb-1">
+                            {ageRange.pricingType === 'percentage' ? 'İndirim Oranı (%)' :
+                             ageRange.pricingType === 'fixed' ? 'Sabit Fiyat (₺)' :
+                             'Değer'}
                           </label>
                           <input
                             type="number"
                             min="0"
+                            max={ageRange.pricingType === 'percentage' ? 100 : undefined}
                             value={ageRange.value}
                             onChange={(e) => handleAgeRangeChange(dateIndex, ageIndex, 'value', e.target.value)}
-                            className="w-full px-3 py-2 border rounded-md"
+                            className="w-full px-3 py-2 border border-neutral-300 rounded-md text-neutral-800 placeholder-neutral-400 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                            placeholder={ageRange.pricingType === 'percentage' ? 'Örn: 50' : 'Örn: 1000'}
+                            disabled={ageRange.pricingType === 'free' || ageRange.pricingType === 'half'}
                           />
                         </div>
-                        
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveAgeRange(dateIndex, ageIndex)}
-                          className="mt-6 p-2 text-red-600 hover:text-red-800"
-                        >
-                          <XMarkIcon className="w-5 h-5" />
-                        </button>
+
+                        <div className="flex flex-col items-center justify-center mt-6">
+                          <span className="text-sm font-medium text-neutral-700 mb-1">
+                            {ageRange.maxAge ? `${ageRange.minAge}-${ageRange.maxAge} Yaş` : `${ageRange.minAge}+ Yaş`}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAgeRange(dateIndex, ageIndex)}
+                            className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                            title="Yaş aralığını sil"
+                          >
+                            <XMarkIcon className="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                     
                     <button
                       type="button"
-                      onClick={() => handleAddAgeRange(dateIndex)}
-                      className="mt-2 text-sm text-sky-600 hover:text-sky-800 font-medium"
+                      onClick={() => {
+                        if (!validateAgeRanges(dateIndex)) {
+                          alert('Yaş aralıkları arasında çakışma var. Lütfen önce mevcut aralıkları düzenleyin.');
+                          return;
+                        }
+                        handleAddAgeRange(dateIndex);
+                      }}
+                      className="mt-2 inline-flex items-center text-sm text-sky-600 hover:text-sky-800 font-medium bg-sky-50 hover:bg-sky-100 px-4 py-2 rounded-md transition-colors"
                     >
-                      + Yaş Aralığı Ekle
+                      <PlusIcon className="w-4 h-4 mr-1.5" />
+                      Yaş Aralığı Ekle
                     </button>
                   </div>
                 </div>
