@@ -95,11 +95,9 @@ export default function ActivityOperatorsPage() {
 
   const filteredOperators = operators.filter(operator => {
     const matchesSearch = 
-      operator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      operator.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      (operator.name && operator.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (operator.email && operator.email.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || operator.status === statusFilter;
-    
     return matchesSearch && matchesStatus;
   });
 

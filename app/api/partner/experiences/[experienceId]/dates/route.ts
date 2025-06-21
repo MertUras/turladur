@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 
 export async function GET(req: Request, { params }: { params: { experienceId: string } }) {
   try {
@@ -28,16 +29,35 @@ export async function POST(req: Request, { params }: { params: { experienceId: s
     }
     const { experienceId } = params;
     const body = await req.json();
-    const date = await prisma.activityDate.create({
-      data: {
-        activityId: experienceId,
-        startDate: new Date(body.startDate),
-        endDate: new Date(body.endDate),
-        price: body.price,
-        availableSeats: body.availableSeats
+    const { startDate, endDate, price, availableSeats, ageRanges } = body;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const date = await tx.activityDate.create({
+        data: {
+          activityId: experienceId,
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+          price: price,
+          availableSeats: availableSeats,
+        }
+      });
+      if (ageRanges && ageRanges.length > 0) {
+        for (const range of ageRanges) {
+          await tx.experienceDateAgeRange.create({
+            data: {
+              activityDateId: date.id,
+              minAge: parseInt(range.minAge, 10),
+              maxAge: range.maxAge ? parseInt(range.maxAge, 10) : null,
+              pricingType: range.pricingType,
+              value: parseFloat(range.value)
+            }
+          });
+        }
       }
+      return date;
     });
-    return NextResponse.json(date);
+
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

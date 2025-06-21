@@ -105,20 +105,41 @@ export async function POST(
       );
     }
 
-    // Yeni tur tarihi oluştur
-    const tourDate = await prisma.tourDate.create({
-      data: {
-        tourId: params.tourId,
-        startDate: new Date(data.startDate),
-        endDate: new Date(data.endDate),
-        price: parseFloat(data.price),
-        availableSeats: parseInt(data.availableSeats),
-        discount: data.discount ? parseFloat(data.discount) : 0,
-        isActive: data.isActive !== undefined ? data.isActive : true
+    // Default yaş aralıkları
+    const defaultAgeRanges = [
+      { minAge: 0, maxAge: 2, pricingType: 'free', value: 0 },
+      { minAge: 3, maxAge: 6, pricingType: 'percentage', value: 50 },
+      { minAge: 7, maxAge: 12, pricingType: 'percentage', value: 25 },
+      { minAge: 13, maxAge: null, pricingType: 'fixed', value: 0 }
+    ];
+
+    // Transaction ile hem tur tarihi hem yaş aralıklarını ekle
+    const result = await prisma.$transaction(async (tx) => {
+      const tourDate = await tx.tourDate.create({
+        data: {
+          tourId: params.tourId,
+          startDate: new Date(data.startDate),
+          endDate: new Date(data.endDate),
+          price: parseFloat(data.price),
+          availableSeats: parseInt(data.availableSeats),
+          isActive: data.isActive !== undefined ? data.isActive : true
+        }
+      });
+      for (const range of defaultAgeRanges) {
+        await tx.tourDateAgeRange.create({
+          data: {
+            tourDateId: tourDate.id,
+            minAge: range.minAge,
+            maxAge: range.maxAge,
+            pricingType: range.pricingType,
+            value: range.value
+          }
+        });
       }
+      return tourDate;
     });
 
-    return NextResponse.json(tourDate);
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error creating tour date:', error);
     return NextResponse.json(
@@ -185,7 +206,6 @@ export async function PUT(
         endDate: new Date(data.endDate),
         price: parseFloat(data.price),
         availableSeats: parseInt(data.availableSeats),
-        discount: data.discount ? parseFloat(data.discount) : 0,
         isActive: data.isActive !== undefined ? data.isActive : true
       }
     });

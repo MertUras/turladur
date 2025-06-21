@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Star, Clock, MapPin, Users, Calendar, ChevronLeft, ChevronRight, X, Heart, Share2, Building2 } from 'lucide-react';
+import { Star, Clock, MapPin, Users, Calendar, ChevronLeft, ChevronRight, X, Heart, Share2, Building2, CheckCircle, XCircle } from 'lucide-react';
 import Marquee from "react-fast-marquee";
+import BottomBookingBar, { ActivityDate } from '../../../components/BottomBookingBar';
 
 interface Activity {
-    id: number;
+    id: string;
     title: string;
     description: string;
     longDescription: string;
@@ -37,10 +38,11 @@ interface Activity {
     meetingPoint?: string;
     meetingPointAddress?: string;
     operator: any;
+    ageRestriction: string;
 }
 
 interface RelatedActivity {
-    id: number;
+    id: string;
     title: string;
     description: string;
     imageUrl: string;
@@ -63,6 +65,8 @@ export default function ActivityDetail() {
     const [relatedActivities, setRelatedActivities] = useState<RelatedActivity[]>([]);
     const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
     const [activityDates, setActivityDates] = useState<any[]>([]);
+    const [showBookingBar, setShowBookingBar] = useState(false);
+    const [selectedDate, setSelectedDate] = useState<ActivityDate | null>(null);
 
     useEffect(() => {
         const fetchActivity = async () => {
@@ -245,9 +249,31 @@ export default function ActivityDetail() {
                     {/* Main Content */}
                     <div className="lg:col-span-2">
                         {/* Description */}
-                        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                            <h2 className="text-2xl font-semibold mb-4 text-gray-900">Aktivite Hakkında</h2>
-                            <p className="text-gray-800 whitespace-pre-line">{activity.longDescription}</p>
+                        <div id="overview" className="bg-white p-6 rounded-lg shadow-sm mb-8 scroll-mt-24">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4">Öne Çıkanlar</h2>
+                            <div className="prose max-w-none text-gray-600">
+                                <p>{activity.longDescription}</p>
+                            </div>
+                        </div>
+
+                        {/* Program */}
+                        <div id="program" className="bg-white p-6 rounded-lg shadow-sm mb-8 scroll-mt-24">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-4">Program Akışı</h2>
+                            <ul className="space-y-4">
+                                {activity.schedule.map((item, index) => (
+                                    <li key={index} className="flex items-start">
+                                        <div className="flex-shrink-0">
+                                            <div className="flex items-center justify-center h-10 w-10 rounded-full bg-blue-100 text-blue-600">
+                                                <Clock className="h-5 w-5" />
+                                            </div>
+                                        </div>
+                                        <div className="ml-4">
+                                            <p className="text-md font-semibold text-gray-700">{item.time}</p>
+                                            <p className="text-gray-600">{item.activity}</p>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
 
                         {/* Modern Buluşma Noktası Kartı */}
@@ -343,29 +369,6 @@ export default function ActivityDetail() {
                                     </li>
                                 ))}
                             </ul>
-                        </div>
-
-                        {/* Schedule */}
-                        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                            <h2 className="text-2xl font-semibold mb-4 text-gray-900">Program Akışı</h2>
-                            <div className="space-y-4">
-                                {activity.schedule.map((item, index) => (
-                                    <div key={index} className="flex items-start gap-4">
-                                        <div className="flex flex-col items-center">
-                                            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                                <Clock className="w-4 h-4 text-blue-500" />
-                                            </div>
-                                            {index !== activity.schedule.length - 1 && (
-                                                <div className="w-0.5 h-full bg-blue-100 mt-2" />
-                                            )}
-                                        </div>
-                                        <div>
-                                            <div className="font-semibold text-gray-900">{item.time}</div>
-                                            <div className="text-gray-800">{item.activity}</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
 
                         {/* Reviews */}
@@ -502,208 +505,239 @@ export default function ActivityDetail() {
                     </div>
 
                     {/* Sidebar */}
-                    <div className="lg:col-span-1">
-                        <div className="sticky top-8">
-                            {/* Modern Rezervasyon Kutusu */}
-                            {activity?.activityDates && activity.activityDates.length > 0 && (
-                                <div className="bg-white rounded-xl p-6 border border-neutral-200/70 shadow-md w-full mb-8">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <Calendar className="w-7 h-7 text-blue-600" />
-                                        <h2 className="text-2xl font-semibold text-gray-900">Rezervasyon</h2>
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200/70 ml-auto">Ücretsiz İptal</span>
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-800 border border-sky-200/70">Anında Onay</span>
-                                    </div>
-                                    <div className="flex flex-col gap-4">
-                                        {activity.activityDates.map((date) => (
-                                            <div key={date.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-neutral-50 rounded-lg border border-neutral-200/70 hover:border-blue-200 transition-colors">
-                                                <div className="flex items-center gap-3">
-                                                    <Calendar className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                                                    <div>
-                                                        <div className="text-base font-semibold text-gray-900">
-                                                            {new Date(date.startDate).toLocaleDateString('tr-TR')} - {new Date(date.endDate).toLocaleDateString('tr-TR')}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500 mt-0.5">
-                                                            {date.availableSeats} kişilik kontenjan
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right flex flex-col items-end">
-                                                    <div className="text-2xl font-bold text-blue-600 flex items-center gap-2">
-                                                        {date.price.toLocaleString('tr-TR')}<span className="text-lg font-semibold">₺</span>
-                                                    </div>
-                                                    <button className="mt-2 px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold rounded-lg transition-colors">
-                                                        Seç
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="mt-6 space-y-3">
-                                        <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 text-lg">
-                                            <Calendar className="w-5 h-5" /> Hızlı Rezervasyon
-                                        </button>
-                                        <button className="w-full border border-blue-500 text-blue-500 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 text-lg">
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12.38V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h7.38M16 5v2m0 0v2m0-2h2m-2 0h-2" /></svg> Fiyat Bilgisi Al
-                                        </button>
+                    <aside className="lg:col-span-1">
+                        <div className="sticky top-24">
+                            {/* New Reservation Card */}
+                            <div 
+                                id="booking" 
+                                className="bg-white rounded-xl p-6 border border-neutral-200/70 shadow-md w-full"
+                            >
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+                                    <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
+                                        <Calendar className="h-6 w-6 mr-2.5 text-sky-600 flex-shrink-0" />
+                                        <span>Rezervasyon</span>
+                                    </h2>
+                                    <div className="flex items-center gap-2 flex-wrap justify-start sm:justify-end">
+                                        <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200/70">
+                                            Ücretsiz İptal
+                                        </div>
+                                        <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-800 border border-sky-200/70">
+                                            Anında Onay
+                                        </div>
                                     </div>
                                 </div>
-                            )}
 
-                            {/* Aktivite Operatörü Kartı - DAHİL OLAN HİZMETLERİN ÜSTÜNE ALINDI */}
+                                <div className="bg-neutral-50/60 p-6 rounded-lg border border-neutral-200/70 mb-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-semibold text-neutral-800">Aktivite Tarihleri</h3>
+                                        <div className="text-sm text-neutral-600">
+                                            {activity.activityDates?.length || 0} tarih mevcut
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-4">
+                                        {!activity.activityDates || activity.activityDates.length === 0 ? (
+                                            <div className="text-center py-8">
+                                                <Calendar className="h-12 w-12 text-neutral-400 mx-auto mb-3" />
+                                                <p className="text-neutral-600">Şu anda mevcut aktivite tarihi bulunmamaktadır.</p>
+                                            </div>
+                                        ) : (
+                                            activity.activityDates.map((date) => {
+                                                const isLimited = date.availableSeats <= 5;
+                                                const startDate = new Date(date.startDate);
+                                                const endDate = new Date(date.endDate);
+                                                
+                                                return (
+                                                    <button
+                                                        key={date.id}
+                                                        onClick={() => {
+                                                            setSelectedDate(date);
+                                                            setShowBookingBar(true);
+                                                        }}
+                                                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-lg border transition-colors text-left w-full ${selectedDate?.id === date.id ? 'border-sky-500 ring-2 ring-sky-200' : 'border-neutral-200/70 hover:border-sky-200'}`}
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <Calendar className="h-5 w-5 text-sky-600 flex-shrink-0 mt-1" />
+                                                            <div>
+                                                                <div className="text-sm font-medium text-neutral-900">
+                                                                    {startDate.toLocaleDateString('tr-TR', { 
+                                                                        day: 'numeric',
+                                                                        month: 'long',
+                                                                        year: 'numeric'
+                                                                    })}
+                                                                </div>
+                                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                                    <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${isLimited ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                                        {isLimited ? `Son ${date.availableSeats} kişilik yer!` : `${date.availableSeats} kişilik kontenjan`}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-1">
+                                                            <div className="text-lg font-semibold text-sky-700">
+                                                                {date.price.toLocaleString('tr-TR')} ₺
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Operator Card */}
                             {activity.operator && (
-                                <div className="bg-white rounded-xl shadow-sm border border-neutral-100/80 p-6 mb-8 flex flex-col gap-4">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <Building2 className="w-7 h-7 text-blue-600" />
-                                        <div className="text-2xl font-semibold text-gray-900">Aktivite Operatörü</div>
-                                    </div>
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center">
-                                            {activity.operator.logo ? (
-                                                <img src={activity.operator.logo} alt={activity.operator.companyName || activity.operator.name} className="object-cover w-full h-full" />
-                                            ) : (
-                                                <span className="text-lg font-bold text-gray-400">{(activity.operator.companyName || activity.operator.name || '?')[0]}</span>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <div className="text-lg font-bold text-gray-900">{activity.operator.companyName || activity.operator.name}</div>
-                                            <a href={`/activities?operator=${activity.operator.id}`} className="text-blue-600 hover:underline text-sm font-medium">Tüm aktivitelerini gör</a>
+                                <div className="bg-white rounded-xl p-6 border border-neutral-200/70 shadow-md w-full mt-8">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+                                        <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
+                                            <Building2 className="h-6 w-6 mr-2.5 text-sky-600 flex-shrink-0" />
+                                            <span>Aktivite Sağlayıcısı</span>
+                                        </h2>
+                                        <div className="flex items-center text-xs text-neutral-500 flex-wrap">
+                                            <div className="flex items-center text-yellow-400 mr-1.5">
+                                                {/* You would need a similar renderStars function here if you have ratings */}
+                                            </div>
+                                            {/* <span className="font-medium">(4.8/5)</span>
+                                            <span className="mx-1">•</span>
+                                            <span>24 değerlendirme</span> */}
                                         </div>
                                     </div>
-                                    <div className="text-gray-700 text-sm mb-2">
-                                        {activity.operator.description || 'Operatör hakkında bilgi bulunmamaktadır.'}
+
+                                    <div className="bg-neutral-50/60 p-5 rounded-lg border border-neutral-200/70 mb-6">
+                                        <div className="flex items-center space-x-3">
+                                            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md">
+                                                <Image
+                                                    src={activity.operator.logo || '/images/tour-operators/default.jpg'}
+                                                    alt={activity.operator.companyName || 'Aktivite Sağlayıcısı'}
+                                                    width={48}
+                                                    height={48}
+                                                    className="object-cover"
+                                                />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-lg font-semibold text-gray-900">{activity.operator.companyName}</h4>
+                                                <Link 
+                                                    href={`/experience-provider/${activity.operator.id}`} 
+                                                    className="text-sm text-blue-600 hover:text-blue-800"
+                                                >
+                                                    Tüm aktiviteleri gör
+                                                </Link>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <Star className="w-5 h-5 text-yellow-400" />
-                                        <span className="text-base font-semibold text-gray-800">{activity.operator.rating ? activity.operator.rating.toFixed(1) : '0.0'}</span>
-                                        <span className="text-sm text-gray-500">({activity.operator.reviewCount || 0} değerlendirme)</span>
+
+                                    <div className="bg-neutral-50/60 p-5 rounded-lg border border-neutral-200/70 mb-6">
+                                        <p className="text-neutral-700 text-sm leading-relaxed line-clamp-3">{activity.operator.description || 'Aktivite sağlayıcısı hakkında bilgi bulunmamaktadır.'}</p>
                                     </div>
-                                    <Link href={`/operator/${activity.operator.id}`} className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 border border-blue-500 text-blue-500 rounded-lg font-semibold hover:bg-blue-50 transition-colors">
-                                        <Building2 className="w-5 h-5" /> Operatör detayları
+                                    
+                                    <Link 
+                                        href={`/experience-provider/${activity.operator.id}`} 
+                                        className="group text-sm font-medium text-sky-600 hover:text-sky-700 transition-colors flex items-center justify-between p-4 rounded-lg border border-neutral-200/70 hover:bg-sky-50/50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-sky-500"
+                                    >
+                                        <span className="flex items-center">
+                                            <Building2 className="w-4 h-4 mr-2" />
+                                            <span>Sağlayıcı detayları</span>
+                                        </span>
+                                        <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
                                     </Link>
                                 </div>
                             )}
 
-                            {/* Dahil Olan Hizmetler */}
-                            <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                                <h3 className="text-lg font-semibold mb-4 text-gray-900">Dahil Olan Hizmetler</h3>
-                                <ul className="space-y-2">
-                                    {activity.included.map((item, index) => (
-                                        <li key={index} className="flex items-center gap-2 text-gray-800">
-                                            <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                            </svg>
-                                            <span>{item}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-
-                            <div className="bg-white rounded-lg shadow-sm p-6">
-                                <h3 className="text-lg font-semibold mb-4 text-gray-900">Dahil Olmayan Hizmetler</h3>
-                                <ul className="space-y-2">
-                                    {activity.notIncluded.map((item, index) => (
-                                        <li key={index} className="flex items-center gap-2 text-gray-800">
-                                            <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                            <span>{item}</span>
-                                        </li>
-                                    ))}
-                                </ul>
+                            {/* Included/Excluded Section */}
+                            <div className="bg-white rounded-xl p-6 border border-neutral-200/70 shadow-md w-full mt-8">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
+                                        <CheckCircle className="h-6 w-6 mr-2.5 text-sky-600 flex-shrink-0" />
+                                        <span>Dahil Olanlar / Olmayanlar</span>
+                                    </h2>
+                                </div>
+                                
+                                <div className="bg-emerald-50/60 p-5 rounded-lg border border-emerald-200/70 mb-6">
+                                    <h3 className="text-lg font-semibold text-emerald-800 mb-4 flex items-center">
+                                        <CheckCircle className="w-5 h-5 mr-2 text-emerald-600 flex-shrink-0" />
+                                        <span>Dahil Olanlar</span>
+                                    </h3>
+                                    <ul className="space-y-2.5">
+                                        {activity.included.map((item, index) => (
+                                            <li key={index} className="flex items-start p-3 rounded-md bg-white/70 border border-emerald-100">
+                                                <CheckCircle className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 flex-shrink-0" />
+                                                <span className="text-neutral-700 text-sm font-medium">{item}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                
+                                <div className="bg-red-50/60 p-5 rounded-lg border border-red-200/70">
+                                    <h3 className="text-lg font-semibold text-red-800 mb-4 flex items-center">
+                                        <XCircle className="w-5 h-5 mr-2 text-red-600 flex-shrink-0" />
+                                        <span>Dahil Olmayanlar</span>
+                                    </h3>
+                                    <ul className="space-y-2.5">
+                                        {activity.notIncluded.map((item, index) => (
+                                            <li key={index} className="flex items-start p-3 rounded-md bg-white/70 border border-red-100">
+                                                <XCircle className="w-4 h-4 text-red-500 mr-2.5 mt-0.5 flex-shrink-0" />
+                                                <span className="text-neutral-700 text-sm font-medium">{item}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </aside>
                 </div>
             </div>
 
-            {/* Lightbox */}
-            {selectedImage && (
-                <div 
-                    className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
-                    onClick={() => setSelectedImage(null)}
-                >
-                    <div className="relative max-w-7xl max-h-[90vh] w-full h-full">
-                        <Image
-                            src={selectedImage}
-                            alt="Büyük görüntü"
-                            fill
-                            className="object-contain"
-                        />
-                        <button 
-                            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
-                            onClick={() => setSelectedImage(null)}
-                        >
-                            <X className="w-8 h-8" />
-                        </button>
-                    </div>
-                </div>
+            {selectedDate && showBookingBar && (
+                 <BottomBookingBar 
+                    activity={{
+                        id: activity.id,
+                        name: activity.title,
+                        price: selectedDate.price,
+                        activityDates: [selectedDate],
+                    }}
+                    selectedDate={selectedDate}
+                    forceVisible={true}
+                    isExpanded={true}
+                    onExpandedChange={(expanded) => setShowBookingBar(expanded)}
+                />
             )}
 
-            {/* Activity Detail Modal */}
-            {selectedActivity && (
-                <div
-                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-                    onClick={() => setSelectedActivity(null)}
-                >
-                    <div
-                        className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="relative h-64">
-                            <Image
-                                src={selectedActivity.imageUrl}
-                                alt={selectedActivity.title}
-                                fill
-                                className="object-cover"
-                            />
-                            <button
-                                className="absolute top-4 right-4 bg-black/50 p-2 rounded-full text-white hover:bg-black/70 transition-colors"
-                                onClick={() => setSelectedActivity(null)}
-                            >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div className="p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-2xl font-semibold text-gray-900">{selectedActivity.title}</h3>
-                                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                                    {selectedActivity.category}
-                                </span>
-                            </div>
-                            <p className="text-gray-700 mb-6">{selectedActivity.description}</p>
-                            <div className="grid grid-cols-2 gap-4 mb-6">
-                                <div className="flex items-center gap-2">
-                                    <MapPin className="w-5 h-5 text-blue-500" />
-                                    <span className="text-gray-700">{selectedActivity.location}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Clock className="w-5 h-5 text-blue-500" />
-                                    <span className="text-gray-700">{selectedActivity.duration}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Star className="w-5 h-5 text-yellow-400" />
-                                    <span className="text-gray-700">{selectedActivity.rating} ({selectedActivity.reviewCount} yorum)</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-2xl font-bold text-blue-500">{selectedActivity.price.toLocaleString('tr-TR')}₺</span>
-                                </div>
-                            </div>
-                            <div className="flex gap-3">
-                                <button
-                                    className="flex-1 bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
-                                    onClick={() => window.location.href = `/activities/${selectedActivity.id}`}
-                                >
-                                    Detaylı İncele
-                                </button>
-                                <button
-                                    className="flex-1 border border-blue-500 text-blue-500 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
-                                >
-                                    Rezervasyon Yap
-                                </button>
-                            </div>
-                        </div>
+            {selectedImage && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100]">
+                    <div className="relative max-w-4xl max-h-[90vh] w-full">
+                        <Image
+                            src={selectedImage}
+                            alt="Selected gallery image"
+                            width={1600}
+                            height={900}
+                            className="object-contain w-full h-full"
+                        />
+                        <button
+                            onClick={() => setSelectedImage(null)}
+                            className="absolute top-4 right-4 text-white bg-black/50 rounded-full p-2"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                        <button
+                            onClick={() => {
+                                const newIndex = (currentImageIndex - 1 + activity.gallery.length) % activity.gallery.length;
+                                setCurrentImageIndex(newIndex);
+                                setSelectedImage(activity.gallery[newIndex]);
+                            }}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 text-white bg-black/50 rounded-full p-2"
+                        >
+                            <ChevronLeft className="w-6 h-6" />
+                        </button>
+                        <button
+                            onClick={() => {
+                                const newIndex = (currentImageIndex + 1) % activity.gallery.length;
+                                setCurrentImageIndex(newIndex);
+                                setSelectedImage(activity.gallery[newIndex]);
+                            }}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-white bg-black/50 rounded-full p-2"
+                        >
+                            <ChevronRight className="w-6 h-6" />
+                        </button>
                     </div>
                 </div>
             )}

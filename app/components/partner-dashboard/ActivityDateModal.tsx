@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { DatePicker } from '../../components/booking/DatePicker';
@@ -9,14 +9,14 @@ interface ActivityDateModalProps {
   onSubmit: (data: {
     startDate: string;
     endDate: string;
-    price: number;
     availableSeats: number;
+    price: number;
   }) => void;
   initialData?: {
     startDate?: string;
     endDate?: string;
-    price?: number;
     availableSeats?: number;
+    price?: number;
   };
   title: string;
 }
@@ -29,11 +29,26 @@ export default function ActivityDateModal({
   title
 }: ActivityDateModalProps) {
   const [formData, setFormData] = useState({
-    startDate: initialData?.startDate || '',
-    endDate: initialData?.endDate || '',
-    price: initialData?.price || 0,
-    availableSeats: initialData?.availableSeats || 0
+    startDate: '',
+    endDate: '',
+    availableSeats: 1,
+    price: 0
   });
+
+  useEffect(() => {
+    if (isOpen && initialData) {
+      setFormData({
+        startDate: initialData.startDate || '',
+        endDate: initialData.endDate || '',
+        availableSeats: initialData.availableSeats || 1,
+        price: initialData.price || 0
+      });
+    } else if (!isOpen) {
+      // Reset form when modal closes
+      setFormData({ startDate: '', endDate: '', availableSeats: 1, price: 0 });
+    }
+  }, [isOpen, initialData]);
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,41 +80,22 @@ export default function ActivityDateModal({
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label
-                htmlFor="startDate"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Başlangıç Tarihi
-              </label>
-              <div className="relative">
-                <DatePicker
-                  label=""
-                  value={formData.startDate}
-                  onChange={(date) => setFormData({ ...formData, startDate: date })}
-                  placeholder="gg.aa.yyyy"
-                />
-                <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200">
-                </div>
-              </div>
+              <DatePicker
+                label="Başlangıç Tarihi"
+                value={formData.startDate}
+                onChange={(date) => setFormData({ ...formData, startDate: date })}
+                placeholder="gg.aa.yyyy"
+              />
             </div>
 
             <div>
-              <label
-                htmlFor="endDate"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Bitiş Tarihi
-              </label>
-              <div className="relative">
-                <DatePicker
-                  label=""
-                  value={formData.endDate}
-                  onChange={(date) => setFormData({ ...formData, endDate: date })}
-                  placeholder="gg.aa.yyyy"
-                  minDate={formData.startDate}
-                />
-                <div className="pointer-events-none absolute right-3 top-1/2 transform -translate-y-1/2 bg-gray-100 rounded-full p-1 border border-gray-200"></div>
-              </div>
+              <DatePicker
+                label="Bitiş Tarihi"
+                value={formData.endDate}
+                onChange={(date) => setFormData({ ...formData, endDate: date })}
+                placeholder="gg.aa.yyyy"
+                minDate={formData.startDate}
+              />
             </div>
 
             <div>
@@ -107,26 +103,24 @@ export default function ActivityDateModal({
                 htmlFor="price"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Fiyat (₺)
+                Fiyat
               </label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                  <span className="text-gray-500">₺</span>
-                </div>
-                <input
-                  type="number"
-                  id="price"
-                  name="price"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, price: parseFloat(e.target.value) })
-                  }
-                  className="block w-full rounded-lg border border-gray-300 bg-white pl-8 pr-4 py-2.5 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-300 sm:text-sm transition"
-                  min="0"
-                  step="0.01"
-                  required
-                />
-              </div>
+              <input
+                type="number"
+                id="price"
+                name="price"
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    price: parseFloat(e.target.value)
+                  })
+                }
+                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
+                min="0"
+                step="0.01"
+                required
+              />
             </div>
 
             <div>
@@ -147,23 +141,23 @@ export default function ActivityDateModal({
                     availableSeats: parseInt(e.target.value)
                   })
                 }
-                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-300 sm:text-sm transition"
+                className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 shadow-sm focus:border-sky-500 focus:ring-sky-500 sm:text-sm"
                 min="1"
                 required
               />
             </div>
 
-            <div className="flex items-center justify-end space-x-3 pt-4">
+            <div className="flex justify-end gap-3 pt-4">
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
               >
                 İptal
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition shadow"
+                className="px-4 py-2 text-sm font-medium text-white bg-sky-600 border border-transparent rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
               >
                 Kaydet
               </button>

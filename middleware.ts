@@ -143,6 +143,8 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/partner-dashboard/:path*',
+    '/api/experiences/:path*',
+    '/api/partner/:path*',
     '/profile/:path*',
     '/bookings/:path*',
     '/favorites/:path*',

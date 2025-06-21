@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export interface Activity {
     id: number;
     title: string;
@@ -643,80 +645,82 @@ Gün doğumunda başlayan bu büyülü yolculukta, Kapadokya'nın peribacaları,
     }
 ];
 
-function safeArray(val: any) {
+function safeArray(val: any): string[] {
     if (Array.isArray(val)) return val;
-    if (typeof val === 'string') {
-        try {
-            const parsed = JSON.parse(val);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch {
-            return [];
-        }
+    if (typeof val === 'string' && val.trim() !== '') return [val];
+    return [];
+}
+
+function safeSchedule(val: any): { time: string; activity: string }[] {
+    if (Array.isArray(val)) {
+        return val.filter(item => typeof item === 'object' && item !== null && 'time' in item && 'activity' in item);
     }
     return [];
 }
 
-export async function GET(request: Request, context: any) {
-    const params = await context.params;
-    const id = params?.id;
-    if (!id) {
-        return NextResponse.json({ error: 'No id provided' }, { status: 400 });
-    }
-
-    // Önce veritabanında arama
-    let activity = null;
+export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
-        activity = await prisma.experience.findUnique({
-            where: { id },
+        const { id } = params;
+        
+        if (!id) {
+            return NextResponse.json({ error: 'Activity ID is required' }, { status: 400 });
+        }
+
+        const experience: any = await prisma.experience.findUnique({
+            where: { id: id },
             include: {
+                activityDates: {
+                    orderBy: {
+                        startDate: 'asc',
+                    },
+                },
                 reviews: true,
-                activityDates: true,
-                user: {
-                    include: {
-                        experienceOperators: true
-                    }
-                }
+                user: true, 
             },
         });
-    } catch (e) {
-        // Prisma hatası olursa yoksay
-    }
 
-    if (activity) {
-        // Operatör bilgisi
-        const operator = activity.user?.experienceOperators?.[0] || null;
-        return NextResponse.json({
-            ...activity,
-            gallery: safeArray(activity.gallery),
-            included: safeArray(activity.included),
-            notIncluded: safeArray(activity.notIncluded),
-            highlights: safeArray(activity.highlights),
-            schedule: safeArray(activity.schedule),
-            reviews: Array.isArray(activity.reviews) ? activity.reviews : [],
-            activityDates: Array.isArray(activity.activityDates) ? activity.activityDates : [],
-            meetingPoint: activity.meetingPoint || '',
-            meetingPointAddress: activity.meetingPointAddress || '',
-            operator: operator ? {
-                id: operator.id,
-                companyName: operator.companyName,
-                logo: operator.logo,
-                description: operator.description,
-                email: operator.email,
-                reviewCount: activity.reviewCount,
-                rating: activity.rating
-            } : null
-        });
-    }
+        if (!experience) {
+            return NextResponse.json({ error: 'Activity not found' }, { status: 404 });
+        }
 
-    // Eğer veritabanında yoksa, eski mock array'den aramaya devam et
-    const legacyActivity = activities.find(a => String(a.id) === String(id));
-    if (!legacyActivity) {
-        return NextResponse.json(
-            { error: 'Activity not found' },
-            { status: 404 }
-        );
+        const reviews = Array.isArray(experience.reviews) ? experience.reviews : [];
+        const rating = reviews.reduce((acc: number, review: { rating: number }) => acc + review.rating, 0) / (reviews.length || 1);
+
+        const activityResponse = {
+            id: experience.id,
+            title: experience.title,
+            description: experience.description,
+            longDescription: experience.longDescription,
+            imageUrl: safeArray(experience.gallery)[0] || '/images/placeholder.jpg',
+            gallery: safeArray(experience.gallery),
+            location: experience.location,
+            duration: `${experience.duration} saat`,
+            rating: rating,
+            reviewCount: reviews.length,
+            popularityRate: 90, 
+            price: experience.price,
+            category: experience.category,
+            included: safeArray(experience.included),
+            notIncluded: safeArray(experience.notIncluded),
+            highlights: safeArray(experience.highlights),
+            schedule: safeSchedule(experience.schedule),
+            reviews: reviews.map((r: any) => ({...r, user: 'Anonymous'})),
+            activityDates: experience.activityDates,
+            meetingPoint: experience.meetingPoint,
+            meetingPointAddress: experience.meetingPointAddress,
+            operator: experience.user,
+            ageRestriction: experience.ageRestriction || 'everyone'
+        };
+
+        return NextResponse.json(activityResponse);
+
+    } catch (error) {
+        console.error(`Error fetching activity ${params.id}:`, error);
+        if (error instanceof Error) {
+            return NextResponse.json({ error: 'Failed to load activity', details: error.message }, { status: 500 });
+        }
+        return NextResponse.json({ error: 'Failed to load activity' }, { status: 500 });
     }
-    return NextResponse.json(legacyActivity);
 }
 
 // API route for fetching related activities

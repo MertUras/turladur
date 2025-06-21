@@ -11,17 +11,46 @@ export async function PUT(req: Request, { params }: { params: { experienceId: st
     }
     const { dateId } = params;
     const body = await req.json();
-    const updated = await prisma.activityDate.update({
-      where: { id: dateId },
-      data: {
-        startDate: new Date(body.startDate),
-        endDate: new Date(body.endDate),
-        price: body.price,
-        availableSeats: body.availableSeats
+    const { startDate, endDate, price, availableSeats, ageRanges } = body;
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Önce mevcut yaş aralıklarını sil
+      await tx.experienceDateAgeRange.deleteMany({
+        where: { activityDateId: dateId },
+      });
+
+      // Yeni yaş aralıklarını ekle
+      if (ageRanges && ageRanges.length > 0) {
+        for (const range of ageRanges) {
+          await tx.experienceDateAgeRange.create({
+            data: {
+              activityDateId: dateId,
+              minAge: parseInt(range.minAge, 10),
+              maxAge: range.maxAge ? parseInt(range.maxAge, 10) : null,
+              pricingType: range.pricingType,
+              value: parseFloat(range.value),
+            },
+          });
+        }
       }
+
+      // Ana tarihi güncelle
+      const updatedDate = await tx.activityDate.update({
+        where: { id: dateId },
+        data: {
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+          price: price,
+          availableSeats: availableSeats,
+        },
+      });
+
+      return updatedDate;
     });
-    return NextResponse.json(updated);
+
+    return NextResponse.json(result);
   } catch (error) {
+    console.error("Güncelleme hatası:", error); // Daha detaylı loglama
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

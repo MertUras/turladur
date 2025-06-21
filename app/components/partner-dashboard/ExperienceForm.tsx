@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { DatePicker } from '../../components/booking/DatePicker';
 
 export interface ExperienceFormData {
+  id?: string;
   name: string;
   description: string;
   category: string;
@@ -19,8 +20,17 @@ export interface ExperienceFormData {
   gallery: string[];
   maxParticipants: number;
   currentParticipants: number;
-  activityDates: { startDate: string; endDate: string; price: number; availableSeats: number }[];
+  activityDates: ActivityDate[];
   meetingPoint?: string;
+  ageRestriction: string;
+}
+
+interface ActivityDate {
+  id?: string;
+  experienceId?: string;
+  startDate: string;
+  endDate: string;
+  availableSeats: number;
 }
 
 interface ExperienceFormProps {
@@ -47,6 +57,7 @@ const defaultFormData: ExperienceFormData = {
   currentParticipants: 0,
   activityDates: [],
   meetingPoint: '',
+  ageRestriction: 'everyone',
 };
 
 const categories = [
@@ -57,6 +68,7 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
   const [formData, setFormData] = useState<ExperienceFormData>({
     ...defaultFormData,
     ...initialData,
+    activityDates: initialData?.activityDates || []
   });
   const [imageInput, setImageInput] = useState('');
   const [galleryInput, setGalleryInput] = useState('');
@@ -68,13 +80,13 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [newDate, setNewDate] = useState({ startDate: '', endDate: '', price: 0, availableSeats: 1 });
+  const [newDate, setNewDate] = useState({ startDate: '', endDate: '', availableSeats: 1 });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'duration' || name === 'price' || name === 'maxParticipants' || name === 'currentParticipants' ? Number(value) : value
+      [name]: ['duration', 'price', 'maxParticipants', 'currentParticipants'].includes(name) ? Number(value) : value
     }));
   };
 
@@ -186,12 +198,12 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
   };
 
   const handleAddDate = () => {
-    if (!newDate.startDate || !newDate.endDate || newDate.price < 0 || newDate.availableSeats < 1) return;
+    if (!newDate.startDate || !newDate.endDate || newDate.availableSeats < 1) return;
     setFormData(prev => ({
       ...prev,
       activityDates: [...prev.activityDates, { ...newDate }]
     }));
-    setNewDate({ startDate: '', endDate: '', price: 0, availableSeats: 1 });
+    setNewDate({ startDate: '', endDate: '', availableSeats: 1 });
   };
 
   const handleRemoveDate = (idx: number) => {
@@ -203,11 +215,14 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.description || !formData.duration || !formData.price) {
-      setError('Lütfen tüm zorunlu alanları doldurun.');
+    setError(null);
+
+    // Basic validation
+    if (!formData.name || !formData.description || !formData.category || formData.price <= 0 || formData.maxParticipants < 1 || formData.images.length === 0) {
+      setError('Lütfen tüm zorunlu alanları doldurun ve en az bir görsel ekleyin.');
       return;
     }
-    setError(null);
+
     onSubmit(formData);
   };
 
@@ -298,6 +313,18 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
                 placeholder="Örn. 0"
               />
             </div>
+          </div>
+          <div>
+            <label className="block mb-1 font-semibold text-gray-700">Yaş Sınırı</label>
+            <select
+              name="ageRestriction"
+              value={formData.ageRestriction}
+              onChange={handleChange}
+              className="w-full border border-neutral-300 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition bg-white"
+            >
+              <option value="everyone">Herkes Katılabilir</option>
+              <option value="18+">+18</option>
+            </select>
           </div>
         </div>
         <hr className="my-6 border-neutral-200" />
@@ -419,48 +446,67 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
         </div>
         <hr className="my-6 border-neutral-200" />
         <h3 className="text-lg font-semibold text-sky-700 mb-2">Aktivite Tarihleri</h3>
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Başlangıç</label>
-              <DatePicker
-                label=""
-                value={newDate.startDate}
-                onChange={date => setNewDate(nd => ({ ...nd, startDate: date }))}
-                placeholder="gg.aa.yyyy"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Bitiş</label>
-              <DatePicker
-                label=""
-                value={newDate.endDate}
-                onChange={date => setNewDate(nd => ({ ...nd, endDate: date }))}
-                placeholder="gg.aa.yyyy"
-                minDate={newDate.startDate}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Fiyat (₺)</label>
-              <input type="number" min={0} value={newDate.price} onChange={e => setNewDate(nd => ({ ...nd, price: Number(e.target.value) }))} className="border border-neutral-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition w-24" />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Kontenjan</label>
-              <input type="number" min={1} value={newDate.availableSeats} onChange={e => setNewDate(nd => ({ ...nd, availableSeats: Number(e.target.value) }))} className="border border-neutral-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition w-20" />
-            </div>
-            <button type="button" onClick={handleAddDate} className="bg-sky-600 text-white px-3 py-2 rounded-lg hover:bg-sky-700 transition flex items-center"><PlusIcon className="h-5 w-5" /></button>
-          </div>
-          <div className="flex flex-col gap-2 mt-2">
-            {formData.activityDates.map((date, idx) => (
-              <div key={idx} className="flex items-center gap-4 bg-neutral-100 rounded-lg px-4 py-2">
-                <span className="text-sm text-gray-700">{date.startDate} - {date.endDate}</span>
-                <span className="text-sm text-gray-700">{date.price} ₺</span>
-                <span className="text-sm text-gray-700">{date.availableSeats} kişilik</span>
-                <button type="button" onClick={() => handleRemoveDate(idx)} className="ml-auto text-red-500 hover:text-red-700"><XMarkIcon className="h-5 w-5" /></button>
+        <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-end">
+              <div className="sm:col-span-2">
+                <DatePicker
+                  label="Başlangıç Tarihi"
+                  value={newDate.startDate}
+                  onChange={(date) => setNewDate({ ...newDate, startDate: date })}
+                />
               </div>
-            ))}
-          </div>
+              <div className="sm:col-span-2">
+                <DatePicker
+                  label="Bitiş Tarihi"
+                  value={newDate.endDate}
+                  onChange={(date) => setNewDate({ ...newDate, endDate: date })}
+                  minDate={newDate.startDate}
+                />
+              </div>
+              <div className="sm:col-span-1">
+                <label htmlFor="new-date-available-seats" className="block mb-2 text-sm font-medium text-gray-700">Kontenjan</label>
+                <input
+                  type="number"
+                  id="new-date-available-seats"
+                  value={newDate.availableSeats}
+                  onChange={(e) => setNewDate({ ...newDate, availableSeats: parseInt(e.target.value) || 1 })}
+                  className="w-full border border-neutral-300 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition"
+                  min="1"
+                />
+              </div>
+            </div>
+            <button 
+              type="button" 
+              onClick={handleAddDate} 
+              className="w-full bg-sky-600 text-white py-2.5 rounded-lg font-semibold hover:bg-sky-700 transition flex items-center justify-center gap-2"
+            >
+              <PlusIcon className="h-5 w-5" />
+              Tarih Ekle
+            </button>
         </div>
+
+        {formData.activityDates.length > 0 && (
+          <ul className="mt-6 space-y-3">
+            <h4 className="text-base font-semibold text-gray-700">Eklenen Tarihler</h4>
+            {formData.activityDates.map((date, dateIdx) => (
+              <li key={date.id || dateIdx} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-gray-800">
+                      {new Date(date.startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })} - {new Date(date.endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Kontenjan: {date.availableSeats} kişi
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => handleRemoveDate(dateIdx)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50">
+                    <XMarkIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
         {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
         <button type="submit" disabled={isSubmitting} className="w-full bg-sky-600 text-white py-3 rounded-xl font-semibold text-lg hover:bg-sky-700 transition mt-4 shadow-md">
           {isSubmitting ? "Ekleniyor..." : "Aktiviteyi Ekle"}

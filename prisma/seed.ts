@@ -522,9 +522,21 @@ async function main() {
       ];
 
       for (const date of activityDates) {
-        await prisma.activityDate.create({
+        const createdDate = await prisma.activityDate.create({
           data: date
         });
+        // Yaş aralıklarını ekle (TourDateAgeRange ile aynı seed)
+        for (const range of defaultAgeRanges) {
+          await prisma.experienceDateAgeRange.create({
+            data: {
+              activityDateId: createdDate.id,
+              minAge: range.minAge,
+              maxAge: range.maxAge,
+              pricingType: range.pricingType,
+              value: range.value
+            }
+          });
+        }
       }
     }
 
