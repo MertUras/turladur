@@ -254,41 +254,45 @@ model ActivityDate {
   endDate        DateTime
   price          Float
   availableSeats Int
-  activityId     String
-  activity       Experience @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  experience     Experience? @relation(fields: [experienceId], references: [id])
+  experienceId   String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime?   @updatedAt
+  ageRanges      ExperienceDateAgeRange[]
 
   @@map("activity_dates")
 }
 
 model Experience {
-  id              String           @id @default(cuid())
-  title           String
-  description     String
-  longDescription String
-  imageUrl        String
-  gallery         Json             @default("[]")
-  location        String
-  duration        String
-  rating          Float            @default(0)
-  reviewCount     Int              @default(0)
-  popularityRate  Float            @default(0)
-  price           Float
-  category        String
-  included        Json             @default("[]")
-  notIncluded     Json             @default("[]")
-  highlights      Json             @default("[]")
-  schedule        Json             @default("[]")
-  featured        Boolean          @default(false)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  userId          String
-  activityDates   ActivityDate[]
-  reviews         ActivityReview[]
-  bookings        Booking[]
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  generalReviews  Review[]
-  meetingPoint    String?          // Google Maps linki (buluşma noktası)
-  meetingPointAddress String?      // Açık adres (buluşma noktası)
+  id                  String           @id @default(cuid())
+  title               String
+  description         String
+  longDescription     String
+  category            String
+  location            String
+  duration            String
+  price               Float
+  ageRestriction      String?
+  userId              String
+  user                User             @relation(fields: [userId], references: [id])
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  imageUrl            String?
+  gallery             Json?
+  included            Json?
+  notIncluded         Json?
+  schedule            Json?
+  highlights          Json?
+  rating              Float?           @default(0)
+  featured            Boolean          @default(false)
+  popularityRate      Float            @default(0)
+  reviewCount         Int              @default(0)
+  activityDates       ActivityDate[]
+  reviews             ActivityReview[]
+  bookings            Booking[]
+  generalReviews      Review[]
+  meetingPoint        String?
+  meetingPointAddress String?
 
   @@map("experiences")
 }
@@ -445,6 +449,21 @@ model TourDateAgeRange {
 
   @@map("tour_date_age_ranges")
   @@unique([tourDateId, minAge, maxAge])
+}
+
+model ExperienceDateAgeRange {
+  id             String       @id @default(cuid())
+  minAge         Int
+  maxAge         Int?
+  pricingType    String       // 'free' | 'half' | 'percentage' | 'fixed'
+  value          Float
+  activityDate   ActivityDate @relation(fields: [activityDateId], references: [id], onDelete: Cascade)
+  activityDateId String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("experience_date_age_ranges")
+  @@unique([activityDateId, minAge, maxAge])
 }
 
 enum TourOperatorStatus {

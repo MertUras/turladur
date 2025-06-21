@@ -2,165 +2,128 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
 
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const userId = session.user.id;
-    
-    // Partner'ı bul
-    const tourOperator = await prisma.tourOperator.findFirst({
-      where: { userId },
-      select: { id: true }
-    });
+    const userRole = session.user.role;
 
-    if (!tourOperator) {
-      return NextResponse.json({ error: 'Tour operator not found' }, { status: 404 });
-    }
+    if (userRole === 'TOUR_OPERATOR') {
+      // Mevcut Tur Operatörü Mantığı
+      const tourOperator = await prisma.tourOperator.findFirst({
+        where: { userId },
+        select: { id: true }
+      });
 
-    // İstatistikleri hesapla
-    const [
-      totalTours,
-      totalBookings,
-      totalRevenue,
-      totalCustomers,
-      averageRating,
-      upcomingTours,
-      recentReservations,
-      popularTours,
-      reservationStatus
-    ] = await Promise.all([
-      // Toplam tur sayısı
-      prisma.tour.count({
-        where: { tourOperatorId: tourOperator.id }
-      }),
-      // Toplam rezervasyon sayısı
-      prisma.booking.count({
-        where: { tourOperatorId: tourOperator.id }
-      }),
-      // Toplam gelir
-      prisma.booking.aggregate({
-        where: { 
-          tourOperatorId: tourOperator.id,
-          status: { in: ['CONFIRMED', 'COMPLETED'] }
-        },
-        _sum: { totalPrice: true }
-      }),
-      // Toplam müşteri sayısı
-      prisma.booking.groupBy({
-        by: ['userId'],
-        where: { tourOperatorId: tourOperator.id }
-      }).then(result => result.length),
-      // Ortalama puan
-      prisma.tour.aggregate({
-        where: { tourOperatorId: tourOperator.id },
-        _avg: { rating: true }
-      }),
-      // Yaklaşan turlar
-      prisma.tour.count({
-        where: {
-          tourOperatorId: tourOperator.id,
-          startDate: { gt: new Date() }
-        }
-      }),
-      // Son rezervasyonlar
-      prisma.booking.findMany({
-        where: { tourOperatorId: tourOperator.id },
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true
-            }
-          },
-          tour: {
-            select: {
-              name: true,
-              duration: true
-            }
-          }
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 5
-      }),
-      // Popüler turlar
-      prisma.tour.findMany({
-        where: { tourOperatorId: tourOperator.id },
-        include: {
-          _count: {
-            select: {
-              bookings: true
-            }
-          }
-        },
-        orderBy: { rating: 'desc' },
-        take: 4
-      }),
-      // Rezervasyon durumları
-      prisma.booking.groupBy({
-        by: ['status'],
-        where: { tourOperatorId: tourOperator.id },
-        _count: true
-      })
-    ]);
+      if (!tourOperator) {
+        return NextResponse.json({ error: 'Partner hesabı bulunamadı' }, { status: 404 });
+      }
+      
+      const tourOperatorId = tourOperator.id;
 
-    // Rezervasyon durumlarını düzenle
-    const formattedReservationStatus = {
-      pending: reservationStatus.find(s => s.status === 'PENDING')?._count || 0,
-      confirmed: reservationStatus.find(s => s.status === 'CONFIRMED')?._count || 0,
-      cancelled: reservationStatus.find(s => s.status === 'CANCELLED')?._count || 0,
-      completed: reservationStatus.find(s => s.status === 'COMPLETED')?._count || 0
-    };
-
-    // Son rezervasyonları formatla
-    const formattedRecentReservations = recentReservations.map(booking => ({
-      id: booking.id,
-      customerName: booking.user.name || 'İsimsiz Müşteri',
-      customerEmail: booking.user.email,
-      customerInitials: (booking.user.name || 'İM').split(' ').map(n => n[0]).join('').toUpperCase(),
-      activity: booking.tour?.name || 'Tur',
-      activityType: `${booking.tour?.duration || 1} Günlük Tur`,
-      date: new Date(booking.startDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' }),
-      time: '09:00 - 18:00',
-      amount: `${booking.totalPrice.toLocaleString('tr-TR')}₺`,
-      status: booking.status === 'PENDING' ? 'Beklemede' :
-              booking.status === 'CONFIRMED' ? 'Onaylandı' :
-              booking.status === 'CANCELLED' ? 'İptal Edildi' : 'Tamamlandı'
-    }));
-
-    // Popüler turları formatla
-    const formattedPopularTours = popularTours.map(tour => ({
-      id: tour.id,
-      title: tour.name,
-      location: tour.departureCity || 'Belirtilmemiş',
-      rating: tour.rating || 0,
-      reviewCount: 0, // TODO: Implement review count
-      reservationCount: tour._count.bookings,
-      guestCount: 0, // TODO: Implement guest count
-      price: `${tour.price.toLocaleString('tr-TR')}₺`,
-      image: Array.isArray(tour.images) && tour.images.length > 0 
-        ? tour.images[0] 
-        : 'https://images.unsplash.com/photo-1527838832700-5059252407fa?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80'
-    }));
-
-    return NextResponse.json({
-      stats: {
+      const [
         totalTours,
         totalBookings,
-        totalRevenue: totalRevenue._sum.totalPrice || 0,
+        totalRevenue,
         totalCustomers,
-        averageRating: averageRating._avg.rating || 0,
-        upcomingTours
-      },
-      recentReservations: formattedRecentReservations,
-      popularTours: formattedPopularTours,
-      reservationStatus: formattedReservationStatus
-    });
+        averageRating,
+        upcomingTours,
+        recentReservations,
+        popularTours,
+        reservationStatus
+      ] = await Promise.all([
+        prisma.tour.count({ where: { tourOperatorId } }),
+        prisma.booking.count({ where: { tourOperatorId } }),
+        prisma.booking.aggregate({ where: { tourOperatorId, status: { in: ['CONFIRMED', 'COMPLETED'] } }, _sum: { totalPrice: true } }),
+        prisma.booking.groupBy({ by: ['userId'], where: { tourOperatorId } }).then(r => r.length),
+        prisma.tour.aggregate({ where: { tourOperatorId }, _avg: { rating: true } }),
+        prisma.tour.count({ where: { tourOperatorId, startDate: { gt: new Date() } } }),
+        prisma.booking.findMany({ where: { tourOperatorId }, include: { user: { select: { name: true, email: true } }, tour: { select: { name: true, duration: true } } }, orderBy: { createdAt: 'desc' }, take: 5 }),
+        prisma.tour.findMany({ where: { tourOperatorId }, include: { _count: { select: { bookings: true } } }, orderBy: { rating: 'desc' }, take: 4 }),
+        prisma.booking.groupBy({ by: ['status'], where: { tourOperatorId }, _count: true })
+      ]);
+
+      const formattedReservationStatus = {
+        pending: reservationStatus.find(s => s.status === 'PENDING')?._count || 0,
+        confirmed: reservationStatus.find(s => s.status === 'CONFIRMED')?._count || 0,
+        cancelled: reservationStatus.find(s => s.status === 'CANCELLED')?._count || 0,
+        completed: reservationStatus.find(s => s.status === 'COMPLETED')?._count || 0
+      };
+      
+      const formattedPopularTours = popularTours.map(t => {
+          const image = Array.isArray(t.images) && t.images.length > 0 ? t.images[0] as string : undefined;
+          return { id: t.id, title: t.name, rating: t.rating, reservationCount: t._count.bookings, price: t.price, image };
+      });
+
+      return NextResponse.json({
+        stats: {
+          totalTours,
+          totalBookings,
+          totalRevenue: totalRevenue._sum.totalPrice || 0,
+          totalCustomers,
+          averageRating: averageRating._avg.rating || 0,
+          upcomingTours
+        },
+        recentReservations: recentReservations.map(b => ({ id: b.id, customerName: b.user.name, activity: b.tour?.name, amount: b.totalPrice, status: b.status})),
+        popularTours: formattedPopularTours,
+        reservationStatus: formattedReservationStatus
+      });
+
+    } else if (userRole === 'EXPERIENCE_PROVIDER') {
+      // Yeni Aktivite Sağlayıcısı Mantığı
+      const [
+        totalExperiences,
+        totalBookings,
+        totalRevenue,
+        totalCustomers,
+        averageRating,
+        upcomingActivities,
+        recentReservations,
+        popularExperiences,
+        reservationStatusResult
+      ] = await Promise.all([
+        prisma.experience.count({ where: { userId } }),
+        prisma.booking.count({ where: { experience: { userId } } }),
+        prisma.booking.aggregate({ where: { experience: { userId }, status: { in: ['CONFIRMED', 'COMPLETED'] } }, _sum: { totalPrice: true } }),
+        prisma.booking.groupBy({ by: ['userId'], where: { experience: { userId } } }).then(r => r.length),
+        prisma.experience.aggregate({ where: { userId }, _avg: { rating: true } }),
+        prisma.activityDate.count({ where: { experience: { userId }, startDate: { gt: new Date() } } }),
+        prisma.booking.findMany({ where: { experience: { userId } }, include: { user: { select: { name: true, email: true } }, experience: { select: { title: true } } }, orderBy: { createdAt: 'desc' }, take: 5 }),
+        prisma.experience.findMany({ where: { userId }, include: { _count: { select: { bookings: true } } }, orderBy: { rating: 'desc' }, take: 4 }),
+        prisma.booking.groupBy({ by: ['status'], where: { experience: { userId } }, _count: true })
+      ]);
+      
+      const formattedReservationStatus = {
+        pending: reservationStatusResult.find(s => s.status === 'PENDING')?._count || 0,
+        confirmed: reservationStatusResult.find(s => s.status === 'CONFIRMED')?._count || 0,
+        cancelled: reservationStatusResult.find(s => s.status === 'CANCELLED')?._count || 0,
+        completed: reservationStatusResult.find(s => s.status === 'COMPLETED')?._count || 0
+      };
+
+      return NextResponse.json({
+        stats: {
+          totalTours: totalExperiences, // Ön yüzde 'totalTours' olarak kullanılıyor
+          totalBookings,
+          totalRevenue: totalRevenue._sum.totalPrice || 0,
+          totalCustomers,
+          averageRating: averageRating._avg.rating || 0,
+          upcomingTours: upcomingActivities, // Ön yüzde 'upcomingTours'
+        },
+        recentReservations: recentReservations.map(b => ({ id: b.id, customerName: b.user.name, activity: b.experience?.title, amount: b.totalPrice, status: b.status})),
+        popularTours: popularExperiences.map(e => ({ id: e.id, title: e.title, rating: e.rating, reservationCount: e._count.bookings, price: e.price, image: e.imageUrl })),
+        reservationStatus: formattedReservationStatus
+      });
+    } else {
+      return NextResponse.json({ error: 'Invalid partner role' }, { status: 403 });
+    }
+
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
     return NextResponse.json(

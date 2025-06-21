@@ -11,7 +11,9 @@ import {
   CurrencyDollarIcon,
   XMarkIcon,
   CalendarIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  InformationCircleIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -46,158 +48,142 @@ interface Tour {
   tourDates: TourDate[];
 }
 
+export interface ActivityDateAgeRange {
+  id: string;
+  minAge: number;
+  maxAge: number | null;
+  pricingType: 'free' | 'half' | 'percentage' | 'fixed';
+  value: number;
+}
+
+export interface ActivityDate {
+  id: string;
+  startDate: Date;
+  endDate: Date;
+  price: number;
+  availableSeats: number;
+  ageRanges?: ActivityDateAgeRange[];
+}
+
+interface Activity {
+  id: string;
+  name: string;
+  price: number;
+  activityDates: ActivityDate[];
+  ageRestriction?: string;
+}
+
 interface Props {
-  tour: Tour;
-  onDateSelect?: (date: TourDate | null) => void;
-  onParticipantsChange?: (participants: { [key: string]: number }) => void;
+  tour?: Tour;
+  activity?: Activity;
+  onDateSelect?: (date: TourDate | ActivityDate | null) => void;
+  onParticipantsChange?: (participants: { [key: string]: number } | { total: number }) => void;
   isExpanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
-  selectedDate?: TourDate | null;
+  selectedDate?: TourDate | ActivityDate | null;
+  forceVisible?: boolean;
 }
 
 export default function BottomBookingBar({ 
   tour, 
+  activity,
   onDateSelect, 
   onParticipantsChange,
   isExpanded = false,
   onExpandedChange,
-  selectedDate: initialSelectedDate = null
+  selectedDate: initialSelectedDate = null,
+  forceVisible = false
 }: Props) {
-  const [visible, setVisible] = useState(false)
-  const [expanded, setExpanded] = useState(isExpanded)
-  const [currentSelectedDate, setCurrentSelectedDate] = useState<TourDate | null>(initialSelectedDate)
-  const [personCount, setPersonCount] = useState<number | string>(1)
-  const [ageGroups, setAgeGroups] = useState<{ age: number; count: number }[]>([])
+  const [visible, setVisible] = useState(forceVisible)
+  const [expanded, setExpanded] = useState(false)
+  const [currentSelectedDate, setCurrentSelectedDate] = useState<TourDate | ActivityDate | null>(initialSelectedDate)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  // Tour specific state
   const [selectedDateAgeRanges, setSelectedDateAgeRanges] = useState<TourDateAgeRange[]>([])
-  const [showDatePicker, setShowDatePicker] = useState(false)
-  const [showParticipants, setShowParticipants] = useState(false)
   const [participants, setParticipants] = useState<{ [key: string]: number }>({})
   
-  useEffect(() => {
-    setCurrentSelectedDate(initialSelectedDate);
-  }, [initialSelectedDate]);
+  // Activity specific state
+  const [activityParticipantCount, setActivityParticipantCount] = useState<number>(1);
 
+  const data = useMemo(() => tour || activity, [tour, activity]);
+  const entityType = useMemo(() => (tour ? 'tour' : 'activity'), [tour]);
+  const dates = useMemo(() => entityType === 'tour' ? tour!.tourDates : activity!.activityDates, [tour, activity, entityType]);
+  
+  useEffect(() => { setCurrentSelectedDate(initialSelectedDate); }, [initialSelectedDate]);
+  
   useEffect(() => {
-    setExpanded(isExpanded);
+    // If the parent wants it expanded (i.e., on mount),
+    // we use a short delay to allow the CSS transition to fire correctly.
+    if (isExpanded) {
+      const timer = setTimeout(() => {
+        setExpanded(true);
+      }, 50); // A minimal delay is enough
+      return () => clearTimeout(timer);
+    }
   }, [isExpanded]);
 
   useEffect(() => {
+    if (forceVisible) { setVisible(true); return; }
     const handleScroll = () => {
-      if (window.scrollY > 400) {
-        setVisible(true)
-      } else {
-        setVisible(false)
-        if (expanded) {
-          setExpanded(false);
-          onExpandedChange?.(false);
-        }
+      const shouldBeVisible = window.scrollY > 400;
+      setVisible(shouldBeVisible);
+      if (!shouldBeVisible && expanded) {
+        setExpanded(false);
+        onExpandedChange?.(false);
       }
     }
-    
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [expanded, onExpandedChange])
-  
-  // En düşük fiyatlı tur tarihini bul
-  const lowestPricedDate = tour.tourDates?.reduce((lowest, current) => {
-    if (!lowest || current.price < lowest.price) {
-      return current;
-    }
-    return lowest;
-  }, null as TourDate | null);
+  }, [expanded, onExpandedChange, forceVisible]);
 
-  const price = lowestPricedDate?.price || tour.price;
-  const discountedPrice = tour.discount && price 
-    ? price * (1 - (tour.discount / 100))
-    : price;
-
-  const primaryButtonClasses = "inline-flex items-center justify-center px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out";
-  const secondaryButtonClasses = "inline-flex items-center justify-center px-6 py-2.5 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 text-sm font-semibold rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-sky-500 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out";
-
-  const formatSelectedDate = (dateString: string | null) => {
-    if (!dateString) return 'Tarih seçilmedi';
-    try {
-      return new Date(dateString).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
-    } catch (error) {
-      return 'Geçersiz tarih';
-    }
-  };
-
-  const totalPeople = typeof personCount === 'number' ? personCount : parseInt(personCount, 10) || 1;
-
-  // Seçilen tarihin fiyatını bul
-  const selectedDatePrice = currentSelectedDate 
-    ? currentSelectedDate.price
-    : price;
-
-  const selectedDateDiscountedPrice = tour.discount && selectedDatePrice
-    ? selectedDatePrice * (1 - (tour.discount / 100))
-    : selectedDatePrice;
-
-  // Seçilen tarihin yaş aralıklarını bul
   const fetchAgeRanges = async (dateId: string) => {
+    if (entityType !== 'tour') return;
     try {
       setIsLoading(true);
       setError(null);
       const response = await fetch(`/api/tour-dates/${dateId}/age-ranges`);
-      if (!response.ok) {
-        throw new Error('Yaş aralıkları getirilemedi');
-      }
-      const data = await response.json();
-      setSelectedDateAgeRanges(data);
+      if (!response.ok) throw new Error('Yaş aralıkları getirilemedi');
+      setSelectedDateAgeRanges(await response.json());
     } catch (err) {
       setError('Yaş aralıkları yüklenirken bir hata oluştu');
-      console.error('Yaş aralıkları getirilemedi:', err);
       setSelectedDateAgeRanges([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Tarih seçildiğinde yaş aralıklarını getir
   useEffect(() => {
-    if (currentSelectedDate) {
+    if (currentSelectedDate && entityType === 'tour') {
       fetchAgeRanges(currentSelectedDate.id);
     } else {
       setSelectedDateAgeRanges([]);
     }
-  }, [currentSelectedDate]);
+  }, [currentSelectedDate, entityType]);
 
-  // Mevcut tarihi normalize et
   const today = useMemo(() => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);
     return date;
   }, []);
 
-  // Kullanılabilir tarihleri filtrele
-  const availableTourDates = useMemo(() => {
-    return tour.tourDates
-      .filter((date) => {
-        const startDate = new Date(date.startDate);
-        startDate.setHours(0, 0, 0, 0);
-        return startDate >= today;
-      })
+  const availableDates = useMemo(() => {
+    return (dates || [])
+      .filter(date => new Date(date.startDate) >= today)
       .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-  }, [tour.tourDates, today]);
-
-  // Erken rezervasyon ve son dakika indirimlerini kontrol et
-  const checkDiscounts = useCallback((date: TourDate) => {
-    const earlyBirdDeadline = date.earlyBirdDeadline ? new Date(date.earlyBirdDeadline) : null;
-    const lastMinuteStart = date.lastMinuteStart ? new Date(date.lastMinuteStart) : null;
-
-    if (earlyBirdDeadline) earlyBirdDeadline.setHours(0, 0, 0, 0);
-    if (lastMinuteStart) lastMinuteStart.setHours(0, 0, 0, 0);
-
+  }, [dates, today]);
+  
+  const formatPrice = (price: number) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(price);
+  const checkDiscounts = useCallback((date: TourDate | ActivityDate) => {
+    const hasEarlyBird = 'earlyBirdDeadline' in date && 'earlyBirdDiscount' in date;
+    const hasLastMinute = 'lastMinuteStart' in date && 'lastMinuteDiscount' in date;
     return {
-      hasEarlyBirdDiscount: date.earlyBirdDiscount && earlyBirdDeadline && today <= earlyBirdDeadline,
-      hasLastMinuteDiscount: date.lastMinuteDiscount && lastMinuteStart && today >= lastMinuteStart
+      hasEarlyBirdDiscount: hasEarlyBird && (date as TourDate).earlyBirdDiscount && new Date((date as TourDate).earlyBirdDeadline!) >= today,
+      hasLastMinuteDiscount: hasLastMinute && (date as TourDate).lastMinuteDiscount && new Date((date as TourDate).lastMinuteStart!) <= today
     };
   }, [today]);
-
-  // Fiyat hesaplama yardımcı fonksiyonu
+  
   const calculatePriceForRange = (basePrice: number, range: TourDateAgeRange) => {
     switch (range.pricingType) {
       case 'free':
@@ -213,45 +199,6 @@ export default function BottomBookingBar({
     }
   };
 
-  // Toplam fiyat hesaplama fonksiyonu
-  const calculateTotalPrice = () => {
-    if (!currentSelectedDate) return 0;
-    
-    let total = 0;
-    const { hasEarlyBirdDiscount, hasLastMinuteDiscount } = checkDiscounts(currentSelectedDate);
-    let basePrice = currentSelectedDate.price;
-
-    // Early Bird veya Last Minute indirimi uygula
-    if (hasEarlyBirdDiscount && currentSelectedDate.earlyBirdDiscount) {
-      basePrice = basePrice * (1 - (currentSelectedDate.earlyBirdDiscount / 100));
-    } else if (hasLastMinuteDiscount && currentSelectedDate.lastMinuteDiscount) {
-      basePrice = basePrice * (1 - (currentSelectedDate.lastMinuteDiscount / 100));
-    }
-    
-    selectedDateAgeRanges.forEach((range) => {
-      const count = participants[range.id] || 0;
-      if (count === 0) return;
-
-      const priceForRange = calculatePriceForRange(basePrice, range);
-      total += priceForRange * count;
-    });
-
-    return total;
-  };
-
-  // Fiyat formatlama yardımcı fonksiyonu
-  const formatPrice = (price: number) => {
-    // Önce fiyatı 0.50'ye yuvarla
-    const roundedPrice = Math.round(price * 2) / 2;
-    
-    return roundedPrice.toLocaleString('tr-TR', { 
-      minimumFractionDigits: roundedPrice % 1 === 0 ? 0 : 2,
-      maximumFractionDigits: roundedPrice % 1 === 0 ? 0 : 2,
-      useGrouping: true
-    }).replace(/,/g, '.');
-  };
-
-  // Yaş aralığı için fiyat gösterim metni
   const getPriceDisplayText = (range: TourDateAgeRange, basePrice: number, originalPrice: number) => {
     const hasDiscount = basePrice !== originalPrice;
     
@@ -279,104 +226,6 @@ export default function BottomBookingBar({
     }
   };
 
-  // Bottom bar alt kısmındaki fiyat gösterimini güncelle
-  const renderParticipantPrices = () => {
-    if (!currentSelectedDate) return null;
-
-    const { hasEarlyBirdDiscount, hasLastMinuteDiscount } = checkDiscounts(currentSelectedDate);
-    let basePrice = currentSelectedDate.price;
-
-    if (hasEarlyBirdDiscount && currentSelectedDate.earlyBirdDiscount) {
-      basePrice = basePrice * (1 - (currentSelectedDate.earlyBirdDiscount / 100));
-    } else if (hasLastMinuteDiscount && currentSelectedDate.lastMinuteDiscount) {
-      basePrice = basePrice * (1 - (currentSelectedDate.lastMinuteDiscount / 100));
-    }
-
-    return selectedDateAgeRanges.map((range) => {
-      const count = participants[range.id] || 0;
-      if (count === 0) return null;
-
-      const priceForRange = calculatePriceForRange(basePrice, range);
-
-      return (
-        <div key={range.id} className="text-xs text-neutral-600 flex justify-between">
-          <span>{formatAgeRange(range.minAge, range.maxAge)} ({count} kişi)</span>
-          <span>{formatPrice(priceForRange * count)} ₺</span>
-        </div>
-      );
-    });
-  };
-
-  // Tarih seçimi işleyicisi
-  const handleDateSelect = (date: TourDate | null) => {
-    setCurrentSelectedDate(date);
-    setAgeGroups([]); // Yeni tarih seçildiğinde yaş gruplarını sıfırla
-    setShowDatePicker(false);
-    // Katılımcı sayılarını sıfırla
-    const newParticipants: { [key: string]: number } = {};
-    date?.ageRanges.forEach(range => {
-      newParticipants[range.id] = 0;
-    });
-    setParticipants(newParticipants);
-    onDateSelect?.(date);
-    onParticipantsChange?.(newParticipants);
-  };
-
-  // Yaş grubu değişikliği işleyicisi
-  const handleAgeGroupChange = (age: number, count: number) => {
-    if (!currentSelectedDate) return;
-
-    // Toplam kişi sayısını kontrol et
-    const currentTotal = ageGroups.reduce((sum, group) => {
-      if (group.age !== age) {
-        return sum + group.count;
-      }
-      return sum;
-    }, 0) + count;
-
-    // Kontenjan kontrolü
-    if (currentTotal > currentSelectedDate.availableSeats) {
-      setError(`Bu tarih için maksimum ${currentSelectedDate.availableSeats} kişi seçebilirsiniz.`);
-      return;
-    }
-
-    // Minimum katılımcı kontrolü
-    if (currentSelectedDate.minParticipants && currentTotal < currentSelectedDate.minParticipants) {
-      setError(`Bu tur için minimum ${currentSelectedDate.minParticipants} kişi gereklidir.`);
-      return;
-    }
-
-    setError(null);
-    setAgeGroups(prev => {
-      const existing = prev.find(g => g.age === age);
-      if (existing) {
-        return prev.map(g => g.age === age ? { ...g, count } : g);
-      }
-      return [...prev, { age, count }];
-    });
-  };
-
-  const handleParticipantChange = (ageRangeId: string, value: number) => {
-    if (!currentSelectedDate) return;
-
-    const newParticipants = { ...participants };
-    newParticipants[ageRangeId] = Math.max(0, value);
-
-    // Sadece kontenjan kontrolü yap
-    const totalParticipants = Object.values(newParticipants).reduce((sum, count) => sum + count, 0);
-    if (totalParticipants <= currentSelectedDate.availableSeats) {
-      setParticipants(newParticipants);
-      onParticipantsChange?.(newParticipants);
-    }
-  };
-
-  const handleExpandClick = () => {
-    const newExpanded = !expanded;
-    setExpanded(newExpanded);
-    onExpandedChange?.(newExpanded);
-  };
-
-  // Yaş aralığı gösterimi için yardımcı fonksiyon
   function formatAgeRange(minAge: number, maxAge: number | null): string {
     if (maxAge === null) {
       return `${minAge}+`;
@@ -384,352 +233,216 @@ export default function BottomBookingBar({
     return `${minAge}-${maxAge}`;
   }
 
+  const handleExpandClick = () => {
+    // We are closing the bar, so trigger animation then notify parent
+    if (expanded) {
+      setExpanded(false);
+      setTimeout(() => {
+        onExpandedChange?.(false);
+      }, 700); // Duration matches the transition duration
+    } else if (onExpandedChange) {
+      onExpandedChange(true);
+    }
+  };
+
+  const handleDateSelect = (date: TourDate | ActivityDate | null) => {
+    setCurrentSelectedDate(date);
+    onDateSelect?.(date);
+    if (entityType === 'activity') {
+      setActivityParticipantCount(1);
+      onParticipantsChange?.({ total: 1 });
+    } else {
+      setParticipants({});
+      onParticipantsChange?.({});
+    }
+  };
+  const handleTourParticipantChange = (ageRangeId: string, delta: number) => {
+    if (!currentSelectedDate) return;
+    const newCount = (participants[ageRangeId] || 0) + delta;
+    const newParticipants = { ...participants, [ageRangeId]: Math.max(0, newCount) };
+    const total = Object.values(newParticipants).reduce((sum, count) => sum + count, 0);
+    if (total <= currentSelectedDate.availableSeats) {
+      setParticipants(newParticipants);
+      onParticipantsChange?.(newParticipants);
+    }
+  };
+  const handleActivityParticipantChange = (delta: number) => {
+    const newCount = activityParticipantCount + delta;
+    if (newCount < 1) return;
+    if (currentSelectedDate && newCount > currentSelectedDate.availableSeats) return;
+    setActivityParticipantCount(newCount);
+    onParticipantsChange?.({ total: newCount });
+  };
+
+  const totalPrice = useMemo(() => {
+    if (!currentSelectedDate) return 0;
+    if (entityType === 'activity') {
+      return activityParticipantCount * currentSelectedDate.price;
+    }
+    // Tour price calculation...
+    const { hasEarlyBirdDiscount, hasLastMinuteDiscount } = checkDiscounts(currentSelectedDate);
+    let basePrice = currentSelectedDate.price;
+    // ... apply discounts ...
+    return Object.entries(participants).reduce((total, [rangeId, count]) => {
+      const range = selectedDateAgeRanges.find(r => r.id === rangeId);
+      return total + (range ? calculatePriceForRange(basePrice, range) * count : 0);
+    }, 0);
+  }, [currentSelectedDate, entityType, activityParticipantCount, participants, selectedDateAgeRanges]);
+  
+  const renderDatePickerColumn = () => (
+    <div className="bg-white rounded-xl p-4 border border-neutral-200/70 flex flex-col h-full">
+      <h3 className="text-base font-semibold text-neutral-800 mb-3 flex items-center flex-shrink-0">
+        <CalendarIcon className="w-5 h-5 mr-2 text-sky-600" />
+        Tarih Seçin
+      </h3>
+      <div className="grid grid-cols-1 gap-2.5 overflow-y-auto scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-neutral-100 scrollbar-thumb-rounded-full flex-grow pr-1">
+        {availableDates.length > 0 ? (
+          availableDates.map((date) => (
+            <button
+              key={date.id} type="button" onClick={() => handleDateSelect(date)}
+              className={`flex flex-col p-3 text-left rounded-lg transition-all duration-200 ease-out border focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1 ${currentSelectedDate?.id === date.id ? 'bg-sky-100 border-sky-600 shadow-sm' : 'bg-white border-neutral-200 hover:bg-neutral-50'}`}
+            >
+              <span className="text-sm font-medium text-neutral-800">{format(new Date(date.startDate), 'd MMMM yyyy', { locale: tr })}</span>
+              <span className="text-xs text-neutral-600 block mt-0.5">{format(new Date(date.startDate), 'eeee')}</span>
+              <span className="text-sm font-medium text-sky-700 mt-1">{formatPrice(date.price)} / kişi</span>
+              {date.availableSeats <= 10 && <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 mt-2">Son {date.availableSeats} koltuk!</span>}
+            </button>
+          ))
+        ) : <p className="text-sm text-neutral-500 text-center py-8">Müsait tarih bulunmuyor.</p>}
+      </div>
+    </div>
+  );
+
+  const renderActivityParticipantPicker = () => (
+    <div className="bg-white rounded-xl p-4 border border-neutral-200/70 flex flex-col h-full">
+        <h3 className="text-base font-semibold text-neutral-800 mb-3 flex items-center flex-shrink-0">
+            <UserIcon className="w-5 h-5 mr-2 text-emerald-600" />
+            Kişi Sayısı
+        </h3>
+        <div className="flex-grow flex flex-col justify-center items-center">
+             <div className="flex items-center gap-4">
+                <button onClick={() => handleActivityParticipantChange(-1)} className="w-12 h-12 flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-white border border-neutral-300 rounded-full hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled={activityParticipantCount <= 1}><span className="text-2xl">-</span></button>
+                <span className="text-3xl font-bold w-16 text-center text-gray-900">{activityParticipantCount}</span>
+                <button onClick={() => handleActivityParticipantChange(1)} className="w-12 h-12 flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-white border border-neutral-300 rounded-full hover:bg-neutral-50 transition-colors disabled:opacity-50" disabled={!!currentSelectedDate && activityParticipantCount >= currentSelectedDate.availableSeats}><span className="text-2xl">+</span></button>
+            </div>
+        </div>
+        <div className="mt-4 border-t border-neutral-200 pt-3">
+            <h4 className="text-sm font-semibold text-neutral-700 mb-2 flex items-center">
+                <InformationCircleIcon className="w-4 h-4 mr-2 text-sky-600"/>
+                Aktivite Kuralı
+            </h4>
+            <div className="flex items-start text-sm text-neutral-600">
+                <p>
+                    {activity?.ageRestriction === '18+'
+                        ? 'Bu aktiviteye katılım için 18 yaşından büyük olmak gerekmektedir.'
+                        : 'Bu aktivite her yaş için uygundur.'
+                    }
+                </p>
+            </div>
+        </div>
+    </div>
+  );
+  
+  const renderTourParticipantPicker = () => {
+    if (isLoading) {
+      return (
+        <div className="bg-white rounded-xl p-4 border border-neutral-200/70 flex justify-center items-center h-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="bg-white rounded-xl p-4 border border-neutral-200/70 flex flex-col justify-center items-center h-full text-center">
+          <ExclamationCircleIcon className="w-10 h-10 text-red-500 mb-2" />
+          <p className="text-sm font-semibold text-neutral-700">Bir Hata Oluştu</p>
+          <p className="text-xs text-neutral-500">{error}</p>
+        </div>
+      );
+    }
+    
+    if (selectedDateAgeRanges.length === 0) {
+      return (
+        <div className="bg-white rounded-xl p-4 border border-neutral-200/70 flex flex-col justify-center items-center h-full text-center">
+          <InformationCircleIcon className="w-10 h-10 text-sky-500 mb-2" />
+          <p className="text-sm font-semibold text-neutral-700">Katılımcı Bilgisi Yok</p>
+          <p className="text-xs text-neutral-500">Bu tarih için özel yaş aralığı veya katılımcı türü bulunmamaktadır.</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="bg-white rounded-xl p-4 border border-neutral-200/70 flex flex-col h-full">
+        <h3 className="text-base font-semibold text-neutral-800 mb-3 flex items-center flex-shrink-0">
+          <UserIcon className="w-5 h-5 mr-2 text-emerald-600" />
+          Kişi Sayısı
+        </h3>
+        <div className="flex-grow flex flex-col justify-center items-center">
+              <div className="flex items-center gap-4">
+                <button onClick={() => handleTourParticipantChange(selectedDateAgeRanges[0].id, -1)} disabled={(participants[selectedDateAgeRanges[0].id] || 0) <= 0} className="w-12 h-12 flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-white border border-neutral-300 rounded-full hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><span className="text-2xl">-</span></button>
+                <span className="text-3xl font-bold w-16 text-center text-gray-900">{participants[selectedDateAgeRanges[0].id] || 0}</span>
+                <button onClick={() => handleTourParticipantChange(selectedDateAgeRanges[0].id, 1)} disabled={!currentSelectedDate || (Object.values(participants).reduce((a, b) => a + b, 0)) >= currentSelectedDate.availableSeats} className="w-12 h-12 flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-white border border-neutral-300 rounded-full hover:bg-neutral-50 transition-colors disabled:opacity-50"><span className="text-2xl">+</span></button>
+              </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderAdvantagesColumn = () => (
+    <div className="bg-indigo-50/40 rounded-xl p-4 border border-indigo-200/50 flex flex-col h-full">
+       <h3 className="text-base font-semibold text-neutral-800 mb-3 flex items-center flex-shrink-0">
+         <CheckCircleIcon className="w-5 h-5 mr-2 text-indigo-600" />
+         Avantajlarınız
+       </h3>
+       <ul className="space-y-2.5 flex-grow content-start">
+         {["Ücretsiz iptal imkanı", "Anında onay", "Özel rehber eşliğinde", "7/24 müşteri desteği"].map((item, index) => (
+           <li key={index} className="flex items-start text-sm text-neutral-700">
+             <CheckCircleIcon className="w-4 h-4 mr-2 text-emerald-600 flex-shrink-0 mt-0.5" />
+             <span>{item}</span>
+           </li>
+         ))}
+       </ul>
+    </div>
+  );
+
+  if (!visible && !forceVisible) return null;
+  
   return (
     <>
       <button 
         onClick={handleExpandClick}
-        className={`fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50 bg-white text-neutral-700 rounded-t-lg px-5 py-2.5 shadow-md border border-b-0 border-neutral-200/80 flex items-center gap-2 transition-all duration-300 ease-out hover:shadow-lg hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-sky-500 ${!visible && !expanded ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}
-        aria-expanded={expanded}
-        aria-controls="booking-panel"
+        className={`fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50 bg-white text-neutral-700 rounded-t-lg px-5 py-2.5 shadow-md border border-b-0 border-neutral-200/80 flex items-center gap-2 transition-all duration-300 ease-out hover:shadow-lg hover:bg-neutral-50 ${visible && !expanded ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'}`}
       >
-        <span className="text-sm font-semibold">
-          {expanded ? 'Seçenekleri Kapat' : 'Tarih ve Fiyat Seçenekleri'}
-        </span>
+        <span className="text-sm font-semibold">Tarih ve Fiyat Seçenekleri</span>
         <ChevronUpIcon className={`w-4 h-4 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`} />
       </button>
 
       <div 
         id="booking-panel"
-        className={`fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200/80 shadow-lg z-40 transition-transform duration-300 ease-out ${expanded && visible ? 'translate-y-0' : 'translate-y-full'}`}
-        style={{ maxHeight: 'calc(100vh - 80px)' }}
+        className={`fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t border-neutral-200/80 shadow-lg z-40 transition-transform duration-700 ease-out ${visible && expanded ? 'translate-y-0' : 'translate-y-full'}`}
+        style={{ height: 'auto', maxHeight: '85vh' }}
       >
-        <div className="container mx-auto px-4 pt-6 pb-4 h-full flex flex-col relative">
-          <button 
-            onClick={() => {
-              setExpanded(false);
-              onExpandedChange?.(false);
-            }}
-            className="absolute top-3 right-3 p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-sky-500"
-            aria-label="Paneli Kapat"
-          >
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 flex-grow overflow-hidden mb-4 pt-6">
-            <div className="bg-white rounded-xl p-4 border border-neutral-200/70 flex flex-col">
-              <h3 className="text-base font-semibold text-neutral-800 mb-3 flex items-center flex-shrink-0">
-                <CalendarIcon className="w-5 h-5 mr-2 text-sky-600" />
-                Tur Tarihini Seçin
-              </h3>
-              <p className="text-xs text-neutral-600 mb-3 flex-shrink-0">
-                {availableTourDates.length > 0 
-                  ? 'Müsait tarihler aşağıdadır.'
-                  : 'Şu anda müsait tarih bulunmuyor.'}
-              </p>
-              <div className="grid grid-cols-1 gap-2.5 overflow-y-auto scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-neutral-100 scrollbar-thumb-rounded-full flex-grow pr-1">
-                {availableTourDates.length > 0 ? (
-                  availableTourDates.map((date) => {
-                    const startDate = new Date(date.startDate);
-                    const endDate = new Date(date.endDate);
-                    const isLimited = date.availableSeats <= 5;
-                    const { hasEarlyBirdDiscount, hasLastMinuteDiscount } = checkDiscounts(date);
-                    const isSelected = currentSelectedDate?.id === date.id;
-
-                    return (
-                      <button
-                        key={date.id}
-                        type="button"
-                        onClick={() => handleDateSelect(date)}
-                        className={`flex flex-col p-3 text-left rounded-lg transition-all duration-200 ease-out
-                          ${isSelected 
-                            ? 'bg-sky-100 border-sky-600 shadow-sm' 
-                            : 'bg-white border-neutral-200 hover:bg-neutral-50'} 
-                          border focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <span className="text-sm font-medium text-neutral-800">
-                              {format(startDate, 'd MMMM yyyy', { locale: tr })}
-                            </span>
-                            <span className="text-xs text-neutral-600 block mt-0.5">
-                              {format(startDate, 'd MMMM')} - {format(endDate, 'd MMMM yyyy')}
-                            </span>
-                          </div>
-                          <div className="text-right flex flex-col items-end">
-                            {(hasEarlyBirdDiscount || hasLastMinuteDiscount) && (
-                              <span className="text-xs line-through text-neutral-500 mb-0.5">
-                                {formatPrice(date.price)} ₺
-                              </span>
-                            )}
-                            <span className="text-sm font-medium text-sky-700">
-                              {formatPrice(hasEarlyBirdDiscount 
-                                ? date.price * (1 - (date.earlyBirdDiscount || 0) / 100)
-                                : hasLastMinuteDiscount 
-                                  ? date.price * (1 - (date.lastMinuteDiscount || 0) / 100)
-                                  : date.price
-                              )} ₺
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${isLimited ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                            {isLimited ? `Son ${date.availableSeats} kontenjan!` : `${date.availableSeats} kişilik kontenjan`}
-                          </span>
-                          {hasEarlyBirdDiscount && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                              Erken Rezervasyon: %{date.earlyBirdDiscount} İndirim
-                            </span>
-                          )}
-                          {hasLastMinuteDiscount && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-700">
-                              Son Dakika: %{date.lastMinuteDiscount} İndirim
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-8">
-                    <CalendarDaysIcon className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                    <p className="text-sm text-neutral-500">
-                      Şu anda müsait tarih bulunmuyor.
-                    </p>
-                    <p className="text-xs text-neutral-400 mt-1">
-                      Lütfen daha sonra tekrar kontrol edin.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl p-4 border border-neutral-200/70 flex flex-col">
-              <h3 className="text-base font-semibold text-neutral-800 mb-3 flex items-center flex-shrink-0">
-                <UserIcon className="w-5 h-5 mr-2 text-emerald-600" />
-                Katılımcı Bilgileri
-              </h3>
-              <p className="text-xs text-neutral-600 mb-3 flex-shrink-0">
-                Katılımcıların yaş bilgilerini girin.
-              </p>
-
-              {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600 mb-3"></div>
-                  <p className="text-sm text-neutral-500">Yaş aralıkları yükleniyor...</p>
-                </div>
-              ) : error ? (
-                <div className="text-center py-8">
-                  <XMarkIcon className="w-12 h-12 text-red-300 mx-auto mb-3" />
-                  <p className="text-sm text-red-600 font-medium">
-                    {error}
-                  </p>
-                  <button
-                    onClick={() => currentSelectedDate && fetchAgeRanges(currentSelectedDate.id)}
-                    className="mt-3 text-xs text-sky-600 hover:text-sky-700 font-medium"
-                  >
-                    Tekrar Dene
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3 overflow-y-auto pr-1">
-                  {selectedDateAgeRanges.length === 0 ? (
-                    <div className="text-center py-8">
-                      <UserIcon className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-                      <p className="text-sm text-neutral-500">
-                        Katılımcı Bilgileri
-                      </p>
-                      <p className="text-xs text-neutral-400 mt-1">
-                        Katılımcıların yaş bilgilerini girin
-                      </p>
-                    </div>
-                  ) : (
-                    selectedDateAgeRanges.map((range) => {
-                      const { hasEarlyBirdDiscount, hasLastMinuteDiscount } = checkDiscounts(currentSelectedDate!);
-                      const originalPrice = currentSelectedDate?.price || 0;
-                      let basePrice = originalPrice;
-
-                      if (hasEarlyBirdDiscount && currentSelectedDate?.earlyBirdDiscount) {
-                        basePrice = basePrice * (1 - (currentSelectedDate.earlyBirdDiscount / 100));
-                      } else if (hasLastMinuteDiscount && currentSelectedDate?.lastMinuteDiscount) {
-                        basePrice = basePrice * (1 - (currentSelectedDate.lastMinuteDiscount / 100));
-                      }
-
-                      return (
-                        <div key={range.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-neutral-200 hover:border-neutral-300 transition-colors">
-                          <div>
-                            <span className="text-sm font-medium text-neutral-800">
-                              {formatAgeRange(range.minAge, range.maxAge)} yaş
-                            </span>
-                            <div className="text-xs text-neutral-500 mt-0.5 flex items-center gap-2">
-                              <span className={range.pricingType === 'free' ? 'text-emerald-600' : 'text-sky-600'} style={{ fontWeight: '500' }}>
-                                {getPriceDisplayText(range, basePrice, originalPrice)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const currentCount = participants[range.id] || 0;
-                                if (currentCount > 0) {
-                                  handleParticipantChange(range.id, currentCount - 1);
-                                }
-                              }}
-                              className="w-8 h-8 flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={!participants[range.id]}
-                            >
-                              <span className="text-lg">-</span>
-                            </button>
-                            <input 
-                              type="text"
-                              inputMode="numeric"
-                              pattern="[0-9]*"
-                              value={participants[range.id] === 0 ? '0' : participants[range.id] || ''}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (value === '' || value === '0') {
-                                  handleParticipantChange(range.id, 0);
-                                  return;
-                                }
-                                if (!/^\d+$/.test(value)) return;
-                                const numValue = parseInt(value.replace(/^0+/, ''));
-                                if (currentSelectedDate && numValue <= currentSelectedDate.availableSeats) {
-                                  handleParticipantChange(range.id, numValue);
-                                }
-                              }}
-                              className="w-16 text-center p-1.5 border border-neutral-300 rounded-lg text-sm font-medium text-neutral-800 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const currentCount = participants[range.id] || 0;
-                                const newCount = currentCount + 1;
-                                if (currentSelectedDate && newCount <= currentSelectedDate.availableSeats) {
-                                  handleParticipantChange(range.id, newCount);
-                                }
-                              }}
-                              className="w-8 h-8 flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-white border border-neutral-300 rounded-lg hover:bg-neutral-50 transition-colors"
-                            >
-                              <span className="text-lg">+</span>
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-
-              {selectedDateAgeRanges.length > 0 && ageGroups.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-neutral-200">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-neutral-600">Toplam Katılımcı</span>
-                      <span className="font-medium text-neutral-800">
-                        {ageGroups.reduce((sum, group) => sum + group.count, 0)} kişi
-                      </span>
-                    </div>
-                    {ageGroups.map(group => {
-                      const range = selectedDateAgeRanges.find(r => r.minAge === group.age);
-                      if (!range || group.count === 0) return null;
-                      
-                      let priceText = '';
-                      switch (range.pricingType) {
-                        case 'free':
-                          priceText = 'Ücretsiz';
-                          break;
-                        case 'half':
-                          priceText = `${((selectedDatePrice * 0.5) * group.count).toLocaleString('tr-TR')} ₺`;
-                          break;
-                        case 'percentage':
-                          priceText = `${((selectedDatePrice * (1 - range.value / 100)) * group.count).toLocaleString('tr-TR')} ₺`;
-                          break;
-                        case 'fixed':
-                          priceText = `${(range.value * group.count).toLocaleString('tr-TR')} ₺`;
-                          break;
-                      }
-
-                      return (
-                        <div key={group.age} className="flex justify-between items-center text-xs">
-                          <span className="text-neutral-500">
-                            {formatAgeRange(range.minAge, range.maxAge)} ({group.count} kişi)
-                          </span>
-                          <span className="font-medium text-neutral-600">{priceText}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-indigo-50/40 rounded-xl p-4 border border-indigo-200/50 flex flex-col">
-              <h3 className="text-base font-semibold text-neutral-800 mb-3 flex items-center flex-shrink-0">
-                <CheckCircleIcon className="w-5 h-5 mr-2 text-indigo-600" />
-                Avantajlarınız
-              </h3>
-              <ul className="space-y-2.5 flex-grow content-start">
-                {[
-                  "Ücretsiz iptal imkanı",
-                  "Anında onay",
-                  "Özel rehber eşliğinde",
-                  "7/24 müşteri desteği"
-                ].map((item, index) => (
-                  <li key={index} className="flex items-start text-sm text-neutral-700">
-                    <CheckCircleIcon className="w-4 h-4 mr-2 text-emerald-600 flex-shrink-0 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="text-center mt-auto pt-2 border-t border-indigo-200/50 flex-shrink-0">
-                <p className="text-indigo-700 font-medium text-xs">
-                  Ödeme şimdi yapılmayacak
-                </p>
-              </div>
-            </div>
+        <div className="container mx-auto px-4 py-6 h-full flex flex-col">
+          <button onClick={handleExpandClick} className="absolute top-3 right-3 p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-full z-10"><XMarkIcon className="w-5 h-5" /></button>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 flex-grow overflow-hidden mb-4 pt-6" style={{minHeight: '300px'}}>
+            {renderDatePickerColumn()}
+            {entityType === 'tour' ? renderTourParticipantPicker() : renderActivityParticipantPicker()}
+            {renderAdvantagesColumn()}
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1 pt-3 border-t border-neutral-200/80 flex-shrink-0">
-            <div className="flex-1 pr-4 order-2 sm:order-1 text-center sm:text-left">
-              {Object.values(participants).some(count => count > 0) ? (
-                <>
-                  <div className="flex flex-col gap-1 mb-2">
-                    {renderParticipantPrices()}
-                  </div>
-                  <div className="flex items-baseline justify-center sm:justify-start gap-2">
-                    <span className="text-2xl font-bold text-sky-700">
-                      {formatPrice(calculateTotalPrice())} ₺
-                    </span>
-                    <span className="text-neutral-500 text-xs">toplam fiyat</span>
-                  </div>
-                </>
-              ) : (
-                <div className="text-neutral-500 text-sm">
-                  Lütfen katılımcı sayısını seçin
-                </div>
-              )}
-            </div>
-            
-            <div className="flex gap-3 items-center flex-shrink-0 order-1 sm:order-2">
-              <div className="hidden md:flex items-center bg-neutral-100 px-3 py-1.5 rounded-lg border border-neutral-200/80">
-                <p className="text-xs text-neutral-600 font-medium">
-                  {currentSelectedDate ? `${format(new Date(currentSelectedDate.startDate), 'd MMMM yyyy', { locale: tr })} - ${format(new Date(currentSelectedDate.endDate), 'd MMMM yyyy', { locale: tr })}` : 'Tarih seçilmedi'}
-                </p>
-              </div>
-              
-              <button 
-                disabled={!currentSelectedDate || Object.values(participants).every(count => count === 0)}
-                className={`${primaryButtonClasses} w-full sm:w-auto min-w-[160px] justify-center`}
-                onClick={() => console.log('Booking:', { 
-                  date: currentSelectedDate, 
-                  participants,
-                  totalPrice: calculateTotalPrice()
-                })}
-              >
-                <CalendarIcon className="w-4 h-4 mr-2" />
-                <span>{currentSelectedDate ? 'Rezervasyon Yap' : 'Tarih Seçin'}</span>
-              </button>
-            </div>
+             <div className="flex-1 pr-4 text-center sm:text-left">
+                <span className="text-2xl font-bold text-sky-700">{formatPrice(totalPrice)}</span>
+                <span className="text-neutral-500 text-sm ml-2">toplam fiyat</span>
+             </div>
+             <div className="flex gap-3 items-center flex-shrink-0">
+                <p className="text-sm text-neutral-600 font-medium hidden md:block">{currentSelectedDate ? format(new Date(currentSelectedDate.startDate), 'd MMMM yyyy') : 'Tarih seçilmedi'}</p>
+                <Link href="/checkout" className={`inline-flex items-center justify-center px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm ${!currentSelectedDate ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <span>Rezervasyon Yap</span>
+                </Link>
+             </div>
           </div>
         </div>
       </div>

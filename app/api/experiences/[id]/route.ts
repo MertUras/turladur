@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 
@@ -9,15 +9,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const experience = await prisma.experience.findUnique({
-      where: {
-        id: params.id,
-        providerId: session.user.id,
+      where: { id: params.id },
+      include: {
+        activityDates: true, // Aktivite tarihlerini de getir
       },
     });
 
@@ -42,28 +37,61 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const json = await request.json();
-    const experience = await prisma.experience.update({
-      where: {
-        id: params.id,
-        providerId: session.user.id,
-      },
-      data: {
-        name: json.title,
-        description: json.description,
-        duration: parseInt(json.duration) || 1,
-        price: parseFloat(json.price),
-        location: json.location,
-        featured: json.featured,
-        images: [json.imageUrl],
-      },
+    
+    const updatedExperience = await prisma.$transaction(async (tx) => {
+      // 1. Önce ana aktivite bilgilerini güncelle
+      const experience = await tx.experience.update({
+        where: {
+          id: params.id,
+          userId: session.user.id, // Yetkilendirme
+        },
+        data: {
+          title: json.name, // Formdan 'name' gelir, db'de 'title'
+          description: json.description,
+          category: json.category,
+          duration: json.duration.toString(),
+          price: json.price,
+          ageRestriction: json.ageRestriction,
+          longDescription: json.longDescription || '',
+          location: json.location || '',
+          included: json.included || [],
+          notIncluded: json.notIncluded || [],
+          highlights: json.highlights || [],
+          schedule: json.schedule || [],
+          userId: session.user.id,
+          imageUrl: json.images?.[0] || '',
+          gallery: json.images || [],
+          meetingPoint: json.meetingPoint,
+        },
+      });
+
+      // 2. Bu aktiviteye ait tüm eski tarihleri sil
+      await tx.activityDate.deleteMany({
+        where: { experienceId: params.id },
+      });
+
+      // 3. Formdan gelen yeni tarihleri ekle
+      if (Array.isArray(json.activityDates) && json.activityDates.length > 0) {
+        await tx.activityDate.createMany({
+          data: json.activityDates.map((date: any) => ({
+            startDate: new Date(date.startDate),
+            endDate: new Date(date.endDate),
+            availableSeats: date.availableSeats,
+            experienceId: experience.id,
+            price: experience.price, // Ana fiyati kullan
+          })),
+        });
+      }
+
+      return experience;
     });
 
-    return NextResponse.json(experience);
+    return NextResponse.json(updatedExperience);
   } catch (error) {
     console.error("Error updating experience:", error);
     return NextResponse.json(
@@ -80,14 +108,14 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await prisma.experience.delete({
       where: {
         id: params.id,
-        providerId: session.user.id,
+        userId: session.user.id, // Yetkilendirme
       },
     });
 

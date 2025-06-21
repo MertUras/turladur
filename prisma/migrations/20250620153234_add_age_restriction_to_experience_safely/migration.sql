@@ -1,0 +1,19 @@
+-- DropForeignKey
+ALTER TABLE "experiences" DROP CONSTRAINT "experiences_userId_fkey";
+
+-- AlterTable
+ALTER TABLE "experiences" ALTER COLUMN "imageUrl" DROP NOT NULL,
+ALTER COLUMN "gallery" DROP NOT NULL,
+ALTER COLUMN "gallery" DROP DEFAULT,
+ALTER COLUMN "rating" DROP NOT NULL,
+ALTER COLUMN "included" DROP NOT NULL,
+ALTER COLUMN "included" DROP DEFAULT,
+ALTER COLUMN "notIncluded" DROP NOT NULL,
+ALTER COLUMN "notIncluded" DROP DEFAULT,
+ALTER COLUMN "highlights" DROP NOT NULL,
+ALTER COLUMN "highlights" DROP DEFAULT,
+ALTER COLUMN "schedule" DROP NOT NULL,
+ALTER COLUMN "schedule" DROP DEFAULT;
+
+-- AddForeignKey
+ALTER TABLE "experiences" ADD CONSTRAINT "experiences_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

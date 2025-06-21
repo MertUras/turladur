@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MapPinIcon, UsersIcon, ClockIcon, PencilSquareIcon, TrashIcon, EyeIcon, PlusIcon, ArrowPathIcon, CalendarIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import ActivityDateModal from '@/app/components/partner-dashboard/ActivityDateModal';
+import { useRouter } from "next/navigation";
 
 interface Activity {
   id: string;
@@ -36,6 +37,7 @@ export default function ExperiencesPage() {
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<any>(null);
   const [activityDates, setActivityDates] = useState<Record<string, any[]>>({});
+  const router = useRouter();
 
   useEffect(() => {
     fetchActivities();
@@ -72,7 +74,7 @@ export default function ExperiencesPage() {
   );
 
   const fetchActivityDates = async (activityId: string) => {
-    const res = await fetch(`/api/partner/experiences/${activityId}/dates`);
+    const res = await fetch(`/api/activity-dates?experienceId=${activityId}`);
     if (res.ok) {
       const data = await res.json();
       setActivityDates(prev => ({ ...prev, [activityId]: data }));
@@ -106,25 +108,43 @@ export default function ExperiencesPage() {
     fetchActivityDates(activityId);
   };
 
-  const handleDateSubmit = async (data: { startDate: string; endDate: string; price: number; availableSeats: number; }) => {
+  const handleDateSubmit = async (data: { startDate: string; endDate: string; availableSeats: number; price: number; }) => {
     if (!selectedActivity) return;
+
+    const body = {
+      ...data,
+      experienceId: selectedActivity,
+    };
+    
+    let url = '/api/activity-dates';
+    let method = 'POST';
+
     if (selectedDate) {
-      // Edit
-      await fetch(`/api/partner/experiences/${selectedActivity}/dates/${selectedDate.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-    } else {
-      // Add
-      await fetch(`/api/partner/experiences/${selectedActivity}/dates`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+      url = `${url}/${selectedDate.id}`;
+      method = 'PUT';
     }
-    setIsDateModalOpen(false);
-    fetchActivityDates(selectedActivity);
+
+    try {
+      const res = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        console.error("Tarih kaydedilemedi");
+        const errorData = await res.json();
+        setError(errorData.error || 'Bir hata oluştu');
+        return;
+      }
+      
+      setError(null);
+      setIsDateModalOpen(false);
+      fetchActivityDates(selectedActivity);
+    } catch (error) {
+      console.error("Bir hata oluştu:", error);
+      setError('İstek gönderilirken bir hata oluştu.');
+    }
   };
 
   if (loading) return (
@@ -191,20 +211,21 @@ export default function ExperiencesPage() {
             <div className="p-6 flex items-start justify-between">
               <div className="flex-1 flex items-center space-x-4">
                 <div className="flex-shrink-0 h-12 w-12 relative">
-                  {activity.gallery && activity.gallery.length > 0 && activity.gallery[0] ? (
-                    <Image
-                      src={activity.gallery[0]}
-                      alt={activity.title}
-                      fill
-                      className="rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center">
-                      <span className="text-gray-400 text-lg font-medium">
-                        {activity.title.charAt(0)}
-                      </span>
-                    </div>
-                  )}
+                  {(() => {
+                    let imgSrc = activity.gallery && Array.isArray(activity.gallery) ? activity.gallery[0] : activity.gallery;
+                    if (Array.isArray(imgSrc)) imgSrc = imgSrc[0];
+                    const safeSrc = imgSrc && typeof imgSrc === 'string' && imgSrc.trim() !== '' && (imgSrc.startsWith('/') || imgSrc.startsWith('http'))
+                      ? imgSrc
+                      : '/images/placeholder.jpg';
+                    return (
+                      <Image
+                        src={safeSrc}
+                        alt={activity.title}
+                        fill
+                        className="rounded-lg object-cover"
+                      />
+                    );
+                  })()}
                 </div>
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900">{activity.title}</h2>
@@ -240,97 +261,88 @@ export default function ExperiencesPage() {
                   <EyeIcon className="h-4 w-4 mr-1.5" />
                   İncele
                 </Link>
-                <Link
-                  href={`/partner-dashboard/experiences/${activity.id}/edit`}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+                <button
+                  onClick={() => router.push(`/partner-dashboard/experiences/${activity.id}/edit`)}
+                  className="text-xs font-medium text-sky-600 hover:text-sky-800 bg-sky-100 px-3 py-1 rounded-md"
                 >
-                  <PencilSquareIcon className="h-4 w-4 mr-1.5" />
                   Düzenle
-                </Link>
+                </button>
                 <button
                   onClick={() => handleDelete(activity.id)}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  className="text-xs font-medium text-red-600 hover:text-red-800 bg-red-100 px-3 py-1 rounded-md"
                 >
-                  <TrashIcon className="h-4 w-4 mr-1.5" />
                   Sil
                 </button>
               </div>
             </div>
-            <div className="mt-4">
-              <button
-                onClick={() => handleToggleDates(activity.id)}
-                className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
-              >
-                {expandedActivity === activity.id ? (
-                  <ChevronUpIcon className="h-5 w-5 mr-1" />
-                ) : (
-                  <ChevronDownIcon className="h-5 w-5 mr-1" />
-                )}
-                Aktivite Tarihleri ({activityDates[activity.id]?.length || 0})
-              </button>
-            </div>
-            {expandedActivity === activity.id && (
-              <div className="mt-4 border-t pt-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Aktivite Tarihleri</h3>
-                  <button
-                    onClick={() => handleAddDate(activity.id)}
-                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
-                  >
-                    <PlusIcon className="h-4 w-4 mr-1.5" />
-                    Yeni Tarih
-                  </button>
-                </div>
-                {activityDates[activity.id] && activityDates[activity.id].length > 0 ? (
-                  <div className="space-y-4">
-                    {activityDates[activity.id].map((date: any) => (
-                      <div key={date.id} className="flex items-center justify-between bg-white p-4 rounded-md border border-gray-200">
-                        <div className="flex items-center space-x-4">
-                          <CalendarIcon className="h-5 w-5 text-gray-400" />
+            <div className="p-4 bg-gray-50 border-t border-gray-200">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-semibold text-gray-700">AKTİVİTE TARİHLERİ</h3>
+                <button onClick={() => handleToggleDates(activity.id)} className="p-2 text-gray-500 hover:text-gray-800">
+                  {expandedActivity === activity.id ? <ChevronUpIcon className="h-5 w-5" /> : <ChevronDownIcon className="h-5 w-5" />}
+                </button>
+              </div>
+
+              {expandedActivity === activity.id && (
+                <div className="mt-4 border-t border-gray-200">
+                  <div className="px-6 py-4 flex justify-between items-center">
+                    <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Aktivite Tarihleri</h4>
+                    <ChevronUpIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <div className="px-6 pb-4 space-y-3">
+                    {activityDates[activity.id]?.map((date, index) => (
+                      <div
+                        key={date.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                          index === 0 // Örnek olarak ilk tarihi vurguluyoruz, bunu dinamik bir seçimle değiştirebilirsiniz
+                            ? 'bg-sky-100 border-sky-500'
+                            : 'bg-white border-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-center">
+                          <CalendarIcon className={`h-5 w-5 mr-3 ${ index === 0 ? 'text-sky-700' : 'text-gray-400' }`} />
                           <div>
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className={`text-sm font-medium ${ index === 0 ? 'text-sky-900' : 'text-gray-800' }`}>
                               {new Date(date.startDate).toLocaleDateString('tr-TR')} - {new Date(date.endDate).toLocaleDateString('tr-TR')}
                             </p>
-                            <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-                              <span>{date.availableSeats} kişilik kontenjan</span>
-                              <span>{date.price} ₺</span>
-                            </div>
+                            <p className={`text-xs ${ index === 0 ? 'text-sky-700' : 'text-gray-500' }`}>
+                              {date.availableSeats} kişilik kontenjan
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleEditDate(activity.id, date)}
-                            className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
-                          >
-                            <PencilSquareIcon className="h-4 w-4 mr-1" />
-                            Düzenle
+                          <button onClick={() => handleEditDate(activity.id, date)} className="p-1.5 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+                            <PencilSquareIcon className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => handleDeleteDate(activity.id, date.id)}
-                            className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                          >
-                            <TrashIcon className="h-4 w-4 mr-1" />
-                            Sil
+                          <button onClick={() => handleDeleteDate(activity.id, date.id)} className="p-1.5 rounded-md hover:bg-red-100 text-gray-400 hover:text-red-600">
+                            <TrashIcon className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
                     ))}
+                    <button
+                      onClick={() => handleAddDate(activity.id)}
+                      className="w-full flex items-center justify-center px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-sky-500 hover:text-sky-600"
+                    >
+                      <PlusIcon className="h-4 w-4 mr-2" />
+                      Yeni Tarih Ekle
+                    </button>
                   </div>
-                ) : (
-                  <div className="text-gray-500 text-sm">Henüz tarih eklenmemiş.</div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
-      <ActivityDateModal
-        isOpen={isDateModalOpen}
-        onClose={() => setIsDateModalOpen(false)}
-        onSubmit={handleDateSubmit}
-        initialData={selectedDate}
-        title={selectedDate ? 'Tarihi Düzenle' : 'Yeni Tarih Ekle'}
-      />
+      {isDateModalOpen && selectedActivity && (
+        <ActivityDateModal
+          isOpen={isDateModalOpen}
+          onClose={() => setIsDateModalOpen(false)}
+          onSubmit={handleDateSubmit}
+          initialData={selectedDate}
+          title={selectedDate ? "Tarihi Düzenle" : "Yeni Tarih Ekle"}
+        />
+      )}
     </div>
   );
 } 

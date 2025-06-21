@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
 
-// GET /api/experiences
+// GET /api/experiences (Partner's own experiences)
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -34,66 +34,85 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    console.log('Session:', session);
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const json = await request.json();
-    console.log('Request body:', json);
 
-    // userId'yi email ile bul
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    });
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const {
+      name,
+      price,
+      category,
+      duration,
+      ageRestriction,
+      activityDates,
+    } = json;
+
+    if (!name || price === undefined || !category || !duration || !ageRestriction) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+    
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice)) {
+      return NextResponse.json(
+        { error: 'Invalid price format' },
+        { status: 400 }
+      );
     }
 
-    const experience = await prisma.experience.create({
-      data: {
-        title: json.name,
-        description: json.description,
-        longDescription: json.longDescription || '',
-        imageUrl: json.images?.[0] || '',
-        gallery: json.images || [],
-        location: json.location,
-        duration: json.duration?.toString() || '1',
-        price: parseFloat(json.price),
-        category: json.category,
-        included: json.included || [],
-        notIncluded: json.notIncluded || [],
-        highlights: json.highlights || [],
-        schedule: json.schedule || [],
-        featured: json.featured ?? false,
-        userId: user.id,
-        meetingPoint: json.meetingPoint || null,
-      },
+    const createdExperience = await prisma.$transaction(async (tx) => {
+      const experience = await tx.experience.create({
+        data: {
+          title: name,
+          description: json.description || '',
+          category,
+          duration: duration.toString(),
+          price: parsedPrice,
+          ageRestriction: ageRestriction,
+          longDescription: json.longDescription || '',
+          location: json.location || '',
+          included: json.included || [],
+          notIncluded: json.notIncluded || [],
+          highlights: json.highlights || [],
+          schedule: json.schedule || [],
+          userId: session.user.id,
+          imageUrl: json.images?.[0] || '',
+          gallery: json.images || [],
+          meetingPoint: json.meetingPoint,
+        },
+      });
+
+      if (Array.isArray(activityDates) && activityDates.length > 0) {
+        await tx.activityDate.createMany({
+          data: activityDates.map((date: any) => {
+            const availableSeats = parseInt(date.availableSeats, 10);
+            if (isNaN(availableSeats)) {
+              throw new Error('Invalid availableSeats format for a date');
+            }
+            return {
+              startDate: new Date(date.startDate),
+              endDate: new Date(date.endDate),
+              availableSeats: availableSeats,
+              experienceId: experience.id,
+              price: parsedPrice,
+            };
+          }),
+        });
+      }
+
+      return experience;
     });
 
-    // Aktivite tarihlerini ekle
-    if (Array.isArray(json.activityDates) && json.activityDates.length > 0) {
-      await Promise.all(json.activityDates.map((date: any) =>
-        prisma.activityDate.create({
-          data: {
-            activityId: experience.id,
-            startDate: new Date(date.startDate),
-            endDate: new Date(date.endDate),
-            price: date.price,
-            availableSeats: date.availableSeats
-          }
-        })
-      ));
-    }
-
-    return NextResponse.json(experience);
+    return NextResponse.json(createdExperience);
   } catch (error) {
     console.error('Error creating experience:', error);
-    if (error instanceof Error) {
-      console.error(error.stack);
-    }
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create experience';
     return NextResponse.json(
-      { error: 'Failed to create experience' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
