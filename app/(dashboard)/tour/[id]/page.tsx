@@ -118,41 +118,23 @@ interface Tour {
     rating: number;
     features: string[];
   };
+  meetingPoint?: string;
+  meetingPointAddress?: string;
+  meetingTime?: string;
+  pickupPoints?: {
+    id: string;
+    city: string;
+    location: string;
+    description?: string;
+    time: string;
+    isActive: boolean;
+    order: number;
+  }[];
 }
 
 interface TourPageProps {
   params: {
     id: string;
-  };
-}
-
-interface ItineraryItem {
-  title: string;
-  description: string;
-}
-
-interface ReviewItem {
-  id: string;
-  name: string;
-  rating: number;
-  comment: string;
-  date: string;
-}
-
-interface TourStop {
-  id: string;
-  name: string;
-  description: string;
-  type: 'start' | 'stop' | 'end';
-  activities: string[];
-  duration: string;
-  arrivalTime: string;
-  departureTime: string;
-  images: string[];
-  location: {
-    city: string;
-    address: string;
-    coordinates?: [number, number];
   };
 }
 
@@ -315,9 +297,6 @@ export default function TourPage() {
     return notFound();
   }
   
-  // Tur resimlerini parse et
-  const tourImages = Array.isArray(tour.images) ? tour.images.filter(Boolean) : [];
-  
   // Tur dahil olanlar ve olmayanlar
   const inclusions = parseJsonString<string[]>(tour.inclusions, []);
   const exclusions = parseJsonString<string[]>(tour.exclusions, []);
@@ -370,9 +349,9 @@ export default function TourPage() {
       {/* Hero Section - ikas Style Refinement (SKY Theme) */}
       <div className="relative h-[80vh] md:h-[90vh]">
         <div className="absolute inset-0 overflow-hidden">
-          {tourImages.length > 0 ? (
+          {tour.images.length > 0 ? (
             <Image
-              src={tourImages[0]}
+              src={tour.images[0]}
               alt={tour.name}
               fill
               priority
@@ -473,6 +452,13 @@ export default function TourPage() {
                 <UserGroupIcon className="w-4 h-4 mr-1.5 opacity-80" />
                 <span className="font-normal">Maks. {tour.maxParticipants || 10} kişi</span>
               </div>
+              {/* Otel Adı Badge */}
+              {tour.accommodation?.name && (
+                <span className="inline-flex items-center gap-2 bg-sky-100 text-sky-800 px-3 py-1 rounded-full text-xs font-semibold ml-2">
+                  <BuildingOfficeIcon className="w-4 h-4 text-sky-600" />
+                  Otel: {tour.accommodation.name}
+                </span>
+              )}
             </div>
              {/* Standardized Buttons (SKY Theme) */}
             <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
@@ -510,104 +496,106 @@ export default function TourPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              {/* Ana Kalkış Noktası */}
-              <div className="bg-white rounded-lg p-5 border border-emerald-100 relative overflow-hidden group">
-                <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-100 rounded-bl-[100px] -z-0 group-hover:bg-emerald-200 transition-colors"></div>
-                <div className="absolute top-3 right-3 z-20">
-                  <button className="bg-white/90 backdrop-blur-sm hover:bg-white text-emerald-700 hover:text-emerald-800 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm hover:shadow flex items-center gap-1.5 transition-all">
-                    <MapPinIcon className="w-4 h-4" />
-                    <span>Konumu Gör</span>
-                  </button>
-                </div>
-                <div className="relative z-10">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
-                      <MapPinIcon className="w-6 h-6 text-emerald-600" />
-                    </div>
-                    <div>
-                      <div className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">Ana Kalkış Noktası</div>
-                      <h5 className="font-medium text-gray-900 mb-1">{tour.departureCity || 'İstanbul'} - Sultanahmet Meydanı</h5>
-                      <p className="text-sm text-gray-600 mb-3">Sultanahmet Meydanı, Ayasofya Camii önü</p>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <ClockIcon className="w-4 h-4 text-emerald-600" />
-                          <span>Toplanma Saati: 07:30</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <UserGroupIcon className="w-4 h-4 text-emerald-600" />
-                          <span>Rehber: Yeşil Şapkalı Rehber</span>
+              {/* Ana Buluşma Noktası */}
+              {tour.meetingPoint && (
+                <div className="bg-white rounded-lg p-5 border border-emerald-100 relative overflow-hidden group">
+                  <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-100 rounded-bl-[100px] -z-0 group-hover:bg-emerald-200 transition-colors"></div>
+                  
+                  <div className="relative z-10">
+                    <div className="flex items-start gap-4">
+                      <div className="p-2.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
+                        <MapPinIcon className="w-6 h-6 text-emerald-600" />
+                      </div>
+                      <div>
+                        <div className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">Ana Buluşma Noktası</div>
+                        <h5 className="font-medium text-gray-900 mb-1">{tour.meetingPoint}</h5>
+                        {tour.meetingPointAddress && (
+                          <p className="text-sm text-gray-600 mb-3">{tour.meetingPointAddress}</p>
+                        )}
+                        <div className="flex flex-col gap-2">
+                          {tour.meetingTime && (
+                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                              <ClockIcon className="w-4 h-4 text-emerald-600" />
+                              <span>Toplanma Saati: {tour.meetingTime}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 text-sm text-gray-700">
+                            <UserGroupIcon className="w-4 h-4 text-emerald-600" />
+                            <span>Rehber: {tour.tourOperator?.companyName || 'Tur Operatörü'} Rehberi</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* 2. Kalkış Noktası */}
-              <div className="bg-white rounded-lg p-5 border border-emerald-100 relative overflow-hidden group">
-                <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-100 rounded-bl-[100px] -z-0 group-hover:bg-emerald-200 transition-colors"></div>
-                <div className="absolute top-3 right-3 z-20">
-                  <button className="bg-white/90 backdrop-blur-sm hover:bg-white text-emerald-700 hover:text-emerald-800 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm hover:shadow flex items-center gap-1.5 transition-all">
-                    <MapPinIcon className="w-4 h-4" />
-                    <span>Konumu Gör</span>
-                  </button>
-                </div>
-                <div className="relative z-10">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
-                      <MapPinIcon className="w-6 h-6 text-emerald-600" />
-                    </div>
-                    <div>
-                      <div className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">2. Kalkış Noktası</div>
-                      <h5 className="font-medium text-gray-900 mb-1">{tour.departureCity || 'İstanbul'} - Kadıköy İskele</h5>
-                      <p className="text-sm text-gray-600 mb-3">Kadıköy İskele Meydanı, Saat Kulesi önü</p>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <ClockIcon className="w-4 h-4 text-emerald-600" />
-                          <span>Toplanma Saati: 08:00</span>
+              {/* Kalkış Noktaları */}
+              {tour.pickupPoints && tour.pickupPoints.length > 0 ? (
+                tour.pickupPoints
+                  .filter(point => point.isActive)
+                  .sort((a, b) => a.order - b.order)
+                  .map((point, index) => (
+                    <div key={point.id} className="bg-white rounded-lg p-5 border border-emerald-100 relative overflow-hidden group">
+                      <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-100 rounded-bl-[100px] -z-0 group-hover:bg-emerald-200 transition-colors"></div>
+                      
+                      <div className="relative z-10">
+                        <div className="flex items-start gap-4">
+                          <div className="p-2.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
+                            <MapPinIcon className="w-6 h-6 text-emerald-600" />
+                          </div>
+                          <div>
+                            <div className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">
+                              {index + 1}. Kalkış Noktası
+                            </div>
+                            <h5 className="font-medium text-gray-900 mb-1">{point.city} - {point.location}</h5>
+                            {point.description && (
+                              <p className="text-sm text-gray-600 mb-3">{point.description}</p>
+                            )}
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-2 text-sm text-gray-700">
+                                <ClockIcon className="w-4 h-4 text-emerald-600" />
+                                <span>Toplanma Saati: {point.time}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-gray-700">
+                                <UserGroupIcon className="w-4 h-4 text-emerald-600" />
+                                <span>Rehber: {tour.tourOperator?.companyName || 'Tur Operatörü'} Rehberi</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <UserGroupIcon className="w-4 h-4 text-emerald-600" />
-                          <span>Rehber: Mavi Şapkalı Rehber</span>
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                // Varsayılan kalkış noktası (veritabanında veri yoksa)
+                <div className="bg-white rounded-lg p-5 border border-emerald-100 relative overflow-hidden group">
+                  <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-100 rounded-bl-[100px] -z-0 group-hover:bg-emerald-200 transition-colors"></div>
+                  
+                  <div className="relative z-10">
+                    <div className="flex items-start gap-4">
+                      <div className="p-2.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
+                        <MapPinIcon className="w-6 h-6 text-emerald-600" />
+                      </div>
+                      <div>
+                        <div className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">Kalkış Noktası</div>
+                        <h5 className="font-medium text-gray-900 mb-1">{tour.departureCity || 'İstanbul'} - Merkez</h5>
+                        <p className="text-sm text-gray-600 mb-3">Tur operatörü tarafından belirlenecek</p>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2 text-sm text-gray-700">
+                            <ClockIcon className="w-4 h-4 text-emerald-600" />
+                            <span>Toplanma Saati: Belirtilecek</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-700">
+                            <UserGroupIcon className="w-4 h-4 text-emerald-600" />
+                            <span>Rehber: {tour.tourOperator?.companyName || 'Tur Operatörü'} Rehberi</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* 3. Kalkış Noktası */}
-              <div className="bg-white rounded-lg p-5 border border-emerald-100 relative overflow-hidden group">
-                <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-100 rounded-bl-[100px] -z-0 group-hover:bg-emerald-200 transition-colors"></div>
-                <div className="absolute top-3 right-3 z-20">
-                  <button className="bg-white/90 backdrop-blur-sm hover:bg-white text-emerald-700 hover:text-emerald-800 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm hover:shadow flex items-center gap-1.5 transition-all">
-                    <MapPinIcon className="w-4 h-4" />
-                    <span>Konumu Gör</span>
-                  </button>
-                </div>
-                <div className="relative z-10">
-                  <div className="flex items-start gap-4">
-                    <div className="p-2.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
-                      <MapPinIcon className="w-6 h-6 text-emerald-600" />
-                    </div>
-                    <div>
-                      <div className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">3. Kalkış Noktası</div>
-                      <h5 className="font-medium text-gray-900 mb-1">{tour.departureCity || 'İstanbul'} - Bakırköy Meydan</h5>
-                      <p className="text-sm text-gray-600 mb-3">Bakırköy Özgürlük Meydanı</p>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <ClockIcon className="w-4 h-4 text-emerald-600" />
-                          <span>Toplanma Saati: 08:30</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <UserGroupIcon className="w-4 h-4 text-emerald-600" />
-                          <span>Rehber: Kırmızı Şapkalı Rehber</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Önemli Bilgiler */}
@@ -649,6 +637,21 @@ export default function TourPage() {
             </div>
           </div>
 
+          {/* Konaklama Bilgisi - Kısa */}
+          {tour.accommodation?.name && (
+            <div className="mb-10">
+              <div className="bg-sky-50 border border-sky-200 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <BuildingOfficeIcon className="w-5 h-5 text-sky-600 flex-shrink-0" />
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Konaklama:</span>
+                    <span className="text-base font-semibold text-gray-900 ml-2">{tour.accommodation.name}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Fotoğraf Galerisi */}
           <div className="mb-16">
             <div className="flex items-center justify-between mb-8">
@@ -662,7 +665,7 @@ export default function TourPage() {
               </button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {tourImages.slice(0, 4).map((image, index) => (
+              {tour.images.slice(0, 4).map((image, index) => (
                 <div 
                   key={index} 
                   className="group relative aspect-[4/3] rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow"
@@ -683,92 +686,6 @@ export default function TourPage() {
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* Konaklama Bilgileri */}
-          <div className="mb-16">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
-                <BuildingOfficeIcon className="h-7 w-7 text-sky-600 mr-3" />
-                <span>Konaklama</span>
-              </h2>
-            </div>
-            <div className="bg-white rounded-xl overflow-hidden border border-neutral-200/70 shadow-sm hover:shadow-md transition-shadow">
-              <div className="grid grid-cols-1 md:grid-cols-3 h-full">
-                <div className="relative aspect-[4/3] md:aspect-auto">
-                  <Image
-                    src={tour.accommodation?.image || "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2070&auto=format&fit=crop"}
-                    alt={tour.accommodation?.name || 'Rixos Premium Belek'}
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute top-3 right-3">
-                    <div className="flex items-center bg-white/90 backdrop-blur-sm rounded-full px-2.5 py-1.5">
-                      <StarIconSolid className="h-4 w-4 text-yellow-400" />
-                      <span className="text-sm font-medium ml-1.5">{tour.accommodation?.rating || 4.8}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="md:col-span-2 p-6 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                          {tour.accommodation?.name || 'Rixos Premium Belek'}
-                        </h3>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <MapPinIcon className="w-4 h-4 text-gray-400" />
-                          <span>{tour.accommodation?.location || 'Belek, Antalya'}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                        <span className="text-sm font-medium text-emerald-600">Müsait</span>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <BuildingOfficeIcon className="w-4 h-4 text-gray-400" />
-                        <span>{tour.accommodation?.type || 'Ultra Her Şey Dahil'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <CalendarDaysIcon className="w-4 h-4 text-gray-400" />
-                        <span>{tour.duration - 1} Gece Konaklama</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      {(tour.accommodation?.features || [
-                        'Özel Plaj',
-                        'Açık Havuz',
-                        'SPA Merkezi',
-                        'Fitness Merkezi',
-                        'Restoran & Bar'
-                      ]).map((feature, index) => (
-                        <span 
-                          key={index}
-                          className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-100"
-                        >
-                          <CheckIcon className="w-3.5 h-3.5 mr-1" />
-                          {feature}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-4 border-t border-neutral-100">
-                    <div className="text-sm text-gray-500">
-                      * Konaklama detayları rezervasyon sonrası paylaşılacaktır
-                    </div>
-                    <button className="inline-flex items-center px-3 py-1.5 bg-sky-50 text-sky-600 hover:bg-sky-100 rounded-lg text-sm font-medium transition-colors">
-                      Detayları Gör
-                      <ChevronRightIcon className="w-4 h-4 ml-1" />
-                    </button>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -795,229 +712,263 @@ export default function TourPage() {
                     </div>
                   </div>
 
-                  <div className="relative">
-                    {/* Rota Çizgisi */}
-                    <div className="absolute left-[26px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-sky-200 via-sky-300 to-sky-200"></div>
+                  {tour.itinerary ? (
+                    <div className="relative">
+                      {/* Rota Çizgisi */}
+                      <div className="absolute left-[26px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-sky-200 via-sky-300 to-sky-200"></div>
 
-                    {/* Günlük Program */}
-                    <div className="space-y-12">
-                      {Object.entries(itinerary).map(([day, content]: [string, ItineraryItem], index: number) => {
-                        const dayNumber = (parseInt(day.replace('day', '')) + 1).toString();
-                        const tourStartDate = tour.tourDates?.[0]?.startDate;
-                        const currentDate = tourStartDate 
-                          ? new Date(new Date(tourStartDate).setDate(new Date(tourStartDate).getDate() + index))
-                          : null;
-                        const formattedDate = currentDate 
-                          ? currentDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })
-                          : `${dayNumber}. Gün`;
+                      {/* Günlük Program */}
+                      <div className="space-y-12">
+                        {Object.entries(tour.itinerary).map(([day, content]: [string, any], index: number) => {
+                          const dayNumber = (parseInt(day.replace('day', '')) + 1).toString();
+                          const tourStartDate = tour.tourDates?.[0]?.startDate;
+                          const currentDate = tourStartDate 
+                            ? new Date(new Date(tourStartDate).setDate(new Date(tourStartDate).getDate() + index))
+                            : null;
+                          const formattedDate = currentDate 
+                            ? currentDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })
+                            : `${dayNumber}. Gün`;
 
-                        // Her gün için öne çıkan özellikler
-                        const highlights = [
-                          { icon: '🏛️', text: 'Tarihi Mekanlar' },
-                          { icon: '🍽️', text: 'Yerel Lezzetler' },
-                          { icon: '📸', text: 'Fotoğraf Noktaları' },
-                          { icon: '🎭', text: 'Kültürel Etkinlikler' },
-                          { icon: '🌅', text: 'Doğal Güzellikler' },
-                          { icon: '🏺', text: 'Müze Ziyareti' }
-                        ].slice(0, (index % 4) + 2);
+                          // Destinasyon bilgisini al
+                          const destination = tour.destinations[index] || tour.destinations[0];
+                          const destinationName = getDestinationName(destination);
 
-                        // Gün için örnek fotoğraflar
-                        const dayImages = tourImages.slice(index * 2, (index * 2) + 2);
+                          // Gün için örnek fotoğraflar
+                          const dayImages = tour.images ? tour.images.slice(index * 2, (index * 2) + 2) : [];
 
-                        return (
-                          <div key={index} className="relative flex gap-6">
-                            {/* Gün İşareti */}
-                            <div className="flex-shrink-0 w-13">
-                              <div className="w-13 h-13 rounded-full flex items-center justify-center bg-sky-100 text-sky-600 relative">
-                                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-sky-50">
-                                  <span className="text-lg font-semibold">{dayNumber}</span>
-                                </div>
-                                {/* Zaman Çizelgesi Göstergesi */}
-                                <div className="absolute -right-1 -top-1 w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center text-xs font-medium">
-                                  {index + 1}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Gün Detayları */}
-                            <div className="flex-grow">
-                              <div className="bg-white rounded-xl border border-neutral-200/70 shadow-sm hover:shadow-md transition-shadow">
-                                {/* Üst Bilgi Çubuğu */}
-                                <div className="px-5 py-4 border-b border-neutral-100 bg-sky-50/50">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-700">
-                                        {formattedDate}
-                                      </span>
-                                      <h4 className="text-lg font-semibold text-gray-900">
-                                        {content.title || destinations[index % destinations.length] || 'Günün Programı'}
-                                      </h4>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <button 
-                                        className="p-2 hover:bg-white rounded-lg transition-colors" 
-                                        title="Haritada Göster"
-                                      >
-                                        <MapPinIcon className="w-5 h-5 text-gray-500" />
-                                      </button>
-                                      {dayImages.length > 0 && (
-                                        <button 
-                                          className="p-2 hover:bg-white rounded-lg transition-colors"
-                                          title="Fotoğrafları Görüntüle"
-                                        >
-                                          <PhotoIcon className="w-5 h-5 text-gray-500" />
-                                        </button>
-                                      )}
-                                    </div>
+                          return (
+                            <div key={index} className="relative flex gap-6">
+                              {/* Gün İşareti */}
+                              <div className="flex-shrink-0 w-13">
+                                <div className="w-13 h-13 rounded-full flex items-center justify-center bg-sky-100 text-sky-600 relative">
+                                  <div className="w-10 h-10 rounded-full flex items-center justify-center bg-sky-50">
+                                    <span className="text-lg font-semibold">{dayNumber}</span>
+                                  </div>
+                                  {/* Zaman Çizelgesi Göstergesi */}
+                                  <div className="absolute -right-1 -top-1 w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center text-xs font-medium">
+                                    {index + 1}
                                   </div>
                                 </div>
+                              </div>
 
-                                {/* Ana İçerik */}
-                                <div className="p-5">
-                                  {/* Açıklama */}
-                                  <p className="text-gray-600 text-sm mb-6">{content.description}</p>
+                              {/* Gün Detayları */}
+                              <div className="flex-grow">
+                                <div className="bg-white rounded-xl border border-neutral-200/70 shadow-sm hover:shadow-md transition-shadow">
+                                  {/* Üst Bilgi Çubuğu */}
+                                  <div className="px-5 py-4 border-b border-neutral-100 bg-sky-50/50">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-3">
+                                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-700">
+                                          {formattedDate}
+                                        </span>
+                                        <h4 className="text-lg font-semibold text-gray-900">
+                                          {content.title || destinationName || `${dayNumber}. Gün Programı`}
+                                        </h4>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <button 
+                                          className="p-2 hover:bg-white rounded-lg transition-colors" 
+                                          title="Haritada Göster"
+                                        >
+                                          <MapPinIcon className="w-5 h-5 text-gray-500" />
+                                        </button>
+                                        {dayImages.length > 0 && (
+                                          <button 
+                                            className="p-2 hover:bg-white rounded-lg transition-colors"
+                                            title="Fotoğrafları Görüntüle"
+                                          >
+                                            <PhotoIcon className="w-5 h-5 text-gray-500" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
 
-                                  {/* Fotoğraflar */}
-                                  {dayImages.length > 0 && (
-                                    <div className="mb-6">
-                                      <div className="grid grid-cols-2 gap-4">
-                                        {dayImages.map((image, imgIndex) => (
-                                          <div key={imgIndex} className="relative aspect-[4/3] rounded-lg overflow-hidden group">
-                                            <Image
-                                              src={image}
-                                              alt={`${content.title || destinations[index % destinations.length]} - ${imgIndex + 1}`}
-                                              fill
-                                              className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                                              <div className="absolute bottom-3 left-3 right-3">
-                                                <p className="text-white text-sm font-medium truncate">
-                                                  {content.title || destinations[index % destinations.length]}
-                                                </p>
+                                  {/* Ana İçerik */}
+                                  <div className="p-5">
+                                    {/* Açıklama */}
+                                    <p className="text-gray-600 text-sm mb-6">{content.description || 'Bu gün için detaylı program bilgisi yakında eklenecektir.'}</p>
+
+                                    {/* Fotoğraflar */}
+                                    {dayImages.length > 0 && (
+                                      <div className="mb-6">
+                                        <div className="grid grid-cols-2 gap-4">
+                                          {dayImages.map((image: string, imgIndex: number) => (
+                                            <div key={imgIndex} className="relative aspect-[4/3] rounded-lg overflow-hidden group">
+                                              <Image
+                                                src={image}
+                                                alt={`${content.title || destinationName} - ${imgIndex + 1}`}
+                                                fill
+                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                              />
+                                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="absolute bottom-3 left-3 right-3">
+                                                  <p className="text-white text-sm font-medium truncate">
+                                                    {content.title || destinationName}
+                                                  </p>
+                                                </div>
                                               </div>
                                             </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Öne Çıkan Özellikler */}
+                                    {content.highlights && content.highlights.length > 0 && (
+                                      <div className="mb-6">
+                                        <h5 className="text-sm font-medium text-gray-700 mb-3">Günün Öne Çıkanları</h5>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                          {content.highlights.map((highlight: string, i: number) => (
+                                            <div 
+                                              key={i} 
+                                              className="flex items-center gap-2 p-2.5 rounded-lg border border-sky-100 bg-sky-50/30"
+                                            >
+                                              <span className="text-lg">✨</span>
+                                              <span className="text-sm text-gray-700">{highlight}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Zaman Çizelgesi */}
+                                    {content.schedule && content.schedule.length > 0 && (
+                                      <div className="mb-6">
+                                        <h5 className="text-sm font-medium text-gray-700 mb-3">Günün Programı</h5>
+                                        <div className="space-y-3">
+                                          {content.schedule.map((scheduleItem: any, i: number) => (
+                                            <div key={i} className="flex items-center gap-3 p-2.5 bg-sky-50 rounded-lg border border-sky-100">
+                                              <div className="p-2 bg-sky-100 rounded-lg">
+                                                <ClockIcon className="w-4 h-4 text-sky-600" />
+                                              </div>
+                                              <div>
+                                                <p className="text-sm font-medium text-gray-900">
+                                                  {scheduleItem.time || `${i + 1}. Aktivite`}
+                                                </p>
+                                                <p className="text-xs text-gray-600">{scheduleItem.activity || 'Aktivite'}</p>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Alt Bilgiler */}
+                                    <div className="pt-4 border-t border-gray-100">
+                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                        {/* Konum */}
+                                        {destinationName && (
+                                          <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-gray-100 rounded-lg">
+                                              <MapPinIcon className="w-4 h-4 text-gray-600" />
+                                            </div>
+                                            <div>
+                                              <p className="text-xs text-gray-500">Konum</p>
+                                              <p className="text-sm font-medium text-gray-700">
+                                                {destinationName}
+                                              </p>
+                                            </div>
                                           </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
+                                        )}
 
-                                  {/* Öne Çıkan Özellikler */}
-                                  <div className="mb-6">
-                                    <h5 className="text-sm font-medium text-gray-700 mb-3">Günün Öne Çıkanları</h5>
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                      {highlights.map((highlight, i) => (
-                                        <div 
-                                          key={i} 
-                                          className="flex items-center gap-2 p-2.5 rounded-lg border border-sky-100 bg-sky-50/30"
-                                        >
-                                          <span className="text-lg">{highlight.icon}</span>
-                                          <span className="text-sm text-gray-700">{highlight.text}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
+                                        {/* Mesafe */}
+                                        {content.distance && (
+                                          <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-gray-100 rounded-lg">
+                                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-gray-600">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                                              </svg>
+                                            </div>
+                                            <div>
+                                              <p className="text-xs text-gray-500">Mesafe</p>
+                                              <p className="text-sm font-medium text-gray-700">
+                                                {content.distance}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        )}
 
-                                  {/* Zaman Çizelgesi */}
-                                  <div className="mb-6">
-                                    <h5 className="text-sm font-medium text-gray-700 mb-3">Günün Programı</h5>
-                                    <div className="space-y-3">
-                                      <div className="flex items-center gap-3 p-2.5 bg-amber-50 rounded-lg border border-amber-100">
-                                        <div className="p-2 bg-amber-100 rounded-lg">
-                                          <SunIcon className="w-4 h-4 text-amber-600" />
-                                        </div>
-                                        <div>
-                                          <p className="text-sm font-medium text-gray-900">Sabah (08:00 - 12:00)</p>
-                                          <p className="text-xs text-gray-600">Kahvaltı ve Şehir Turu</p>
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-3 p-2.5 bg-sky-50 rounded-lg border border-sky-100">
-                                        <div className="p-2 bg-sky-100 rounded-lg">
-                                          <SunIcon className="w-4 h-4 text-sky-600" />
-                                        </div>
-                                        <div>
-                                          <p className="text-sm font-medium text-gray-900">Öğle (12:00 - 16:00)</p>
-                                          <p className="text-xs text-gray-600">Öğle Yemeği ve Müze Ziyareti</p>
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-3 p-2.5 bg-indigo-50 rounded-lg border border-indigo-100">
-                                        <div className="p-2 bg-indigo-100 rounded-lg">
-                                          <MoonIcon className="w-4 h-4 text-indigo-600" />
-                                        </div>
-                                        <div>
-                                          <p className="text-sm font-medium text-gray-900">Akşam (16:00 - 20:00)</p>
-                                          <p className="text-xs text-gray-600">Serbest Zaman ve Akşam Yemeği</p>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
+                                        {/* Aktivite Sayısı */}
+                                        {content.highlights && content.highlights.length > 0 && (
+                                          <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-gray-100 rounded-lg">
+                                              <CalendarDaysIcon className="w-4 h-4 text-gray-600" />
+                                            </div>
+                                            <div>
+                                              <p className="text-xs text-gray-500">Aktiviteler</p>
+                                              <p className="text-sm font-medium text-gray-700">
+                                                {content.highlights.length} Aktivite
+                                              </p>
+                                            </div>
+                                          </div>
+                                        )}
 
-                                  {/* Alt Bilgiler */}
-                                  <div className="pt-4 border-t border-gray-100">
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                      {/* Konum */}
-                                      <div className="flex items-center gap-2">
-                                        <div className="p-2 bg-gray-100 rounded-lg">
-                                          <MapPinIcon className="w-4 h-4 text-gray-600" />
-                                        </div>
-                                        <div>
-                                          <p className="text-xs text-gray-500">Konum</p>
-                                          <p className="text-sm font-medium text-gray-700">
-                                            {(() => {
-                                              const destination = tour.destinations[index];
-                                              if (!destination) return 'Belirtilmemiş';
-                                              if (typeof destination === 'string') return destination;
-                                              if (typeof destination === 'object' && destination.city) return destination.city;
-                                              return 'Belirtilmemiş';
-                                            })()}
-                                          </p>
-                                        </div>
-                                      </div>
-
-                                      {/* Mesafe */}
-                                      <div className="flex items-center gap-2">
-                                        <div className="p-2 bg-gray-100 rounded-lg">
-                                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-gray-600">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                          </svg>
-                                        </div>
-                                        <div>
-                                          <p className="text-xs text-gray-500">Mesafe</p>
-                                          <p className="text-sm font-medium text-gray-700">{((index + 1) * 50)} km</p>
-                                        </div>
-                                      </div>
-
-                                      {/* Aktivite Sayısı */}
-                                      <div className="flex items-center gap-2">
-                                        <div className="p-2 bg-gray-100 rounded-lg">
-                                          <CalendarDaysIcon className="w-4 h-4 text-gray-600" />
-                                        </div>
-                                        <div>
-                                          <p className="text-xs text-gray-500">Aktiviteler</p>
-                                          <p className="text-sm font-medium text-gray-700">{highlights.length} Aktivite</p>
-                                        </div>
-                                      </div>
-
-                                      {/* Tahmini Süre */}
-                                      <div className="flex items-center gap-2">
-                                        <div className="p-2 bg-gray-100 rounded-lg">
-                                          <ClockIcon className="w-4 h-4 text-gray-600" />
-                                        </div>
-                                        <div>
-                                          <p className="text-xs text-gray-500">Süre</p>
-                                          <p className="text-sm font-medium text-gray-700">12 Saat</p>
-                                        </div>
+                                        {/* Tahmini Süre */}
+                                        {content.duration && (
+                                          <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-gray-100 rounded-lg">
+                                              <ClockIcon className="w-4 h-4 text-gray-600" />
+                                            </div>
+                                            <div>
+                                              <p className="text-xs text-gray-500">Süre</p>
+                                              <p className="text-sm font-medium text-gray-700">
+                                                {content.duration}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    // Itinerary verisi yoksa varsayılan görünüm
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <MapIcon className="w-8 h-8 text-sky-600" />
+                      </div>
+                      <h4 className="text-lg font-medium text-gray-900 mb-2">Tur Programı Hazırlanıyor</h4>
+                      <p className="text-gray-600 mb-6">
+                        Bu tur için detaylı günlük program yakında eklenecektir.
+                      </p>
+                      <div className="bg-sky-50 rounded-lg p-4 border border-sky-100">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center">
+                            <span className="text-sm font-semibold text-sky-600">1</span>
+                          </div>
+                          <div>
+                            <h5 className="font-medium text-gray-900">Tur Başlangıcı</h5>
+                            <p className="text-sm text-gray-600">Buluşma noktasında toplanma ve tur başlangıcı</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center">
+                            <span className="text-sm font-semibold text-sky-600">2</span>
+                          </div>
+                          <div>
+                            <h5 className="font-medium text-gray-900">Destinasyon Ziyaretleri</h5>
+                            <p className="text-sm text-gray-600">Planlanan destinasyonlarda rehber eşliğinde geziler</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center">
+                            <span className="text-sm font-semibold text-sky-600">3</span>
+                          </div>
+                          <div>
+                            <h5 className="font-medium text-gray-900">Tur Sonu</h5>
+                            <p className="text-sm text-gray-600">Tur sonunda ayrılış ve dönüş</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import TourForm, { TourFormData } from '@/app/components/partner-dashboard/TourForm';
-import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, InformationCircleIcon, PhotoIcon } from '@heroicons/react/24/outline';
+import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, InformationCircleIcon, PhotoIcon, MapPinIcon, CalendarIcon, UsersIcon, TagIcon } from '@heroicons/react/24/outline';
 import { useSession } from 'next-auth/react';
+import Image from 'next/image';
+import ReactMarkdown from 'react-markdown';
 
 interface FormData extends Partial<TourFormData> {
   [key: string]: any;
@@ -36,6 +38,10 @@ export default function CreateTourPage() {
       fetchTourOperator();
     }
   }, [session]);
+
+  const handleFormDataChange = (data: TourFormData) => {
+    setFormData(data);
+  };
 
   const handleSubmit = async (data: any) => {
     setIsSubmitting(true);
@@ -83,6 +89,32 @@ export default function CreateTourPage() {
     }
   };
 
+  // Önizleme için yardımcı fonksiyonlar
+  const getPreviewImage = () => {
+    if (formData.mainImage?.preview) {
+      return formData.mainImage.preview;
+    }
+    if (formData.galleryImages && formData.galleryImages.length > 0) {
+      return formData.galleryImages[0].preview || formData.galleryImages[0].url;
+    }
+    if (formData.images && formData.images.length > 0) {
+      return formData.images[0].preview || formData.images[0].url;
+    }
+    return null;
+  };
+
+  const formatPrice = (price: string | number | undefined) => {
+    if (!price || price === '') return '0 ₺';
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    return `${numPrice.toLocaleString('tr-TR')} ₺`;
+  };
+
+  const formatDuration = (duration: string | number | undefined) => {
+    if (!duration || duration === '') return '0 gün';
+    const numDuration = typeof duration === 'string' ? parseInt(duration) : duration;
+    return `${numDuration} gün`;
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex items-center justify-between">
@@ -126,9 +158,10 @@ export default function CreateTourPage() {
               <TourForm 
                 initialData={formData} 
                 onSubmit={handleSubmit} 
+                onFormDataChange={handleFormDataChange}
                 isSubmitting={isSubmitting}
                 currentStep={formStep}
-                partnerId={tourOperatorId}
+                partnerId={tourOperatorId || undefined}
               />
             </div>
           </div>
@@ -140,42 +173,417 @@ export default function CreateTourPage() {
               <div className="p-6">
                 <h2 className="text-lg font-medium text-gray-900">Önizleme</h2>
                 <div className="mt-4 space-y-4">
+                  {/* Ana Görsel */}
                   <div className="h-48 w-full overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
-                    <PhotoIcon className="h-14 w-14 text-gray-400" />
+                    {getPreviewImage() ? (
+                      <Image
+                        src={getPreviewImage()!}
+                        alt="Tur görseli"
+                        width={400}
+                        height={200}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <PhotoIcon className="h-14 w-14 text-gray-400" />
+                    )}
                   </div>
+
+                  {/* Tur Başlığı */}
                   <h3 className="text-lg font-medium text-gray-900">
-                    {(formData?.title ?? '') || 'Tur başlığı'}
+                    {formData?.title || 'Tur başlığı'}
                   </h3>
-                  <p className="text-sm text-gray-600 line-clamp-3">
-                    {(formData?.description ?? '') || 'Tur açıklaması burada görünecek...'}
-                  </p>
+
+                  {/* Tur Açıklaması */}
+                  <div className="text-sm text-gray-600 line-clamp-3">
+                    {formData?.description ? (
+                      <div className="prose prose-sm max-w-none">
+                        <ReactMarkdown 
+                          components={{
+                            p: ({children}) => <span className="text-sm text-gray-600">{children}</span>,
+                            strong: ({children}) => <span className="font-semibold text-gray-900">{children}</span>,
+                            em: ({children}) => <span className="italic text-gray-700">{children}</span>,
+                            ul: ({children}) => <ul className="list-disc list-inside text-xs text-gray-600 mt-1">{children}</ul>,
+                            ol: ({children}) => <ol className="list-decimal list-inside text-xs text-gray-600 mt-1">{children}</ol>,
+                            li: ({children}) => <li className="text-xs text-gray-600">{children}</li>
+                          }}
+                        >
+                          {formData.description}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      'Tur açıklaması burada görünecek...'
+                    )}
+                  </div>
+
+                  {/* Fiyat ve Süre */}
                   <div className="flex items-center justify-between">
                     <span className="font-medium text-gray-900">
-                      {formData?.price !== undefined && formData?.price !== null && formData?.price !== '' ? `${formData.price} ₺` : '0 ₺'}
+                      {formatPrice(formData?.price)}
                     </span>
                     <span className="text-sm text-gray-600">
-                      {formData?.duration !== undefined && formData?.duration !== null && formData?.duration !== '' ? formData.duration : '0 saat'}
+                      {formatDuration(formData?.duration)}
                     </span>
                   </div>
 
+                  {/* Tur Bilgileri */}
+                  <div className="space-y-2">
+                    {formData?.departureCity && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <MapPinIcon className="h-4 w-4 mr-2" />
+                        <span>Kalkış: {formData.departureCity}</span>
+                      </div>
+                    )}
+                    
+                    {formData?.destinations && formData.destinations.length > 0 && (
+                      <div className="space-y-1">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <MapPinIcon className="h-4 w-4 mr-2" />
+                          <span>Gidilen Yerler:</span>
+                        </div>
+                        <div className="ml-6 space-y-1">
+                          {formData.destinations.map((dest: any, idx: number) => (
+                            <div key={idx} className="text-xs text-gray-600 flex items-center">
+                              <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
+                              <span className="font-medium">{dest.city}</span>
+                              {dest.description && (
+                                <span className="ml-1 text-gray-500">({dest.description})</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {formData?.startDate && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <CalendarIcon className="h-4 w-4 mr-2" />
+                        <span>Başlangıç: {new Date(formData.startDate).toLocaleDateString('tr-TR')}</span>
+                      </div>
+                    )}
+
+                    {formData?.maxParticipants && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <UsersIcon className="h-4 w-4 mr-2" />
+                        <span>Maksimum: {formData.maxParticipants} kişi</span>
+                      </div>
+                    )}
+
+                    {formData?.transportation && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <span>🚌 {formData.transportation}</span>
+                      </div>
+                    )}
+
+                    {formData?.tourType && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <span>🏷️ {formData.tourType}</span>
+                      </div>
+                    )}
+
+                    {formData?.accommodationType && formData.accommodationType !== 'Günübirlik Tur' && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <span>🏨 {formData.accommodationType}</span>
+                        {formData.accommodationName && (
+                          <span className="ml-1">({formData.accommodationName})</span>
+                        )}
+                      </div>
+                    )}
+
+                    {formData?.region && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <span>🗺️ {formData.region}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Etiketler */}
+                  {formData?.tags && formData.tags.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center">
+                        <TagIcon className="h-4 w-4 mr-1" />
+                        Etiketler
+                      </h4>
+                      <div className="flex flex-wrap gap-1">
+                        {formData.tags.slice(0, 5).map((tag: string, idx: number) => (
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                            {tag}
+                          </span>
+                        ))}
+                        {formData.tags.length > 5 && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-600">
+                            +{formData.tags.length - 5}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Dahil Olanlar */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-1">Dahil Olanlar</h4>
-                    <ul className="space-y-1">
-                      {(formData?.includes || []).map((item: string, idx: number) => (
-                        <li key={idx} className="text-sm text-black">{item}</li>
-                      ))}
-                    </ul>
-                  </div>
+                  {formData?.includes && formData.includes.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-1">✅ Dahil Olanlar</h4>
+                      <ul className="space-y-1">
+                        {formData.includes.slice(0, 3).map((item: string, idx: number) => (
+                          <li key={idx} className="text-sm text-gray-700 flex items-center">
+                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
+                            {item}
+                          </li>
+                        ))}
+                        {formData.includes.length > 3 && (
+                          <li className="text-sm text-gray-500">
+                            +{formData.includes.length - 3} daha...
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+
                   {/* Dahil Olmayanlar */}
-                  <div className="mt-2">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-1">Dahil Olmayanlar</h4>
-                    <ul className="space-y-1">
-                      {(formData?.excludes || []).map((item: string, idx: number) => (
-                        <li key={idx} className="text-sm text-black">{item}</li>
-                      ))}
-                    </ul>
-                  </div>
+                  {formData?.excludes && formData.excludes.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-1">❌ Dahil Olmayanlar</h4>
+                      <ul className="space-y-1">
+                        {formData.excludes.slice(0, 3).map((item: string, idx: number) => (
+                          <li key={idx} className="text-sm text-gray-700 flex items-center">
+                            <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2"></span>
+                            {item}
+                          </li>
+                        ))}
+                        {formData.excludes.length > 3 && (
+                          <li className="text-sm text-gray-500">
+                            +{formData.excludes.length - 3} daha...
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Özellikler */}
+                  {formData?.features && formData.features.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-1">✨ Özellikler</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {formData.features.slice(0, 4).map((feature: string, idx: number) => (
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                            {feature}
+                          </span>
+                        ))}
+                        {formData.features.length > 4 && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-600">
+                            +{formData.features.length - 4}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Program Günleri */}
+                  {formData?.itinerary && formData.itinerary.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">📅 Program</h4>
+                      <div className="space-y-2">
+                        {formData.itinerary.slice(0, 3).map((day: any, idx: number) => (
+                          <div key={idx} className="bg-gray-50 rounded-lg p-3">
+                            <h5 className="text-sm font-medium text-gray-900 mb-1">
+                              {day.title || `${idx + 1}. Gün`}
+                            </h5>
+                            <div className="text-xs text-gray-600 line-clamp-2">
+                              {day.description ? (
+                                <div className="prose prose-xs max-w-none">
+                                  <ReactMarkdown 
+                                    components={{
+                                      p: ({children}) => <span className="text-xs text-gray-600">{children}</span>,
+                                      strong: ({children}) => <span className="font-semibold text-gray-800">{children}</span>,
+                                      em: ({children}) => <span className="italic text-gray-700">{children}</span>,
+                                      ul: ({children}) => <ul className="list-disc list-inside text-xs text-gray-600 mt-1">{children}</ul>,
+                                      ol: ({children}) => <ol className="list-decimal list-inside text-xs text-gray-600 mt-1">{children}</ol>,
+                                      li: ({children}) => <li className="text-xs text-gray-600">{children}</li>
+                                    }}
+                                  >
+                                    {day.description}
+                                  </ReactMarkdown>
+                                </div>
+                              ) : (
+                                'Açıklama girilmemiş'
+                              )}
+                            </div>
+                            {day.images && day.images.length > 0 && (
+                              <div className="mt-2 flex gap-1">
+                                {day.images.slice(0, 3).map((img: any, imgIdx: number) => (
+                                  <div key={imgIdx} className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center">
+                                    <span className="text-xs text-gray-500">📷</span>
+                                  </div>
+                                ))}
+                                {day.images.length > 3 && (
+                                  <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center">
+                                    <span className="text-xs text-gray-500">+{day.images.length - 3}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {formData.itinerary.length > 3 && (
+                          <div className="text-xs text-gray-500 text-center py-2">
+                            +{formData.itinerary.length - 3} gün daha...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tur Tarihleri */}
+                  {formData?.tourDates && formData.tourDates.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">🗓️ Tur Tarihleri</h4>
+                      <div className="space-y-2">
+                        {formData.tourDates.slice(0, 2).map((date: any, idx: number) => (
+                          <div key={idx} className="bg-blue-50 rounded-lg p-3">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {date.startDate && new Date(date.startDate).toLocaleDateString('tr-TR')}
+                                  {date.endDate && date.startDate !== date.endDate && 
+                                    ` - ${new Date(date.endDate).toLocaleDateString('tr-TR')}`
+                                  }
+                                </div>
+                                <div className="text-xs text-gray-600 mt-1">
+                                  {date.price && `${formatPrice(date.price)}`}
+                                  {date.availableSeats && ` • ${date.availableSeats} kişilik`}
+                                  {date.soldSeats && parseInt(date.soldSeats) > 0 && ` • ${date.soldSeats} satıldı`}
+                                </div>
+                                
+                                {/* Yaş Aralıkları */}
+                                {date.ageRanges && date.ageRanges.length > 0 && (
+                                  <div className="mt-2">
+                                    <div className="text-xs font-medium text-gray-700 mb-1">Yaş Aralıkları:</div>
+                                    <div className="space-y-1">
+                                      {date.ageRanges.slice(0, 3).map((range: any, rangeIdx: number) => (
+                                        <div key={rangeIdx} className="text-xs text-gray-600 flex items-center">
+                                          <span className="w-1 h-1 bg-orange-500 rounded-full mr-2"></span>
+                                          <span>
+                                            {range.minAge}-{range.maxAge || '∞'} yaş: 
+                                            {range.pricingType === 'free' && ' Ücretsiz'}
+                                            {range.pricingType === 'half' && ' Yarı Fiyat'}
+                                            {range.pricingType === 'percentage' && ` %${range.value} indirim`}
+                                            {range.pricingType === 'fixed' && ` ${formatPrice(range.value)}`}
+                                          </span>
+                                        </div>
+                                      ))}
+                                      {date.ageRanges.length > 3 && (
+                                        <div className="text-xs text-gray-500">
+                                          +{date.ageRanges.length - 3} yaş aralığı daha...
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* İndirimler */}
+                                {(date.earlyBirdDiscount || date.lastMinuteDiscount) && (
+                                  <div className="mt-2">
+                                    <div className="text-xs font-medium text-gray-700 mb-1">İndirimler:</div>
+                                    <div className="space-y-1">
+                                      {date.earlyBirdDiscount && parseFloat(date.earlyBirdDiscount) > 0 && (
+                                        <div className="text-xs text-green-600 flex items-center">
+                                          <span className="w-1 h-1 bg-green-500 rounded-full mr-2"></span>
+                                          Erken Rezervasyon: %{date.earlyBirdDiscount} indirim
+                                        </div>
+                                      )}
+                                      {date.lastMinuteDiscount && parseFloat(date.lastMinuteDiscount) > 0 && (
+                                        <div className="text-xs text-orange-600 flex items-center">
+                                          <span className="w-1 h-1 bg-orange-500 rounded-full mr-2"></span>
+                                          Son Dakika: %{date.lastMinuteDiscount} indirim
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <span className={`text-xs px-2 py-1 rounded-full ml-2 ${
+                                date.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                                date.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {date.status === 'ACTIVE' ? 'Aktif' :
+                                 date.status === 'CANCELLED' ? 'İptal' : 'Tamamlandı'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        {formData.tourDates.length > 2 && (
+                          <div className="text-xs text-gray-500 text-center py-2">
+                            +{formData.tourDates.length - 2} tarih daha...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Galeri Görselleri */}
+                  {formData?.galleryImages && formData.galleryImages.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">📸 Galeri Görselleri</h4>
+                      <div className="grid grid-cols-3 gap-2">
+                        {formData.galleryImages.slice(0, 6).map((img: any, idx: number) => (
+                          <div key={idx} className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
+                            <Image
+                              src={img.preview || img.url}
+                              alt={`Galeri görseli ${idx + 1}`}
+                              fill
+                              className="object-cover"
+                            />
+                            {img.description && (
+                              <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-1">
+                                <p className="text-xs text-white truncate">{img.description}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {formData.galleryImages.length > 6 && (
+                          <div className="aspect-square rounded-lg bg-gray-100 flex items-center justify-center">
+                            <span className="text-xs text-gray-500">+{formData.galleryImages.length - 6}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Yolcu Alma Noktaları */}
+                  {formData?.pickupPoints && formData.pickupPoints.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">🚌 Yolcu Alma Noktaları</h4>
+                      <div className="space-y-1">
+                        {formData.pickupPoints.slice(0, 3).map((point: any, idx: number) => (
+                          <div key={idx} className="text-xs text-gray-600 flex items-center">
+                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
+                            <span className="font-medium">{point.city}:</span>
+                            <span className="ml-1">{point.location}</span>
+                            {point.time && <span className="ml-1">({point.time})</span>}
+                          </div>
+                        ))}
+                        {formData.pickupPoints.length > 3 && (
+                          <div className="text-xs text-gray-500">
+                            +{formData.pickupPoints.length - 3} nokta daha...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Diller */}
+                  {formData?.languages && formData.languages.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 mb-1">🌍 Diller</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {formData.languages.map((lang: string, idx: number) => (
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                            {lang}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -188,9 +596,15 @@ export default function CreateTourPage() {
                     <h3 className="text-sm font-medium text-blue-800">Bilgilendirme</h3>
                     <div className="mt-2 text-sm text-blue-700">
                       {formStep === 'basic' ? (
-                        <p>Temel bilgileri eksiksiz doldurmanız önemlidir. Müşterileriniz turunuzu seçerken öncelikle bu bilgilere göre karar verir.</p>
+                        <div className="space-y-2">
+                          <p>Temel bilgileri eksiksiz doldurmanız önemlidir. Müşterileriniz turunuzu seçerken öncelikle bu bilgilere göre karar verir.</p>
+                          <p><strong>💡 İpucu:</strong> Birden fazla destinasyon ekleyebilirsiniz. Her destinasyon için açıklama da ekleyebilirsiniz.</p>
+                        </div>
                       ) : (
-                        <p>Turunuzun detaylarını ne kadar zengin tutarsanız, müşterilerinizin ilgisini o kadar çekersiniz. Turda neler dahil olduğu ve olmadığı konusunda açık olun.</p>
+                        <div className="space-y-2">
+                          <p>Turunuzun detaylarını ne kadar zengin tutarsanız, müşterilerinizin ilgisini o kadar çekersiniz. Turda neler dahil olduğu ve olmadığı konusunda açık olun.</p>
+                          <p><strong>💡 İpucu:</strong> Yaş aralıkları ve indirimler müşterilerinizin karar vermesinde önemli rol oynar.</p>
+                        </div>
                       )}
                     </div>
                   </div>

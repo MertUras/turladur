@@ -194,7 +194,14 @@ export default async function TourOperatorPage({ params }: TourOperatorPageProps
                 <div className="space-y-8">
                   {operatorTours.map((tour, index) => {
                     const tourImages = parseJsonString<string[]>(tour.images, []);
-                    const destinations = parseJsonString<string[]>(tour.destinations, []);
+                    
+                    // Destinasyonları doğru şekilde parse et
+                    const rawDestinations = parseJsonString<any[]>(tour.destinations, []);
+                    const destinations = rawDestinations.map(dest => {
+                      if (typeof dest === 'string') return dest;
+                      if (typeof dest === 'object' && dest.city) return dest.city;
+                      return '';
+                    }).filter(dest => dest !== '');
                     
                     return (
                       <div 

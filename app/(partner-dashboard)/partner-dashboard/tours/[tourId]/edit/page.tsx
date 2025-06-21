@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import TourForm, { TourFormData } from '@/app/components/partner-dashboard/TourForm';
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, InformationCircleIcon, PhotoIcon } from '@heroicons/react/24/outline';
@@ -11,8 +11,97 @@ interface FormData extends Partial<TourFormData> {
   [key: string]: any;
 }
 
-export default function EditTourPage({ params }: { params: { tourId: string } }) {
+// API'den gelen tur verisini TourFormData'ya dönüştüren yardımcı fonksiyon
+const transformApiDataToFormData = (apiData: any): TourFormData => {
+  return {
+    title: apiData.name || '',
+    description: apiData.description || '',
+    price: apiData.price?.toString() || '',
+    location: Array.isArray(apiData.destinations) && apiData.destinations.length > 0 
+      ? apiData.destinations[0]?.city || '' 
+      : '',
+    duration: apiData.duration?.toString() || '',
+    nights: apiData.nights?.toString() || '',
+    maxParticipants: apiData.maxParticipants || 0,
+    currentParticipants: apiData.currentParticipants || 0,
+    images: Array.isArray(apiData.images) 
+      ? apiData.images.map((img: string) => ({ url: img, file: null })) 
+      : [],
+    includes: Array.isArray(apiData.inclusions) ? apiData.inclusions : [],
+    excludes: Array.isArray(apiData.exclusions) ? apiData.exclusions : [],
+    itinerary: Array.isArray(apiData.itinerary) ? apiData.itinerary : [],
+    status: apiData.status || 'draft',
+    departureCity: apiData.departureCity?.split(', ') || [''],
+    region: apiData.region || '',
+    transportation: apiData.transportation || '',
+    period: apiData.period || '',
+    tourType: apiData.tourType || '',
+    accommodationType: apiData.accommodationType || '',
+    ageRestriction: apiData.ageRestriction?.toString() || '',
+    languages: Array.isArray(apiData.languages) ? apiData.languages : [],
+    tags: Array.isArray(apiData.tags) ? apiData.tags : [],
+    tourDates: Array.isArray(apiData.tourDates) 
+      ? apiData.tourDates.map((date: any) => {
+          // Nested tour objesini kaldır
+          const { tour, ...dateWithoutTour } = date;
+          
+          // Tarih formatını dönüştür
+          const earlyBirdDeadline = date.earlyBirdDeadline ? new Date(date.earlyBirdDeadline).toISOString().split('T')[0] : '';
+          const lastMinuteStart = date.lastMinuteStart ? new Date(date.lastMinuteStart).toISOString().split('T')[0] : '';
+          
+          return {
+            ...dateWithoutTour,
+            startDate: date.startDate ? new Date(date.startDate).toISOString().split('T')[0] : '',
+            endDate: date.endDate ? new Date(date.endDate).toISOString().split('T')[0] : '',
+            price: date.price?.toString() || '0',
+            availableSeats: date.availableSeats?.toString() || '0',
+            soldSeats: date.soldSeats?.toString() || '0',
+            minParticipants: date.minParticipants?.toString() || '',
+            maxParticipants: date.maxParticipants?.toString() || '',
+            earlyBirdDiscount: date.earlyBirdDiscount?.toString() || '',
+            lastMinuteDiscount: date.lastMinuteDiscount?.toString() || '',
+            earlyBirdDeadline: earlyBirdDeadline,
+            lastMinuteStart: lastMinuteStart,
+            // Form alanları için ayrı tarih alanları - null değerler için boş string
+            earlyBirdDeadlineStart: earlyBirdDeadline,
+            earlyBirdDeadlineEnd: earlyBirdDeadline,
+            lastMinuteStartStart: lastMinuteStart,
+            lastMinuteStartEnd: lastMinuteStart,
+            notes: date.notes || '',
+            status: date.status || 'ACTIVE',
+            ageRanges: Array.isArray(date.ageRanges) ? date.ageRanges : [],
+            isExpanded: false,
+            waitingList: date.waitingList?.toString() || '0',
+            discount: date.discount?.toString() || '0'
+          };
+        })
+      : [],
+    discount: apiData.discount || 0,
+    destinations: Array.isArray(apiData.destinations) && apiData.destinations.length > 0
+      ? apiData.destinations
+      : [{ city: '', description: '' }],
+    reviews: apiData.reviews || 0,
+    isJointTour: apiData.isJointTour || false,
+    features: Array.isArray(apiData.features) ? apiData.features : [],
+    startDate: apiData.startDate ? new Date(apiData.startDate).toISOString().split('T')[0] : '',
+    endDate: apiData.endDate ? new Date(apiData.endDate).toISOString().split('T')[0] : '',
+    accommodationName: apiData.accommodation?.name || '',
+    meetingPoint: apiData.meetingPoint || '',
+    meetingTime: apiData.meetingTime || '',
+    pickupPoints: Array.isArray(apiData.pickupPoints) ? apiData.pickupPoints : [],
+    mainImage: Array.isArray(apiData.images) && apiData.images.length > 0 
+      ? { url: apiData.images[0], file: null } 
+      : null,
+    galleryImages: Array.isArray(apiData.images) && apiData.images.length > 1
+      ? apiData.images.slice(1).map((img: string) => ({ url: img, file: null }))
+      : [],
+  };
+};
+
+export default function EditTourPage() {
   const router = useRouter();
+  const params = useParams();
+  const tourId = params.tourId as string;
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formStep, setFormStep] = useState<'basic' | 'details'>('basic');
@@ -20,7 +109,7 @@ export default function EditTourPage({ params }: { params: { tourId: string } })
   const [tourOperatorId, setTourOperatorId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  
   useEffect(() => {
     const fetchTourOperator = async () => {
       try {
@@ -34,16 +123,19 @@ export default function EditTourPage({ params }: { params: { tourId: string } })
       }
     };
 
-    const fetchTour = async () => {
+    const fetchTourData = async () => {
+      setLoading(true);
       try {
-        const response = await fetch(`/api/partner/tours/${params.tourId}`);
+        const response = await fetch(`/api/partner/tours/${tourId}`);
         if (!response.ok) {
-          throw new Error('Tur bilgileri yüklenirken bir hata oluştu');
+          throw new Error('Tur verileri alınamadı');
         }
         const data = await response.json();
-        setFormData(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+        const transformedData = transformApiDataToFormData(data);
+        setFormData(transformedData);
+      } catch (error) {
+        console.error('Hata:', error);
+        setError(error instanceof Error ? error.message : 'Bir hata oluştu');
       } finally {
         setLoading(false);
       }
@@ -51,42 +143,30 @@ export default function EditTourPage({ params }: { params: { tourId: string } })
 
     if (session) {
       fetchTourOperator();
-      fetchTour();
+      fetchTourData();
     }
-  }, [session, params.tourId]);
+  }, [session, tourId]);
 
-  const handleSubmit = async (data: any) => {
+  const handleUpdate = async (formData: TourFormData) => {
     setIsSubmitting(true);
-    if (formStep === 'details') {
-      try {
-        if (!tourOperatorId) {
-          throw new Error('Tur operatörü bilgisi bulunamadı');
-        }
+    setError(null);
+    try {
+      const response = await fetch(`/api/partner/tours/${tourId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
 
-        const payload = {
-          ...data,
-          tourOperatorId,
-        };
-
-        const response = await fetch(`/api/partner/tours/${params.tourId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          throw new Error('Tur güncellenirken bir hata oluştu');
-        }
-
-        router.push('/partner-dashboard/tours');
-      } catch (error) {
-        console.error('Error submitting form:', error);
-      } finally {
-        setIsSubmitting(false);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Tur güncellenirken bir hata oluştu.');
       }
-    } else {
-      setFormStep('details');
-      setFormData(data);
+
+      router.push('/partner-dashboard/tours');
+    } catch (error) {
+      console.error('Güncelleme hatası:', error);
+      setError(error instanceof Error ? error.message : 'Bir hata oluştu');
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -129,7 +209,7 @@ export default function EditTourPage({ params }: { params: { tourId: string } })
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tur Düzenle</h1>
-          <p className="text-gray-600">Tur bilgilerini güncelleyin</p>
+          <p className="text-gray-600">Tur bilgilerini güncelleyin ve değişiklikleri kaydedin.</p>
         </div>
         <Link href="/partner-dashboard/tours" className="rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
           İptal
@@ -164,12 +244,14 @@ export default function EditTourPage({ params }: { params: { tourId: string } })
         <div className="lg:col-span-2">
           <div className="overflow-hidden rounded-lg bg-white shadow">
             <div className="p-8">
-              <TourForm 
-                initialData={formData} 
-                onSubmit={handleSubmit} 
+              <TourForm
+                initialData={formData}
+                onSubmit={handleUpdate}
                 isSubmitting={isSubmitting}
                 currentStep={formStep}
-                partnerId={tourOperatorId}
+                partnerId={tourOperatorId || undefined}
+                isUpdateMode={true}
+                tourId={tourId}
               />
             </div>
           </div>
@@ -242,7 +324,7 @@ export default function EditTourPage({ params }: { params: { tourId: string } })
                   </>
                 ) : (
                   <>
-                    {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
+                    {isSubmitting ? 'Güncelleniyor...' : 'Güncelle'}
                   </>
                 )}
               </button>
@@ -252,4 +334,4 @@ export default function EditTourPage({ params }: { params: { tourId: string } })
       </div>
     </div>
   );
-} 
+}

@@ -60,7 +60,16 @@ export async function PUT(
         endDate: new Date(data.endDate),
         price: parseFloat(data.price),
         availableSeats: parseInt(data.availableSeats),
-        discount: data.discount ? parseFloat(data.discount) : 0,
+        minParticipants: data.minParticipants ? parseInt(data.minParticipants) : null,
+        maxParticipants: data.maxParticipants ? parseInt(data.maxParticipants) : null,
+        earlyBirdDiscount: data.earlyBirdDiscount ? parseFloat(data.earlyBirdDiscount) : 0,
+        lastMinuteDiscount: data.lastMinuteDiscount ? parseFloat(data.lastMinuteDiscount) : 0,
+        earlyBirdDeadlineStart: data.earlyBirdDeadlineStart ? new Date(data.earlyBirdDeadlineStart) : null,
+        earlyBirdDeadline: data.earlyBirdDeadlineEnd ? new Date(data.earlyBirdDeadlineEnd) : null,
+        lastMinuteStart: data.lastMinuteStartStart ? new Date(data.lastMinuteStartStart) : null,
+        lastMinuteStartEnd: data.lastMinuteStartEnd ? new Date(data.lastMinuteStartEnd) : null,
+        notes: data.notes || '',
+        status: data.status || 'ACTIVE',
         isActive: data.isActive !== undefined ? data.isActive : true
       }
     });

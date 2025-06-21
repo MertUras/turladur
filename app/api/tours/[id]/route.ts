@@ -46,10 +46,6 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Bugünün tarihini normalize et
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     // Turu ve ilişkili tarihleri getir
     const tour = await prisma.tour.findUnique({
       where: {
@@ -65,20 +61,15 @@ export async function GET(
           },
         },
         tourDates: {
-          where: {
-            AND: [
-              { isActive: true },
-              { status: 'ACTIVE' },
-              { startDate: { gte: today } }
-            ]
-          },
           include: {
             ageRanges: true
           },
           orderBy: {
             startDate: 'asc'
           }
-        }
+        },
+        pickupPoints: true,
+        accommodation: true
       },
     });
 
@@ -89,7 +80,7 @@ export async function GET(
     // Tarihleri dönüştür
     const transformedTour = {
       ...tour,
-      tourDates: tour.tourDates.map(date => ({
+      tourDates: tour.tourDates.map((date: any) => ({
         ...date,
         startDate: date.startDate.toISOString(),
         endDate: date.endDate.toISOString(),

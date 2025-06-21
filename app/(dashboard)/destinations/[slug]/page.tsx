@@ -132,7 +132,14 @@ export default function DestinationPage() {
     // API isteği simülasyonu
     setTimeout(() => {
       const filteredTours = dummyTours.filter(tour => {
-        const tourDestinations = parseJsonString<string[]>(tour.destinations, []);
+        // Destinasyonları doğru şekilde parse et
+        const rawDestinations = parseJsonString<any[]>(tour.destinations, []);
+        const tourDestinations = rawDestinations.map(dest => {
+          if (typeof dest === 'string') return dest;
+          if (typeof dest === 'object' && dest.city) return dest.city;
+          return '';
+        }).filter(dest => dest !== '');
+        
         return tourDestinations.some(dest => {
           const destLower = dest.toLowerCase();
           const destinationNameLower = destination.name.toLowerCase();
@@ -309,7 +316,15 @@ export default function DestinationPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {tours.map((tour) => {
               const tourImages = parseJsonString<string[]>(tour.images, []);
-              const destinations = parseJsonString<string[]>(tour.destinations, []);
+              
+              // Destinasyonları doğru şekilde parse et
+              const rawDestinations = parseJsonString<any[]>(tour.destinations, []);
+              const destinations = rawDestinations.map(dest => {
+                if (typeof dest === 'string') return dest;
+                if (typeof dest === 'object' && dest.city) return dest.city;
+                return '';
+              }).filter(dest => dest !== '');
+              
               const remainingSpots = (tour.maxParticipants || 0) - (tour.currentParticipants || 0);
               const startDate = new Date(tour.startDate || new Date());
               const discountedPrice = tour.discount 

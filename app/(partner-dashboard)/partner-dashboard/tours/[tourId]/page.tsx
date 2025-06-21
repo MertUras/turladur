@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { use } from 'react';
 import { 
   ArrowLeftIcon, 
   CalendarIcon, 
@@ -62,17 +63,20 @@ interface Tour {
   };
 }
 
-export default function TourDetailPage({ params }: { params: { tourId: string } }) {
+export default function TourDetailPage({ params }: { params: Promise<{ tourId: string }> }) {
   const router = useRouter();
   const { data: session } = useSession();
   const [tour, setTour] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Next.js 15'te params'ı React.use() ile aç
+  const { tourId } = use(params);
 
   useEffect(() => {
     const fetchTour = async () => {
       try {
-        const response = await fetch(`/api/partner/tours/${params.tourId}`);
+        const response = await fetch(`/api/partner/tours/${tourId}`);
         if (!response.ok) {
           throw new Error('Tur bilgileri yüklenirken bir hata oluştu');
         }
@@ -88,7 +92,7 @@ export default function TourDetailPage({ params }: { params: { tourId: string } 
     if (session) {
       fetchTour();
     }
-  }, [session, params.tourId]);
+  }, [session, tourId]);
 
   if (loading) {
     return (

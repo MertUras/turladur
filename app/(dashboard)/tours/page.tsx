@@ -6,6 +6,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { dummyTours, dummyTourOperators } from "@/app/lib/dummy-data";
 import { parseJsonString } from "@/app/utils/format";
+import { format, differenceInDays } from 'date-fns';
+import { tr } from 'date-fns/locale';
+import { type Tour } from "@/app/types";
 import { 
   MapPin, 
   Calendar, 
@@ -20,58 +23,18 @@ import {
   ChevronRight,
   SlidersHorizontal,
   ArrowDownWideNarrow,
-  Loader2
+  Loader2,
+  Heart,
+  Eye,
+  Zap,
+  Shield,
+  Award,
+  Plane,
+  Hotel,
+  ShieldCheck,
+  ArrowRight,
 } from "lucide-react";
 import React from "react";
-import { format } from 'date-fns';
-import { tr } from 'date-fns/locale';
-
-interface Tour {
-  id: string;
-  name: string;
-  description: string;
-  duration: number;
-  price: number;
-  discount: number | null;
-  startDate: Date | null;
-  endDate: Date | null;
-  maxParticipants: number | null;
-  destinations: string[];
-  inclusions: string[];
-  exclusions: string[];
-  itinerary: any;
-  images: string[];
-  featured: boolean;
-  departureCity: string | null;
-  region: string | null;
-  transportation: string | null;
-  period: string | null;
-  rating: number | null;
-  tourType: string | null;
-  accommodationType: string | null;
-  difficultyLevel: string | null;
-  ageRestriction: number | null;
-  isPopular: boolean;
-  isLastMinute: boolean;
-  isEarlyBird: boolean;
-  languages: string[];
-  tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
-  tourOperatorId: string;
-  tourOperator: {
-    id: string;
-    name: string;
-    logo: string | null;
-  };
-  tourDates: {
-    id: string;
-    startDate: Date;
-    endDate: Date;
-    price: number;
-    availableSeats: number;
-  }[];
-}
 
 interface FilterOptions {
   departureCity: string | null;
@@ -170,7 +133,17 @@ export default function ToursPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setFilteredTours(data.tours);
+        // API'den gelen verileri types/index.ts'deki Tour interface'ine uygun hale getir
+        const mappedTours: Tour[] = data.tours.map((tour: any) => ({
+          ...tour,
+          tourOperator: {
+            id: tour.tourOperator?.id || '',
+            companyName: tour.tourOperator?.companyName || tour.tourOperator?.name || '',
+            logo: tour.tourOperator?.logo || null
+          }
+        }));
+        
+        setFilteredTours(mappedTours);
         setTotalTours(data.total);
       } else {
         console.error('Error fetching tours:', data.error);
@@ -458,170 +431,323 @@ export default function ToursPage() {
     handleSearch();
   }, [handleSearch]);
 
-  // Performans optimizasyonu için memoize edilmiş tur kartı bileşeni
-  const TourCard = React.memo(({ tour }: { tour: Tour }) => {
-    const destinations = tour.destinations;
-    const tourOperator = tour.tourOperator;
-    const remainingSpots = tour.maxParticipants || 0;
-    const startDate = tour.startDate || new Date();
-    const discountedPrice = tour.discount && tour.price 
-      ? tour.price * (1 - (tour.discount || 0) / 100) 
-      : tour.price || 0;
+  // Modern Tur Kartı Bileşeni
+  const ModernTourCard = ({ tour }: { tour: Tour }) => {
+    const [isFavorite, setIsFavorite] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    
+    const getDepartureSuffix = (city: string): string => {
+      if (!city) return "'dan";
+
+      // Turkish vowel harmony rules
+      const cityLower = city.toLowerCase();
+      const vowels = "aıoueiöü";
+      
+      let lastVowel = 'a'; // default to back vowel
+      for (let i = cityLower.length - 1; i >= 0; i--) {
+          if (vowels.includes(cityLower[i])) {
+              lastVowel = cityLower[i];
+              break;
+          }
+      }
+
+      const unvoicedConsonants = "pçtkfhsş";
+      const lastChar = city.slice(-1).toLowerCase();
+
+      const useT = unvoicedConsonants.includes(lastChar);
+      const useA = "aıou".includes(lastVowel);
+
+      if (useT) {
+          return useA ? "'tan" : "'ten";
+      } else {
+          return useA ? "'dan" : "'den";
+      }
+    };
+
+    const formatDepartureCity = (cityData: string | string[] | null): string => {
+      if (!cityData) return '';
+      const cities = (Array.isArray(cityData) ? cityData : [cityData]).filter(c => c && c.trim() !== '');
+      if (cities.length === 0) return '';
+      
+      const lastCity = cities[cities.length - 1];
+      const suffix = getDepartureSuffix(lastCity);
+
+      if (cities.length === 1) {
+        return `${lastCity}${suffix} kalkışlı`;
+      }
+
+      const otherCities = cities.slice(0, -1);
+      return `${otherCities.join(', ')} ve ${lastCity}${suffix} kalkışlı`;
+    };
+    
+    const departureText = formatDepartureCity(tour.departureCity);
+
+    const tourImages = parseJsonString<string[]>(tour.images || '[]', []);
+    const rawDestinations = parseJsonString<any[]>(tour.destinations || '[]', []);
+    const destinations = rawDestinations.map(dest => {
+      if (typeof dest === 'string') return dest;
+      if (typeof dest === 'object' && dest.city) return dest.city;
+      return '';
+    }).filter(dest => dest !== '');
+    
+    const inclusions = parseJsonString<string[]>(tour.inclusions || '[]', []);
+    const features = parseJsonString<string[]>((tour as any).features || '[]', []);
+
+    const tourOperator = dummyTourOperators.find(op => op.id === tour.tourOperator.id);
+    const remainingSpots = (tour.maxParticipants || 0) - 0; // currentParticipants yok
+    
+    // Fiyat hesaplama
+    const price = tour.price;
+    let discountedPrice = price;
+    let appliedDiscount = 0;
+    
+    // O günün tarihine göre en uygun indirimi bul
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if ((tour as any).tourDates && (tour as any).tourDates.length > 0) {
+      for (const tourDate of (tour as any).tourDates) {
+        // Erken rezervasyon kontrolü
+        if (tourDate.earlyBirdDiscount && tourDate.earlyBirdDiscount > 0) {
+          const earlyBirdStart = tourDate.earlyBirdDeadlineStart ? new Date(tourDate.earlyBirdDeadlineStart) : null;
+          const earlyBirdEnd = tourDate.earlyBirdDeadline ? new Date(tourDate.earlyBirdDeadline) : null;
+          
+          if (earlyBirdStart && earlyBirdEnd && today >= earlyBirdStart && today <= earlyBirdEnd) {
+            const discountAmount = tourDate.price * (tourDate.earlyBirdDiscount / 100);
+            if (discountAmount > appliedDiscount) {
+              appliedDiscount = discountAmount;
+              discountedPrice = tourDate.price - discountAmount;
+            }
+          }
+        }
+        
+        // Son dakika kontrolü
+        if (tourDate.lastMinuteDiscount && tourDate.lastMinuteDiscount > 0) {
+          const lastMinuteStart = tourDate.lastMinuteStart ? new Date(tourDate.lastMinuteStart) : null;
+          const lastMinuteEnd = tourDate.lastMinuteStartEnd ? new Date(tourDate.lastMinuteStartEnd) : null;
+          
+          if (lastMinuteStart && lastMinuteEnd && today >= lastMinuteStart && today <= lastMinuteEnd) {
+            const discountAmount = tourDate.price * (tourDate.lastMinuteDiscount / 100);
+            if (discountAmount > appliedDiscount) {
+              appliedDiscount = discountAmount;
+              discountedPrice = tourDate.price - discountAmount;
+            }
+          }
+        }
+      }
+    }
+    
+    // Eğer tarih bazlı indirim yoksa genel tur indirimini uygula
+    if (appliedDiscount === 0 && tour.discount && tour.discount > 0) {
+      discountedPrice = price * (1 - (tour.discount || 0) / 100);
+    }
+
+    const firstDate = (tour as any).tourDates?.[0];
+    const tourDateText = firstDate?.startDate && firstDate?.endDate
+        ? `${format(new Date(firstDate.startDate), 'd MMMM', { locale: tr })} - ${format(new Date(firstDate.endDate), 'd MMMM yyyy', { locale: tr })}`
+        : `${tour.duration || 1} Gün`;
+    
+    const otherDatesCount = (tour as any).tourDates ? (tour as any).tourDates.length - 1 : 0;
+
+    // Tur için tek ve öncelikli etiket belirle
+    const getTourBadge = () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Sadece tarih kısmını al
+      
+      // Tur tarihlerini kontrol et
+      if ((tour as any).tourDates && (tour as any).tourDates.length > 0) {
+        for (const tourDate of (tour as any).tourDates) {
+          // Erken rezervasyon kontrolü
+          if (tourDate.earlyBirdDiscount && tourDate.earlyBirdDiscount > 0) {
+            const earlyBirdStart = tourDate.earlyBirdDeadlineStart ? new Date(tourDate.earlyBirdDeadlineStart) : null;
+            const earlyBirdEnd = tourDate.earlyBirdDeadline ? new Date(tourDate.earlyBirdDeadline) : null;
+            
+            if (earlyBirdStart && earlyBirdEnd && today >= earlyBirdStart && today <= earlyBirdEnd) {
+              return { text: `%${tourDate.earlyBirdDiscount} Erken Rezervasyon`, icon: Zap, color: 'bg-green-500' };
+            }
+          }
+          
+          // Son dakika kontrolü
+          if (tourDate.lastMinuteDiscount && tourDate.lastMinuteDiscount > 0) {
+            const lastMinuteStart = tourDate.lastMinuteStart ? new Date(tourDate.lastMinuteStart) : null;
+            const lastMinuteEnd = tourDate.lastMinuteStartEnd ? new Date(tourDate.lastMinuteStartEnd) : null;
+            
+            if (lastMinuteStart && lastMinuteEnd && today >= lastMinuteStart && today <= lastMinuteEnd) {
+              return { text: `%${tourDate.lastMinuteDiscount} Son Dakika`, icon: Clock, color: 'bg-orange-500' };
+            }
+          }
+        }
+      }
+      
+      // Genel tur indirimi kontrolü
+      if (tour.discount && tour.discount > 0) return { text: `%${tour.discount} İndirim`, icon: Zap, color: 'bg-red-500' };
+      if (tour.isLastMinute) return { text: 'Son Dakika', icon: Clock, color: 'bg-orange-500' };
+      if (tour.isEarlyBird) return { text: 'Erken Rezervasyon', icon: Zap, color: 'bg-green-500' };
+      
+      return null;
+    };
+
+    const badge = getTourBadge();
 
     return (
-      <Link key={tour.id} href={`/tour/${tour.id}`} className="block">
+      <Link 
+        href={`/tour/${tour.id}`}
+        className="block h-full focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         <div 
-          className="bg-white rounded-xl shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300 flex flex-col"
-          role="article"
-          aria-label={`${tour.name} turu`}
+          className="group relative bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden border border-gray-100 hover:border-gray-200 flex flex-col h-full"
         >
-          <div className="relative h-64 overflow-hidden">
-            <div className="relative w-full h-full">
+          {/* Görsel Alanı */}
+          <div className="relative h-48 overflow-hidden">
               <Image
-                src={tour.images[0] || '/images/tours/default.jpg'}
+              src={tourImages[0] || '/images/tours/default.jpg'}
                 alt={tour.name || 'Tur görseli'}
                 fill
-                className="object-cover group-hover:scale-105 transition-transform duration-500"
+              className={`object-cover transition-transform duration-500 ${
+                isHovered ? 'scale-105' : 'scale-100'
+              }`}
                 priority={true}
               />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
             
-            {/* Tur Durumu Etiketleri */}
-            <div className="absolute top-3 right-3 flex flex-col gap-1">
-              {(tour.discount || 0) > 0 && (
-                <div className="bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm border border-white/20">
-                  %{tour.discount} İndirim
+            {/* Etiket */}
+            {badge && (
+              <div 
+                className={`absolute top-3 left-3 flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-white ${badge.color}`}
+              >
+                <badge.icon className="h-3 w-3" />
+                <span>{badge.text}</span>
                 </div>
               )}
-              {remainingSpots <= 5 && remainingSpots > 0 && (
-                <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm border border-white/20">
-                  Son {remainingSpots} yer
+
+            {/* Favori Butonu */}
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsFavorite(!isFavorite);
+              }}
+              className={`absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
+                isFavorite 
+                  ? 'text-red-500' 
+                  : 'text-gray-600 hover:text-red-500'
+              }`}
+            >
+              <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-current' : ''}`} />
+            </button>
+
+            {/* Kalkış Şehri */}
+            {departureText && (
+              <div className="absolute bottom-3 left-3 bg-blue-600/60 backdrop-blur-sm rounded-lg px-2 py-1 max-w-[calc(100%-3rem)]">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-white rounded-full flex-shrink-0"></div>
+                  <span className="text-white text-xs font-medium truncate">
+                    {departureText}
+                  </span>
+                </div>
                 </div>
               )}
-              {remainingSpots === 0 && (
-                <div className="bg-gradient-to-r from-gray-600 to-gray-700 text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm border border-white/20">
-                  Dolu
-                </div>
-              )}
-            </div>
-            
-            {/* Tur Operatörü ve Destinasyon Bilgisi */}
-            <div className="absolute bottom-4 left-4 right-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center">
-                  <div className="w-8 h-8 rounded-full overflow-hidden mr-2 border-2 border-white">
+
+            {/* Tur Operatörü */}
+            <div className="absolute bottom-3 right-3">
+              <div className="relative group/operator">
+                <div className="w-6 h-6 rounded-full overflow-hidden border border-white">
                     <Image
-                      src={tourOperator?.logo || '/images/tour-operators/default.jpg'}
-                      alt={tourOperator?.name || 'Tur Operatörü'}
-                      width={32}
-                      height={32}
-                      className="object-cover"
+                    src={tour.tourOperator?.logo || '/images/tour-operators/default.jpg'}
+                    alt={tour.tourOperator?.companyName || 'Tur Operatörü'}
+                    width={24}
+                    height={24}
+                    className="object-cover w-full h-full"
                     />
                   </div>
-                  <span className="text-white text-sm font-medium">{tourOperator?.name}</span>
+                {/* Hover Tooltip */}
+                <div className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-black/80 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover/operator:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                  {tour.tourOperator?.companyName || 'Tur Operatörü'}
                 </div>
-              </div>
-              <div className="flex items-center text-white/90 text-sm">
-                <MapPin className="h-4 w-4 mr-1" />
-                <span className="truncate">{destinations.join(', ')}</span>
               </div>
             </div>
           </div>
           
-          <div className="p-5 flex-grow flex flex-col">
-            <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
+          {/* İçerik Alanı */}
+          <div className="p-4 flex flex-col flex-1">
+            {/* Başlık */}
+            <h3 className="text-base font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2 leading-tight min-h-[2.5rem]">
               {tour.name}
             </h3>
             
-            {/* Tur Detayları */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {tour.tourType && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {tour.tourType}
-                </span>
-              )}
-              {tour.transportation && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  {tour.transportation}
-                </span>
-              )}
-              {tour.accommodationType && (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  {tour.accommodationType}
-                </span>
-              )}
+            {/* Konum ve Tarih */}
+            <div className="flex items-center gap-2 mb-3 text-gray-600 min-h-[1.5rem]">
+              <div className="flex items-center gap-1 flex-1 min-w-0">
+                <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                <span className="text-xs truncate">{destinations.join(', ')}</span>
             </div>
-            
-            {/* En Önemli 4 Bilgi */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="flex items-center text-gray-600">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-3">
-                  <Calendar className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Tarih</div>
-                  <div className="text-sm font-medium">
-                    {startDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
-                  </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Calendar className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                <span className="text-xs whitespace-nowrap">{tourDateText}</span>
                 </div>
               </div>
               
-              <div className="flex items-center text-gray-600">
-                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mr-3">
-                  <Clock className="h-5 w-5 text-green-600" />
+            {/* Puanlama */}
+            <div className="flex items-center gap-2 mb-3 min-h-[1.5rem]">
+              <div className="flex items-center gap-0.5">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`w-3 h-3 ${
+                      i < Math.floor(tour.rating || 0)
+                        ? 'text-yellow-400 fill-yellow-400'
+                        : 'text-gray-300'
+                    }`}
+                  />
+                ))}
                 </div>
-                <div>
-                  <div className="text-xs text-gray-500">Süre</div>
-                  <div className="text-sm font-medium">{tour.duration || 0} gün</div>
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                {tour.rating || 0} ({Math.floor(Math.random() * 100) + 20})
+              </span>
+              
+              {/* Kalan Yer */}
+              {remainingSpots <= 10 && remainingSpots > 0 && (
+                <div className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-medium flex-shrink-0 ml-auto">
+                  Son {remainingSpots}
                 </div>
+              )}
               </div>
               
-              <div className="flex items-center text-gray-600">
-                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mr-3">
-                  <Users className="h-5 w-5 text-amber-600" />
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Kalan Yer</div>
-                  <div className="text-sm font-medium">{remainingSpots} kişi</div>
-                </div>
-              </div>
-              
-              <div className="flex items-center text-gray-600">
-                <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center mr-3">
-                  <Star className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Puan</div>
-                  <div className="text-sm font-medium">{tour.rating || 0}/5</div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-auto flex items-center justify-between">
-              <div>
-                {(tour.discount || 0) > 0 && (
-                  <span className="text-gray-500 text-sm line-through mr-2">
-                    ₺{formatPrice(tour.price || 0)}
+            {/* Fiyat ve Buton */}
+            <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto min-h-[3rem]">
+              <div className="flex flex-col flex-1 min-w-0">
+                {(appliedDiscount > 0 || (tour.discount && tour.discount > 0)) && (
+                  <span className="text-gray-400 text-xs line-through">
+                    ₺{formatPrice(price)}
                   </span>
                 )}
-                <span className="text-xl font-bold text-blue-600">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-lg font-bold text-gray-900">
                   ₺{formatPrice(discountedPrice)}
                 </span>
-                <span className="text-gray-500 text-sm">/kişi</span>
+                  <span className="text-gray-500 text-xs">kişi</span>
               </div>
-              <div
-                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors inline-flex items-center"
-              >
-                İncele
-                <ChevronRight className="h-4 w-4 ml-1" />
+              </div>
+              
+              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 text-blue-600 group-hover:text-blue-700 transition-colors font-medium text-sm">
+                  <span>İncele</span>
+                  <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+                {otherDatesCount > 0 && (
+                  <div className="flex items-center gap-1 text-xs text-green-600 whitespace-nowrap">
+                    <Calendar className="w-3 h-3" />
+                    <span>+{otherDatesCount} tur tarihi</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </Link>
     );
-  });
+  };
 
   // Yükleme durumu için bileşen
   const LoadingSkeleton = () => (
@@ -761,7 +887,7 @@ export default function ToursPage() {
       </div>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 py-10">
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* Mobil Filtre Butonu */}
           <div className="lg:hidden mb-4">
                             <button
@@ -788,7 +914,7 @@ export default function ToursPage() {
           <div className={`
             fixed inset-y-0 right-0 w-full lg:w-80 bg-gray-50 shadow-lg transform transition-transform duration-300 ease-in-out z-30
             ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}
-            lg:relative lg:translate-x-0 lg:shadow-none
+            lg:relative lg:translate-x-0 lg:shadow-none lg:w-72 xl:w-80
           `}>
             <div className="h-full flex flex-col">
               <div className="bg-gray-50 border-b border-gray-100 pt-0 pb-3 px-6 flex justify-between items-center">
@@ -806,7 +932,7 @@ export default function ToursPage() {
                 </div>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto p-4 lg:p-6">
                 {/* Mevcut filtre içeriği */}
                 <div className="space-y-6">
                 {/* Kalkış Noktası */}
@@ -877,111 +1003,10 @@ export default function ToursPage() {
                   </div>
                 </div>
 
-              
-
-                {/* Bölge */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Bölge</h4>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Bölge ara..."
-                      className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mb-2"
-                    />
-                    <div className="max-h-60 overflow-y-auto space-y-2">
-                      {regions.map((item) => (
-                        <button
-                          key={item.region}
-                          onClick={() => setFilterOptions({
-                            ...filterOptions,
-                            region: filterOptions.region === item.region ? null : item.region
-                          })}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                            filterOptions.region === item.region
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                          }`}
-                        >
-                          {item.region} ({item.count})
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Ulaşım Tipi */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Ulaşım Tipi</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {transportationTypes.map((item) => (
-                      <button
-                        key={item.type}
-                        onClick={() => setFilterOptions({
-                          ...filterOptions,
-                          transportation: filterOptions.transportation === item.type ? null : item.type
-                        })}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          filterOptions.transportation === item.type
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      >
-                        {item.type} ({item.count})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tur Süresi */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Tur Süresi</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {durations.map((item) => (
-                      <button
-                        key={item.duration}
-                        onClick={() => setFilterOptions({
-                          ...filterOptions,
-                          duration: filterOptions.duration === item.duration ? null : item.duration
-                        })}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          filterOptions.duration === item.duration
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      >
-                        {item.duration} ({item.count})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Dönem */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Dönem</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {periods.map((item) => (
-                      <button
-                        key={item.period}
-                        onClick={() => setFilterOptions({
-                          ...filterOptions,
-                          month: filterOptions.month === item.period ? null : item.period
-                        })}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          filterOptions.month === item.period
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      >
-                        {item.period} ({item.count})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Fiyat Aralığı */}
                 <div>
                   <h4 className="font-medium text-gray-900 mb-3">Fiyat Aralığı</h4>
-                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                     <div className="relative flex-1">
                       <input
                         type="text"
@@ -1016,205 +1041,42 @@ export default function ToursPage() {
                   </div>
                 </div>
 
-                {/* Diğer Filtreler Accordion */}
-                <div className="border-t border-gray-200 pt-4">
-                  <details className="group">
-                  <summary className="flex items-center justify-between p-3 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 transition-colors cursor-pointer group">
-  <h4 className="font-semibold text-gray-800 text-sm">Diğer Filtreler</h4>
-  <ChevronDown className="h-4 w-4 text-gray-500 group-open:rotate-180 transform transition-transform duration-300" />
-</summary>
-
-                    <div className="mt-4 space-y-6">
-                      {/* Tur Tipi */}
+                  {/* Bölge */}
                       <div>
-                        <h4 className="font-medium text-gray-900 mb-3">Tur Tipi</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {tourTypes.map((item) => (
+                    <h4 className="font-medium text-gray-900 mb-3">Bölge</h4>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Bölge ara..."
+                        className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mb-2"
+                      />
+                      <div className="max-h-60 overflow-y-auto space-y-2">
+                        {regions.map((item) => (
                             <button
-                              key={item.type}
+                            key={item.region}
                               onClick={() => setFilterOptions({
                                 ...filterOptions,
-                                tourType: filterOptions.tourType === item.type ? null : item.type
+                              region: filterOptions.region === item.region ? null : item.region
                               })}
-                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                filterOptions.tourType === item.type
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                              filterOptions.region === item.region
                                   ? "bg-blue-600 text-white"
                                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                               }`}
                             >
-                              {item.label} ({item.count})
+                            {item.region} ({item.count})
                             </button>
                           ))}
                         </div>
                       </div>
-
-                      {/* Konaklama Tipi */}
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-3">Konaklama Tipi</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {accommodationTypes.map((item) => (
-                            <button
-                              key={item.type}
-                              onClick={() => setFilterOptions({
-                                ...filterOptions,
-                                accommodationType: filterOptions.accommodationType === item.type ? null : item.type
-                              })}
-                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                filterOptions.accommodationType === item.type
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                              }`}
-                            >
-                              {item.label} ({item.count})
-                            </button>
-                          ))}
                         </div>
                       </div>
-
-                      {/* Zorluk Seviyesi */}
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-3">Zorluk Seviyesi</h4>
-                        <div className="grid grid-cols-3 gap-2">
-                          {difficultyLevels.map((item) => (
-                            <button
-                              key={item.level}
-                              onClick={() => setFilterOptions({
-                                ...filterOptions,
-                                difficultyLevel: filterOptions.difficultyLevel === item.level ? null : item.level
-                              })}
-                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                filterOptions.difficultyLevel === item.level
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                              }`}
-                            >
-                              {item.label} ({item.count})
-                            </button>
-                          ))}
                         </div>
-                      </div>
-
-                      {/* Yaş Sınırı */}
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-3">Yaş Sınırı</h4>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            placeholder="Minimum yaş"
-                            className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                            value={filterOptions.ageRestriction || ''}
-                            onChange={(e) => setFilterOptions({
-                              ...filterOptions,
-                              ageRestriction: e.target.value ? parseInt(e.target.value) : null
-                            })}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Değerlendirme Puanı */}
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-3">Değerlendirme Puanı</h4>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="range"
-                            min="0"
-                            max="5"
-                            step="0.1"
-                            className="w-full"
-                            value={filterOptions.rating || 0}
-                            onChange={(e) => setFilterOptions({
-                              ...filterOptions,
-                              rating: parseFloat(e.target.value)
-                            })}
-                          />
-                          <span className="text-sm font-medium text-gray-700">
-                            {filterOptions.rating || 0}+
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Özel Filtreler */}
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-3">Özel Filtreler</h4>
-                        <div className="space-y-2">
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={filterOptions.isPopular}
-                              onChange={(e) => setFilterOptions({
-                                ...filterOptions,
-                                isPopular: e.target.checked
-                              })}
-                              className="rounded text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-sm text-gray-700">Popüler Turlar</span>
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={filterOptions.isLastMinute}
-                              onChange={(e) => setFilterOptions({
-                                ...filterOptions,
-                                isLastMinute: e.target.checked
-                              })}
-                              className="rounded text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-sm text-gray-700">Son Dakika Turları</span>
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={filterOptions.isEarlyBird}
-                              onChange={(e) => setFilterOptions({
-                                ...filterOptions,
-                                isEarlyBird: e.target.checked
-                              })}
-                              className="rounded text-blue-600 focus:ring-blue-500"
-                            />
-                            <span className="text-sm text-gray-700">Erken Rezervasyon</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Dil Seçenekleri */}
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-3">Dil Seçenekleri</h4>
-                        <div className="space-y-2">
-                          {languages.map((item) => (
-                            <label key={item.code} className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={filterOptions.languages.includes(item.code)}
-                                onChange={(e) => {
-                                  const newLanguages = e.target.checked
-                                    ? [...filterOptions.languages, item.code]
-                                    : filterOptions.languages.filter(lang => lang !== item.code);
-                                  setFilterOptions({
-                                    ...filterOptions,
-                                    languages: newLanguages
-                                  });
-                                }}
-                                className="rounded text-blue-600 focus:ring-blue-500"
-                              />
-                              <span className="text-sm text-gray-700">
-                                {item.label} ({item.count})
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </details>
-            </div>
-          </div>
-        </div>
-
-
             </div>
           </div>
           
           {/* Tur Listesi */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {/* Başlık ve Filtreler */}
             <div className="flex items-center gap-4 mb-6">
               <div className="flex flex-col gap-2">
@@ -1248,499 +1110,74 @@ export default function ToursPage() {
                   </svg>
                 </button>
               </div>
-              {/* Aktif Filtreler */}
-              {Object.values(filterOptions).some(value => value !== null && value !== false) && (
-                <div className="bg-white rounded-xl shadow-sm p-2 flex-1">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 flex-1 flex-wrap">
-                      <span className="text-sm font-medium text-gray-600">Aktif Filtreler:</span>
-                      {Object.entries(filterOptions).map(([key, value]) => {
-                        if (!value || key === 'priceRange' || value === false) return null;
-                        
-                        let displayValue = value;
-                        if (Array.isArray(value)) {
-                          if (key === 'dateRange') {
-                            const [start, end] = value;
-                            if (!start && !end) return null;
-                            displayValue = `${start?.toLocaleDateString('tr-TR') || ''} - ${end?.toLocaleDateString('tr-TR') || ''}`;
-                          } else if (value.length === 0) return null;
-                        }
-                        
-                        return (
-                          <div key={key} className="flex items-center gap-1 bg-gray-100 px-3 py-1 rounded-full">
-                            <span className="text-sm text-gray-600">{displayValue}</span>
-                            <button
-                              onClick={() => {
-                                if (Array.isArray(value)) {
-                                  setFilterOptions({...filterOptions, [key]: []});
-                                } else {
-                                  setFilterOptions({...filterOptions, [key]: null});
-                                }
-                              }}
-                              className="text-gray-500 hover:text-gray-700"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
                 </div>
-                    );
-                  })}
-                </div>
+
+            {/* Sıralama Seçenekleri */}
+            <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-600">Sırala:</span>
                         <select 
-                          className="text-sm border rounded-md px-2 py-1 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           value={sortBy}
                           onChange={(e) => handleSortChange(e.target.value)}
-                        >
-                          {sortOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-            ))}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="popular">Popülerliğe Göre</option>
+                  <option value="price-low">Fiyat (Düşükten Yükseğe)</option>
+                  <option value="price-high">Fiyat (Yüksekten Düşüğe)</option>
+                  <option value="date">Tarihe Göre</option>
+                  <option value="rating">Puana Göre</option>
                         </select>
           </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-600">Sayfa Başına:</span>
-                        <select 
-                          className="text-sm border rounded-md px-2 py-1 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          value={itemsPerPage}
-                          onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                        >
-                          {pageSizeOptions.map((size) => (
-                            <option key={size} value={size}>
-                              {size} Tur
-                            </option>
-                          ))}
-                        </select>
-        </div>
-              </div>
-                  </div>
-                  </div>
+              
+              <div className="text-sm text-gray-600">
+                {totalTours > 0 ? (
+                  <>
+                    Toplam <span className="font-semibold text-gray-800">{totalTours}</span> tur bulundu
+                  </>
+                ) : (
+                  <span className="text-gray-500">Gösterilecek tur bulunamadı</span>
               )}
                 </div>
-            {/* Tur Listesi */}
-            {loading ? (
+            </div>
+
+            {/* Yükleme Durumu */}
+            {isLoading ? (
               <LoadingSkeleton />
             ) : filteredTours.length === 0 ? (
               <NoResults />
             ) : (
               <>
-                <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <p className="text-sm text-gray-600">
-                        <span className="font-semibold text-blue-600">{totalItems}</span> tur arasından{' '}
-                        <span className="font-semibold text-blue-600">{currentTours.length}</span> tanesi gösteriliyor
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Clock className="h-4 w-4" />
-                      <span>Son güncelleme: {new Date().toLocaleTimeString('tr-TR')}</span>
-                    </div>
-                  </div>
-                </div>
-                
+                {/* Tur Kartları */}
                 {view === 'grid' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                    {currentTours.map((tour) => {
-                      const tourImages = parseJsonString<string[]>(tour.images || '[]', []);
-                      const destinations = parseJsonString<string[]>(tour.destinations || '[]', []);
-                      const tourOperator = dummyTourOperators.find(op => op.id === tour.tourOperatorId);
-                      const remainingSpots = (tour.maxParticipants || 0) - (tour.currentParticipants || 0);
-                      
-                      // En yakın tur tarihini bul
-                      const nextDate = tour.tourDates?.reduce((nearest, current) => {
-                        if (!nearest) return current;
-                        const nearestDate = new Date(nearest.startDate);
-                        const currentDate = new Date(current.startDate);
-                        const today = new Date();
-                        
-                        if (currentDate < today) return nearest;
-                        
-                        const nearestDiff = Math.abs(nearestDate.getTime() - today.getTime());
-                        const currentDiff = Math.abs(currentDate.getTime() - today.getTime());
-                        
-                        return currentDiff < nearestDiff ? current : nearest;
-                      }, null as (typeof tour.tourDates[0] | null));
-
-                      const startDate = nextDate ? new Date(nextDate.startDate) : new Date();
-
-                      // En düşük fiyatlı tur tarihini bul
-                      const lowestPricedDate = tour.tourDates?.reduce((lowest, current) => {
-                        if (!lowest || current.price < lowest.price) {
-                          return current;
-                        }
-                        return lowest;
-                      }, null as (typeof tour.tourDates[0] | null));
-
-                      const price = lowestPricedDate?.price || tour.price;
-                      const discountedPrice = tour.discount && price 
-                        ? price * (1 - (tour.discount || 0) / 100) 
-                        : price;
-
-                      return (
-                        <Link key={tour.id} href={`/tour/${tour.id}`} className="block">
-                          <div 
-                            className="bg-white rounded-xl shadow-sm overflow-hidden group hover:shadow-md transition-all duration-300 flex flex-col"
-                            role="article"
-                            aria-label={`${tour.name} turu`}
-                          >
-                            <div className="relative h-64 overflow-hidden">
-                              <div className="relative w-full h-full">
-                                <Image
-                                  src={tourImages[0] || '/images/tours/default.jpg'}
-                                  alt={tour.name || 'Tur görseli'}
-                                  fill
-                                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                                  priority={true}
-                                />
-                              </div>
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-                              
-                              {/* Tur Durumu Etiketleri */}
-                              <div className="absolute top-3 right-3 flex flex-col gap-1">
-                                {(tour.discount || 0) > 0 && (
-                                  <div className="bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm border border-white/20">
-                                    %{tour.discount} İndirim
-                                  </div>
-                                )}
-                                {remainingSpots <= 5 && remainingSpots > 0 && (
-                                  <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm border border-white/20">
-                                    Son {remainingSpots} yer
-                                  </div>
-                                )}
-                                {remainingSpots === 0 && (
-                                  <div className="bg-gradient-to-r from-gray-600 to-gray-700 text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm border border-white/20">
-                                    Dolu
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Tur Operatörü ve Destinasyon Bilgisi */}
-                              <div className="absolute bottom-4 left-4 right-4">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center">
-                                    <div className="w-8 h-8 rounded-full overflow-hidden mr-2 border-2 border-white">
-                                      <Image
-                                        src={tourOperator?.logo || '/images/tour-operators/default.jpg'}
-                                        alt={tourOperator?.name || 'Tur Operatörü'}
-                                        width={32}
-                                        height={32}
-                                        className="object-cover"
-                                      />
-                                    </div>
-                                    <span className="text-white text-sm font-medium">{tourOperator?.name}</span>
-                                  </div>
-                                </div>
-                                <div className="flex items-center text-white/90 text-sm">
-                                  <MapPin className="h-4 w-4 mr-1" />
-                                  <span className="truncate">{destinations.join(', ')}</span>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="p-5 flex-grow flex flex-col">
-                              <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
-                                {tour.name}
-                              </h3>
-                              
-                              {/* Tur Detayları */}
-                              <div className="flex flex-wrap gap-2 mb-4">
-                                {tour.tourType && (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                    {tour.tourType}
-                                  </span>
-                                )}
-                                {tour.transportation && (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    {tour.transportation}
-                                  </span>
-                                )}
-                                {tour.accommodationType && (
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                    {tour.accommodationType}
-                                  </span>
-                                )}
-                              </div>
-                              
-                              {/* En Önemli 4 Bilgi */}
-                              <div className="grid grid-cols-2 gap-4 mb-4">
-                                <div className="flex items-center text-gray-600">
-                                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-3">
-                                    <Calendar className="h-5 w-5 text-blue-600" />
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-gray-500">Tarih</div>
-                                    <div className="text-sm font-medium">
-                                      {nextDate 
-                                        ? format(startDate, 'd MMM', { locale: tr })
-                                        : '-'
-                                      }
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center text-gray-600">
-                                  <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mr-3">
-                                    <Clock className="h-5 w-5 text-green-600" />
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-gray-500">Süre</div>
-                                    <div className="text-sm font-medium">{tour.duration || 0} gün</div>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center text-gray-600">
-                                  <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mr-3">
-                                    <Users className="h-5 w-5 text-amber-600" />
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-gray-500">Kalan Yer</div>
-                                    <div className="text-sm font-medium">{remainingSpots} kişi</div>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center text-gray-600">
-                                  <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center mr-3">
-                                    <Star className="h-5 w-5 text-purple-600" />
-                                  </div>
-                                  <div>
-                                    <div className="text-xs text-gray-500">Puan</div>
-                                    <div className="text-sm font-medium">{tour.rating || 0}/5</div>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div className="mt-auto flex items-center justify-between">
-                                <div>
-                                  {(tour.discount || 0) > 0 && (
-                                    <span className="text-gray-500 text-sm line-through mr-2">
-                                      ₺{formatPrice(tour.price || 0)}
-                                    </span>
-                                  )}
-                                  <span className="text-xl font-bold text-blue-600">
-                                    ₺{formatPrice(discountedPrice)}
-                                  </span>
-                                  <span className="text-gray-500 text-sm">/kişi</span>
-                                </div>
-                                <div
-                                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors inline-flex items-center"
-                                >
-                                  İncele
-                                  <ChevronRight className="h-4 w-4 ml-1" />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+                    {filteredTours.map((tour) => (
+                      <ModernTourCard key={tour.id} tour={tour} />
+                    ))}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
-                    {currentTours.map((tour) => {
-                      const tourImages = parseJsonString<string[]>(tour.images || '[]', []);
-                      const destinations = parseJsonString<string[]>(tour.destinations || '[]', []);
-                      const tourOperator = dummyTourOperators.find(op => op.id === tour.tourOperatorId);
-                      const remainingSpots = (tour.maxParticipants || 0) - (tour.currentParticipants || 0);
-                      
-                      // En yakın tur tarihini bul
-                      const nextDate = tour.tourDates?.reduce((nearest, current) => {
-                        if (!nearest) return current;
-                        const nearestDate = new Date(nearest.startDate);
-                        const currentDate = new Date(current.startDate);
-                        const today = new Date();
-                        
-                        if (currentDate < today) return nearest;
-                        
-                        const nearestDiff = Math.abs(nearestDate.getTime() - today.getTime());
-                        const currentDiff = Math.abs(currentDate.getTime() - today.getTime());
-                        
-                        return currentDiff < nearestDiff ? current : nearest;
-                      }, null as (typeof tour.tourDates[0] | null));
-
-                      const startDate = nextDate ? new Date(nextDate.startDate) : new Date();
-
-                      // En düşük fiyatlı tur tarihini bul
-                      const lowestPricedDate = tour.tourDates?.reduce((lowest, current) => {
-                        if (!lowest || current.price < lowest.price) {
-                          return current;
-                        }
-                        return lowest;
-                      }, null as (typeof tour.tourDates[0] | null));
-
-                      const price = lowestPricedDate?.price || tour.price;
-                      const discountedPrice = tour.discount && price 
-                        ? price * (1 - (tour.discount || 0) / 100) 
-                        : price;
-
-                      return (
-                        <Link key={tour.id} href={`/tour/${tour.id}`} className="block">
-                          <div className="bg-white rounded-xl shadow-sm overflow-hidden group hover:shadow-lg transition-all duration-300 border border-gray-100">
-                            <div className="flex h-[225px]">
-                              {/* Sol Taraf - Görsel */}
-                              <div className="relative w-[280px] shrink-0">
-                                <Image
-                                  src={tourImages[0] || '/images/tours/default.jpg'}
-                                  alt={tour.name || 'Tur görseli'}
-                                  fill
-                                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                                  priority={true}
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                                
-                                {/* Etiketler */}
-                                <div className="absolute top-3 right-3 flex flex-col gap-1">
-                                  {(tour.discount || 0) > 0 && (
-                                    <div className="bg-gradient-to-r from-red-500 to-red-600 text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm border border-white/20">
-                                      %{tour.discount} İndirim
+                    {filteredTours.map((tour) => (
+                      <ModernTourCard key={tour.id} tour={tour} />
+                    ))}
                                     </div>
                                   )}
-                                  {remainingSpots <= 5 && remainingSpots > 0 && (
-                                    <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm border border-white/20">
-                                      Son {remainingSpots} yer
-                                    </div>
-                                  )}
-                                  {remainingSpots === 0 && (
-                                    <div className="bg-gradient-to-r from-gray-600 to-gray-700 text-white text-[10px] font-medium px-2 py-0.5 rounded-full shadow-sm backdrop-blur-sm border border-white/20">
-                                      Dolu
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Tur Operatörü */}
-                                <div className="absolute bottom-4 left-4 right-4">
-                                  <div className="flex items-center">
-                                    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white shadow-sm">
-                                      <Image
-                                        src={tourOperator?.logo || '/images/tour-operators/default.jpg'}
-                                        alt={tourOperator?.name || 'Tur Operatörü'}
-                                        width={32}
-                                        height={32}
-                                        className="object-cover"
-                                      />
-                                    </div>
-                                    <span className="ml-2 text-white text-sm font-medium truncate">
-                                      {tourOperator?.name}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Orta Kısım - Başlık ve Açıklama */}
-                              <div className="flex-1 flex flex-col p-4 min-w-[360px] max-w-[460px] border-r border-gray-100">
-                                <div className="mb-2">
-                                  <div className="flex items-center gap-2 text-sm text-blue-600 mb-1.5">
-                                    <MapPin className="h-4 w-4" />
-                                    <span className="font-medium truncate">{destinations.join(', ')}</span>
-                                  </div>
-                                  <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">
-                                    {tour.name}
-                                  </h3>
-                                </div>
-
-                                <div className="flex-1 relative">
-                                  <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 max-h-[3.6em] overflow-hidden">
-                                    {tour.description || 'Bu tur hakkında detaylı bilgi için tıklayın.'}
-                                  </p>
-                                </div>
-
-                                <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
-                                  <div className="flex items-baseline gap-2">
-                                    <span className="text-xl font-bold text-blue-600">₺{formatPrice(discountedPrice)}</span>
-                                    {(tour.discount || 0) > 0 && (
-                                      <span className="text-sm text-gray-400 line-through">₺{formatPrice(price)}</span>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full">
-                                      <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
-                                      <span className="text-sm font-medium text-gray-900">{tour.rating || 0}</span>
-                                    </div>
-                                    {remainingSpots <= 5 && remainingSpots > 0 && (
-                                      <div className="text-sm text-amber-600 bg-amber-50 px-2 py-1 rounded-full font-medium">
-                                        Son {remainingSpots} yer
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Sağ Taraf - Özellikler */}
-                              <div className="w-[220px] shrink-0 p-4 bg-gray-50 flex flex-col">
-                                <div className="space-y-2.5">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                                      <Calendar className="h-4 w-4 text-blue-600" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <div className="text-xs text-gray-500">Başlangıç</div>
-                                      <div className="text-sm font-medium text-gray-900 truncate">
-                                        {startDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
-                                      <Clock className="h-4 w-4 text-green-600" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <div className="text-xs text-gray-500">Süre</div>
-                                      <div className="text-sm font-medium text-gray-900 truncate">
-                                        {tour.duration || 1} gün
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
-                                      <Users className="h-4 w-4 text-purple-600" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <div className="text-xs text-gray-500">Dil</div>
-                                      <div className="text-sm font-medium text-gray-900 truncate">
-                                        {tour.languages?.join(', ') || 'Türkçe'}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-3 py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm font-medium mt-3 shadow-sm hover:shadow-md">
-                                  Detayları Gör
-                                  <ChevronRight className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
                 
-                {/* Sayfalama ve Bilgi */}
-                <div className="mt-8 flex flex-col items-center gap-4">
-                  {/* Sayfa Numaraları */}
-                  {totalPages > 1 && (
+                {/* Sayfalama */}
+                {totalTours > itemsPerPage && (
+                  <div className="mt-8 flex justify-center">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage === 1}
-                        className="p-2 border rounded-md hover:bg-gray-100 disabled:opacity-50 text-gray-700"
+                        className="px-3 py-2 border rounded-md hover:bg-gray-100 disabled:opacity-50 text-gray-700"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
+                        Önceki
                       </button>
                       
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      {Array.from({ length: Math.ceil(totalTours / itemsPerPage) }, (_, i) => i + 1).map((page) => (
                         <button
                           key={page}
                           onClick={() => handlePageChange(page)}
-                          className={`w-10 h-10 rounded-md ${
+                          className={`px-3 py-2 rounded-md ${
                             currentPage === page
                               ? 'bg-blue-600 text-white'
                               : 'border hover:bg-gray-100 text-gray-700'
@@ -1752,69 +1189,18 @@ export default function ToursPage() {
                       
                       <button
                         onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="p-2 border rounded-md hover:bg-gray-100 disabled:opacity-50 text-gray-700"
+                        disabled={currentPage === Math.ceil(totalTours / itemsPerPage)}
+                        className="px-3 py-2 border rounded-md hover:bg-gray-100 disabled:opacity-50 text-gray-700"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
+                        Sonraki
                       </button>
                   </div>
-                  )}
-
-                  {/* Sayfa Başına Gösterim Seçeneği */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Sayfa Başına:</span>
-                    <select 
-                      className="text-sm border rounded-md px-2 py-1 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      value={itemsPerPage}
-                      onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                    >
-                      {pageSizeOptions.map((size) => (
-                        <option key={size} value={size}>
-                          {size} Tur
-                        </option>
-                      ))}
-                    </select>
         </div>
-        
-                  {/* Sayfalama Bilgisi */}
-                  <div className="text-sm text-gray-600">
-                    {totalItems > 0 ? (
-                      <>
-                        Toplam <span className="font-semibold text-gray-800">{totalItems}</span> tur arasından{' '}
-                        <span className="font-semibold text-gray-800">{startIndex + 1}-{endIndex}</span> arası gösteriliyor
-                      </>
-                    ) : (
-                      <span className="text-gray-500">Gösterilecek tur bulunamadı</span>
-                    )}
-            </div>
-          </div>
+                )}
               </>
             )}
               </div>
           </div>
-        </div>
-        
-      {/* Sabit Filtreleme Butonları */}
-      <div className="fixed bottom-6 left-4 sm:left-6 z-40 flex flex-col gap-2">
-                  <button
-          onClick={() => {
-            setLoading(true);
-            setTimeout(() => setLoading(false), 500);
-          }}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium py-1.5 px-3 rounded-md transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg"
-        >
-          <Search className="h-3 w-3 mr-1.5" />
-          Turları Filtrele
-        </button>
-        <button
-          onClick={resetFilters}
-          className="bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 text-sm font-medium py-1.5 px-3 rounded-md transition-all duration-300 flex items-center justify-center shadow-md hover:shadow-lg"
-                  >
-          <X className="h-3 w-3 mr-1.5" />
-          Filtreleri Temizle
-                  </button>
       </div>
     </div>
   );

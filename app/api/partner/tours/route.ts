@@ -37,12 +37,8 @@ export async function GET(request: Request) {
           }
         },
         tourDates: {
-          select: {
-            id: true,
-            startDate: true,
-            endDate: true,
-            price: true,
-            availableSeats: true
+          include: {
+            ageRanges: true
           },
           orderBy: {
             startDate: 'asc'

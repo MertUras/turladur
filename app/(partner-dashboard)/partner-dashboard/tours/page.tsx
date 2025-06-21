@@ -28,6 +28,15 @@ interface TourDate {
   endDate: Date;
   price: number;
   availableSeats: number;
+  earlyBirdDiscount?: number;
+  lastMinuteDiscount?: number;
+  earlyBirdDeadlineStart?: Date;
+  earlyBirdDeadline?: Date;
+  lastMinuteStart?: Date;
+  lastMinuteStartEnd?: Date;
+  minParticipants?: number;
+  maxParticipants?: number;
+  notes?: string;
 }
 
 interface Tour {
@@ -84,6 +93,8 @@ export default function PartnerToursPage() {
       }
 
       const data = await response.json();
+      console.log('API response - tours:', data);
+      console.log('First tour dates:', data[0]?.tourDates);
       setTours(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bir hata oluştu');
@@ -123,6 +134,25 @@ export default function PartnerToursPage() {
   };
 
   const handleEditDate = (tourId: string, date: TourDate) => {
+    console.log('=== EDIT DATE DEBUG ===');
+    console.log('Tour ID:', tourId);
+    console.log('Selected date object:', date);
+    console.log('Date ID:', date.id);
+    console.log('Start Date:', date.startDate);
+    console.log('End Date:', date.endDate);
+    console.log('Price:', date.price);
+    console.log('Available Seats:', date.availableSeats);
+    console.log('Early Bird Discount:', date.earlyBirdDiscount);
+    console.log('Last Minute Discount:', date.lastMinuteDiscount);
+    console.log('Early Bird Deadline Start:', date.earlyBirdDeadlineStart);
+    console.log('Early Bird Deadline:', date.earlyBirdDeadline);
+    console.log('Last Minute Start:', date.lastMinuteStart);
+    console.log('Last Minute Start End:', date.lastMinuteStartEnd);
+    console.log('Min Participants:', date.minParticipants);
+    console.log('Max Participants:', date.maxParticipants);
+    console.log('Notes:', date.notes);
+    console.log('======================');
+    
     setSelectedTour(tourId);
     setSelectedDate(date);
     setIsDateModalOpen(true);
@@ -162,6 +192,15 @@ export default function PartnerToursPage() {
     endDate: string;
     price: number;
     availableSeats: number;
+    earlyBirdDiscount?: number;
+    lastMinuteDiscount?: number;
+    earlyBirdDeadlineStart?: string;
+    earlyBirdDeadlineEnd?: string;
+    lastMinuteStartStart?: string;
+    lastMinuteStartEnd?: string;
+    minParticipants?: number;
+    maxParticipants?: number;
+    notes?: string;
   }) => {
     if (!selectedTour) return;
 
@@ -380,7 +419,23 @@ export default function PartnerToursPage() {
                               <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
                                 <span>{date.availableSeats} kişilik kontenjan</span>
                                 <span>{date.price} ₺</span>
+                                {date.earlyBirdDiscount && date.earlyBirdDiscount > 0 && (
+                                  <span className="text-green-600">%{date.earlyBirdDiscount} Erken Rezervasyon</span>
+                                )}
+                                {date.lastMinuteDiscount && date.lastMinuteDiscount > 0 && (
+                                  <span className="text-orange-600">%{date.lastMinuteDiscount} Son Dakika</span>
+                                )}
                               </div>
+                              {(date.earlyBirdDeadlineStart || date.earlyBirdDeadline || date.lastMinuteStart || date.lastMinuteStartEnd) && (
+                                <div className="mt-1 text-xs text-gray-400">
+                                  {date.earlyBirdDeadlineStart && date.earlyBirdDeadline && (
+                                    <span>Erken Rez: {new Date(date.earlyBirdDeadlineStart).toLocaleDateString('tr-TR')} - {new Date(date.earlyBirdDeadline).toLocaleDateString('tr-TR')}</span>
+                                  )}
+                                  {date.lastMinuteStart && date.lastMinuteStartEnd && (
+                                    <span className="ml-2">Son Dakika: {new Date(date.lastMinuteStart).toLocaleDateString('tr-TR')} - {new Date(date.lastMinuteStartEnd).toLocaleDateString('tr-TR')}</span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -421,18 +476,43 @@ export default function PartnerToursPage() {
         ))}
       </div>
 
-      <TourDateModal
-        isOpen={isDateModalOpen}
-        onClose={() => setIsDateModalOpen(false)}
-        onSubmit={handleDateSubmit}
-        initialData={selectedDate ? {
+      {(() => {
+        console.log('=== MODAL RENDER DEBUG ===');
+        console.log('selectedDate:', selectedDate);
+        console.log('isDateModalOpen:', isDateModalOpen);
+        
+        const modalInitialData = selectedDate ? {
           startDate: new Date(selectedDate.startDate).toISOString().split('T')[0],
           endDate: new Date(selectedDate.endDate).toISOString().split('T')[0],
           price: selectedDate.price,
-          availableSeats: selectedDate.availableSeats
-        } : undefined}
-        title={selectedDate ? 'Tur Tarihini Düzenle' : 'Yeni Tur Tarihi Ekle'}
-      />
+          availableSeats: selectedDate.availableSeats,
+          earlyBirdDiscount: selectedDate.earlyBirdDiscount,
+          lastMinuteDiscount: selectedDate.lastMinuteDiscount,
+          earlyBirdDeadlineStart: selectedDate.earlyBirdDeadlineStart ? new Date(selectedDate.earlyBirdDeadlineStart).toISOString().split('T')[0] : '',
+          earlyBirdDeadlineEnd: selectedDate.earlyBirdDeadline ? new Date(selectedDate.earlyBirdDeadline).toISOString().split('T')[0] : '',
+          lastMinuteStartStart: selectedDate.lastMinuteStart ? new Date(selectedDate.lastMinuteStart).toISOString().split('T')[0] : '',
+          lastMinuteStartEnd: selectedDate.lastMinuteStartEnd ? new Date(selectedDate.lastMinuteStartEnd).toISOString().split('T')[0] : '',
+          minParticipants: selectedDate.minParticipants,
+          maxParticipants: selectedDate.maxParticipants,
+          notes: selectedDate.notes
+        } : undefined;
+
+        console.log('Modal initialData:', modalInitialData);
+        console.log('Modal title:', selectedDate ? 'Tur Tarihini Düzenle' : 'Yeni Tur Tarihi Ekle');
+        console.log('Modal isEditMode:', !!selectedDate);
+        console.log('==========================');
+
+        return (
+          <TourDateModal
+            isOpen={isDateModalOpen}
+            onClose={() => setIsDateModalOpen(false)}
+            onSubmit={handleDateSubmit}
+            initialData={modalInitialData}
+            title={selectedDate ? 'Tur Tarihini Düzenle' : 'Yeni Tur Tarihi Ekle'}
+            isEditMode={!!selectedDate}
+          />
+        );
+      })()}
     </div>
   );
 } 

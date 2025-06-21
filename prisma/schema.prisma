@@ -232,8 +232,10 @@ model TourDate {
   maxParticipants   Int?
   earlyBirdDiscount Float?
   lastMinuteDiscount Float?
-  earlyBirdDeadline DateTime?
-  lastMinuteStart   DateTime?
+  earlyBirdDeadlineStart DateTime?   // Erken Rezervasyon Başlangıç
+  earlyBirdDeadline      DateTime?   // Erken Rezervasyon Bitiş
+  lastMinuteStart        DateTime?   // Son Dakika Başlangıç
+  lastMinuteStartEnd     DateTime?   // Son Dakika Bitiş
   status            String           @default("ACTIVE")
   notes             String?
   isActive          Boolean          @default(true)
