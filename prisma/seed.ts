@@ -510,14 +510,14 @@ async function main() {
           endDate: new Date('2025-06-10T13:00:00Z'),
           price: experience.price,
           availableSeats: 10,
-          activityId: createdExperience.id
+          experienceId: createdExperience.id
         },
         {
           startDate: new Date('2025-06-11T09:00:00Z'),
           endDate: new Date('2025-06-11T13:00:00Z'),
           price: experience.price,
           availableSeats: 10,
-          activityId: createdExperience.id
+          experienceId: createdExperience.id
         }
       ];
 
