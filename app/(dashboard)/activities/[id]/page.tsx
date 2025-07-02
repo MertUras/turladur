@@ -97,6 +97,20 @@ export default function ActivityDetail() {
         fetchActivity();
     }, [params.id]);
 
+    const getImageUrl = (img: any) => {
+        if (!img) return '/images/placeholder.jpg';
+        if (Array.isArray(img)) return img[0] || '/images/placeholder.jpg';
+        if (typeof img === 'string') {
+            // Eğer yanlışlıkla stringified array gelirse (örn: '["/img1.jpg","/img2.jpg"]')
+            try {
+                const parsed = JSON.parse(img);
+                if (Array.isArray(parsed)) return parsed[0] || '/images/placeholder.jpg';
+            } catch {}
+            return img;
+        }
+        return '/images/placeholder.jpg';
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -120,7 +134,7 @@ export default function ActivityDetail() {
             <div className="relative h-[80vh] md:h-[90vh]">
                 <div className="absolute inset-0 overflow-hidden">
                     <Image
-                        src={activity.imageUrl}
+                        src={getImageUrl(activity.imageUrl)}
                         alt={activity.title}
                         fill
                         priority
@@ -322,7 +336,7 @@ export default function ActivityDetail() {
                                                 onClick={() => { setSelectedImage(image); setCurrentImageIndex(index); }}
                                             >
                                                 <Image
-                                                    src={image}
+                                                    src={getImageUrl(image)}
                                                     alt={`${activity.title} - Fotoğraf ${index + 1}`}
                                                     fill
                                                     className="object-cover"
