@@ -216,7 +216,7 @@ export default function ExperiencesPage() {
                     if (Array.isArray(imgSrc)) imgSrc = imgSrc[0];
                     const safeSrc = imgSrc && typeof imgSrc === 'string' && imgSrc.trim() !== '' && (imgSrc.startsWith('/') || imgSrc.startsWith('http'))
                       ? imgSrc
-                      : '/images/placeholder.jpg';
+                      : 'https://placehold.co/96x96/e5e7eb/6b7280?text=Yok';
                     return (
                       <Image
                         src={safeSrc}

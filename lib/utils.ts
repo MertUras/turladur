@@ -5,6 +5,52 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Prisma'nın `Json?` alanları veritabanında null, düzgün bir dizi ya da
+ * (eski seed verilerinde olduğu gibi) JSON.stringify edilmiş bir metin
+ * olarak saklanmış olabilir. Bu fonksiyon her durumda güvenli bir dizi
+ * döndürür, böylece `.map`/`.filter` çağrıları asla patlamaz.
+ */
+export function parseJsonArray<T = unknown>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed as T[];
+    } catch {
+      // JSON değilse tek elemanlı dizi olarak kabul et
+      return [value as unknown as T];
+    }
+  }
+
+  return [];
+}
+
+interface ScheduleItem {
+  time: string;
+  activity: string;
+}
+
+/**
+ * Program akışı öğelerini normalize eder. Eski verilerde `activity`
+ * alanı yerine `description` kullanılmış olabilir, bu yüzden ikisini de
+ * destekler.
+ */
+export function parseJsonSchedule(value: unknown): ScheduleItem[] {
+  return parseJsonArray<Record<string, unknown>>(value)
+    .filter((item) => item && typeof item === 'object')
+    .map((item) => ({
+      time: typeof item.time === 'string' ? item.time : '',
+      activity:
+        typeof item.activity === 'string'
+          ? item.activity
+          : typeof item.description === 'string'
+          ? item.description
+          : '',
+    }));
+}
+
 // Tarih formatı
 export const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('tr-TR', {

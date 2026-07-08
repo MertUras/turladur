@@ -1188,7 +1188,7 @@ export default function TourPage() {
               {/* Acentenin Diğer Turları - Kompakt UI */}
               <div 
                 ref={containerRef}
-                className="bg-white rounded-xl overflow-hidden border border-neutral-200/70 shadow-md"
+                className="@container bg-white rounded-xl overflow-hidden border border-neutral-200/70 shadow-md"
               >
                 {/* Header - Daha kompakt */}
                 <div className="border-b border-neutral-100 px-5 py-4 flex items-center justify-between bg-gray-50/80">
@@ -1210,10 +1210,10 @@ export default function TourPage() {
                   {otherTours.map((otherTour) => (
                     <div 
                           key={otherTour.id} 
-                      className="flex items-center gap-4 p-4 rounded-lg border border-neutral-100 hover:border-neutral-200 transition-all bg-white hover:shadow-sm group"
+                      className="flex flex-col @sm:flex-row @sm:items-center gap-4 p-4 rounded-lg border border-neutral-100 hover:border-neutral-200 transition-all bg-white hover:shadow-sm group"
                         >
                       {/* Tur Resmi */}
-                      <div className="relative w-32 h-24 rounded-lg overflow-hidden flex-shrink-0">
+                      <div className="relative w-full h-40 @sm:w-32 @sm:h-24 rounded-lg overflow-hidden flex-shrink-0">
                               <Image
                           src={otherTour.images[0]}
                                 alt={otherTour.name}
@@ -1232,7 +1232,7 @@ export default function TourPage() {
                         <h3 className="text-base font-medium text-gray-900 mb-2 truncate">
                           {otherTour.name}
                         </h3>
-                        <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                        <div className="grid grid-cols-1 @sm:grid-cols-2 gap-2 text-sm text-gray-600">
                           <div className="flex items-center">
                             <MapPinIcon className="w-4 h-4 mr-1.5 text-gray-500 flex-shrink-0" />
                             <span className="truncate">
@@ -1257,8 +1257,8 @@ export default function TourPage() {
                               </div>
 
                       {/* Fiyat ve Detay Butonu */}
-                      <div className="flex flex-col items-end gap-2 flex-shrink-0 pl-4 border-l border-gray-100">
-                        <div className="text-right">
+                      <div className="flex @sm:flex-col items-center @sm:items-end justify-between @sm:justify-start gap-2 flex-shrink-0 pt-3 @sm:pt-0 @sm:pl-4 border-t @sm:border-t-0 @sm:border-l border-gray-100">
+                        <div className="text-left @sm:text-right">
                           <div className="text-lg font-semibold text-gray-900">
                             {otherTour.price.toLocaleString('tr-TR')} ₺
                           </div>
@@ -1270,7 +1270,7 @@ export default function TourPage() {
                             </div>
                   <Link 
                           href={`/tour/${otherTour.id}`}
-                          className="inline-flex items-center px-4 py-2 bg-sky-50 text-sky-600 hover:bg-sky-100 rounded-lg text-sm font-medium transition-colors group/link"
+                          className="inline-flex items-center px-4 py-2 bg-sky-50 text-sky-600 hover:bg-sky-100 rounded-lg text-sm font-medium transition-colors group/link flex-shrink-0"
                   >
                           <span>Detaylar</span>
                           <ArrowRightIcon className="w-4 h-4 ml-1.5 transform group-hover/link:translate-x-0.5 transition-transform" />

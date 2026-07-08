@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
+import { parseJsonArray, parseJsonSchedule } from "@/lib/utils";
 
 // GET /api/experiences/[id]
 export async function GET(
@@ -20,7 +21,20 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    return NextResponse.json(experience);
+    // Json alanları (null / stringify edilmiş veri) her zaman dizi olarak normalize edilir
+    // ve düzenleme formunun beklediği `images` alanına eşlenir; aksi halde form boş
+    // görsellerle açılır ve kaydedildiğinde mevcut fotoğraflar silinir.
+    const gallery = parseJsonArray<string>(experience.gallery);
+
+    return NextResponse.json({
+      ...experience,
+      images: gallery.length > 0 ? gallery : (experience.imageUrl ? [experience.imageUrl] : []),
+      gallery,
+      included: parseJsonArray<string>(experience.included),
+      notIncluded: parseJsonArray<string>(experience.notIncluded),
+      highlights: parseJsonArray<string>(experience.highlights),
+      schedule: parseJsonSchedule(experience.schedule),
+    });
   } catch (error) {
     console.error("Error fetching experience:", error);
     return NextResponse.json(

@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { PhotoIcon, XMarkIcon, PlusIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
+import { Dialog } from '@headlessui/react';
+import { PhotoIcon, XMarkIcon, PlusIcon, ClockIcon, CurrencyDollarIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import Image from 'next/image';
 import { DatePicker } from '../../components/booking/DatePicker';
+import { parseJsonArray, parseJsonSchedule } from '@/lib/utils';
 
 export interface ExperienceFormData {
   id?: string;
@@ -64,12 +66,38 @@ const categories = [
   "Doğa", "Kültür", "Macera", "Deniz", "Tarihi", "Yemek", "Eğlence", "Spor", "Sanat"
 ];
 
-export default function ExperienceForm({ initialData, onSubmit, isSubmitting = false }: ExperienceFormProps) {
-  const [formData, setFormData] = useState<ExperienceFormData>({
+// API'den gelen initialData'yı forma güvenli şekilde uygulanabilecek bir
+// başlangıç durumuna dönüştürür. Hem ilk state için hem de "değişiklik
+// yapıldı mı" karşılaştırması için kullanılan referans anlık görüntüsü
+// için tek bir yerden besleniyor.
+function buildInitialFormData(initialData?: Partial<ExperienceFormData>): ExperienceFormData {
+  return {
     ...defaultFormData,
     ...initialData,
-    activityDates: initialData?.activityDates || []
-  });
+    // API'den gelen Json alanları null ya da (eski/bozuk kayıtlarda)
+    // stringify edilmiş metin olabilir; bunlar diziye zorlanmazsa
+    // formData.included.map gibi çağrılar patlar.
+    images: parseJsonArray<string>(initialData?.images),
+    included: parseJsonArray<string>(initialData?.included),
+    notIncluded: parseJsonArray<string>(initialData?.notIncluded),
+    highlights: parseJsonArray<string>(initialData?.highlights),
+    schedule: parseJsonSchedule(initialData?.schedule),
+    activityDates: initialData?.activityDates || [],
+    // `category` ve `ageRestriction` veritabanında null gelebilir
+    // (özellikle ageRestriction opsiyonel bir alan); `<select>` bileşenine
+    // null verilirse React "value prop on select should not be null"
+    // hatasını fırlatır, bu yüzden burada güvenli varsayılanlara düşülür.
+    category: initialData?.category ?? defaultFormData.category,
+    ageRestriction: initialData?.ageRestriction ?? defaultFormData.ageRestriction,
+  };
+}
+
+export default function ExperienceForm({ initialData, onSubmit, isSubmitting = false }: ExperienceFormProps) {
+  const [formData, setFormData] = useState<ExperienceFormData>(() => buildInitialFormData(initialData));
+  // Düzenleme sırasında hiçbir alan değişmediyse kaydetmeden önce kullanıcıya
+  // sormak için formun ilk halinin anlık görüntüsü.
+  const initialSnapshotRef = useRef(JSON.stringify(buildInitialFormData(initialData)));
+  const [showNoChangesModal, setShowNoChangesModal] = useState(false);
   const [imageInput, setImageInput] = useState('');
   const [galleryInput, setGalleryInput] = useState('');
   const [includedInput, setIncludedInput] = useState('');
@@ -81,6 +109,9 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [newDate, setNewDate] = useState({ startDate: '', endDate: '', availableSeats: 1 });
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const isEditMode = Boolean(initialData?.id);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -168,18 +199,41 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
     handleFiles(files);
   };
 
-  const handleFiles = (files: File[]) => {
-    files.forEach(file => {
-      if (file.type.startsWith('image/')) {
-        const url = URL.createObjectURL(file);
-        setFormData(prev => ({ ...prev, images: [...prev.images, url] }));
+  // Görseller `URL.createObjectURL` ile geçici bir blob: URL olarak
+  // tutulursa, sayfa yenilendiğinde veya başka bir oturumda bu bağlantı
+  // geçersiz kalır ve aktivite detayında fotoğraflar hiç görünmez. Bu
+  // yüzden dosyalar seçildiği anda sunucuya yüklenip kalıcı bir URL
+  // alınır.
+  const handleFiles = async (files: File[]) => {
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    if (imageFiles.length === 0) return;
+
+    setUploadError(null);
+    setIsUploadingImages(true);
+    try {
+      const uploadedUrls: string[] = [];
+      for (const file of imageFiles) {
+        const body = new FormData();
+        body.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || `${file.name} yüklenemedi`);
+        }
+        uploadedUrls.push(data.url);
       }
-    });
+      setFormData(prev => ({ ...prev, images: [...prev.images, ...uploadedUrls] }));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Görsel yüklenirken bir hata oluştu');
+    } finally {
+      setIsUploadingImages(false);
+    }
   };
 
   const handleImageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       handleFiles(Array.from(e.target.files));
+      e.target.value = '';
     }
   };
 
@@ -217,12 +271,29 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
     e.preventDefault();
     setError(null);
 
+    if (isUploadingImages) {
+      setError('Görseller yüklenirken lütfen bekleyin.');
+      return;
+    }
+
     // Basic validation
     if (!formData.name || !formData.description || !formData.category || formData.price <= 0 || formData.maxParticipants < 1 || formData.images.length === 0) {
       setError('Lütfen tüm zorunlu alanları doldurun ve en az bir görsel ekleyin.');
       return;
     }
 
+    // Düzenleme sırasında hiçbir alan değiştirilmediyse, gereksiz bir
+    // kaydetme isteği göndermeden önce kullanıcıya onay soruyoruz.
+    if (isEditMode && JSON.stringify(formData) === initialSnapshotRef.current) {
+      setShowNoChangesModal(true);
+      return;
+    }
+
+    onSubmit(formData);
+  };
+
+  const handleConfirmSubmitWithoutChanges = () => {
+    setShowNoChangesModal(false);
     onSubmit(formData);
   };
 
@@ -331,14 +402,16 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
         <h3 className="text-lg font-semibold text-sky-700 mb-2">Görseller</h3>
         <div className="space-y-2">
           <div
-            className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl cursor-pointer transition p-6 mb-2 ${dragActive ? 'border-sky-500 bg-sky-50' : 'border-neutral-300 bg-neutral-100 hover:border-sky-400'}`}
+            className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl cursor-pointer transition p-6 mb-2 ${dragActive ? 'border-sky-500 bg-sky-50' : 'border-neutral-300 bg-neutral-100 hover:border-sky-400'} ${isUploadingImages ? 'opacity-60 pointer-events-none' : ''}`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleImageDrop}
             onClick={handleDropZoneClick}
           >
             <PhotoIcon className="w-10 h-10 text-sky-400 mb-2" />
-            <span className="text-sky-700 font-medium">Görseli buraya sürükleyin veya tıklayın</span>
+            <span className="text-sky-700 font-medium">
+              {isUploadingImages ? 'Görseller yükleniyor...' : 'Görseli buraya sürükleyin veya tıklayın'}
+            </span>
             <input
               type="file"
               accept="image/*"
@@ -346,8 +419,10 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
               ref={fileInputRef}
               className="hidden"
               onChange={handleImageInputChange}
+              disabled={isUploadingImages}
             />
           </div>
+          {uploadError && <p className="text-sm text-red-600">{uploadError}</p>}
           <div className="flex gap-2 mb-2">
             <input type="text" placeholder="Görsel URL" value={imageInput} onChange={e => setImageInput(e.target.value)} className="flex-1 border border-neutral-300 rounded-lg px-4 py-2 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-sky-300 focus:border-sky-500 transition" />
             <button type="button" onClick={handleAddImage} className="bg-sky-600 text-white px-3 py-2 rounded-lg hover:bg-sky-700 transition"><PlusIcon className="h-5 w-5" /></button>
@@ -508,10 +583,59 @@ export default function ExperienceForm({ initialData, onSubmit, isSubmitting = f
           </ul>
         )}
         {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
-        <button type="submit" disabled={isSubmitting} className="w-full bg-sky-600 text-white py-3 rounded-xl font-semibold text-lg hover:bg-sky-700 transition mt-4 shadow-md">
-          {isSubmitting ? "Ekleniyor..." : "Aktiviteyi Ekle"}
+        <button
+          type="submit"
+          disabled={isSubmitting || isUploadingImages}
+          className="w-full bg-sky-600 text-white py-3 rounded-xl font-semibold text-lg hover:bg-sky-700 transition mt-4 shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {isSubmitting
+            ? (isEditMode ? "Güncelleniyor..." : "Ekleniyor...")
+            : isUploadingImages
+            ? "Görseller yükleniyor..."
+            : (isEditMode ? "Aktiviteyi Güncelle" : "Aktiviteyi Ekle")}
         </button>
       </form>
+
+      <Dialog
+        open={showNoChangesModal}
+        onClose={() => setShowNoChangesModal(false)}
+        className="relative z-50"
+      >
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-md w-full rounded-lg bg-white p-6">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-amber-100">
+                <ExclamationTriangleIcon className="h-6 w-6 text-amber-600" />
+              </div>
+              <div className="flex-1">
+                <Dialog.Title className="text-lg font-semibold text-gray-900">
+                  Herhangi bir değişiklik yapmadınız
+                </Dialog.Title>
+                <p className="mt-2 text-sm text-gray-600">
+                  Aktivite bilgilerinde herhangi bir değişiklik yapmadınız. Devam etmek istiyor musunuz?
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setShowNoChangesModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSubmitWithoutChanges}
+                className="px-4 py-2 text-sm font-medium text-white bg-sky-600 border border-transparent rounded-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+              >
+                Devam Et
+              </button>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
     </div>
   );
 } 

@@ -97,18 +97,21 @@ export default function ActivityDetail() {
         fetchActivity();
     }, [params.id]);
 
+    const PLACEHOLDER_IMAGE = 'https://placehold.co/1200x800/e5e7eb/6b7280?text=G%C3%B6rsel+Yok';
+
     const getImageUrl = (img: any) => {
-        if (!img) return '/images/placeholder.jpg';
-        if (Array.isArray(img)) return img[0] || '/images/placeholder.jpg';
+        if (!img) return PLACEHOLDER_IMAGE;
+        if (Array.isArray(img)) return img[0] || PLACEHOLDER_IMAGE;
         if (typeof img === 'string') {
+            if (img.trim() === '') return PLACEHOLDER_IMAGE;
             // Eğer yanlışlıkla stringified array gelirse (örn: '["/img1.jpg","/img2.jpg"]')
             try {
                 const parsed = JSON.parse(img);
-                if (Array.isArray(parsed)) return parsed[0] || '/images/placeholder.jpg';
+                if (Array.isArray(parsed)) return parsed[0] || PLACEHOLDER_IMAGE;
             } catch {}
             return img;
         }
-        return '/images/placeholder.jpg';
+        return PLACEHOLDER_IMAGE;
     };
 
     if (loading) {

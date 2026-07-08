@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { parseJsonArray } from '@/lib/utils';
 
 export async function GET() {
   try {
@@ -30,7 +31,15 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(experiences);
+    // `gallery` alanı null ya da stringify edilmiş bir metin olarak
+    // saklanmış olabilir; listeleme sayfasının kapak görselini doğru
+    // gösterebilmesi için her zaman gerçek bir diziye normalize edilir.
+    const normalized = experiences.map((experience) => ({
+      ...experience,
+      gallery: parseJsonArray<string>(experience.gallery),
+    }));
+
+    return NextResponse.json(normalized);
   } catch (error) {
     console.error('Error fetching partner experiences:', error);
     return NextResponse.json(

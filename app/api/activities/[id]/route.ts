@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { parseJsonArray, parseJsonSchedule } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -645,18 +646,12 @@ Gün doğumunda başlayan bu büyülü yolculukta, Kapadokya'nın peribacaları,
     }
 ];
 
-function safeArray(val: any): string[] {
-    if (Array.isArray(val)) return val;
-    if (typeof val === 'string' && val.trim() !== '') return [val];
-    return [];
-}
-
-function safeSchedule(val: any): { time: string; activity: string }[] {
-    if (Array.isArray(val)) {
-        return val.filter(item => typeof item === 'object' && item !== null && 'time' in item && 'activity' in item);
-    }
-    return [];
-}
+// Prisma'nın `Json?` alanları null, gerçek bir dizi ya da (eski seed
+// verilerinde olduğu gibi) JSON.stringify edilmiş bir metin olarak
+// saklanmış olabilir; `parseJsonArray`/`parseJsonSchedule` her durumu
+// güvenli şekilde normalize eder.
+const safeArray = parseJsonArray;
+const safeSchedule = parseJsonSchedule;
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
     try {
@@ -686,13 +681,20 @@ export async function GET(request: Request, { params }: { params: { id: string }
         const reviews = Array.isArray(experience.reviews) ? experience.reviews : [];
         const rating = reviews.reduce((acc: number, review: { rating: number }) => acc + review.rating, 0) / (reviews.length || 1);
 
+        const PLACEHOLDER_IMAGE = 'https://placehold.co/1200x800/e5e7eb/6b7280?text=G%C3%B6rsel+Yok';
+        const gallery = safeArray<string>(experience.gallery);
+        // `gallery` boşsa da tekil `imageUrl` alanı dolu olabilir; ikisi de
+        // boşsa kırık bir yerel dosyaya değil, her zaman yüklenen bir
+        // görsele düşülür.
+        const coverImage = gallery[0] || experience.imageUrl || PLACEHOLDER_IMAGE;
+
         const activityResponse = {
             id: experience.id,
             title: experience.title,
             description: experience.description,
             longDescription: experience.longDescription,
-            imageUrl: safeArray(experience.gallery)[0] || '/images/placeholder.jpg',
-            gallery: safeArray(experience.gallery),
+            imageUrl: coverImage,
+            gallery: gallery.length > 0 ? gallery : [coverImage],
             location: experience.location,
             duration: `${experience.duration} saat`,
             rating: rating,

@@ -493,14 +493,11 @@ async function main() {
 
     for (const experience of experiences) {
       const createdExperience = await prisma.experience.create({
-        data: {
-          ...experience,
-          gallery: JSON.stringify(experience.gallery),
-          included: JSON.stringify(experience.included),
-          notIncluded: JSON.stringify(experience.notIncluded),
-          highlights: JSON.stringify(experience.highlights),
-          schedule: JSON.stringify(experience.schedule)
-        }
+        // Not: Bu alanlar Prisma şemasında `Json` tipinde olduğu için
+        // JSON.stringify ile tekrar metne çevrilmemeli; aksi halde
+        // veritabanına dizi yerine "[...]" içeren bir metin yazılır ve
+        // uygulama tarafında `.map is not a function` hatasına yol açar.
+        data: experience
       });
 
       // Her deneyim için tarihleri oluştur

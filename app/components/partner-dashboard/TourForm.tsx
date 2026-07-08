@@ -338,7 +338,10 @@ export default function TourForm({
         tourDates,
         discount: initialData.discount || 0,
         destinations: initialData.destinations && initialData.destinations.length > 0 
-          ? initialData.destinations 
+          ? initialData.destinations.map(dest => ({
+              city: dest.city ?? '',
+              description: dest.description ?? '',
+            }))
           : [{ city: '', description: '' }],
         reviews: initialData.reviews || 0,
         isJointTour: initialData.isJointTour || false,
@@ -933,7 +936,7 @@ export default function TourForm({
     if (formData.destinations.length > 0) {
       const selectedCities = formData.destinations
         .map(dest => dest.city)
-        .filter(city => city.trim() !== '');
+        .filter((city): city is string => typeof city === 'string' && city.trim() !== '');
       
       if (selectedCities.length > 0) {
         let calculatedRegion = '';
@@ -1628,7 +1631,7 @@ export default function TourForm({
                   {(() => {
                     const selectedCities = formData.destinations
                       .map(dest => dest.city)
-                      .filter(city => city.trim() !== '');
+                      .filter((city): city is string => typeof city === 'string' && city.trim() !== '');
                     
                     if (selectedCities.length === 1) {
                       return ` Tek şehir (${selectedCities[0]}) seçildiği için ${formData.region} bölgesi belirlendi.`;
