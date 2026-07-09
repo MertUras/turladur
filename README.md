@@ -16,6 +16,18 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+### Dev server sorun giderme
+
+Dev sunucusu "duruyor" gibi görünüyorsa genelde çökme değil, **birden fazla `next dev` örneği** veya **bozuk `.next` önbelleği** kaynaklıdır.
+
+1. **Tek örnek çalıştırın** — Aynı anda birden fazla terminalde `npm run dev` açmayın.
+2. **Çalışırken `.next` silmeyin** — `rm -rf .next` yalnızca sunucu kapalıyken yapılmalı.
+3. **Temiz yeniden başlatma** — Sorun devam ederse:
+   ```bash
+   npm run dev:clean
+   ```
+   Bu komut önce mevcut dev süreçlerini durdurur, `.next` klasörünü siler ve sunucuyu yeniden başlatır.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

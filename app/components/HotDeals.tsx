@@ -6,32 +6,25 @@ import Link from 'next/link';
 import { MapPinIcon, StarIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { ArrowRightIcon } from '@heroicons/react/20/solid';
 import { motion } from 'framer-motion';
+import MembershipBadge, { type MembershipTier } from './partner-dashboard/MembershipBadge';
 
-// Simplified Deal type
+// Gerçek turları/aktiviteleri döndüren /api/home/deals'ten gelen kart tipi.
 type Deal = {
-  id: number;
+  id: string;
   title: string;
   description: string;
   salePrice: number;
-  image: string;
+  originalPrice: number | null;
+  image: string | null;
   location: string;
-  category: 'popular' | 'lastMinute' | 'discount';
   type: 'tour' | 'activity';
+  partnerName: string | null;
+  partnerTier: MembershipTier;
+  operatorRating: number;
+  discount?: number;
 };
 
-// Updated deals data with type field
-const allDeals: Deal[] = [
-  // Turlar
-  { id: 1, title: 'Kapadokya Balon Turu', description: 'Eşsiz peri bacaları manzarasında unutulmaz bir balon deneyimi yaşayın', salePrice: 2880, image: 'https://images.unsplash.com/photo-1570654230464-9e63b3497a1e', location: 'Kapadokya', category: 'popular', type: 'tour' },
-  { id: 2, title: 'İstanbul Boğaz Turu', description: 'Tekne ile İstanbul Boğazının güzelliklerini keşfedin', salePrice: 840, image: 'https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b', location: 'İstanbul', category: 'lastMinute', type: 'tour' },
-  { id: 3, title: 'Pamukkale & Hierapolis Turu', description: 'Doğal travertenleri ve antik kenti keşfedin', salePrice: 1530, image: 'https://images.unsplash.com/photo-1571215682738-574b686ecb0b', location: 'Denizli', category: 'popular', type: 'tour' },
-  { id: 4, title: 'Efes Antik Kenti Turu', description: 'Dünyanın en iyi korunmuş antik kentlerinden birini ziyaret edin', salePrice: 1125, image: 'https://images.unsplash.com/photo-1555869433-94f21d89a10d', location: 'İzmir', category: 'lastMinute', type: 'tour' },
-  // Aktiviteler
-  { id: 5, title: 'Fethiye Yamaç Paraşütü', description: 'Babadağdan Ölüdeniz manzarasına karşı yamaç paraşütü deneyimi', salePrice: 1200, image: 'https://images.unsplash.com/photo-1600255821058-c4f89958d700', location: 'Fethiye', category: 'popular', type: 'activity' },
-  { id: 6, title: 'Köprülü Kanyon Rafting', description: 'Heyecan dolu rafting macerası', salePrice: 450, image: 'https://images.unsplash.com/photo-1530866495561-e3aa5c2461cd', location: 'Antalya', category: 'lastMinute', type: 'activity' },
-  { id: 7, title: 'Kaş Dalış Deneyimi', description: 'Akdenizin berrak sularında batıkları keşfedin', salePrice: 800, image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5', location: 'Kaş', category: 'discount', type: 'activity' },
-  { id: 8, title: 'Erciyes Kayak Turu', description: 'Her seviyeye uygun pistlerde kayak deneyimi', salePrice: 950, image: 'https://images.unsplash.com/photo-1605540436563-5bca919ae766', location: 'Kayseri', category: 'popular', type: 'activity' }
-];
+const PLACEHOLDER_IMAGE = 'https://placehold.co/800x600/e5e7eb/6b7280?text=Görsel+Yok';
 
 // Simplified price formatter
 const formatPrice = (price: number) => {
@@ -63,6 +56,10 @@ export default function HotDeals() {
   const [activeTourCategory, setActiveTourCategory] = useState<CategoryTab>('all');
   const [activeActivityCategory, setActiveActivityCategory] = useState<CategoryTab>('all');
   const [isVisible, setIsVisible] = useState(false);
+  const [tours, setTours] = useState<Deal[]>([]);
+  const [activities, setActivities] = useState<Deal[]>([]);
+  const [loadingTours, setLoadingTours] = useState(true);
+  const [loadingActivities, setLoadingActivities] = useState(true);
   const sectionRef = useRef<HTMLDivElement>(null);
 
   // Intersection observer remains the same
@@ -87,14 +84,28 @@ export default function HotDeals() {
     };
   }, []);
 
-  const getFilteredDeals = (type: 'tour' | 'activity', category: CategoryTab) => {
-    const typeFiltered = allDeals.filter(deal => deal.type === type);
-    if (category === 'all') return typeFiltered;
-    return typeFiltered.filter(deal => deal.category === category);
-  };
+  // Gerçek turları, seçilen kategoriye ve partner üyelik seviyesine
+  // (GOLD > SILVER > BRONZE) göre sıralanmış şekilde getirir.
+  useEffect(() => {
+    setLoadingTours(true);
+    fetch(`/api/home/deals?type=tour&category=${activeTourCategory}`)
+      .then((res) => (res.ok ? res.json() : { deals: [] }))
+      .then((data) => setTours(data.deals || []))
+      .catch(() => setTours([]))
+      .finally(() => setLoadingTours(false));
+  }, [activeTourCategory]);
 
-  const filteredTours = getFilteredDeals('tour', activeTourCategory);
-  const filteredActivities = getFilteredDeals('activity', activeActivityCategory);
+  useEffect(() => {
+    setLoadingActivities(true);
+    fetch(`/api/home/deals?type=activity&category=${activeActivityCategory}`)
+      .then((res) => (res.ok ? res.json() : { deals: [] }))
+      .then((data) => setActivities(data.deals || []))
+      .catch(() => setActivities([]))
+      .finally(() => setLoadingActivities(false));
+  }, [activeActivityCategory]);
+
+  const filteredTours = tours;
+  const filteredActivities = activities;
 
   return (
     <section 
@@ -147,9 +158,15 @@ export default function HotDeals() {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            {filteredTours.map((deal, index) => (
-              <DealCard key={deal.id} deal={deal} index={index} isVisible={isVisible} />
-            ))}
+            {loadingTours ? (
+              Array.from({ length: 4 }).map((_, i) => <DealCardSkeleton key={i} />)
+            ) : filteredTours.length > 0 ? (
+              filteredTours.map((deal, index) => (
+                <DealCard key={deal.id} deal={deal} index={index} isVisible={isVisible} />
+              ))
+            ) : (
+              <p className="col-span-full text-center text-neutral-500 py-8 text-sm">Bu kategoride şu anda tur bulunmuyor.</p>
+            )}
           </div>
           
           <motion.div 
@@ -212,9 +229,15 @@ export default function HotDeals() {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            {filteredActivities.map((deal, index) => (
-              <DealCard key={deal.id} deal={deal} index={index} isVisible={isVisible} />
-            ))}
+            {loadingActivities ? (
+              Array.from({ length: 4 }).map((_, i) => <DealCardSkeleton key={i} />)
+            ) : filteredActivities.length > 0 ? (
+              filteredActivities.map((deal, index) => (
+                <DealCard key={deal.id} deal={deal} index={index} isVisible={isVisible} />
+              ))
+            ) : (
+              <p className="col-span-full text-center text-neutral-500 py-8 text-sm">Bu kategoride şu anda aktivite bulunmuyor.</p>
+            )}
           </div>
           
           <motion.div 
@@ -239,6 +262,12 @@ export default function HotDeals() {
 
 // DealCard bileşeni
 function DealCard({ deal, index, isVisible }: { deal: Deal; index: number; isVisible: boolean }) {
+  const [imageSrc, setImageSrc] = useState(deal.image || PLACEHOLDER_IMAGE);
+
+  useEffect(() => {
+    setImageSrc(deal.image || PLACEHOLDER_IMAGE);
+  }, [deal.image]);
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -249,25 +278,39 @@ function DealCard({ deal, index, isVisible }: { deal: Deal; index: number; isVis
     >
       <div className="relative aspect-[4/3] w-full overflow-hidden">
         <Image 
-          src={deal.image} 
+          src={imageSrc} 
           alt={deal.title}
           fill
           priority={index < 4}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          onError={() => {
+            if (imageSrc !== PLACEHOLDER_IMAGE) setImageSrc(PLACEHOLDER_IMAGE);
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        {/* Partnerin müşteri değerlendirmelerinden otomatik hesaplanan üyelik arması */}
+        {deal.partnerTier && (
+          <div className="absolute top-2 left-2">
+            <MembershipBadge tier={deal.partnerTier} variant="onImage" />
+          </div>
+        )}
+        {deal.discount && deal.discount > 0 ? (
+          <div className="absolute top-2 right-2 bg-red-500 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full shadow-sm">
+            %{deal.discount} İndirim
+          </div>
+        ) : null}
       </div>
       
       <div className="p-4 flex flex-col flex-grow">
         <div className="flex items-center gap-3 text-xs text-neutral-500 mb-2">
           <div className="flex items-center">
             <MapPinIcon className="w-3.5 h-3.5 mr-1 text-neutral-400" />
-            <span>{deal.location}</span>
+            <span>{deal.location || 'Türkiye'}</span>
           </div>
           <div className="flex items-center">
             <StarIcon className="w-3.5 h-3.5 mr-1 text-amber-400" />
-            <span>4.8</span>
+            <span>{deal.operatorRating > 0 ? deal.operatorRating.toFixed(1) : 'Yeni'}</span>
           </div>
         </div>
         
@@ -281,20 +324,39 @@ function DealCard({ deal, index, isVisible }: { deal: Deal; index: number; isVis
         
         <div className="mb-3 mt-auto pt-3 border-t border-neutral-100">
           <div className="flex items-baseline justify-between">
-            <span className="text-lg font-bold text-neutral-900">
-              {formatPrice(deal.salePrice)}
-            </span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-lg font-bold text-neutral-900">
+                {formatPrice(deal.salePrice)}
+              </span>
+              {deal.originalPrice && deal.originalPrice > deal.salePrice && (
+                <span className="text-xs text-neutral-400 line-through">{formatPrice(deal.originalPrice)}</span>
+              )}
+            </div>
             <span className="text-xs text-neutral-500">/ kişi</span>
           </div>
         </div>
         
         <Link 
-          href={`/${deal.type === 'tour' ? 'tour' : 'activity'}/${deal.id}`}
+          href={`/${deal.type === 'tour' ? 'tour' : 'activities'}/${deal.id}`}
           className="block w-full text-center px-3 py-2 bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-all duration-200 font-medium rounded-lg shadow-sm hover:shadow-md text-sm"
         >
           Detayları Gör
         </Link>
       </div>
     </motion.div>
+  );
+}
+
+function DealCardSkeleton() {
+  return (
+    <div className="bg-white rounded-lg border border-neutral-200/80 shadow-sm flex flex-col overflow-hidden animate-pulse">
+      <div className="aspect-[4/3] w-full bg-neutral-200" />
+      <div className="p-4 space-y-3">
+        <div className="h-3 w-24 bg-neutral-200 rounded" />
+        <div className="h-4 w-3/4 bg-neutral-200 rounded" />
+        <div className="h-3 w-full bg-neutral-100 rounded" />
+        <div className="h-8 w-full bg-neutral-100 rounded-lg mt-2" />
+      </div>
+    </div>
   );
 } 

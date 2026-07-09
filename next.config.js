@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
+
 const nextConfig = {
+  // Üst dizindeki (/Users/merturas) package-lock.json yanlış workspace root seçimini önler
+  outputFileTracingRoot: path.join(__dirname),
   images: {
     remotePatterns: [
       {
@@ -32,6 +36,18 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'picsum.photos',
+        pathname: '/**',
+      },
+      // picsum.photos görselleri CDN üzerinden fastly.picsum.photos'a yönlendirilir;
+      // Next.js Image optimizer'ın bu redirect hedefini de whitelist'te tutması gerekir.
+      {
+        protocol: 'https',
+        hostname: 'fastly.picsum.photos',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'fastly.picsum.photos',
         pathname: '/**',
       },
       {

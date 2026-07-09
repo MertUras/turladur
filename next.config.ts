@@ -68,11 +68,19 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "fastly.picsum.photos",
+      },
+      {
+        protocol: "https",
         hostname: "source.unsplash.com",
       },
       {
         protocol: "https",
         hostname: "avatar.vercel.sh",
+      },
+      {
+        protocol: "https",
+        hostname: "ui-avatars.com",
       },
     ],
   },

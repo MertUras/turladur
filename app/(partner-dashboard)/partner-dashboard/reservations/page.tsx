@@ -1,26 +1,37 @@
 'use client';
 
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { 
-  MagnifyingGlassIcon, 
-  FunnelIcon, 
-  CheckCircleIcon, 
-  XCircleIcon, 
-  ClockIcon, 
-  ChatBubbleLeftIcon, 
-  PhoneIcon, 
-  EnvelopeIcon, 
-  ChevronDownIcon, 
+import {
+  MagnifyingGlassIcon,
+  FunnelIcon,
+  XCircleIcon,
+  ChatBubbleLeftIcon,
+  PhoneIcon,
+  EnvelopeIcon,
+  ChevronDownIcon,
   CalendarIcon,
-  ArrowDownTrayIcon
+  ArrowDownTrayIcon,
+  CheckCircleIcon,
+  NoSymbolIcon,
+  PauseCircleIcon,
 } from '@heroicons/react/24/outline';
 import { Transition, Menu, Popover } from '@headlessui/react';
-import { formatDate, formatCurrency, getStatusClass, translateStatus } from '@/lib/utils';
+import {
+  formatPaymentLabel,
+  getPaymentLabelClass,
+  getReservationStatusClass,
+  translateReservationStatus,
+} from '@/lib/partner/reservations';
 
 interface ContactInfo {
   email: string;
   phone: string;
+}
+
+interface SpecialConditionRow {
+  category: string;
+  detail: string;
 }
 
 interface Reservation {
@@ -33,9 +44,15 @@ interface Reservation {
   totalPrice: number;
   status: string;
   paymentStatus: string;
+  paymentMethod: string | null;
+  paymentLabel: string;
   contactInfo: ContactInfo;
   notes?: string;
+  specialConditions?: string[];
+  specialConditionsDetail?: SpecialConditionRow[];
 }
+
+type StatusAction = 'CONFIRMED' | 'CANCELLED' | 'SUSPENDED';
 
 export default function ReservationsPage() {
   const { data: session } = useSession();
@@ -47,41 +64,74 @@ export default function ReservationsPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<StatusAction | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const fetchReservations = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const queryParams = new URLSearchParams({
+        search: searchTerm,
+        status: statusFilter,
+        payment: paymentFilter,
+        sort: dateSort,
+      });
+
+      const response = await fetch(`/api/partner/reservations?${queryParams}`);
+
+      if (!response.ok) {
+        throw new Error('Rezervasyonlar getirilemedi');
+      }
+
+      const data = await response.json();
+      setReservations(data);
+      setError(null);
+    } catch (err) {
+      setError('Rezervasyonlar yüklenirken bir hata oluştu');
+      console.error('Rezervasyon yükleme hatası:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchTerm, statusFilter, paymentFilter, dateSort]);
 
   useEffect(() => {
-    const fetchReservations = async () => {
-      try {
-        setIsLoading(true);
-        const queryParams = new URLSearchParams({
-          search: searchTerm,
-          status: statusFilter,
-          payment: paymentFilter,
-          sort: dateSort
-        });
-
-        const response = await fetch(`/api/partner/reservations?${queryParams}`);
-        
-        if (!response.ok) {
-          throw new Error('Rezervasyonlar getirilemedi');
-        }
-
-        const data = await response.json();
-        setReservations(data);
-        setError(null);
-      } catch (err) {
-        setError('Rezervasyonlar yüklenirken bir hata oluştu');
-        console.error('Rezervasyon yükleme hatası:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (session?.user) {
       fetchReservations();
     }
-  }, [session, searchTerm, statusFilter, paymentFilter, dateSort]);
+  }, [session, fetchReservations]);
+
+  const handleStatusUpdate = async (reservationId: string, status: StatusAction) => {
+    setActionLoading(status);
+    setActionError(null);
+
+    try {
+      const response = await fetch(`/api/partner/reservations/${reservationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Durum güncellenemedi');
+      }
+
+      const updated = (await response.json()) as Reservation;
+      setReservations((prev) =>
+        prev.map((r) => (r.id === updated.id ? updated : r))
+      );
+      setSelectedReservation((prev) =>
+        prev?.id === updated.id ? updated : prev
+      );
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Durum güncellenemedi');
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const showReservationDetail = (reservation: Reservation) => {
+    setActionError(null);
     setSelectedReservation(reservation);
   };
 
@@ -97,110 +147,25 @@ export default function ReservationsPage() {
     return <div className="p-4 text-red-500">{error}</div>;
   }
 
-  // Filtreleme ve sıralama
-  const filteredReservations = reservations
-    .filter(reservation => {
-      const matchesSearch = reservation.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          reservation.referenceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          reservation.tourName.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || reservation.status === statusFilter;
-      const matchesPayment = paymentFilter === 'all' || reservation.paymentStatus === paymentFilter;
-      
-      return matchesSearch && matchesStatus && matchesPayment;
-    })
-    .sort((a, b) => {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
-      
-      return dateSort === 'asc' ? dateA - dateB : dateB - dateA;
-    });
-
-  // Durum renk sınıfları
-  const getStatusClass = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-blue-100 text-blue-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // Ödeme durumu renk sınıfları
-  const getPaymentStatusClass = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'partial':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'unpaid':
-        return 'bg-red-100 text-red-800';
-      case 'refunded':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // Durum çevirisi
-  const translateStatus = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'Onaylandı';
-      case 'pending':
-        return 'Beklemede';
-      case 'cancelled':
-        return 'İptal Edildi';
-      case 'completed':
-        return 'Tamamlandı';
-      default:
-        return status;
-    }
-  };
-
-  // Ödeme durumu çevirisi
-  const translatePaymentStatus = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return 'Ödendi';
-      case 'partial':
-        return 'Kısmi Ödeme';
-      case 'unpaid':
-        return 'Ödenmedi';
-      case 'refunded':
-        return 'İade Edildi';
-      default:
-        return status;
-    }
-  };
-
-  // Para formatı
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
   };
 
-  // Tarih formatı
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('tr-TR', options);
   };
 
-  // Durum filtreleme seçenekleri
   const statusOptions = [
     { id: 'all', name: 'Tüm Durumlar' },
-    { id: 'confirmed', name: 'Onaylandı' },
+    { id: 'pending_payment', name: 'Ödeme Bekliyor' },
     { id: 'pending', name: 'Beklemede' },
+    { id: 'confirmed', name: 'Onaylandı' },
+    { id: 'suspended', name: 'Askıya Alındı' },
     { id: 'completed', name: 'Tamamlandı' },
     { id: 'cancelled', name: 'İptal Edildi' },
   ];
 
-  // Ödeme durumu filtreleme seçenekleri
   const paymentOptions = [
     { id: 'all', name: 'Tüm Ödemeler' },
     { id: 'paid', name: 'Ödendi' },
@@ -209,10 +174,16 @@ export default function ReservationsPage() {
     { id: 'refunded', name: 'İade Edildi' },
   ];
 
+  const canConfirm = (status: string) =>
+    ['pending', 'pending_payment', 'suspended'].includes(status);
+  const canSuspend = (status: string) =>
+    ['pending', 'pending_payment', 'confirmed'].includes(status);
+  const canCancel = (status: string) =>
+    !['cancelled', 'completed'].includes(status);
+
   return (
     <div className="bg-gray-50 min-h-screen pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Başlık ve Üst Bölüm */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-6 border-b border-gray-200">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Rezervasyonlar</h1>
@@ -240,38 +211,23 @@ export default function ReservationsPage() {
                   <div className="py-1">
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="#"
-                          className={`${
-                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                          } block px-4 py-2 text-sm`}
-                        >
+                        <span className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}>
                           Excel (.xlsx)
-                        </a>
+                        </span>
                       )}
                     </Menu.Item>
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="#"
-                          className={`${
-                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                          } block px-4 py-2 text-sm`}
-                        >
+                        <span className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}>
                           PDF
-                        </a>
+                        </span>
                       )}
                     </Menu.Item>
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="#"
-                          className={`${
-                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                          } block px-4 py-2 text-sm`}
-                        >
+                        <span className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}>
                           CSV
-                        </a>
+                        </span>
                       )}
                     </Menu.Item>
                   </div>
@@ -281,7 +237,6 @@ export default function ReservationsPage() {
           </div>
         </div>
 
-        {/* Arama ve Filtreler */}
         <div className="mt-8 mb-6">
           <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
             <div className="flex-1 min-w-0">
@@ -308,13 +263,9 @@ export default function ReservationsPage() {
                       } text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200`}
                     >
                       <FunnelIcon className="h-5 w-5 mr-2" />
-                      {statusOptions.find(option => option.id === statusFilter)?.name || 'Durum'}
-                      <ChevronDownIcon
-                        className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`}
-                        aria-hidden="true"
-                      />
+                      {statusOptions.find((option) => option.id === statusFilter)?.name || 'Durum'}
+                      <ChevronDownIcon className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`} aria-hidden="true" />
                     </Popover.Button>
-
                     <Transition
                       as={Fragment}
                       enter="transition ease-out duration-200"
@@ -355,13 +306,9 @@ export default function ReservationsPage() {
                       } text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200`}
                     >
                       <FunnelIcon className="h-5 w-5 mr-2" />
-                      {paymentOptions.find(option => option.id === paymentFilter)?.name || 'Ödeme'}
-                      <ChevronDownIcon
-                        className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`}
-                        aria-hidden="true"
-                      />
+                      {paymentOptions.find((option) => option.id === paymentFilter)?.name || 'Ödeme'}
+                      <ChevronDownIcon className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`} aria-hidden="true" />
                     </Popover.Button>
-
                     <Transition
                       as={Fragment}
                       enter="transition ease-out duration-200"
@@ -403,12 +350,8 @@ export default function ReservationsPage() {
                     >
                       <CalendarIcon className="h-5 w-5 mr-2" />
                       {dateSort === 'desc' ? 'En Yeni' : 'En Eski'}
-                      <ChevronDownIcon
-                        className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`}
-                        aria-hidden="true"
-                      />
+                      <ChevronDownIcon className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`} aria-hidden="true" />
                     </Popover.Button>
-
                     <Transition
                       as={Fragment}
                       enter="transition ease-out duration-200"
@@ -450,49 +393,31 @@ export default function ReservationsPage() {
           </div>
         </div>
 
-        {/* Rezervasyon Sonuçları */}
         <div className="mt-2">
           <p className="text-sm text-gray-500 mb-4">
-            {filteredReservations.length} rezervasyon gösteriliyor
+            {reservations.length} rezervasyon gösteriliyor
           </p>
 
-          {/* Tablo */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Referans
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Müşteri
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tur
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tarih
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Tutar
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Durum
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ödeme
-                    </th>
-                    <th scope="col" className="relative px-6 py-3">
-                      <span className="sr-only">İşlemler</span>
-                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referans</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tur</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödeme</th>
+                    <th scope="col" className="relative px-6 py-3"><span className="sr-only">İşlemler</span></th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredReservations.length > 0 ? (
-                    filteredReservations.map((reservation) => (
-                      <tr 
-                        key={reservation.id} 
+                  {reservations.length > 0 ? (
+                    reservations.map((reservation) => (
+                      <tr
+                        key={reservation.id}
                         className="hover:bg-gray-50 transition-colors cursor-pointer"
                         onClick={() => showReservationDetail(reservation)}
                       >
@@ -512,18 +437,18 @@ export default function ReservationsPage() {
                           {formatCurrency(reservation.totalPrice)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2.5 py-1 text-xs font-medium capitalize rounded-full ${getStatusClass(reservation.status)}`}>
-                            {translateStatus(reservation.status)}
+                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${getReservationStatusClass(reservation.status)}`}>
+                            {translateReservationStatus(reservation.status)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2.5 py-1 text-xs font-medium capitalize rounded-full ${getPaymentStatusClass(reservation.paymentStatus)}`}>
-                            {translatePaymentStatus(reservation.paymentStatus)}
+                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${getPaymentLabelClass(reservation.paymentMethod)}`}>
+                            {reservation.paymentLabel || formatPaymentLabel(reservation.paymentMethod, reservation.paymentStatus)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button
-                            className="text-indigo-600 hover:text-indigo-900 ml-3"
+                            className="text-indigo-600 hover:text-indigo-900"
                             onClick={(e) => {
                               e.stopPropagation();
                               showReservationDetail(reservation);
@@ -554,29 +479,18 @@ export default function ReservationsPage() {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
               <div className="flex justify-between items-center">
                 <div className="flex items-center text-sm text-gray-500">
-                  <span>{filteredReservations.length} kayıt gösteriliyor</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-                    Önceki
-                  </button>
-                  <button className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-                    Sonraki
-                  </button>
+                  <span>{reservations.length} kayıt gösteriliyor</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Rezervasyon Detayı */}
         {selectedReservation && (
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 overflow-hidden">
-              <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-                <h3 className="text-lg font-bold text-gray-900">
-                  Rezervasyon Detayı
-                </h3>
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full overflow-hidden max-h-[90vh] flex flex-col">
+              <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
+                <h3 className="text-lg font-bold text-gray-900">Rezervasyon Detayı</h3>
                 <button
                   className="text-gray-500 hover:text-gray-700"
                   onClick={() => setSelectedReservation(null)}
@@ -584,80 +498,147 @@ export default function ReservationsPage() {
                   <XCircleIcon className="h-6 w-6" />
                 </button>
               </div>
-              
-              <div className="p-6 space-y-6">
-                <div className="flex justify-between items-start">
+
+              <div className="p-6 space-y-6 overflow-y-auto">
+                <div className="flex justify-between items-start flex-wrap gap-3">
                   <div>
                     <p className="text-sm text-gray-500">Referans Numarası</p>
                     <p className="text-lg font-semibold text-indigo-600">{selectedReservation.referenceNumber}</p>
                   </div>
-                  <div className="flex space-x-2">
-                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusClass(selectedReservation.status)}`}>
-                      {translateStatus(selectedReservation.status)}
+                  <div className="flex flex-wrap gap-2">
+                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${getReservationStatusClass(selectedReservation.status)}`}>
+                      {translateReservationStatus(selectedReservation.status)}
                     </span>
-                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${getPaymentStatusClass(selectedReservation.paymentStatus)}`}>
-                      {translatePaymentStatus(selectedReservation.paymentStatus)}
+                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${getPaymentLabelClass(selectedReservation.paymentMethod)}`}>
+                      {selectedReservation.paymentLabel}
                     </span>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Müşteri Bilgileri */}
                   <div className="bg-gray-50 rounded-lg p-4">
                     <h4 className="text-sm font-bold text-gray-800 mb-3">Müşteri Bilgileri</h4>
                     <p className="text-sm font-medium text-gray-900 mb-2">{selectedReservation.customerName}</p>
-                    
                     <div className="flex items-center text-sm text-gray-600 mb-2">
                       <EnvelopeIcon className="h-4 w-4 text-gray-400 mr-2" />
                       <span>{selectedReservation.contactInfo.email}</span>
                     </div>
-                    
                     <div className="flex items-center text-sm text-gray-600">
                       <PhoneIcon className="h-4 w-4 text-gray-400 mr-2" />
-                      <span>{selectedReservation.contactInfo.phone}</span>
+                      <span>{selectedReservation.contactInfo.phone || '—'}</span>
                     </div>
                   </div>
-                  
-                  {/* Tur Bilgileri */}
+
                   <div className="bg-gray-50 rounded-lg p-4">
                     <h4 className="text-sm font-bold text-gray-800 mb-3">Tur Bilgileri</h4>
                     <p className="text-sm font-medium text-gray-900 mb-2">{selectedReservation.tourName}</p>
-                    
                     <div className="flex items-center text-sm text-gray-600 mb-2">
                       <CalendarIcon className="h-4 w-4 text-gray-400 mr-2" />
                       <span>{formatDate(selectedReservation.date)}</span>
                     </div>
-                    
                     <div className="flex items-center text-sm text-gray-600">
                       <span className="mr-4">Katılımcı: {selectedReservation.participants} kişi</span>
                       <span>Toplam: {formatCurrency(selectedReservation.totalPrice)}</span>
                     </div>
                   </div>
                 </div>
-                
-                {/* Notlar */}
-                {selectedReservation.notes && (
-                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-100">
-                    <h4 className="text-sm font-bold text-yellow-800 mb-2 flex items-center">
+
+                {selectedReservation.specialConditionsDetail &&
+                selectedReservation.specialConditionsDetail.length > 0 ? (
+                  <div className="bg-sky-50 rounded-lg p-4 border border-sky-100">
+                    <h4 className="text-sm font-bold text-sky-900 mb-3 flex items-center">
                       <ChatBubbleLeftIcon className="h-4 w-4 mr-1" />
-                      Notlar
+                      Özel Durumlar ve Talepler
                     </h4>
-                    <p className="text-sm text-yellow-700">{selectedReservation.notes}</p>
+                    <div className="overflow-hidden rounded-lg border border-sky-200 bg-white">
+                      <table className="min-w-full divide-y divide-sky-100 text-sm">
+                        <thead className="bg-sky-100/60">
+                          <tr>
+                            <th className="px-4 py-2 text-left font-semibold text-sky-900 w-2/5">Kategori</th>
+                            <th className="px-4 py-2 text-left font-semibold text-sky-900">Detay</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-sky-50">
+                          {selectedReservation.specialConditionsDetail.map((row, index) => (
+                            <tr key={index} className="hover:bg-sky-50/50">
+                              <td className="px-4 py-2.5 font-medium text-sky-900 align-top">{row.category}</td>
+                              <td className="px-4 py-2.5 text-sky-800">{row.detail}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : selectedReservation.specialConditions &&
+                  selectedReservation.specialConditions.length > 0 ? (
+                  <div className="bg-sky-50 rounded-lg p-4 border border-sky-100">
+                    <h4 className="text-sm font-bold text-sky-900 mb-3 flex items-center">
+                      <ChatBubbleLeftIcon className="h-4 w-4 mr-1" />
+                      Özel Durumlar ve Talepler
+                    </h4>
+                    <ul className="text-sm text-sky-800 space-y-2 list-disc list-inside">
+                      {selectedReservation.specialConditions.map((line, index) => (
+                        <li key={index}>{line}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  selectedReservation.notes && (
+                    <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-100">
+                      <h4 className="text-sm font-bold text-yellow-800 mb-2 flex items-center">
+                        <ChatBubbleLeftIcon className="h-4 w-4 mr-1" />
+                        Rezervasyon Notları
+                      </h4>
+                      <p className="text-sm text-yellow-700">{selectedReservation.notes}</p>
+                    </div>
+                  )
+                )}
+
+                {actionError && (
+                  <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                    {actionError}
                   </div>
                 )}
               </div>
-              
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-wrap justify-between items-center gap-3 shrink-0">
+                <div className="flex flex-wrap gap-2">
+                  {canConfirm(selectedReservation.status) && (
+                    <button
+                      disabled={actionLoading !== null}
+                      onClick={() => handleStatusUpdate(selectedReservation.id, 'CONFIRMED')}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 transition-colors"
+                    >
+                      <CheckCircleIcon className="h-4 w-4 mr-1.5" />
+                      {actionLoading === 'CONFIRMED' ? 'Onaylanıyor...' : 'Onayla'}
+                    </button>
+                  )}
+                  {canSuspend(selectedReservation.status) && (
+                    <button
+                      disabled={actionLoading !== null}
+                      onClick={() => handleStatusUpdate(selectedReservation.id, 'SUSPENDED')}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                    >
+                      <PauseCircleIcon className="h-4 w-4 mr-1.5" />
+                      {actionLoading === 'SUSPENDED' ? 'Askıya alınıyor...' : 'Askıya Al'}
+                    </button>
+                  )}
+                  {canCancel(selectedReservation.status) && (
+                    <button
+                      disabled={actionLoading !== null}
+                      onClick={() => handleStatusUpdate(selectedReservation.id, 'CANCELLED')}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    >
+                      <NoSymbolIcon className="h-4 w-4 mr-1.5" />
+                      {actionLoading === 'CANCELLED' ? 'İptal ediliyor...' : 'İptal Et'}
+                    </button>
+                  )}
+                </div>
                 <button
                   className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                   onClick={() => setSelectedReservation(null)}
                 >
                   Kapat
-                </button>
-                <button
-                  className="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
-                >
-                  Rezervasyonu Düzenle
                 </button>
               </div>
             </div>
@@ -666,4 +647,4 @@ export default function ReservationsPage() {
       </div>
     </div>
   );
-} 
+}

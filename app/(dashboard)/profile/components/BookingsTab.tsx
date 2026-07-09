@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { CalendarIcon, ClockIcon, UsersIcon, FunnelIcon, ArrowsUpDownIcon, MapPinIcon, XMarkIcon, CheckIcon, BanknotesIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, ClockIcon, UsersIcon, FunnelIcon, ArrowsUpDownIcon, MapPinIcon, XMarkIcon, CheckIcon, BanknotesIcon, StarIcon } from '@heroicons/react/24/outline';
+import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { toast } from 'react-hot-toast';
 
 interface Booking {
-  id: number;
-  type: 'hotel' | 'tour';
+  id: string;
+  type: 'hotel' | 'tour' | 'experience';
   name: string;
   image: string;
   checkIn?: string;
@@ -20,16 +21,21 @@ interface Booking {
   location: string;
   bookingNumber: string;
   description?: string;
+  partnerName?: string;
+  canReviewPartner?: boolean;
+  partnerReviewRating?: number;
 }
 
 interface BookingsTabProps {
   bookings: Record<string, Booking[]>;
+  loading?: boolean;
   onViewDetails: (booking: Booking) => void;
-  onCancelBooking: (bookingId: number) => void;
+  onCancelBooking: (bookingId: string) => void;
+  onRatePartner?: (booking: Booking) => void;
   formatDate: (dateString: string) => string;
 }
 
-export default function BookingsTab({ bookings, onViewDetails, onCancelBooking, formatDate }: BookingsTabProps) {
+export default function BookingsTab({ bookings, loading, onViewDetails, onCancelBooking, onRatePartner, formatDate }: BookingsTabProps) {
   const [bookingTab, setBookingTab] = useState('upcoming');
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<'dateDesc' | 'dateAsc' | 'priceDesc' | 'priceAsc'>('dateDesc');
@@ -124,7 +130,12 @@ export default function BookingsTab({ bookings, onViewDetails, onCancelBooking, 
       </div>
 
       <div className="space-y-5">
-        {currentBookings.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center text-center py-16 px-6 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
+            <div className="h-8 w-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-neutral-500 text-sm">Rezervasyonlar yükleniyor...</p>
+          </div>
+        ) : currentBookings.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-16 px-6 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
             <div className="p-3 bg-neutral-100 rounded-full mb-4">
               <CalendarIcon className="h-8 w-8 text-neutral-400" />
@@ -219,7 +230,25 @@ export default function BookingsTab({ bookings, onViewDetails, onCancelBooking, 
                   <div className="text-lg font-semibold text-neutral-900 flex-shrink-0">
                     {booking.price.toLocaleString('tr-TR')} ₺
                   </div>
-                  <div className="flex space-x-2 flex-shrink-0">
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    {/* Partner değerlendirmesi: sadece tur/aktivite rezervasyonlarında
+                        gösterilir (otel rezervasyonlarında partner review kavramı yok) */}
+                    {booking.type !== 'hotel' && booking.status === 'completed' && (
+                      booking.canReviewPartner ? (
+                        <button
+                          onClick={() => onRatePartner?.(booking)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white rounded-md transition-colors shadow-sm"
+                        >
+                          <StarIcon className="h-3.5 w-3.5" />
+                          {booking.type === 'tour' ? 'Turu Değerlendir' : 'Aktiviteyi Değerlendir'}
+                        </button>
+                      ) : typeof booking.partnerReviewRating === 'number' ? (
+                        <span className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-neutral-100 text-neutral-600 rounded-md border border-neutral-200">
+                          <StarIconSolid className="h-3.5 w-3.5 text-amber-400" />
+                          Değerlendirildi ({booking.partnerReviewRating}/5)
+                        </span>
+                      ) : null
+                    )}
                     {booking.status === 'confirmed' && (
                       <button 
                         onClick={() => onCancelBooking(booking.id)}

@@ -98,7 +98,7 @@ export interface TourFormData {
   images: ImageFile[];
   includes: string[];
   excludes: string[];
-  itinerary: { title: string; description: string; images?: { url: string; file: File }[] }[];
+  itinerary: { title: string; description: string; images?: { url: string; file: File | null }[] }[];
   status: 'active' | 'draft' | 'archived';
   departureCity: string[]; // Tek şehir yerine şehir dizisi
   region: string;
@@ -366,6 +366,8 @@ export default function TourForm({
   const [errors, setErrors] = useState<Partial<Record<keyof TourFormData, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Form verileri değiştiğinde callback'i çağır
   useEffect(() => {
@@ -383,19 +385,62 @@ export default function TourForm({
     });
   };
 
-  const handleImagesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      const newImages: ImageFile[] = Array.from(files).map(file => ({
-        url: URL.createObjectURL(file),
-        file,
-        preview: URL.createObjectURL(file)
-      }));
+  const uploadImageFile = async (file: File): Promise<string> => {
+    const body = new FormData();
+    body.append('file', file);
+    const res = await fetch('/api/upload', { method: 'POST', body });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || `${file.name} yüklenemedi`);
+    }
+    return data.url;
+  };
 
-      setFormData(prev => ({
-        ...prev,
-        images: [...prev.images, ...newImages]
-      }));
+  const uploadImagesToForm = async (
+    files: File[],
+    target: 'images' | 'gallery' | 'main' | 'itinerary',
+    dayIdx?: number
+  ) => {
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    if (imageFiles.length === 0) return;
+
+    setUploadError(null);
+    setIsUploadingImages(true);
+    try {
+      const uploadedImages: ImageFile[] = [];
+      for (const file of imageFiles) {
+        const url = await uploadImageFile(file);
+        uploadedImages.push({ url, file: null, preview: url });
+      }
+
+      setFormData(prev => {
+        if (target === 'images') {
+          return { ...prev, images: [...prev.images, ...uploadedImages] };
+        }
+        if (target === 'gallery') {
+          const galleryImages: GalleryImageFile[] = uploadedImages.map(img => ({
+            ...img,
+            description: '',
+          }));
+          return { ...prev, galleryImages: [...prev.galleryImages, ...galleryImages] };
+        }
+        if (target === 'main' && uploadedImages[0]) {
+          return { ...prev, mainImage: uploadedImages[0] };
+        }
+        if (target === 'itinerary' && dayIdx !== undefined) {
+          const newItinerary = [...prev.itinerary];
+          const day = { ...newItinerary[dayIdx] };
+          const itineraryImages = uploadedImages.map(img => ({ url: img.url, file: null }));
+          day.images = [...(day.images || []), ...itineraryImages];
+          newItinerary[dayIdx] = day;
+          return { ...prev, itinerary: newItinerary };
+        }
+        return prev;
+      });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'Görsel yüklenirken bir hata oluştu');
+    } finally {
+      setIsUploadingImages(false);
     }
   };
 
@@ -403,17 +448,9 @@ export default function TourForm({
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png', '.gif']
     },
+    disabled: isUploadingImages,
     onDrop: (acceptedFiles) => {
-      const newImages: ImageFile[] = acceptedFiles.map(file => ({
-        url: URL.createObjectURL(file),
-        file,
-        preview: URL.createObjectURL(file)
-      }));
-      
-      setFormData(prev => ({
-        ...prev,
-        images: [...prev.images, ...newImages]
-      }));
+      void uploadImagesToForm(acceptedFiles, 'images');
     }
   });
 
@@ -581,18 +618,8 @@ export default function TourForm({
     }));
   };
 
-  // Resim ekleme - gerçek uygulamada resim yükleme API'si kullanılır
   const handleImageUpload = (files: File[]) => {
-    const newImages: ImageFile[] = files.map(file => ({
-      url: URL.createObjectURL(file),
-      file,
-      preview: URL.createObjectURL(file)
-    }));
-
-    setFormData(prev => ({
-      ...prev,
-      images: [...prev.images, ...newImages]
-    }));
+    void uploadImagesToForm(files, 'images');
   };
 
   const handleImageRemove = (index: number) => {
@@ -752,6 +779,18 @@ export default function TourForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
+
+    if (isUploadingImages) {
+      setSubmitError('Görseller yükleniyor. Lütfen yükleme tamamlanana kadar bekleyin.');
+      return;
+    }
+
+    const hasBlobUrls = formData.images.some(img => img.url.startsWith('blob:'));
+    if (hasBlobUrls) {
+      setSubmitError('Görseller geçici bağlantı olarak kaydedilmiş. Lütfen görselleri yeniden yükleyin.');
+      return;
+    }
+
     const isValid = await validateForm();
     if (!isValid) {
       setSubmitError('Lütfen form alanlarını kontrol ediniz.');
@@ -1146,34 +1185,17 @@ export default function TourForm({
   const handleMainImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          mainImage: {
-            url: URL.createObjectURL(file),
-            file: file,
-            preview: reader.result as string
-          }
-        }));
-      };
-      reader.readAsDataURL(file);
+      void uploadImagesToForm([file], 'main');
+      event.target.value = '';
     }
   };
 
   const handleGalleryImagesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    const newGalleryImages: GalleryImageFile[] = files.map(file => ({
-      url: URL.createObjectURL(file),
-      file: file,
-      preview: URL.createObjectURL(file),
-      description: ''
-    }));
-
-    setFormData(prev => ({
-      ...prev,
-      galleryImages: [...prev.galleryImages, ...newGalleryImages]
-    }));
+    if (files.length > 0) {
+      void uploadImagesToForm(files, 'gallery');
+      event.target.value = '';
+    }
   };
 
   const handleGalleryImageDescriptionChange = (index: number, value: string) => {
@@ -1331,20 +1353,13 @@ export default function TourForm({
   interface ItineraryDay {
     title: string;
     description: string;
-    images?: { url: string; file: File }[];
+    images?: { url: string; file: File | null }[];
   }
 
   // Program günlerinde fotoğraf ekleme fonksiyonu:
   const handleItineraryImageAdd = (dayIdx: number, files: FileList | null) => {
     if (!files) return;
-    setFormData(prev => {
-      const newItinerary = [...prev.itinerary];
-      const day = { ...newItinerary[dayIdx] };
-      const newImages = Array.from(files).map(file => ({ url: URL.createObjectURL(file), file }));
-      day.images = [...(day.images || []), ...newImages];
-      newItinerary[dayIdx] = day;
-      return { ...prev, itinerary: newItinerary };
-    });
+    void uploadImagesToForm(Array.from(files), 'itinerary', dayIdx);
   };
 
   const handleItineraryImageRemove = (dayIdx: number, imgIdx: number) => {
@@ -1899,6 +1914,10 @@ export default function TourForm({
               </div>
             </div>
             {errors.images && <p className="mt-2 text-sm text-red-600">{errors.images}</p>}
+            {uploadError && <p className="mt-2 text-sm text-red-600">{uploadError}</p>}
+            {isUploadingImages && (
+              <p className="mt-2 text-sm text-sky-600">Görseller yükleniyor...</p>
+            )}
             
             {formData.images.length > 0 && (
               <div className="mt-5 grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -2826,7 +2845,7 @@ export default function TourForm({
         <button
           type="button"
             onClick={() => window.history.back()}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploadingImages}
             className="px-5 py-2.5 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
           İptal
@@ -2843,7 +2862,7 @@ export default function TourForm({
                     setStep('details');
                   }
                 }}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploadingImages}
                 className="px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
               >
                 Devam Et
@@ -2856,14 +2875,14 @@ export default function TourForm({
                     window.scrollTo(0, 0);
                     setStep('basic');
                   }}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isUploadingImages}
                   className="px-5 py-2.5 border border-gray-300 shadow-sm text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                 >
                   Geri Dön
         </button>
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || isUploadingImages}
                   className="inline-flex items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (

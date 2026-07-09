@@ -26,6 +26,7 @@ import {
   Cog6ToothIcon
 } from '@heroicons/react/24/outline';
 import { signOut, useSession } from 'next-auth/react';
+import MembershipBadge, { type MembershipTier } from '@/app/components/partner-dashboard/MembershipBadge';
 
 interface SidebarLink {
   name: string;
@@ -53,6 +54,7 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [membershipTier, setMembershipTier] = useState<MembershipTier | null>(null);
   const pathname = usePathname();
   const { data: session } = useSession();
   const userRole = session?.user?.role as string;
@@ -68,6 +70,15 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
     if (!link.roles) return true;
     return link.roles.includes(userRole);
   });
+
+  // İsim yanında gösterilecek üyelik armasını (Bronze/Silver/Gold) getir
+  useEffect(() => {
+    if (!session) return;
+    fetch('/api/partner/membership')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setMembershipTier(data?.tier ?? null))
+      .catch(() => setMembershipTier(null));
+  }, [session]);
 
   // Mobil cihazlarda menü açıldığında sayfanın kaydırılmasını engelle
   useEffect(() => {
@@ -175,7 +186,10 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
                 </div>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-900">{session?.user?.name || 'Partner'}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-gray-900 truncate">{session?.user?.name || 'Partner'}</p>
+                  <MembershipBadge tier={membershipTier} />
+                </div>
                 <p className="text-xs text-gray-500">Yönetici</p>
               </div>
             </div>
@@ -368,7 +382,10 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
                   <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold mr-1">
                     {(session?.user?.name || 'Partner').split(' ').map(part => part[0]).join('').toUpperCase()}
                   </div>
-                  <span className="hidden md:block text-sm font-medium">{session?.user?.name || 'Partner'}</span>
+                  <span className="hidden md:flex items-center gap-1.5 text-sm font-medium">
+                    {session?.user?.name || 'Partner'}
+                    <MembershipBadge tier={membershipTier} />
+                  </span>
                   <svg className="h-5 w-5 ml-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
@@ -377,7 +394,10 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
                 {showProfileMenu && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50 origin-top-right">
                     <div className="p-3 border-b border-gray-200">
-                      <p className="text-sm font-medium text-gray-900">{session?.user?.name || 'Partner'}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-gray-900 truncate">{session?.user?.name || 'Partner'}</p>
+                        <MembershipBadge tier={membershipTier} />
+                      </div>
                       <p className="text-xs text-gray-500">{session?.user?.email || ''}</p>
                     </div>
                     <div className="py-1">

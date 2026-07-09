@@ -20,10 +20,12 @@ import PaymentTab from './components/PaymentTab';
 import NotificationsTab from './components/NotificationsTab';
 import SecurityTab from './components/SecurityTab';
 import HelpTab from './components/HelpTab';
+import RatePartnerModal, { ReviewableBooking } from '../bookings/components/RatePartnerModal';
+import { parseJsonArray } from '@/lib/utils';
 
 interface Booking {
-  id: number;
-  type: 'hotel' | 'tour';
+  id: string;
+  type: 'hotel' | 'tour' | 'experience';
   name: string;
   image: string;
   checkIn?: string;
@@ -36,6 +38,13 @@ interface Booking {
   location: string;
   bookingNumber: string;
   description?: string;
+  // Partner değerlendirmesi (müşteri değerlendirmelerinden otomatik hesaplanan
+  // üyelik seviyesi sistemi) için gerekli alanlar. Sadece tur/aktivite
+  // rezervasyonlarında dolu gelir; otel rezervasyonlarında partner review
+  // kavramı yoktur.
+  partnerName?: string;
+  canReviewPartner?: boolean;
+  partnerReviewRating?: number;
 }
 
 interface FavoriteItem {
@@ -153,70 +162,79 @@ export default function ProfilePage() {
     }
   ]);
   
+  // Rezervasyonlar artık dummy veri değil, /api/user/bookings'ten gelen
+  // GERÇEK rezervasyonlardır (bkz. fetchBookings useEffect'i aşağıda).
   const [bookings, setBookings] = useState<Record<string, Booking[]>>({
-    upcoming: [
-      {
-        id: 1,
-        type: 'hotel',
-        name: 'Grand Hotel Antalya',
-        image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
-        checkIn: '2024-06-15',
-        checkOut: '2024-06-20',
-        guests: 2,
-        status: 'confirmed',
-        price: 2500,
-        location: 'Antalya, Türkiye',
-        bookingNumber: 'BK-2024-001',
-        description: 'Lüks ve konforu bir arada sunan 5 yıldızlı otel'
-      },
-      {
-        id: 2,
-        type: 'tour',
-        name: 'Kapadokya Balon Turu',
-        image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
-        date: '2024-07-01',
-        time: '06:00',
-        guests: 2,
-        status: 'confirmed',
-        price: 800,
-        location: 'Kapadokya, Türkiye',
-        bookingNumber: 'BK-2024-002',
-        description: 'Güneşin doğuşunu gökyüzünden izleyin'
-      }
-    ],
-    past: [
-      {
-        id: 3,
-        type: 'hotel',
-        name: 'Blue Resort Fethiye',
-        image: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2080&q=80',
-        checkIn: '2024-03-01',
-        checkOut: '2024-03-05',
-        guests: 2,
-        status: 'completed',
-        price: 1800,
-        location: 'Fethiye, Türkiye',
-        bookingNumber: 'BK-2024-003',
-        description: 'Deniz manzaralı muhteşem bir tatil deneyimi'
-      }
-    ],
-    cancelled: [
-      {
-        id: 4,
-        type: 'tour',
-        name: 'Efes Antik Kenti Turu',
-        image: 'https://images.unsplash.com/photo-1513639776629-7b61b0ac49cb?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
-        date: '2024-02-15',
-        time: '09:00',
-        guests: 2,
-        status: 'cancelled',
-        price: 400,
-        location: 'İzmir, Türkiye',
-        bookingNumber: 'BK-2024-004',
-        description: 'Antik dünyanın izlerini keşfedin'
-      }
-    ]
+    upcoming: [],
+    past: [],
+    cancelled: []
   });
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [ratingBooking, setRatingBooking] = useState<ReviewableBooking | null>(null);
+
+  const fetchBookings = () => {
+    setBookingsLoading(true);
+    fetch('/api/user/bookings')
+      .then((res) => (res.ok ? res.json() : { bookings: [] }))
+      .then((data) => {
+        const now = new Date();
+        const buckets: Record<string, Booking[]> = { upcoming: [], past: [], cancelled: [] };
+
+        (data.bookings || []).forEach((b: any) => {
+          const type: Booking['type'] = b.hotelId ? 'hotel' : b.tourId ? 'tour' : 'experience';
+          const name = b.hotel?.name || b.tour?.name || b.experience?.title || 'Rezervasyon';
+          const hotelImages = parseJsonArray<string>(b.hotel?.images);
+          const tourImages = parseJsonArray<string>(b.tour?.images);
+          const image = tourImages[0] || b.experience?.imageUrl || hotelImages[0] || null;
+
+          const mapped: Booking = {
+            id: b.id,
+            type,
+            name,
+            image: image || 'https://placehold.co/800x600/e5e7eb/6b7280?text=G%C3%B6rsel+Yok',
+            checkIn: type === 'hotel' ? b.startDate : undefined,
+            checkOut: type === 'hotel' ? b.endDate : undefined,
+            date: type !== 'hotel' ? b.startDate : undefined,
+            time: undefined,
+            guests: (b.adults || 0) + (b.children || 0) || 1,
+            status: b.status === 'CANCELLED' ? 'cancelled' : b.status === 'COMPLETED' ? 'completed' : 'confirmed',
+            price: b.totalPrice,
+            location: 'Türkiye',
+            bookingNumber: b.bookingNumber,
+            partnerName: b.tour?.operator?.name || b.experience?.operator?.name || undefined,
+            canReviewPartner: Boolean(b.canReviewPartner),
+            partnerReviewRating: b.partnerReview?.rating,
+          };
+
+          if (b.status === 'CANCELLED') {
+            buckets.cancelled.push(mapped);
+          } else if (mapped.status === 'completed' || new Date(b.endDate) < now) {
+            buckets.past.push({ ...mapped, status: 'completed' });
+          } else {
+            buckets.upcoming.push(mapped);
+          }
+        });
+
+        setBookings(buckets);
+      })
+      .catch(() => setBookings({ upcoming: [], past: [], cancelled: [] }))
+      .finally(() => setBookingsLoading(false));
+  };
+
+  useEffect(() => {
+    if (session?.user) {
+      fetchBookings();
+    }
+  }, [session]);
+
+  const handleReviewSubmitted = (bookingId: string) => {
+    setBookings((prev) => ({
+      ...prev,
+      past: prev.past.map((b) => (b.id === bookingId ? { ...b, canReviewPartner: false } : b)),
+    }));
+    setRatingBooking(null);
+    toast.success('Değerlendirmeniz kaydedildi');
+  };
 
   const [favorites, setFavorites] = useState<Record<string, FavoriteItem[]>>({
     hotels: [
@@ -338,7 +356,7 @@ export default function ProfilePage() {
     toast.success('Kart başarıyla silindi');
   };
 
-  const handleCancelBooking = (bookingId: number) => {
+  const handleCancelBooking = (bookingId: string) => {
     const updatedBookings = {
       ...bookings,
       upcoming: bookings.upcoming.filter(booking => booking.id !== bookingId),
@@ -439,8 +457,18 @@ export default function ProfilePage() {
                 {activeTab === 'bookings' && (
                   <BookingsTab
                     bookings={bookings}
+                    loading={bookingsLoading}
                     onViewDetails={handleViewBookingDetails}
                     onCancelBooking={handleCancelBooking}
+                    onRatePartner={(booking) =>
+                      setRatingBooking({
+                        id: booking.id,
+                        bookingNumber: booking.bookingNumber,
+                        title: booking.name,
+                        partnerName: booking.partnerName || 'Partner',
+                        type: booking.type === 'experience' ? 'experience' : 'tour',
+                      })
+                    }
                     formatDate={formatDate}
                   />
                 )}
@@ -580,6 +608,15 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Partner değerlendirme modalı */}
+      {ratingBooking && (
+        <RatePartnerModal
+          booking={ratingBooking}
+          onClose={() => setRatingBooking(null)}
+          onSubmitted={handleReviewSubmitted}
+        />
       )}
     </main> 
   );

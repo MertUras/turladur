@@ -25,6 +25,8 @@ import { tr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 import BookingCard from './components/BookingCard';
 import BookingDetailsModal from './components/BookingDetailsModal';
+import RatePartnerModal, { ReviewableBooking } from './components/RatePartnerModal';
+import { StarIcon } from '@heroicons/react/24/solid';
 
 // Filter tipi
 type FilterStatus = 'all' | 'CONFIRMED' | 'PENDING' | 'COMPLETED' | 'CANCELLED';
@@ -37,7 +39,13 @@ export default function BookingsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  
+
+  // Süresi dolmuş ve henüz partneri değerlendirilmemiş gerçek rezervasyonlar
+  // (bkz. /api/user/bookings). Üstteki liste hâlâ demo verisiyle çalıştığı
+  // için bu, bağımsız/gerçek bir veri kaynağıdır.
+  const [reviewableBookings, setReviewableBookings] = useState<ReviewableBooking[]>([]);
+  const [ratingBooking, setRatingBooking] = useState<ReviewableBooking | null>(null);
+
   // Filtreler
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [typeFilter, setTypeFilter] = useState<FilterType>('all');
@@ -61,6 +69,31 @@ export default function BookingsPage() {
       setLoading(false);
     }
   }, [status]);
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+
+    fetch('/api/user/bookings')
+      .then((res) => (res.ok ? res.json() : { bookings: [] }))
+      .then((data) => {
+        const eligible = (data.bookings || [])
+          .filter((b: any) => b.canReviewPartner)
+          .map((b: any): ReviewableBooking => ({
+            id: b.id,
+            bookingNumber: b.bookingNumber,
+            title: b.tour?.name || b.experience?.title || 'Rezervasyon',
+            partnerName: b.tour?.operator?.name || b.experience?.operator?.name || 'Partner',
+            type: b.tourId ? 'tour' : b.experienceId ? 'experience' : undefined,
+          }));
+        setReviewableBookings(eligible);
+      })
+      .catch(() => setReviewableBookings([]));
+  }, [status]);
+
+  const handleReviewSubmitted = (bookingId: string) => {
+    setReviewableBookings((prev) => prev.filter((b) => b.id !== bookingId));
+    setRatingBooking(null);
+  };
 
   const filteredBookings = bookings.filter(booking => {
     // Durum filtrelemesi
@@ -187,6 +220,36 @@ export default function BookingsPage() {
           <p className="text-sm text-neutral-600 mt-1">Tüm geçmiş, güncel ve gelecek rezervasyonlarınızı buradan yönetebilirsiniz.</p>
         </div>
         
+        {/* Değerlendirme bekleyen rezervasyonlar */}
+        {reviewableBookings.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200/70 rounded-xl p-5 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <StarIcon className="h-5 w-5 text-amber-500" />
+              <h2 className="text-sm font-semibold text-amber-900">Değerlendirmenizi Bekleyen Rezervasyonlar</h2>
+            </div>
+            <div className="space-y-2">
+              {reviewableBookings.map((rb) => (
+                <div
+                  key={rb.id}
+                  className="flex items-center justify-between gap-3 bg-white rounded-lg border border-amber-100 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-neutral-900 truncate">{rb.title}</p>
+                    <p className="text-xs text-neutral-500 truncate">{rb.partnerName}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRatingBooking(rb)}
+                    className="shrink-0 inline-flex items-center px-3 py-1.5 bg-amber-500 text-white text-xs font-semibold rounded-lg hover:bg-amber-600 transition-colors"
+                  >
+                    {rb.type === 'experience' ? 'Aktiviteyi Değerlendir' : 'Turu Değerlendir'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Filtre ve sıralama */}
         <div className="bg-white rounded-xl shadow-sm border border-neutral-200/50 p-5 mb-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-4 gap-y-5">
@@ -325,6 +388,15 @@ export default function BookingsPage() {
           onClose={() => setShowDetailsModal(false)}
           booking={selectedBooking}
           onCancelBooking={handleCancelBooking}
+        />
+      )}
+
+      {/* Partner değerlendirme modalı */}
+      {ratingBooking && (
+        <RatePartnerModal
+          booking={ratingBooking}
+          onClose={() => setRatingBooking(null)}
+          onSubmitted={handleReviewSubmitted}
         />
       )}
     </div>

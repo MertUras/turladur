@@ -20,6 +20,7 @@ const partnerAuthRequiredPaths = [
 const userAuthRequiredPaths = [
   '/profile',
   '/bookings',
+  '/checkout',
   '/favorites',
   '/reviews',
 ];
@@ -122,7 +123,9 @@ export async function middleware(request: NextRequest) {
   // Normal kullanıcı sayfaları için erişim kontrolü
   if (userAuthRequiredPaths.some(path => pathname.startsWith(path))) {
     if (!token) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname + request.nextUrl.search);
+      return NextResponse.redirect(loginUrl);
     }
 
     if (token.role === 'TOUR_OPERATOR') {
@@ -147,6 +150,7 @@ export const config = {
     '/api/partner/:path*',
     '/profile/:path*',
     '/bookings/:path*',
+    '/checkout/:path*',
     '/favorites/:path*',
     '/reviews/:path*',
     '/login',

@@ -19,8 +19,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [callbackUrl, setCallbackUrl] = useState('/');
   const router = useRouter();
   const { data: session, status } = useSession();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const url = params.get('callbackUrl');
+    if (url && url.startsWith('/')) {
+      setCallbackUrl(url);
+    }
+  }, []);
 
   const handlePartnerPortalClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -36,10 +45,10 @@ export default function LoginPage() {
       if (session?.user?.provider === 'partner-credentials') {
         window.location.href = '/partner-dashboard';
       } else {
-        window.location.href = '/';
+        window.location.href = callbackUrl;
       }
     }
-  }, [status, session]);
+  }, [status, session, callbackUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

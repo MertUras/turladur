@@ -36,6 +36,9 @@ interface Tour {
     companyName: string;
     logo: string | null;
     description: string | null;
+    rating: number | null;
+    reviewCount: number;
+    membershipTier: string;
   };
   tourDates: TourDate[];
   [key: string]: any;
@@ -58,6 +61,9 @@ export async function GET(
             companyName: true,
             logo: true,
             description: true,
+            rating: true,
+            reviewCount: true,
+            membershipTier: true,
           },
         },
         tourDates: {

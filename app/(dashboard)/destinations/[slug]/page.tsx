@@ -339,7 +339,7 @@ export default function DestinationPage() {
                   <div className="relative h-64 overflow-hidden">
                     <div className="relative w-full h-full">
                       <Image
-                        src={tourImages[0] || '/images/tours/default.jpg'}
+                        src={tourImages[0] || 'https://placehold.co/800x600/e5e7eb/6b7280?text=Tur'}
                         alt={tour.name}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"

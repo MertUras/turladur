@@ -129,7 +129,8 @@ export default function Header() {
 
   // Hangi sayfalarda başlangıçta açık renk header kullanılacağını belirle
   const lightBackgroundRoutes = ['/about', '/contact', '/profile', '/bookings', '/login', '/register', '/partner-login', '/partner-register'];
-  const forceScrolledAppearance = lightBackgroundRoutes.includes(pathname);
+  const forceScrolledAppearance =
+    lightBackgroundRoutes.includes(pathname) || pathname.startsWith('/checkout');
 
   // Dinamik stiller için değişkenler
   const shouldAppearScrolled = isScrolled || forceScrolledAppearance;

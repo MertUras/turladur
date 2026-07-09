@@ -32,6 +32,7 @@ model User {
   posts                    Post[]
   reviews                  Review[]
   tourOperators            TourOperator[]
+  partnerReviews           PartnerReview[]
 
   @@map("users")
 }
@@ -126,12 +127,20 @@ model TourOperator {
   userId      String
   status      TourOperatorStatus @default(pending)
   companyName String?
+  // `rating` ve `reviewCount`, müşterilerin tamamlanmış rezervasyonlar sonrası
+  // verdiği 1-5 yıldızlı PartnerReview'lerin aritmetik ortalamasından
+  // hesaplanıp cache'lenir (bkz. lib/membership.ts). Elle düzenlenmemelidir.
   rating      Float?             @default(0)
+  reviewCount Int                @default(0)
   certified   Boolean            @default(false)
+  // Müşteri değerlendirme ortalamasından otomatik türetilen üyelik seviyesi
+  // (bkz. lib/membership.ts). Satın alınan/elle atanan bir değer DEĞİLDİR.
+  membershipTier MembershipTier  @default(BRONZE)
   bookings    Booking[]
   subUsers    SubUser[]
   user        User               @relation(fields: [userId], references: [id])
   tours       Tour[]
+  partnerReviews PartnerReview[]
 
   @@map("tour_operators")
 }
@@ -320,7 +329,9 @@ model Booking {
   totalPrice      Float
   status          BookingStatus @default(PENDING)
   paymentStatus   PaymentStatus @default(UNPAID)
+  paymentMethod   String?
   specialRequests String?
+  metadata        Json?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   userId          String
@@ -337,8 +348,31 @@ model Booking {
   tour            Tour?         @relation(fields: [tourId], references: [id])
   tourOperator    TourOperator? @relation(fields: [tourOperatorId], references: [id])
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partnerReview   PartnerReview?
 
   @@map("bookings")
+}
+
+// Müşterinin, turu/aktiviteyi tamamladıktan sonra PARTNERİ (operatörün kendisini,
+// tek bir ürünü değil) 1-5 yıldız üzerinden değerlendirdiği kayıt. Her booking
+// için en fazla bir değerlendirme yapılabilir (bookingId @unique). Operatörün
+// güncel `rating`/`reviewCount`/`membershipTier` alanları bu tablodaki
+// kayıtların ortalamasından hesaplanıp cache'lenir (bkz. lib/membership.ts).
+model PartnerReview {
+  id                   String              @id @default(cuid())
+  rating               Int
+  comment              String?
+  createdAt            DateTime            @default(now())
+  userId               String
+  bookingId            String              @unique
+  tourOperatorId       String?
+  experienceOperatorId String?
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking              Booking             @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  tourOperator         TourOperator?       @relation(fields: [tourOperatorId], references: [id], onDelete: Cascade)
+  experienceOperator   ExperienceOperator? @relation(fields: [experienceOperatorId], references: [id], onDelete: Cascade)
+
+  @@map("partner_reviews")
 }
 
 model Review {
@@ -417,7 +451,13 @@ model ExperienceOperator {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   userId      String
+  // Bkz. TourOperator.rating / reviewCount / membershipTier açıklaması:
+  // aynı otomatik hesaplama mantığı burada da geçerlidir.
+  rating         Float?         @default(0)
+  reviewCount    Int            @default(0)
+  membershipTier MembershipTier @default(BRONZE)
   user        User     @relation(fields: [userId], references: [id])
+  partnerReviews PartnerReview[]
 
   @@map("experience_operators")
 }
@@ -473,6 +513,14 @@ enum TourOperatorStatus {
   suspended
 }
 
+// Operatörlerin üyelik seviyesi. Ana sayfadaki "öne çıkan" turlar/aktiviteler
+// bu seviyeye göre önceliklendirilir (GOLD > SILVER > BRONZE).
+enum MembershipTier {
+  BRONZE
+  SILVER
+  GOLD
+}
+
 enum UserRole {
   USER
   HOTEL_ADMIN
@@ -494,7 +542,9 @@ enum HotelType {
 
 enum BookingStatus {
   PENDING
+  PENDING_PAYMENT
   CONFIRMED
+  SUSPENDED
   CANCELLED
   COMPLETED
 }

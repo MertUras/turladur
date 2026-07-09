@@ -3,12 +3,13 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const tours = await prisma.tour.findMany({
       where: {
-        tourOperatorId: params.id,
+        tourOperatorId: id,
         NOT: {
           id: request.headers.get('x-current-tour-id') || ''
         }
@@ -32,6 +33,7 @@ export async function GET(
             companyName: true,
             logo: true,
             description: true,
+            membershipTier: true,
           },
         },
       },

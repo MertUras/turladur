@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Star, Clock, MapPin, Users, Calendar, ChevronLeft, ChevronRight, X, Heart, Share2, Building2, CheckCircle, XCircle } from 'lucide-react';
 import Marquee from "react-fast-marquee";
 import BottomBookingBar, { ActivityDate } from '../../../components/BottomBookingBar';
+import MembershipBadge from '../../../components/partner-dashboard/MembershipBadge';
 
 interface Activity {
     id: string;
@@ -146,6 +147,12 @@ export default function ActivityDetail() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                 </div>
+                {/* Partner üyelik arması (müşteri değerlendirmelerinden otomatik hesaplanır) */}
+                {activity.operator?.membershipTier && (
+                    <div className="absolute top-6 right-6 z-10">
+                        <MembershipBadge tier={activity.operator.membershipTier} variant="onImage" className="text-sm px-2.5 py-1" />
+                    </div>
+                )}
                 {/* Badge ve Başlık */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
                     <div className="mb-4 flex flex-col items-center gap-2">
@@ -195,7 +202,7 @@ export default function ActivityDetail() {
                             <span>Aktivite Programı</span>
                         </Link>
                         <Link
-                            href="#"
+                            href="#booking"
                             className="inline-flex items-center justify-center px-7 py-3 bg-white/10 backdrop-blur-lg text-sky-300 hover:bg-sky-400/10 border border-sky-400/40 hover:border-sky-300/60 text-base font-semibold rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/50 focus:ring-sky-400 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out"
                         >
                             <Calendar className="h-5 w-5 mr-2" />
@@ -471,6 +478,9 @@ export default function ActivityDetail() {
                                                         <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
                                                             <span className="text-sm font-medium text-gray-800">{relatedActivity.category}</span>
                                                         </div>
+                                                        <div className="absolute bottom-3 left-3">
+                                                            <MembershipBadge tier={relatedActivity.experienceOperator?.membershipTier} variant="onImage" />
+                                                        </div>
                                                     </div>
                                                     <div className="p-4">
                                                         <h3 className="text-lg font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">{relatedActivity.title}</h3>
@@ -624,7 +634,7 @@ export default function ActivityDetail() {
                                         <div className="flex items-center space-x-3">
                                             <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md">
                                                 <Image
-                                                    src={activity.operator.logo || '/images/tour-operators/default.jpg'}
+                                                    src={activity.operator.logo || 'https://ui-avatars.com/api/?name=Operator&background=0EA5E9&color=fff'}
                                                     alt={activity.operator.companyName || 'Aktivite Sağlayıcısı'}
                                                     width={48}
                                                     height={48}
@@ -632,7 +642,10 @@ export default function ActivityDetail() {
                                                 />
                                             </div>
                                             <div>
-                                                <h4 className="text-lg font-semibold text-gray-900">{activity.operator.companyName}</h4>
+                                                <div className="flex items-center gap-1.5">
+                                                    <h4 className="text-lg font-semibold text-gray-900">{activity.operator.companyName}</h4>
+                                                    <MembershipBadge tier={activity.operator.membershipTier} />
+                                                </div>
                                                 <Link 
                                                     href={`/experience-provider/${activity.operator.id}`} 
                                                     className="text-sm text-blue-600 hover:text-blue-800"

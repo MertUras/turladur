@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, MapPin, Clock, ChevronLeft, ChevronRight, Search, Star, Filter, Calendar, Users, X, Wallet, Timer, ChevronDown, SlidersHorizontal, Trash2, ArrowUpDown, Plus, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import MembershipBadge from "@/app/components/partner-dashboard/MembershipBadge";
 
 interface Experience {
     id: string;
@@ -23,6 +24,12 @@ interface Experience {
     category?: string;
     durationHours?: number;
     experienceType?: string;
+    experienceOperator?: {
+        id: string;
+        companyName: string;
+        logo: string | null;
+        membershipTier?: 'BRONZE' | 'SILVER' | 'GOLD' | null;
+    } | null;
 }
 
 // --- Helper Function for Countdown --- 
@@ -711,6 +718,10 @@ export default function ActivitiesPage() {
                                                   <span className="text-[11px] font-semibold text-white capitalize tracking-wide">{experience.category}</span>
                                               </div>
                                             )}
+                                            {/* Partner üyelik arması (müşteri değerlendirmelerinden otomatik hesaplanır) */}
+                                            <div className={`absolute left-3 ${experience.category ? 'top-12' : 'top-3'}`}>
+                                              <MembershipBadge tier={experience.experienceOperator?.membershipTier} variant="onImage" />
+                                            </div>
                                         </div>
                                         <div className="p-4">
                                             <h3 className="text-base font-semibold text-neutral-900 mb-1.5 line-clamp-2 group-hover:text-sky-700 transition-colors duration-200">{experience.title}</h3>

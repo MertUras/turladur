@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { 
   CalendarDaysIcon, 
@@ -17,6 +17,13 @@ import {
 } from '@heroicons/react/24/outline'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
+import {
+  adultChildToParticipants,
+  childSharesAdultRange,
+  computeTourPricing,
+  findAdultAgeRange,
+  findChildAgeRange,
+} from '@/app/lib/booking-utils'
 
 interface TourDateAgeRange {
   id: string;
@@ -102,7 +109,8 @@ export default function BottomBookingBar({
   
   // Tour specific state
   const [selectedDateAgeRanges, setSelectedDateAgeRanges] = useState<TourDateAgeRange[]>([])
-  const [participants, setParticipants] = useState<{ [key: string]: number }>({})
+  const [adultCount, setAdultCount] = useState(0)
+  const [childCount, setChildCount] = useState(0)
   
   // Activity specific state
   const [activityParticipantCount, setActivityParticipantCount] = useState<number>(1);
@@ -168,6 +176,36 @@ export default function BottomBookingBar({
     return date;
   }, []);
 
+  const tourParticipants = useMemo(
+    () => adultChildToParticipants(adultCount, childCount, selectedDateAgeRanges),
+    [adultCount, childCount, selectedDateAgeRanges]
+  );
+
+  const adultAgeRange = useMemo(
+    () => findAdultAgeRange(selectedDateAgeRanges),
+    [selectedDateAgeRanges]
+  );
+  const childAgeRange = useMemo(
+    () => findChildAgeRange(selectedDateAgeRanges),
+    [selectedDateAgeRanges]
+  );
+  const childSharesAdultRangeFlag = childSharesAdultRange(selectedDateAgeRanges);
+
+  const lastNotifiedParticipantsRef = useRef<string>('');
+
+  useEffect(() => {
+    if (entityType !== 'tour' || selectedDateAgeRanges.length === 0) return;
+    if (adultCount === 0 && childCount === 0) {
+      setAdultCount(1);
+      return;
+    }
+
+    const serialized = JSON.stringify(tourParticipants);
+    if (serialized === lastNotifiedParticipantsRef.current) return;
+    lastNotifiedParticipantsRef.current = serialized;
+    onParticipantsChange?.(tourParticipants);
+  }, [entityType, selectedDateAgeRanges, adultCount, childCount, tourParticipants, onParticipantsChange]);
+
   const availableDates = useMemo(() => {
     return (dates || [])
       .filter(date => new Date(date.startDate) >= today)
@@ -193,7 +231,7 @@ export default function BottomBookingBar({
       case 'percentage':
         return basePrice * (1 - (range.value / 100));
       case 'fixed':
-        return basePrice;
+        return range.value;
       default:
         return basePrice;
     }
@@ -252,19 +290,29 @@ export default function BottomBookingBar({
       setActivityParticipantCount(1);
       onParticipantsChange?.({ total: 1 });
     } else {
-      setParticipants({});
-      onParticipantsChange?.({});
+      setAdultCount(1);
+      setChildCount(0);
     }
   };
-  const handleTourParticipantChange = (ageRangeId: string, delta: number) => {
+
+  const handleAdultChange = (delta: number) => {
     if (!currentSelectedDate) return;
-    const newCount = (participants[ageRangeId] || 0) + delta;
-    const newParticipants = { ...participants, [ageRangeId]: Math.max(0, newCount) };
-    const total = Object.values(newParticipants).reduce((sum, count) => sum + count, 0);
-    if (total <= currentSelectedDate.availableSeats) {
-      setParticipants(newParticipants);
-      onParticipantsChange?.(newParticipants);
-    }
+    const newCount = adultCount + delta;
+    if (newCount < 0) return;
+    const newTotal = newCount + childCount;
+    if (newTotal < 1) return;
+    if (newTotal > currentSelectedDate.availableSeats) return;
+    setAdultCount(newCount);
+  };
+
+  const handleChildChange = (delta: number) => {
+    if (!currentSelectedDate || !childAgeRange) return;
+    const newCount = childCount + delta;
+    if (newCount < 0) return;
+    const newTotal = adultCount + newCount;
+    if (newTotal < 1) return;
+    if (newTotal > currentSelectedDate.availableSeats) return;
+    setChildCount(newCount);
   };
   const handleActivityParticipantChange = (delta: number) => {
     const newCount = activityParticipantCount + delta;
@@ -274,20 +322,46 @@ export default function BottomBookingBar({
     onParticipantsChange?.({ total: newCount });
   };
 
+  const totalParticipants = useMemo(() => {
+    if (entityType === 'activity') return activityParticipantCount;
+    return adultCount + childCount;
+  }, [entityType, activityParticipantCount, adultCount, childCount]);
+
+  const checkoutUrl = useMemo(() => {
+    if (!currentSelectedDate || !data || totalParticipants <= 0) return null;
+    const params = new URLSearchParams({
+      type: entityType,
+      itemId: data.id,
+      dateId: currentSelectedDate.id,
+      participants:
+        entityType === 'activity'
+          ? JSON.stringify({ total: activityParticipantCount })
+          : JSON.stringify(tourParticipants),
+    });
+    return `/checkout?${params.toString()}`;
+  }, [currentSelectedDate, data, entityType, activityParticipantCount, tourParticipants, totalParticipants]);
+
+  const canCheckout = Boolean(checkoutUrl);
+
   const totalPrice = useMemo(() => {
     if (!currentSelectedDate) return 0;
     if (entityType === 'activity') {
       return activityParticipantCount * currentSelectedDate.price;
     }
-    // Tour price calculation...
-    const { hasEarlyBirdDiscount, hasLastMinuteDiscount } = checkDiscounts(currentSelectedDate);
-    let basePrice = currentSelectedDate.price;
-    // ... apply discounts ...
-    return Object.entries(participants).reduce((total, [rangeId, count]) => {
-      const range = selectedDateAgeRanges.find(r => r.id === rangeId);
-      return total + (range ? calculatePriceForRange(basePrice, range) * count : 0);
-    }, 0);
-  }, [currentSelectedDate, entityType, activityParticipantCount, participants, selectedDateAgeRanges]);
+    return computeTourPricing(
+      currentSelectedDate.price,
+      selectedDateAgeRanges,
+      adultCount,
+      childCount
+    ).total;
+  }, [
+    currentSelectedDate,
+    entityType,
+    activityParticipantCount,
+    selectedDateAgeRanges,
+    adultCount,
+    childCount,
+  ]);
   
   const renderDatePickerColumn = () => (
     <div className="bg-white rounded-xl p-4 border border-neutral-200/70 flex flex-col h-full">
@@ -343,6 +417,42 @@ export default function BottomBookingBar({
     </div>
   );
   
+  const renderParticipantCounter = (
+    label: string,
+    count: number,
+    onDecrease: () => void,
+    onIncrease: () => void,
+    decreaseDisabled: boolean,
+    increaseDisabled: boolean,
+    hint?: string
+  ) => (
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-neutral-700">{label}</span>
+        {hint && <span className="text-xs text-neutral-500">{hint}</span>}
+      </div>
+      <div className="flex items-center justify-center gap-4">
+        <button
+          type="button"
+          onClick={onDecrease}
+          disabled={decreaseDisabled}
+          className="w-12 h-12 flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-white border border-neutral-300 rounded-full hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span className="text-2xl">-</span>
+        </button>
+        <span className="text-3xl font-bold w-16 text-center text-gray-900">{count}</span>
+        <button
+          type="button"
+          onClick={onIncrease}
+          disabled={increaseDisabled}
+          className="w-12 h-12 flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-white border border-neutral-300 rounded-full hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <span className="text-2xl">+</span>
+        </button>
+      </div>
+    </div>
+  );
+
   const renderTourParticipantPicker = () => {
     if (isLoading) {
       return (
@@ -376,14 +486,38 @@ export default function BottomBookingBar({
       <div className="bg-white rounded-xl p-4 border border-neutral-200/70 flex flex-col h-full">
         <h3 className="text-base font-semibold text-neutral-800 mb-3 flex items-center flex-shrink-0">
           <UserIcon className="w-5 h-5 mr-2 text-emerald-600" />
-          Kişi Sayısı
+          Katılımcılar
         </h3>
-        <div className="flex-grow flex flex-col justify-center items-center">
-              <div className="flex items-center gap-4">
-                <button onClick={() => handleTourParticipantChange(selectedDateAgeRanges[0].id, -1)} disabled={(participants[selectedDateAgeRanges[0].id] || 0) <= 0} className="w-12 h-12 flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-white border border-neutral-300 rounded-full hover:bg-neutral-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><span className="text-2xl">-</span></button>
-                <span className="text-3xl font-bold w-16 text-center text-gray-900">{participants[selectedDateAgeRanges[0].id] || 0}</span>
-                <button onClick={() => handleTourParticipantChange(selectedDateAgeRanges[0].id, 1)} disabled={!currentSelectedDate || (Object.values(participants).reduce((a, b) => a + b, 0)) >= currentSelectedDate.availableSeats} className="w-12 h-12 flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-white border border-neutral-300 rounded-full hover:bg-neutral-50 transition-colors disabled:opacity-50"><span className="text-2xl">+</span></button>
-              </div>
+        <div className="flex-grow flex flex-col justify-center gap-6">
+          {renderParticipantCounter(
+            'Yetişkin',
+            adultCount,
+            () => handleAdultChange(-1),
+            () => handleAdultChange(1),
+            adultCount <= 0 || (adultCount <= 1 && childCount === 0),
+            !currentSelectedDate || totalParticipants >= currentSelectedDate.availableSeats,
+            adultAgeRange
+              ? childSharesAdultRangeFlag
+                ? '18+ yaş'
+                : adultAgeRange.maxAge
+                  ? `${adultAgeRange.minAge}-${adultAgeRange.maxAge} yaş`
+                  : `${adultAgeRange.minAge}+ yaş`
+              : undefined
+          )}
+          {childAgeRange &&
+            renderParticipantCounter(
+              'Çocuk',
+              childCount,
+              () => handleChildChange(-1),
+              () => handleChildChange(1),
+              childCount <= 0 || (childCount <= 1 && adultCount === 0),
+              !currentSelectedDate || totalParticipants >= currentSelectedDate.availableSeats,
+              childSharesAdultRangeFlag
+                ? '18 yaş altı'
+                : childAgeRange.maxAge
+                  ? `${childAgeRange.minAge}-${childAgeRange.maxAge} yaş`
+                  : `${childAgeRange.minAge}+ yaş`
+            )}
         </div>
       </div>
     );
@@ -439,9 +573,19 @@ export default function BottomBookingBar({
              </div>
              <div className="flex gap-3 items-center flex-shrink-0">
                 <p className="text-sm text-neutral-600 font-medium hidden md:block">{currentSelectedDate ? format(new Date(currentSelectedDate.startDate), 'd MMMM yyyy') : 'Tarih seçilmedi'}</p>
-                <Link href="/checkout" className={`inline-flex items-center justify-center px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm ${!currentSelectedDate ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                  <span>Rezervasyon Yap</span>
-                </Link>
+                {canCheckout && checkoutUrl ? (
+                  <Link
+                    href={checkoutUrl}
+                    className="inline-flex items-center justify-center px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm"
+                  >
+                    <span>Rezervasyon Yap</span>
+                    <ArrowRightIcon className="w-4 h-4 ml-2" />
+                  </Link>
+                ) : (
+                  <span className="inline-flex items-center justify-center px-6 py-2.5 bg-sky-600/50 text-white text-sm font-semibold rounded-lg cursor-not-allowed">
+                    <span>Rezervasyon Yap</span>
+                  </span>
+                )}
              </div>
           </div>
         </div>

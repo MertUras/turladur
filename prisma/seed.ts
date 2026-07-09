@@ -413,6 +413,16 @@ async function main() {
         email: 'test.operator@tourtech.com',
         password: await bcrypt.hash('test123', 10),
         role: UserRole.TOUR_OPERATOR
+      },
+      {
+        email: 'test.silver.operator@tourtech.com',
+        password: await bcrypt.hash('test123', 10),
+        role: UserRole.TOUR_OPERATOR
+      },
+      {
+        email: 'test.bronze.operator@tourtech.com',
+        password: await bcrypt.hash('test123', 10),
+        role: UserRole.TOUR_OPERATOR
       }
     ];
 
@@ -433,7 +443,8 @@ async function main() {
         phone: '+90 555 123 4567',
         website: 'www.adventureactivities.com',
         address: 'Fethiye, Muğla',
-        logo: '/images/activity-providers/adventure.jpg',
+        logo: 'https://ui-avatars.com/api/?name=Adventure+Activities&background=0EA5E9&color=fff',
+        status: 'approved',
         userId: (await prisma.user.findUnique({ where: { email: 'test.activity@tourtech.com' } }))!.id
       }
     });
@@ -444,8 +455,14 @@ async function main() {
         title: 'Yamaç Paraşütü',
         description: 'Babadağ\'dan profesyonel eğitmenler eşliğinde yamaç paraşütü deneyimi',
         longDescription: 'Türkiye\'nin en ünlü yamaç paraşütü merkezi Babadağ\'da, deneyimli eğitmenler eşliğinde unutulmaz bir deneyim yaşayın.',
-        imageUrl: '/images/activities/paragliding1.jpg',
-        gallery: ['/images/activities/paragliding1.jpg', '/images/activities/paragliding2.jpg'],
+        // Not: Public klasöründe karşılığı olmayan yerel dosya yolları (örn.
+        // /images/activities/paragliding1.jpg) kırık görsellere yol açar; bu
+        // yüzden burada her zaman erişilebilir olan Unsplash URL'leri kullanılır.
+        imageUrl: 'https://images.unsplash.com/photo-1521673461164-de300ebcfb17?auto=format&fit=crop&w=1200&q=80',
+        gallery: [
+          'https://images.unsplash.com/photo-1521673461164-de300ebcfb17?auto=format&fit=crop&w=1200&q=80',
+          'https://images.unsplash.com/photo-1445307806294-bff7f67ff225?auto=format&fit=crop&w=1200&q=80',
+        ],
         location: 'Fethiye, Muğla',
         duration: '4 saat',
         price: 2500,
@@ -468,8 +485,11 @@ async function main() {
         title: 'Dalış Deneyimi',
         description: 'PADI sertifikalı eğitmenler eşliğinde keşif dalışı',
         longDescription: 'Akdeniz\'in berrak sularında, PADI sertifikalı eğitmenler eşliğinde güvenli ve unutulmaz bir dalış deneyimi.',
-        imageUrl: '/images/activities/diving1.jpg',
-        gallery: ['/images/activities/diving1.jpg', '/images/activities/diving2.jpg'],
+        imageUrl: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
+        gallery: [
+          'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
+          'https://images.unsplash.com/photo-1583212292454-1fe6229603b7?auto=format&fit=crop&w=1200&q=80',
+        ],
         location: 'Kaş, Antalya',
         duration: '6 saat',
         price: 3000,
@@ -537,19 +557,83 @@ async function main() {
       }
     }
 
-    // Örnek tur operatörü oluştur
-    const tourOperator = await prisma.tourOperator.create({
-      data: {
+    const tourOperatorProfiles = [
+      {
+        email: 'test.operator@tourtech.com',
         companyName: 'Turladur Turizm',
         description: 'Türkiye\'nin önde gelen tur operatörlerinden biri.',
-        email: 'test.operator@tourtech.com',
-        phone: '+90 555 123 4567',
-        address: 'İstanbul, Türkiye',
+        phone: '+90 212 555 0101',
+        address: 'Levent Mah. Büyükdere Cad. No: 185, Şişli',
+        city: 'İstanbul',
+        country: 'Türkiye',
+        website: 'https://www.turladur.com',
         logo: 'https://picsum.photos/200',
-        status: 'approved',
-        userId: (await prisma.user.findUnique({ where: { email: 'test.operator@tourtech.com' } }))!.id
-      }
-    });
+      },
+      {
+        email: 'test.silver.operator@tourtech.com',
+        companyName: 'Silver Turizm (Test)',
+        description: 'Orta segment kültür ve şehir turları sunan test operatörü.',
+        phone: '+90 312 555 0202',
+        address: 'Kızılırmak Mah. Ufuk Üniversitesi Cad. No: 12, Çankaya',
+        city: 'Ankara',
+        country: 'Türkiye',
+        website: 'https://www.silverturizm.com',
+        logo: 'https://picsum.photos/201',
+      },
+      {
+        email: 'test.bronze.operator@tourtech.com',
+        companyName: 'Bronze Turizm (Test)',
+        description: 'Ekonomik paket turlar sunan test operatörü.',
+        phone: '+90 232 555 0303',
+        address: 'Alsancak Mah. Kordon Boyu No: 45, Konak',
+        city: 'İzmir',
+        country: 'Türkiye',
+        website: 'https://www.bronzeturizm.com',
+        logo: 'https://picsum.photos/202',
+      },
+    ] as const;
+
+    const tourOperatorByEmail: Record<string, { id: string }> = {};
+
+    for (const profile of tourOperatorProfiles) {
+      const user = await prisma.user.findUnique({ where: { email: profile.email } });
+      if (!user) continue;
+
+      const operator = await prisma.tourOperator.upsert({
+        where: { email: profile.email },
+        update: {
+          companyName: profile.companyName,
+          description: profile.description,
+          phone: profile.phone,
+          address: profile.address,
+          city: profile.city,
+          country: profile.country,
+          website: profile.website,
+          logo: profile.logo,
+          status: 'approved',
+        },
+        create: {
+          companyName: profile.companyName,
+          description: profile.description,
+          email: profile.email,
+          phone: profile.phone,
+          address: profile.address,
+          city: profile.city,
+          country: profile.country,
+          website: profile.website,
+          logo: profile.logo,
+          status: 'approved',
+          userId: user.id,
+        },
+      });
+
+      tourOperatorByEmail[profile.email] = operator;
+    }
+
+    const tourOperator = tourOperatorByEmail['test.operator@tourtech.com'];
+    if (!tourOperator) {
+      throw new Error('test.operator@tourtech.com için TourOperator oluşturulamadı.');
+    }
 
     // Her tur için
     for (const tourData of tours) {

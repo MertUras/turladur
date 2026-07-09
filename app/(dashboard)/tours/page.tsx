@@ -9,6 +9,7 @@ import { parseJsonString } from "@/app/utils/format";
 import { format, differenceInDays } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { type Tour } from "@/app/types";
+import MembershipBadge from "@/app/components/partner-dashboard/MembershipBadge";
 import { 
   MapPin, 
   Calendar, 
@@ -139,7 +140,8 @@ export default function ToursPage() {
           tourOperator: {
             id: tour.tourOperator?.id || '',
             companyName: tour.tourOperator?.companyName || tour.tourOperator?.name || '',
-            logo: tour.tourOperator?.logo || null
+            logo: tour.tourOperator?.logo || null,
+            membershipTier: tour.tourOperator?.membershipTier || null
           }
         }));
         
@@ -602,7 +604,7 @@ export default function ToursPage() {
           {/* Görsel Alanı */}
           <div className="relative h-48 overflow-hidden">
               <Image
-              src={tourImages[0] || '/images/tours/default.jpg'}
+              src={tourImages[0] || 'https://placehold.co/800x600/e5e7eb/6b7280?text=Tur'}
                 alt={tour.name || 'Tur görseli'}
                 fill
               className={`object-cover transition-transform duration-500 ${
@@ -620,6 +622,11 @@ export default function ToursPage() {
                 <span>{badge.text}</span>
                 </div>
               )}
+
+            {/* Partner üyelik arması (müşteri değerlendirmelerinden otomatik hesaplanır) */}
+            <div className={`absolute left-3 ${badge ? 'top-11' : 'top-3'}`}>
+              <MembershipBadge tier={tour.tourOperator?.membershipTier} variant="onImage" />
+            </div>
 
             {/* Favori Butonu */}
             <button
@@ -654,7 +661,7 @@ export default function ToursPage() {
               <div className="relative group/operator">
                 <div className="w-6 h-6 rounded-full overflow-hidden border border-white">
                     <Image
-                    src={tour.tourOperator?.logo || '/images/tour-operators/default.jpg'}
+                    src={tour.tourOperator?.logo || 'https://ui-avatars.com/api/?name=Tur&background=0EA5E9&color=fff'}
                     alt={tour.tourOperator?.companyName || 'Tur Operatörü'}
                     width={24}
                     height={24}

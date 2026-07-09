@@ -14,8 +14,34 @@ export async function GET(request: Request) {
     const experiences = await prisma.experience.findMany({
         where,
         take: limit,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
+        include: {
+            user: {
+                select: {
+                    experienceOperators: {
+                        select: {
+                            id: true,
+                            companyName: true,
+                            logo: true,
+                            rating: true,
+                            reviewCount: true,
+                            membershipTier: true,
+                        },
+                    },
+                },
+            },
+        },
     });
 
-    return NextResponse.json(experiences);
-} 
+    // Partnerin (aktivite sağlayıcısının) müşteri değerlendirmelerinden
+    // otomatik hesaplanan güncel üyelik seviyesini karta taşıyoruz.
+    const withOperator = experiences.map((exp) => {
+        const { user, ...rest } = exp as typeof exp & { user?: { experienceOperators: any[] } };
+        return {
+            ...rest,
+            experienceOperator: user?.experienceOperators?.[0] ?? null,
+        };
+    });
+
+    return NextResponse.json(withOperator);
+}

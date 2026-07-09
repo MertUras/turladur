@@ -670,7 +670,21 @@ export async function GET(request: Request, { params }: { params: { id: string }
                     },
                 },
                 reviews: true,
-                user: true, 
+                user: {
+                    select: {
+                        experienceOperators: {
+                            select: {
+                                id: true,
+                                companyName: true,
+                                logo: true,
+                                description: true,
+                                rating: true,
+                                reviewCount: true,
+                                membershipTier: true,
+                            },
+                        },
+                    },
+                },
             },
         });
 
@@ -710,7 +724,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
             activityDates: experience.activityDates,
             meetingPoint: experience.meetingPoint,
             meetingPointAddress: experience.meetingPointAddress,
-            operator: experience.user,
+            // `experience.user` bir User kaydıdır; gerçek partner bilgileri
+            // (şirket adı, logo, üyelik seviyesi) ExperienceOperator'da yer alır.
+            operator: experience.user?.experienceOperators?.[0] || null,
             ageRestriction: experience.ageRestriction || 'everyone'
         };
 

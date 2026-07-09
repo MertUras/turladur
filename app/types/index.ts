@@ -149,6 +149,7 @@ export interface Tour {
     id: string;
     companyName: string;
     logo: string;
+    membershipTier?: 'BRONZE' | 'SILVER' | 'GOLD' | null;
   };
 }
 

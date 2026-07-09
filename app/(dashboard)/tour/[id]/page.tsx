@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { dummyTours, dummyTourOperators } from "@/app/lib/dummy-data";
 import { parseJsonString } from "@/app/utils/format";
 import BottomBookingBar from "@/app/components/BottomBookingBar";
+import MembershipBadge from "@/app/components/partner-dashboard/MembershipBadge";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from 'next/navigation';
 
@@ -46,6 +47,9 @@ interface TourOperator {
   companyName: string;
   logo: string | null;
   description: string | null;
+  rating?: number | null;
+  reviewCount?: number;
+  membershipTier?: 'BRONZE' | 'SILVER' | 'GOLD' | null;
 }
 
 interface Destination {
@@ -365,6 +369,13 @@ export default function TourPage() {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
         </div>
+
+        {/* Partner üyelik arması (müşteri değerlendirmelerinden otomatik hesaplanır) */}
+        {tour.tourOperator?.membershipTier && (
+          <div className="absolute top-6 right-6 z-10">
+            <MembershipBadge tier={tour.tourOperator.membershipTier} variant="onImage" className="text-sm px-2.5 py-1" />
+          </div>
+        )}
         
         {/* Feature Bar - Refined Style (SKY Theme) */}
         <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-md py-4 border-t border-white/10">
@@ -1086,15 +1097,16 @@ export default function TourPage() {
                       <ChatBubbleLeftRightIcon className="h-6 w-6 mr-2.5 text-sky-600 flex-shrink-0" />
                       <span>Tur Operatörü</span>
                     </h2>
-                    {/* Simplified Rating Display */}
-                    <div className="flex items-center text-xs text-neutral-500 flex-wrap">
-                      <div className="flex items-center text-yellow-400 mr-1.5">
-                        {renderStars(4.8)} {/* Assuming renderStars exists and works */} 
+                    {(tourOperator.reviewCount ?? 0) > 0 && (
+                      <div className="flex items-center text-xs text-neutral-500 flex-wrap">
+                        <div className="flex items-center text-yellow-400 mr-1.5">
+                          {renderStars(tourOperator.rating ?? 0)}
+                        </div>
+                        <span className="font-medium">({(tourOperator.rating ?? 0).toFixed(1)}/5)</span>
+                        <span className="mx-1">•</span>
+                        <span>{tourOperator.reviewCount} değerlendirme</span>
                       </div>
-                      <span className="font-medium">(4.8/5)</span>
-                      <span className="mx-1">•</span>
-                      <span>24 değerlendirme</span>
-                    </div>
+                    )}
                   </div>
 
                   {/* Simplified Operator Info Area */}
@@ -1102,7 +1114,7 @@ export default function TourPage() {
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md">
                           <Image
-                          src={tourOperator.logo || '/images/tour-operators/default.jpg'}
+                          src={tourOperator.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(tourOperator.companyName || 'Operator')}&background=0EA5E9&color=fff`}
                           alt={tourOperator.companyName || 'Tur Operatörü'}
                           width={48}
                           height={48}
@@ -1110,9 +1122,14 @@ export default function TourPage() {
                           />
                         </div>
                       <div>
-                        <h4 className="text-lg font-semibold text-gray-900">{tourOperator.companyName}</h4>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-lg font-semibold text-gray-900">{tourOperator.companyName}</h4>
+                          {tourOperator.membershipTier && (
+                            <MembershipBadge tier={tourOperator.membershipTier} />
+                          )}
+                        </div>
                         <Link 
-                          href={`/tour-operator/${tourOperator.id}`} 
+                          href={`/tour-operator/${tourOperator.id}#tours`}
                           className="text-sm text-blue-600 hover:text-blue-800"
                         >
                           Tüm turları gör
@@ -1225,6 +1242,9 @@ export default function TourPage() {
                             %{otherTour.discount} İndirim
                                   </div>
                         )}
+                        <div className="absolute bottom-2 left-2">
+                          <MembershipBadge tier={otherTour.tourOperator?.membershipTier} variant="onImage" />
+                        </div>
                                 </div>
 
                       {/* Tur Bilgileri */}
