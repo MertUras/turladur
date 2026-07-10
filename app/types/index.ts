@@ -134,6 +134,7 @@ export interface Tour {
   transportation: string;
   period: string;
   rating: number;
+  reviewCount?: number;
   tourType: string;
   accommodationType: string;
   difficultyLevel: string;
@@ -179,7 +180,13 @@ export interface Activity {
 }
 
 // Rezervasyon tipleri
-export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+export type BookingStatus =
+  | 'PENDING'
+  | 'PENDING_PAYMENT'
+  | 'CONFIRMED'
+  | 'SUSPENDED'
+  | 'CANCELLED'
+  | 'COMPLETED';
 export type PaymentStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'REFUNDED';
 
 export interface Booking {
@@ -201,6 +208,14 @@ export interface Booking {
   tourId?: string;
   experienceId?: string;
   agencyId?: string;
+  /** Tur / deneyim / otel adı */
+  productTitle?: string;
+  /** Tur firması veya deneyim sağlayıcısı */
+  operatorName?: string;
+  fromLocation?: string;
+  toLocation?: string;
+  /** Örn. "İstanbul → Kapadokya" */
+  routeLabel?: string;
 }
 
 // Değerlendirme tipleri

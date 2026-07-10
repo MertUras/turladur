@@ -13,6 +13,7 @@ import {
   Filler,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import { RevenueChartData, RevenueTimeRange } from '@/lib/partner/dashboard';
 
 ChartJS.register(
   CategoryScale,
@@ -27,6 +28,7 @@ ChartJS.register(
 
 const options = {
   responsive: true,
+  maintainAspectRatio: false,
   plugins: {
     legend: {
       display: false,
@@ -56,17 +58,20 @@ const options = {
   },
 };
 
-const labels = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran'];
+interface RevenueChartProps {
+  data: RevenueChartData;
+}
 
-export default function RevenueChart() {
-  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year'>('month');
+export default function RevenueChart({ data }: RevenueChartProps) {
+  const [timeRange, setTimeRange] = useState<RevenueTimeRange>('month');
+  const points = data[timeRange];
 
-  const data = {
-    labels,
+  const chartData = {
+    labels: points.map((p) => p.label),
     datasets: [
       {
         label: 'Gelir',
-        data: [12000, 19000, 15000, 25000, 22000, 30000],
+        data: points.map((p) => p.revenue),
         borderColor: 'rgb(59, 130, 246)',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
         fill: true,
@@ -79,41 +84,30 @@ export default function RevenueChart() {
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-gray-900">Gelir Grafiği</h3>
         <div className="flex space-x-2">
-          <button
-            onClick={() => setTimeRange('week')}
-            className={`px-3 py-1 text-sm rounded-md ${
-              timeRange === 'week'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            Hafta
-          </button>
-          <button
-            onClick={() => setTimeRange('month')}
-            className={`px-3 py-1 text-sm rounded-md ${
-              timeRange === 'month'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            Ay
-          </button>
-          <button
-            onClick={() => setTimeRange('year')}
-            className={`px-3 py-1 text-sm rounded-md ${
-              timeRange === 'year'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            Yıl
-          </button>
+          {(['week', 'month', 'year'] as const).map((range) => (
+            <button
+              key={range}
+              onClick={() => setTimeRange(range)}
+              className={`px-3 py-1 text-sm rounded-md ${
+                timeRange === range
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {range === 'week' ? 'Hafta' : range === 'month' ? 'Ay' : 'Yıl'}
+            </button>
+          ))}
         </div>
       </div>
       <div className="h-[300px]">
-        <Line options={options} data={data} />
+        {points.some((p) => p.revenue > 0) ? (
+          <Line options={options} data={chartData} />
+        ) : (
+          <div className="h-full flex items-center justify-center text-gray-500 text-sm">
+            Seçili dönemde gelir verisi bulunmuyor
+          </div>
+        )}
       </div>
     </div>
   );
-} 
+}

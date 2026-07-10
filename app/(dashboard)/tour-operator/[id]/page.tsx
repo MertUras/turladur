@@ -79,6 +79,8 @@ async function getTourOperatorProfile(id: string) {
         id: true,
         rating: true,
         comment: true,
+        responseText: true,
+        respondedAt: true,
         createdAt: true,
         user: {
           select: {
@@ -89,7 +91,7 @@ async function getTourOperatorProfile(id: string) {
         booking: {
           select: {
             tour: {
-              select: { name: true },
+              select: { id: true, name: true },
             },
           },
         },
@@ -412,6 +414,8 @@ export default async function TourOperatorPage({ params }: TourOperatorPageProps
                   rating: review.rating,
                   comment: review.comment,
                   createdAt: review.createdAt.toISOString(),
+                  responseText: review.responseText,
+                  respondedAt: review.respondedAt?.toISOString() ?? null,
                   user: review.user,
                   booking: review.booking,
                 }))}

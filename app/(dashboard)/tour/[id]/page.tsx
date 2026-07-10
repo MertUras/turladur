@@ -7,6 +7,7 @@ import { dummyTours, dummyTourOperators } from "@/app/lib/dummy-data";
 import { parseJsonString } from "@/app/utils/format";
 import BottomBookingBar from "@/app/components/BottomBookingBar";
 import MembershipBadge from "@/app/components/partner-dashboard/MembershipBadge";
+import OperatorReviewsSection, { OperatorReview } from "@/app/(dashboard)/tour-operator/[id]/components/OperatorReviewsSection";
 import { useEffect, useRef, useState } from "react";
 import { useParams } from 'next/navigation';
 
@@ -50,6 +51,7 @@ interface TourOperator {
   rating?: number | null;
   reviewCount?: number;
   membershipTier?: 'BRONZE' | 'SILVER' | 'GOLD' | null;
+  reviews?: OperatorReview[];
 }
 
 interface Destination {
@@ -246,28 +248,41 @@ export default function TourPage() {
   }, []);
 
   useEffect(() => {
+    const operatorId = tour?.tourOperator?.id;
+    if (!operatorId) {
+      return;
+    }
+
     const fetchTourOperator = async () => {
       try {
-        const response = await fetch(`/api/tour-operators/${tour?.tourOperator.id}`);
+        const response = await fetch(`/api/tour-operators/${operatorId}`);
         if (!response.ok) {
-          throw new Error('Tur operatörü bulunamadı');
+          console.warn('Tur operatörü detayları alınamadı:', response.status);
+          if (tour?.tourOperator) {
+            setTourOperator(tour.tourOperator);
+          }
+          return;
         }
         const data = await response.json();
         setTourOperator(data);
       } catch (err) {
         console.error('Tur operatörü yüklenirken hata:', err);
+        if (tour?.tourOperator) {
+          setTourOperator(tour.tourOperator);
+        }
       }
     };
 
     const fetchOtherTours = async () => {
       try {
-        const response = await fetch(`/api/tour-operators/${tour?.tourOperator.id}/tours`, {
+        const response = await fetch(`/api/tour-operators/${operatorId}/tours`, {
           headers: {
             'x-current-tour-id': tour?.id || ''
           }
         });
         if (!response.ok) {
-          throw new Error('Turlar yüklenemedi');
+          console.warn('Operatör turları yüklenemedi:', response.status);
+          return;
         }
         const data = await response.json();
         setOtherTours(data);
@@ -276,10 +291,8 @@ export default function TourPage() {
       }
     };
 
-    if (tour?.tourOperator?.id) {
-      fetchTourOperator();
-      fetchOtherTours();
-    }
+    fetchTourOperator();
+    fetchOtherTours();
   }, [tour?.tourOperator?.id, tour?.id]);
 
   const handleDateSelect = (date: TourDate | null) => {
@@ -310,6 +323,15 @@ export default function TourPage() {
     if (typeof d === 'string') return d;
     return d.city;
   };
+
+  const tourReviews: OperatorReview[] = (tourOperator?.reviews || []).filter(
+    (review) => review.booking.tour?.id === tour.id
+  );
+  const tourReviewCount = tourReviews.length;
+  const tourAverageRating =
+    tourReviewCount > 0
+      ? tourReviews.reduce((sum, review) => sum + review.rating, 0) / tourReviewCount
+      : 0;
 
   const destinations = Array.isArray(tour.destinations) 
     ? tour.destinations.map(getDestinationName)
@@ -982,6 +1004,16 @@ export default function TourPage() {
                   )}
                 </div>
               </div>
+
+              {tourReviewCount > 0 && (
+                <OperatorReviewsSection
+                  reviews={tourReviews}
+                  rating={tourAverageRating}
+                  reviewCount={tourReviewCount}
+                  variant="main"
+                  operatorName={tourOperator?.companyName}
+                />
+              )}
             </div>
 
             {/* Sağ Kolon - Rezervasyon ve Bilgiler */}

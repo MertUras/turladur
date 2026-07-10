@@ -1,4 +1,3 @@
-import AuthProvider from "@/components/providers/AuthProvider";
 import Header from "@/app/components/Header";
 
 export default function AuthLayout({
@@ -7,11 +6,9 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthProvider>
-      <div className="h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 overflow-hidden">{children}</main>
-      </div>
-    </AuthProvider>
+    <div className="h-screen flex flex-col">
+      <Header />
+      <main className="flex-1 overflow-hidden">{children}</main>
+    </div>
   );
 } 

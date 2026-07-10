@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Prisma } from '@prisma/client';
+import { getTourRatingProvider } from '@/lib/reviews/server';
 
 interface PickupPoint {
   id?: string;
@@ -100,8 +101,20 @@ export async function GET(request: Request) {
       prisma.tour.count({ where }),
     ]);
 
+    const tourIds = tours.map((tour) => tour.id);
+    const ratingMap = await getTourRatingProvider().getTourRatingsForTourIds(tourIds);
+
+    const toursWithRatings = tours.map((tour) => {
+      const summary = ratingMap.get(tour.id);
+      return {
+        ...tour,
+        rating: summary?.averageRating ?? 0,
+        reviewCount: summary?.reviewCount ?? 0,
+      };
+    });
+
     return NextResponse.json({
-      tours,
+      tours: toursWithRatings,
       total,
       page,
       totalPages: Math.ceil(total / limit),

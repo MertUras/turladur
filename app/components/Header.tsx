@@ -152,15 +152,6 @@ export default function Header() {
   const authChevronColor = shouldAppearScrolled ? "text-neutral-500" : "text-neutral-300";
   const pulseBg = shouldAppearScrolled ? 'bg-neutral-200' : 'bg-white/20';
 
-  useEffect(() => {
-    if (status === 'authenticated') {
-      if (session?.user?.provider === 'partner-credentials') {
-        signOut({ redirect: false });
-        return;
-      }
-    }
-  }, [status, session]);
-
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${headerBg} ${headerPadding}`}

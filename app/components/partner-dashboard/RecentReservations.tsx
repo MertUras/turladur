@@ -11,18 +11,20 @@ interface Reservation {
   date: string;
   time: string;
   amount: string;
-  status: 'Onaylandı' | 'Beklemede' | 'İptal Edildi' | 'Tamamlandı';
+  status: 'Onaylandı' | 'Beklemede' | 'İptal Edildi' | 'Tamamlandı' | 'Ödeme Bekliyor' | 'Askıya Alındı';
 }
 
 interface RecentReservationsProps {
   reservations: Reservation[];
 }
 
-const statusColors = {
+const statusColors: Record<Reservation['status'], string> = {
   Onaylandı: 'bg-green-100 text-green-700',
   Beklemede: 'bg-amber-100 text-amber-700',
   'İptal Edildi': 'bg-red-100 text-red-700',
   Tamamlandı: 'bg-blue-100 text-blue-700',
+  'Ödeme Bekliyor': 'bg-yellow-100 text-yellow-800',
+  'Askıya Alındı': 'bg-orange-100 text-orange-800',
 };
 
 export default function RecentReservations({ reservations }: RecentReservationsProps) {
@@ -40,7 +42,10 @@ export default function RecentReservations({ reservations }: RecentReservationsP
         </div>
       </div>
       <div className="divide-y divide-gray-200">
-        {reservations.map((reservation) => (
+        {reservations.length === 0 ? (
+          <div className="p-6 text-sm text-gray-500">Henüz rezervasyon bulunmuyor.</div>
+        ) : (
+          reservations.map((reservation) => (
           <div key={reservation.id} className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -72,7 +77,8 @@ export default function RecentReservations({ reservations }: RecentReservationsP
               <div className="font-medium text-gray-900">{reservation.amount}</div>
             </div>
           </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { OperatorRatingSummary } from '@/lib/reviews';
+import { getRatingScoringProvider } from '@/lib/reviews/server';
+import { fetchPartnerReviewsForOperator } from '@/lib/reviews/partner-review-queries';
 
 export async function GET(
   request: Request,
@@ -39,6 +42,26 @@ export async function GET(
       return new NextResponse('Tur operatörü bulunamadı', { status: 404 });
     }
 
+    const scoringProvider = getRatingScoringProvider();
+    let ratingSummary: OperatorRatingSummary;
+    try {
+      ratingSummary = await scoringProvider.getOperatorRatingSummary(id, 'tour');
+    } catch (scoringError) {
+      console.error('[TOUR_OPERATOR_GET] rating summary failed, using cached values', scoringError);
+      ratingSummary = {
+        overallRating: tourOperator.rating ?? 0,
+        reviewCount: tourOperator.reviewCount ?? 0,
+        categoryAverages: {
+          guideRating: null,
+          operatorRating: null,
+          routeRating: null,
+          foodRating: null,
+          hotelRating: null,
+          transportRating: null,
+        },
+      };
+    }
+
     const [tours, reviews] = await Promise.all([
       prisma.tour.findMany({
         where: { tourOperatorId: id },
@@ -67,36 +90,14 @@ export async function GET(
         },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.partnerReview.findMany({
-        where: { tourOperatorId: id },
-        select: {
-          id: true,
-          rating: true,
-          comment: true,
-          createdAt: true,
-          user: {
-            select: {
-              name: true,
-              image: true,
-            },
-          },
-          booking: {
-            select: {
-              tour: {
-                select: {
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 20,
-      }),
+      fetchPartnerReviewsForOperator(id),
     ]);
 
     return NextResponse.json({
       ...tourOperator,
+      rating: ratingSummary.overallRating,
+      reviewCount: ratingSummary.reviewCount,
+      categoryAverages: ratingSummary.categoryAverages,
       tours,
       reviews,
     });

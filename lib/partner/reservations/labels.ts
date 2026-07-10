@@ -7,13 +7,7 @@ export function formatPaymentLabel(
   const method = paymentMethod?.toLowerCase();
 
   if (method === 'bank_transfer' || method === 'havale') {
-    if (paymentStatus === 'paid') {
-      return 'Havale / EFT — Ödeme Onaylandı';
-    }
-    if (paymentStatus === 'refunded') {
-      return 'Havale / EFT — İade Edildi';
-    }
-    return 'Havale / EFT — Onay Bekliyor';
+    return 'Havale / EFT';
   }
 
   if (method === 'card') {

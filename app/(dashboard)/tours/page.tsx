@@ -4,18 +4,17 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { dummyTours, dummyTourOperators } from "@/app/lib/dummy-data";
 import { parseJsonString } from "@/app/utils/format";
 import { format, differenceInDays } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { type Tour } from "@/app/types";
 import MembershipBadge from "@/app/components/partner-dashboard/MembershipBadge";
+import StarRating from "@/app/components/StarRating";
 import { 
   MapPin, 
   Calendar, 
   Clock, 
   Users, 
-  Star, 
   Search, 
   Filter,
   ChevronDown,
@@ -70,6 +69,18 @@ const formatPrice = (price: number) => {
     maximumFractionDigits: 0
   }).replace(/,/g, '.');
 };
+
+const mapTourFromApi = (tour: any): Tour => ({
+  ...tour,
+  rating: tour.rating ?? 0,
+  reviewCount: tour.reviewCount ?? 0,
+  tourOperator: {
+    id: tour.tourOperator?.id || '',
+    companyName: tour.tourOperator?.companyName || tour.tourOperator?.name || '',
+    logo: tour.tourOperator?.logo || null,
+    membershipTier: tour.tourOperator?.membershipTier || null,
+  },
+});
 
 export default function ToursPage() {
   const searchParams = useSearchParams();
@@ -134,17 +145,7 @@ export default function ToursPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // API'den gelen verileri types/index.ts'deki Tour interface'ine uygun hale getir
-        const mappedTours: Tour[] = data.tours.map((tour: any) => ({
-          ...tour,
-          tourOperator: {
-            id: tour.tourOperator?.id || '',
-            companyName: tour.tourOperator?.companyName || tour.tourOperator?.name || '',
-            logo: tour.tourOperator?.logo || null,
-            membershipTier: tour.tourOperator?.membershipTier || null
-          }
-        }));
-        
+        const mappedTours: Tour[] = data.tours.map(mapTourFromApi);
         setFilteredTours(mappedTours);
         setTotalTours(data.total);
       } else {
@@ -292,8 +293,8 @@ export default function ToursPage() {
         break;
       default: // popular
         sorted.sort((a, b) => {
-          const scoreA = (b.rating || 0) * 0.7 + (b.reviews || 0) * 0.3;
-          const scoreB = (a.rating || 0) * 0.7 + (a.reviews || 0) * 0.3;
+          const scoreA = (b.rating || 0) * 0.7 + (b.reviewCount || 0) * 0.3;
+          const scoreB = (a.rating || 0) * 0.7 + (a.reviewCount || 0) * 0.3;
           return scoreA - scoreB;
         });
         break;
@@ -338,7 +339,7 @@ export default function ToursPage() {
         const data = await response.json();
 
         if (response.ok) {
-          setFilteredTours(data.tours);
+          setFilteredTours(data.tours.map(mapTourFromApi));
           setTotalTours(data.total);
           setCurrentPage(1);
         } else {
@@ -413,26 +414,6 @@ export default function ToursPage() {
     setCurrentPage(1);
   };
 
-  // Arama işlevi
-  const handleSearch = useCallback(() => {
-    let filtered = [...dummyTours];
-    
-    if (searchTerm) {
-      filtered = filtered.filter(tour => 
-        tour.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tour.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tour.destinations?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    setFilteredTours(filtered);
-    setCurrentPage(1);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    handleSearch();
-  }, [handleSearch]);
-
   // Modern Tur Kartı Bileşeni
   const ModernTourCard = ({ tour }: { tour: Tour }) => {
     const [isFavorite, setIsFavorite] = useState(false);
@@ -495,8 +476,9 @@ export default function ToursPage() {
     const inclusions = parseJsonString<string[]>(tour.inclusions || '[]', []);
     const features = parseJsonString<string[]>((tour as any).features || '[]', []);
 
-    const tourOperator = dummyTourOperators.find(op => op.id === tour.tourOperator.id);
     const remainingSpots = (tour.maxParticipants || 0) - 0; // currentParticipants yok
+    const reviewCount = tour.reviewCount ?? 0;
+    const averageRating = tour.rating ?? 0;
     
     // Fiyat hesaplama
     const price = tour.price;
@@ -697,21 +679,16 @@ export default function ToursPage() {
               
             {/* Puanlama */}
             <div className="flex items-center gap-2 mb-3 min-h-[1.5rem]">
-              <div className="flex items-center gap-0.5">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`w-3 h-3 ${
-                      i < Math.floor(tour.rating || 0)
-                        ? 'text-yellow-400 fill-yellow-400'
-                        : 'text-gray-300'
-                    }`}
-                  />
-                ))}
-                </div>
-              <span className="text-xs text-gray-500 whitespace-nowrap">
-                {tour.rating || 0} ({Math.floor(Math.random() * 100) + 20})
-              </span>
+              {reviewCount > 0 ? (
+                <>
+                  <StarRating rating={averageRating} size="sm" />
+                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                    {averageRating.toFixed(1)} ({reviewCount})
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs text-gray-400">Henüz değerlendirme yok</span>
+              )}
               
               {/* Kalan Yer */}
               {remainingSpots <= 10 && remainingSpots > 0 && (

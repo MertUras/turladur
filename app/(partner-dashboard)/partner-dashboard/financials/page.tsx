@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, Fragment } from 'react';
-import { 
-  CurrencyDollarIcon, 
-  ArrowDownIcon, 
-  ArrowUpIcon, 
-  DocumentTextIcon, 
-  ArrowPathIcon, 
+import { useState, useEffect, Fragment } from 'react';
+import {
+  CurrencyDollarIcon,
+  ArrowUpIcon,
+  ArrowDownIcon,
+  DocumentTextIcon,
+  ArrowPathIcon,
   ChevronDownIcon,
   ArrowDownTrayIcon,
   FunnelIcon,
@@ -14,30 +14,40 @@ import {
 } from '@heroicons/react/24/outline';
 import { CurrencyDollarIcon as CurrencyDollarSolidIcon } from '@heroicons/react/24/solid';
 import { Transition, Menu, Popover } from '@headlessui/react';
+import RevenueChart from '@/app/components/partner-dashboard/RevenueChart';
+import {
+  FinancialDateRangeId,
+  FinancialTransactionType,
+  PartnerFinancialsData,
+} from '@/lib/partner/financials';
 
 export default function FinancialsPage() {
-  const [dateRange, setDateRange] = useState('thisMonth');
-  const [paymentFilter, setPaymentFilter] = useState('all');
-  
-  // Örnek veri
-  const financialSummary = {
-    totalRevenue: 78500,
-    pendingPayments: 12350,
-    totalPayouts: 65200,
-    netProfit: 52640,
-    comparedToLastPeriod: 14.5,
-    increase: true
-  };
+  const [dateRange, setDateRange] = useState<FinancialDateRangeId>('thisMonth');
+  const [paymentFilter, setPaymentFilter] = useState<'all' | FinancialTransactionType>('all');
+  const [data, setData] = useState<PartnerFinancialsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const recentTransactions = [
-    { id: 1, date: '15 Kas 2023', type: 'ödeme', amount: 2500, status: 'tamamlandı', customer: 'Mehmet Yılmaz', tourName: 'Kapadokya Turu' },
-    { id: 2, date: '13 Kas 2023', type: 'ödeme', amount: 3200, status: 'tamamlandı', customer: 'Ayşe Kaya', tourName: 'İstanbul Boğaz Turu' },
-    { id: 3, date: '10 Kas 2023', type: 'komisyon', amount: -450, status: 'tamamlandı', customer: 'Sistem', tourName: 'Platform Komisyonu' },
-    { id: 4, date: '08 Kas 2023', type: 'ödeme', amount: 1800, status: 'tamamlandı', customer: 'Ali Demir', tourName: 'Efes Antik Kenti Turu' },
-    { id: 5, date: '05 Kas 2023', type: 'iade', amount: -1500, status: 'tamamlandı', customer: 'Zeynep Şahin', tourName: 'Pamukkale Turu' },
-    { id: 6, date: '02 Kas 2023', type: 'ödeme', amount: 4200, status: 'beklemede', customer: 'Emre Yıldız', tourName: 'Karadeniz Yaylalar Turu' },
-    { id: 7, date: '01 Kas 2023', type: 'ödeme', amount: 2800, status: 'tamamlandı', customer: 'Deniz Aksoy', tourName: 'Fethiye Tekne Turu' },
-  ];
+  useEffect(() => {
+    fetchFinancials();
+  }, [dateRange]);
+
+  const fetchFinancials = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/partner/financials?range=${dateRange}`);
+      if (!response.ok) {
+        throw new Error('Finansal veriler yüklenemedi');
+      }
+      const result = await response.json();
+      setData(result);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusClass = (status: string) => {
     switch (status) {
@@ -58,7 +68,7 @@ export default function FinancialsPage() {
         return 'text-green-600';
       case 'iade':
         return 'text-red-600';
-      case 'komisyon':
+      case 'beklemede':
         return 'text-orange-600';
       default:
         return 'text-gray-600';
@@ -69,13 +79,15 @@ export default function FinancialsPage() {
     return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
   };
 
+  const financialSummary = data?.summary;
+  const recentTransactions = data?.transactions || [];
+
   const filteredTransactions = recentTransactions.filter((transaction) => {
     if (paymentFilter === 'all') return true;
     return transaction.type === paymentFilter;
   });
 
-  // Tarih aralığı seçenekleri
-  const dateRangeOptions = [
+  const dateRangeOptions: { id: FinancialDateRangeId; name: string }[] = [
     { id: 'thisWeek', name: 'Bu Hafta' },
     { id: 'thisMonth', name: 'Bu Ay' },
     { id: 'lastMonth', name: 'Geçen Ay' },
@@ -83,18 +95,40 @@ export default function FinancialsPage() {
     { id: 'thisYear', name: 'Bu Yıl' },
   ];
 
-  // İşlem türü seçenekleri
   const paymentFilterOptions = [
     { id: 'all', name: 'Tüm İşlemler' },
     { id: 'ödeme', name: 'Ödemeler' },
     { id: 'iade', name: 'İadeler' },
-    { id: 'komisyon', name: 'Komisyonlar' },
+    { id: 'beklemede', name: 'Bekleyenler' },
   ];
+
+  if (loading && !data) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500" />
+      </div>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <button
+            onClick={fetchFinancials}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm"
+          >
+            Tekrar Dene
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Başlık ve Üst Bölüm */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-6 border-b border-gray-200">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Finansal Durum</h1>
@@ -122,38 +156,23 @@ export default function FinancialsPage() {
                   <div className="py-1">
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="#"
-                          className={`${
-                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                          } block px-4 py-2 text-sm`}
-                        >
+                        <span className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}>
                           Excel (.xlsx)
-                        </a>
+                        </span>
                       )}
                     </Menu.Item>
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="#"
-                          className={`${
-                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                          } block px-4 py-2 text-sm`}
-                        >
+                        <span className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}>
                           PDF
-                        </a>
+                        </span>
                       )}
                     </Menu.Item>
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="#"
-                          className={`${
-                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                          } block px-4 py-2 text-sm`}
-                        >
+                        <span className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}>
                           CSV
-                        </a>
+                        </span>
                       )}
                     </Menu.Item>
                   </div>
@@ -163,37 +182,52 @@ export default function FinancialsPage() {
           </div>
         </div>
 
-        {/* Özet Kartları */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all hover:shadow-md">
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-gray-500">Toplam Gelir</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(financialSummary.totalRevenue)}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {formatCurrency(financialSummary?.totalRevenue || 0)}
+                </p>
               </div>
               <div className="p-2.5 bg-indigo-100 rounded-lg">
                 <CurrencyDollarIcon className="h-6 w-6 text-indigo-600" />
               </div>
             </div>
-            <div className="mt-4 flex items-center">
-              <ArrowUpIcon className="h-4 w-4 text-green-500 mr-1.5" />
-              <span className="text-sm font-medium text-green-500">{financialSummary.comparedToLastPeriod}% artış</span>
-              <span className="text-xs text-gray-500 ml-1.5">son aya göre</span>
-            </div>
+            {financialSummary?.comparedToLastPeriod !== null && financialSummary?.comparedToLastPeriod !== undefined ? (
+              <div className="mt-4 flex items-center">
+                {financialSummary.increase ? (
+                  <ArrowUpIcon className="h-4 w-4 text-green-500 mr-1.5" />
+                ) : (
+                  <ArrowDownIcon className="h-4 w-4 text-red-500 mr-1.5" />
+                )}
+                <span className={`text-sm font-medium ${financialSummary.increase ? 'text-green-500' : 'text-red-500'}`}>
+                  {Math.abs(financialSummary.comparedToLastPeriod)}% {financialSummary.increase ? 'artış' : 'azalış'}
+                </span>
+                <span className="text-xs text-gray-500 ml-1.5">önceki döneme göre</span>
+              </div>
+            ) : (
+              <div className="mt-4 text-sm text-gray-500">Karşılaştırma verisi yok</div>
+            )}
           </div>
 
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all hover:shadow-md">
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-gray-500">Bekleyen Ödemeler</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(financialSummary.pendingPayments)}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {formatCurrency(financialSummary?.pendingPayments || 0)}
+                </p>
               </div>
               <div className="p-2.5 bg-yellow-100 rounded-lg">
                 <ArrowPathIcon className="h-6 w-6 text-yellow-600" />
               </div>
             </div>
             <div className="mt-4 flex items-center">
-              <span className="text-sm text-gray-500">5 bekleyen işlem</span>
+              <span className="text-sm text-gray-500">
+                {financialSummary?.pendingTransactionCount || 0} bekleyen işlem
+              </span>
             </div>
           </div>
 
@@ -201,14 +235,18 @@ export default function FinancialsPage() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-gray-500">Toplam Ödemeler</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(financialSummary.totalPayouts)}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {formatCurrency(financialSummary?.totalPayouts || 0)}
+                </p>
               </div>
               <div className="p-2.5 bg-green-100 rounded-lg">
                 <CurrencyDollarSolidIcon className="h-6 w-6 text-green-600" />
               </div>
             </div>
             <div className="mt-4 flex items-center">
-              <span className="text-sm text-gray-500">23 başarılı işlem</span>
+              <span className="text-sm text-gray-500">
+                {financialSummary?.completedTransactionCount || 0} başarılı işlem
+              </span>
             </div>
           </div>
 
@@ -216,21 +254,32 @@ export default function FinancialsPage() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-gray-500">Net Kazanç</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(financialSummary.netProfit)}</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {formatCurrency(financialSummary?.netProfit || 0)}
+                </p>
               </div>
               <div className="p-2.5 bg-purple-100 rounded-lg">
                 <DocumentTextIcon className="h-6 w-6 text-purple-600" />
               </div>
             </div>
-            <div className="mt-4 flex items-center">
-              <ArrowUpIcon className="h-4 w-4 text-green-500 mr-1.5" />
-              <span className="text-sm font-medium text-green-500">12.2% artış</span>
-              <span className="text-xs text-gray-500 ml-1.5">son aya göre</span>
-            </div>
+            {financialSummary?.netProfitChange !== null && financialSummary?.netProfitChange !== undefined ? (
+              <div className="mt-4 flex items-center">
+                {financialSummary.netProfitIncrease ? (
+                  <ArrowUpIcon className="h-4 w-4 text-green-500 mr-1.5" />
+                ) : (
+                  <ArrowDownIcon className="h-4 w-4 text-red-500 mr-1.5" />
+                )}
+                <span className={`text-sm font-medium ${financialSummary.netProfitIncrease ? 'text-green-500' : 'text-red-500'}`}>
+                  {Math.abs(financialSummary.netProfitChange)}% {financialSummary.netProfitIncrease ? 'artış' : 'azalış'}
+                </span>
+                <span className="text-xs text-gray-500 ml-1.5">önceki döneme göre</span>
+              </div>
+            ) : (
+              <div className="mt-4 text-sm text-gray-500">İadeler düşülmüş net gelir</div>
+            )}
           </div>
         </div>
 
-        {/* Tarih Aralığı Filtresi */}
         <div className="mt-8 mb-6">
           <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
             <div>
@@ -243,7 +292,7 @@ export default function FinancialsPage() {
                       } text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200`}
                     >
                       <CalendarDaysIcon className="h-5 w-5 mr-2" />
-                      {dateRangeOptions.find(option => option.id === dateRange)?.name || 'Tarih Aralığı'}
+                      {dateRangeOptions.find((option) => option.id === dateRange)?.name || 'Tarih Aralığı'}
                       <ChevronDownIcon
                         className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`}
                         aria-hidden="true"
@@ -284,21 +333,31 @@ export default function FinancialsPage() {
           </div>
         </div>
 
-        {/* Grafik */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all hover:shadow-md mt-6 mb-8">
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-lg font-bold text-gray-800">Gelir Grafiği</h2>
+        {data?.revenueChart && (
+          <div className="mt-6 mb-8">
+            <RevenueChart data={data.revenueChart} />
           </div>
-          <div className="h-64 w-full p-6 flex items-center justify-center">
-            <p className="text-gray-500">Gelir grafiği burada gösterilecek</p>
-          </div>
-        </div>
+        )}
 
-        {/* İşlem Geçmişi */}
+        {data?.paymentMethods && data.paymentMethods.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Ödeme Yöntemleri</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {data.paymentMethods.map((method) => (
+                <div key={method.method} className="border border-gray-100 rounded-lg p-4">
+                  <p className="text-sm font-medium text-gray-900">{method.method}</p>
+                  <p className="text-lg font-semibold text-indigo-600 mt-1">{formatCurrency(method.amount)}</p>
+                  <p className="text-xs text-gray-500 mt-1">{method.count} işlem</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mt-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-gray-800">Son İşlemler</h2>
-            
+
             <div className="flex items-center">
               <Popover className="relative">
                 {({ open }) => (
@@ -309,7 +368,7 @@ export default function FinancialsPage() {
                       } text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 mr-3`}
                     >
                       <FunnelIcon className="h-5 w-5 mr-2" />
-                      {paymentFilterOptions.find(option => option.id === paymentFilter)?.name || 'Tüm İşlemler'}
+                      {paymentFilterOptions.find((option) => option.id === paymentFilter)?.name || 'Tüm İşlemler'}
                       <ChevronDownIcon
                         className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`}
                         aria-hidden="true"
@@ -330,7 +389,7 @@ export default function FinancialsPage() {
                           {paymentFilterOptions.map((option) => (
                             <button
                               key={option.id}
-                              onClick={() => setPaymentFilter(option.id)}
+                              onClick={() => setPaymentFilter(option.id as typeof paymentFilter)}
                               className={`${
                                 paymentFilter === option.id
                                   ? 'bg-indigo-50 text-indigo-700 font-medium'
@@ -346,10 +405,6 @@ export default function FinancialsPage() {
                   </>
                 )}
               </Popover>
-              
-              <a href="#" className="text-indigo-600 hover:text-indigo-800 text-sm font-medium transition-colors">
-                Tümünü Gör
-              </a>
             </div>
           </div>
 
@@ -416,7 +471,7 @@ export default function FinancialsPage() {
                   </div>
                   <h3 className="mt-4 text-lg font-medium text-gray-900">İşlem bulunamadı</h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    Farklı bir filtre seçeneği deneyin
+                    Seçili dönemde işlem kaydı bulunmuyor veya farklı bir filtre deneyin
                   </p>
                 </div>
               )}
@@ -427,14 +482,6 @@ export default function FinancialsPage() {
                 <div className="flex items-center text-sm text-gray-500">
                   <span>{filteredTransactions.length} kayıt gösteriliyor</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <button className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-                    Önceki
-                  </button>
-                  <button className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-                    Sonraki
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -442,4 +489,4 @@ export default function FinancialsPage() {
       </div>
     </div>
   );
-} 
+}

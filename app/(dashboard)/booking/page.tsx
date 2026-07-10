@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { BookingSteps } from '@/components/booking/BookingSteps';
-import { DatePicker } from '@/components/booking/DatePicker';
+import { BookingSteps } from '@/app/components/booking/BookingSteps';
+import { DatePicker } from '@/app/components/booking/DatePicker';
 import { 
   CreditCardIcon, UserIcon, 
   CheckCircleIcon, ChevronRightIcon, ChevronLeftIcon,

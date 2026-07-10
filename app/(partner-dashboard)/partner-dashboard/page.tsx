@@ -2,55 +2,31 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import Link from 'next/link';
 import {
   CalendarIcon,
   CurrencyDollarIcon,
-  UsersIcon,
   CheckBadgeIcon,
-  ExclamationCircleIcon,
   ClockIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  ChevronRightIcon,
-  MapPinIcon,
   ChartBarIcon,
   BuildingStorefrontIcon,
-  EllipsisHorizontalIcon,
-  ArrowTrendingUpIcon,
   UserGroupIcon,
   StarIcon
 } from "@heroicons/react/24/outline";
-import Image from 'next/image';
 import QuickAccessCard from '../../components/partner-dashboard/QuickAccessCard';
 import StatCard from '../../components/partner-dashboard/StatCard';
 import ReservationStatus from '../../components/partner-dashboard/ReservationStatus';
 import RevenueChart from '../../components/partner-dashboard/RevenueChart';
 import RecentReservations from '../../components/partner-dashboard/RecentReservations';
 import PopularTours from '../../components/partner-dashboard/PopularTours';
-
-interface DashboardData {
-  stats: {
-    totalTours: number;
-    totalBookings: number;
-    totalRevenue: number;
-    totalCustomers: number;
-    averageRating: number;
-    upcomingTours: number;
-  };
-  recentReservations: any[];
-  popularTours: any[];
-  reservationStatus: {
-    pending: number;
-    confirmed: number;
-    cancelled: number;
-    completed: number;
-  };
-}
+import {
+  PartnerDashboardData,
+  PartnerDashboardStatTrends,
+  PartnerDashboardStats,
+} from '@/lib/partner/dashboard';
 
 export default function PartnerDashboardPage() {
   const { data: session } = useSession();
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<PartnerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -107,91 +83,34 @@ export default function PartnerDashboardPage() {
   ];
 
   if (loading) {
-  return (
+    return (
       <div className="flex items-center justify-center h-full">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-    </div>
-  );
+      </div>
+    );
   }
 
   if (error) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-red-500">{error}</div>
-  </div>
-);
+      </div>
+    );
   }
 
   if (!dashboardData) {
     return null;
   }
 
-  const stats = [
-    {
-      title: 'Toplam Tur',
-      value: dashboardData.stats.totalTours.toString(),
-      icon: BuildingStorefrontIcon,
-      change: '+12%',
-      changeType: 'increase' as const,
-      changeText: 'Geçen aya göre',
-      color: 'blue' as const
-    },
-    {
-      title: 'Toplam Rezervasyon',
-      value: dashboardData.stats.totalBookings.toString(),
-      icon: CalendarIcon,
-      change: '+8%',
-      changeType: 'increase' as const,
-      changeText: 'Geçen aya göre',
-      color: 'green' as const
-    },
-    {
-      title: 'Toplam Gelir',
-      value: `${dashboardData.stats.totalRevenue.toLocaleString('tr-TR')}₺`,
-      icon: CurrencyDollarIcon,
-      change: '+15%',
-      changeType: 'increase' as const,
-      changeText: 'Geçen aya göre',
-      color: 'amber' as const
-    },
-    {
-      title: 'Toplam Müşteri',
-      value: dashboardData.stats.totalCustomers.toString(),
-      icon: UserGroupIcon,
-      change: '+5%',
-      changeType: 'increase' as const,
-      changeText: 'Geçen aya göre',
-      color: 'purple' as const
-    },
-    {
-      title: 'Ortalama Puan',
-      value: dashboardData.stats.averageRating.toFixed(1),
-      icon: StarIcon,
-      change: '+0.2',
-      changeType: 'increase' as const,
-      changeText: 'Geçen aya göre',
-      color: 'red' as const
-    },
-    {
-      title: 'Yaklaşan Turlar',
-      value: dashboardData.stats.upcomingTours.toString(),
-      icon: ClockIcon,
-      change: '+3',
-      changeType: 'increase' as const,
-      changeText: 'Geçen haftaya göre',
-      color: 'blue' as const
-    }
-  ];
+  const stats = buildStatCards(dashboardData.stats, dashboardData.trends, userRole);
 
   return (
     <div className="space-y-6">
-      {/* Başlık ve Karşılama */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Hoş Geldiniz, {session?.user?.name}</h1>
         <p className="text-gray-600 mt-1">İşletmenizle ilgili güncel bilgileri ve istatistikleri buradan takip edebilirsiniz</p>
       </div>
 
-      {/* Hızlı Erişim Kartları */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {quickAccessItems.map(item => (
           <QuickAccessCard
@@ -205,7 +124,6 @@ export default function PartnerDashboardPage() {
         ))}
       </div>
       
-      {/* İstatistik Kartları */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {stats.map((stat) => (
           <StatCard
@@ -222,20 +140,81 @@ export default function PartnerDashboardPage() {
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Rezervasyon Durumu */}
         <ReservationStatus reservations={dashboardData.reservationStatus} />
         
-        {/* Gelir Grafiği */}
         <div className="lg:col-span-2">
-          <RevenueChart />
+          <RevenueChart data={dashboardData.revenueChart} />
         </div>
       </div>
       
-      {/* Yaklaşan Rezervasyonlar */}
       <RecentReservations reservations={dashboardData.recentReservations} />
       
-      {/* Popüler Turlar */}
       <PopularTours tours={dashboardData.popularTours} />
     </div>
   );
-} 
+}
+
+function buildStatCards(
+  stats: PartnerDashboardStats,
+  trends: PartnerDashboardStatTrends,
+  userRole?: string
+) {
+  const tourLabel = userRole === 'EXPERIENCE_PROVIDER' ? 'Toplam Aktivite' : 'Toplam Tur';
+  const upcomingLabel = userRole === 'EXPERIENCE_PROVIDER' ? 'Yaklaşan Aktiviteler' : 'Yaklaşan Turlar';
+
+  return [
+    {
+      title: tourLabel,
+      value: stats.totalTours.toString(),
+      icon: BuildingStorefrontIcon,
+      ...pickTrend(trends.totalTours),
+      color: 'blue' as const,
+    },
+    {
+      title: 'Toplam Rezervasyon',
+      value: stats.totalBookings.toString(),
+      icon: CalendarIcon,
+      ...pickTrend(trends.totalBookings),
+      color: 'green' as const,
+    },
+    {
+      title: 'Toplam Gelir',
+      value: `${stats.totalRevenue.toLocaleString('tr-TR')}₺`,
+      icon: CurrencyDollarIcon,
+      ...pickTrend(trends.totalRevenue),
+      color: 'amber' as const,
+    },
+    {
+      title: 'Toplam Müşteri',
+      value: stats.totalCustomers.toString(),
+      icon: UserGroupIcon,
+      ...pickTrend(trends.totalCustomers),
+      color: 'purple' as const,
+    },
+    {
+      title: 'Ortalama Puan',
+      value: stats.averageRating.toFixed(1),
+      icon: StarIcon,
+      ...pickTrend(trends.averageRating),
+      color: 'red' as const,
+    },
+    {
+      title: upcomingLabel,
+      value: stats.upcomingTours.toString(),
+      icon: ClockIcon,
+      ...pickTrend(trends.upcomingTours),
+      color: 'blue' as const,
+    },
+  ];
+}
+
+function pickTrend(trend?: PartnerDashboardStatTrends[keyof PartnerDashboardStatTrends]) {
+  if (!trend) {
+    return {};
+  }
+  return {
+    change: trend.change,
+    changeType: trend.changeType,
+    changeText: trend.changeText,
+  };
+}

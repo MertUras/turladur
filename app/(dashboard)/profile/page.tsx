@@ -7,7 +7,8 @@ import {
   UserCircleIcon, KeyIcon, BellIcon, CreditCardIcon, CameraIcon, ShieldCheckIcon, 
   CalendarIcon, HeartIcon, QuestionMarkCircleIcon, TicketIcon, MapPinIcon, 
   ClockIcon, TrashIcon, StarIcon, FunnelIcon, ArrowsUpDownIcon, PlusIcon, 
-  EllipsisVerticalIcon, ArrowPathIcon, UsersIcon, PencilIcon, XMarkIcon
+  EllipsisVerticalIcon, ArrowPathIcon, UsersIcon, PencilIcon, XMarkIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-hot-toast';
 import { useSession } from 'next-auth/react';
@@ -20,6 +21,7 @@ import PaymentTab from './components/PaymentTab';
 import NotificationsTab from './components/NotificationsTab';
 import SecurityTab from './components/SecurityTab';
 import HelpTab from './components/HelpTab';
+import ReviewsTab from './components/ReviewsTab';
 import RatePartnerModal, { ReviewableBooking } from '../bookings/components/RatePartnerModal';
 import { parseJsonArray } from '@/lib/utils';
 
@@ -424,6 +426,7 @@ export default function ProfilePage() {
                 {[
                   { key: 'profile', label: 'Profil Bilgileri', icon: UserCircleIcon },
                   { key: 'bookings', label: 'Rezervasyonlarım', icon: CalendarIcon },
+                  { key: 'reviews', label: 'Değerlendirmelerim', icon: ChatBubbleLeftRightIcon },
                   { key: 'favorites', label: 'Favorilerim', icon: HeartIcon },
                   { key: 'payment', label: 'Ödeme Bilgileri', icon: CreditCardIcon },
                   { key: 'security', label: 'Güvenlik', icon: KeyIcon },
@@ -472,6 +475,8 @@ export default function ProfilePage() {
                     formatDate={formatDate}
                   />
                 )}
+
+                {activeTab === 'reviews' && <ReviewsTab />}
 
                 {activeTab === 'favorites' && (
                   <FavoritesTab

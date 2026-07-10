@@ -4,10 +4,11 @@ import {
   CalendarIcon, 
   UsersIcon,
   BuildingOfficeIcon,
+  BuildingStorefrontIcon,
   GlobeAltIcon,
   SparklesIcon,
   CurrencyDollarIcon,
-  XMarkIcon
+  MapIcon,
 } from '@heroicons/react/24/outline';
 import { Booking } from '@/app/types';
 import { format } from 'date-fns';
@@ -32,6 +33,8 @@ export default function BookingCard({ booking, onViewDetails }: BookingCardProps
   const statusStyles = {
     CONFIRMED: { text: 'Onaylandı', style: 'bg-green-100 text-green-800 ring-green-200' },
     PENDING: { text: 'Beklemede', style: 'bg-yellow-100 text-yellow-800 ring-yellow-200' },
+    PENDING_PAYMENT: { text: 'Ödeme Bekliyor', style: 'bg-amber-100 text-amber-800 ring-amber-200' },
+    SUSPENDED: { text: 'Askıya Alındı', style: 'bg-orange-100 text-orange-800 ring-orange-200' },
     CANCELLED: { text: 'İptal Edildi', style: 'bg-red-100 text-red-800 ring-red-200' },
     COMPLETED: { text: 'Tamamlandı', style: 'bg-sky-100 text-sky-800 ring-sky-200' },
   };
@@ -43,6 +46,12 @@ export default function BookingCard({ booking, onViewDetails }: BookingCardProps
     experience: { text: 'Deneyim Rezervasyonu', icon: SparklesIcon, color: 'text-purple-600' },
   };
   const bookingType = booking.hotelId ? bookingTypes.hotel : booking.tourId ? bookingTypes.tour : booking.experienceId ? bookingTypes.experience : null;
+
+  const routeText = booking.routeLabel || (
+    booking.fromLocation && booking.toLocation
+      ? `${booking.fromLocation} → ${booking.toLocation}`
+      : booking.fromLocation || booking.toLocation || null
+  );
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-neutral-200/50 overflow-hidden hover:shadow-lg transition-shadow duration-200 ease-in-out">
@@ -63,6 +72,35 @@ export default function BookingCard({ booking, onViewDetails }: BookingCardProps
             Rez. No: <span className="font-semibold font-mono text-neutral-600 tracking-tight">{booking.bookingNumber}</span>
           </div>
         </div>
+
+        {booking.productTitle && (
+          <h3 className="text-base font-semibold text-neutral-900 mb-3 leading-snug">
+            {booking.productTitle}
+          </h3>
+        )}
+
+        {(booking.operatorName || routeText) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5 mb-4 pb-4 border-b border-neutral-100">
+            {booking.operatorName && (
+              <div className="flex items-start space-x-2.5 min-w-0">
+                <BuildingStorefrontIcon className="h-5 w-5 text-neutral-400 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-neutral-500">Tur Firması</div>
+                  <div className="text-sm text-neutral-800 truncate">{booking.operatorName}</div>
+                </div>
+              </div>
+            )}
+            {routeText && (
+              <div className="flex items-start space-x-2.5 min-w-0">
+                <MapIcon className="h-5 w-5 text-neutral-400 mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-neutral-500">Nereden → Nereye</div>
+                  <div className="text-sm text-neutral-800 truncate">{routeText}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-3">
           <div className="flex items-start space-x-2.5">

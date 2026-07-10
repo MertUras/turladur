@@ -12,6 +12,7 @@ declare module "next-auth" {
     provider: string;
     isMainUser?: boolean;
     tourOperatorId?: string;
+    experienceOperatorId?: string;
     permissions?: any;
   }
 
@@ -22,6 +23,7 @@ declare module "next-auth" {
       provider: string;
       isMainUser?: boolean;
       tourOperatorId?: string;
+      experienceOperatorId?: string;
       permissions?: any;
     };
   }
@@ -34,6 +36,7 @@ declare module "next-auth/jwt" {
     provider: string;
     isMainUser?: boolean;
     tourOperatorId?: string;
+    experienceOperatorId?: string;
     permissions?: any;
   }
 }
@@ -44,8 +47,8 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 gün
   },
   pages: {
-    signIn: "/partner-login",
-    error: "/partner-login",
+    signIn: "/login",
+    error: "/login",
   },
   providers: [
     // Normal kullanıcılar için credentials provider
@@ -191,6 +194,7 @@ export const authOptions: NextAuthOptions = {
         token.isMainUser = user.isMainUser;
         token.permissions = user.permissions;
         token.tourOperatorId = user.tourOperatorId;
+        token.experienceOperatorId = (user as { experienceOperatorId?: string }).experienceOperatorId;
       }
       return token;
     },
@@ -202,6 +206,7 @@ export const authOptions: NextAuthOptions = {
         session.user.isMainUser = token.isMainUser;
         session.user.permissions = token.permissions;
         session.user.tourOperatorId = token.tourOperatorId;
+        session.user.experienceOperatorId = token.experienceOperatorId;
       }
       return session;
     },

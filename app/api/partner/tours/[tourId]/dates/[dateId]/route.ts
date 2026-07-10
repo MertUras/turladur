@@ -2,13 +2,72 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { resolvePartnerContext } from '@/lib/partner/auth';
+import {
+  getPartnerTourDatesProvider,
+  TourDateAction,
+} from '@/lib/partner/tour-dates';
+
+const VALID_ACTIONS = new Set<TourDateAction>(['complete', 'cancel']);
+
+// Tur tarihini tamamla veya iptal et
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ tourId: string; dateId: string }> }
+) {
+  try {
+    const partner = await resolvePartnerContext();
+    if (!partner || partner.type !== 'tour') {
+      return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
+    }
+
+    const { tourId, dateId } = await params;
+    const body = await request.json();
+    const action = String(body.action || '') as TourDateAction;
+
+    if (!VALID_ACTIONS.has(action)) {
+      return NextResponse.json(
+        { error: 'Geçersiz işlem. İzin verilen: complete, cancel' },
+        { status: 400 }
+      );
+    }
+
+    const provider = getPartnerTourDatesProvider();
+    const context = { tourOperatorId: partner.tourOperatorId };
+
+    let result;
+    try {
+      result =
+        action === 'complete'
+          ? await provider.completeTourDate(context, tourId, dateId)
+          : await provider.cancelTourDate(context, tourId, dateId);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Tur tarihi güncellenemedi';
+      return NextResponse.json({ error: message }, { status: 409 });
+    }
+
+    if (!result) {
+      return NextResponse.json(
+        { error: 'Tur tarihi bulunamadı veya bu işletmeye ait değil' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error('Error updating tour date status:', error);
+    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+  }
+}
 
 // Tur tarihini güncelle
 export async function PUT(
   request: Request,
-  { params }: { params: { tourId: string; dateId: string } }
+  { params }: { params: Promise<{ tourId: string; dateId: string }> }
 ) {
   try {
+    const { tourId, dateId } = await params;
     const session = await getServerSession(authOptions);
     
     if (!session) {
@@ -30,7 +89,7 @@ export async function PUT(
     // Turun partner'a ait olduğunu kontrol et
     const tour = await prisma.tour.findFirst({
       where: {
-        id: params.tourId,
+        id: tourId,
         tourOperatorId: tourOperator.id
       }
     });
@@ -52,8 +111,8 @@ export async function PUT(
     // Tur tarihini güncelle
     const tourDate = await prisma.tourDate.update({
       where: {
-        id: params.dateId,
-        tourId: params.tourId
+        id: dateId,
+        tourId: tourId
       },
       data: {
         startDate: new Date(data.startDate),
@@ -87,9 +146,10 @@ export async function PUT(
 // Tur tarihini sil
 export async function DELETE(
   request: Request,
-  { params }: { params: { tourId: string; dateId: string } }
+  { params }: { params: Promise<{ tourId: string; dateId: string }> }
 ) {
   try {
+    const { tourId, dateId } = await params;
     const session = await getServerSession(authOptions);
     
     if (!session) {
@@ -111,7 +171,7 @@ export async function DELETE(
     // Turun partner'a ait olduğunu kontrol et
     const tour = await prisma.tour.findFirst({
       where: {
-        id: params.tourId,
+        id: tourId,
         tourOperatorId: tourOperator.id
       }
     });
@@ -123,8 +183,8 @@ export async function DELETE(
     // Tur tarihini sil
     await prisma.tourDate.delete({
       where: {
-        id: params.dateId,
-        tourId: params.tourId
+        id: dateId,
+        tourId: tourId
       }
     });
 

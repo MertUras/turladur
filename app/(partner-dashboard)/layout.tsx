@@ -58,13 +58,6 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
   const pathname = usePathname();
   const { data: session } = useSession();
   const userRole = session?.user?.role as string;
-  
-  // Partner olmayanları login sayfasına yönlendir
-  useEffect(() => {
-    if (session && userRole !== 'TOUR_OPERATOR' && userRole !== 'EXPERIENCE_PROVIDER') {
-      window.location.href = '/partner-login';
-    }
-  }, [session, userRole]);
 
   const filteredSidebarLinks = sidebarLinks.filter(link => {
     if (!link.roles) return true;

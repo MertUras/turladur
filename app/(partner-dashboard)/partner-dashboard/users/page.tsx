@@ -50,8 +50,12 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       const response = await fetch('/api/partner/sub-users');
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Kullanıcılar yüklenemedi');
+      }
       const data = await response.json();
-      setUsers(data);
+      setUsers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -159,6 +163,11 @@ export default function UsersPage() {
       </div>
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
+        {users.length === 0 ? (
+          <div className="px-6 py-12 text-center text-gray-500">
+            Henüz alt kullanıcı eklenmemiş
+          </div>
+        ) : (
         <ul className="divide-y divide-gray-200">
           {users.map((user) => (
             <li key={user.id}>
@@ -212,6 +221,7 @@ export default function UsersPage() {
             </li>
           ))}
         </ul>
+        )}
       </div>
 
       {/* Add User Modal */}

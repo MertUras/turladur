@@ -1493,9 +1493,8 @@ const AgencyManagement = () => {
               </button>
             </div>
           </div>
-        )}
-      </div>
-   )}
+        </div>
+      )}
     </div>
   );
 };

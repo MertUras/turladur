@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarIcon, UsersIcon, CreditCardIcon, InformationCircleIcon, XMarkIcon, CheckCircleIcon, ClockIcon, ExclamationTriangleIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
+import { CalendarIcon, UsersIcon, CreditCardIcon, InformationCircleIcon, XMarkIcon, CheckCircleIcon, ClockIcon, ExclamationTriangleIcon, NoSymbolIcon, BuildingStorefrontIcon, MapIcon } from '@heroicons/react/24/outline';
 import { Booking } from '@/app/types';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -18,6 +18,8 @@ const getStatusInfo = (status: Booking['status']) => {
   switch (status) {
     case 'CONFIRMED': return { icon: CheckCircleIcon, text: 'Onaylandı', color: 'text-green-600', badge: 'bg-green-100 text-green-800 ring-green-200' };
     case 'PENDING': return { icon: ClockIcon, text: 'Beklemede', color: 'text-yellow-600', badge: 'bg-yellow-100 text-yellow-800 ring-yellow-200' };
+    case 'PENDING_PAYMENT': return { icon: ClockIcon, text: 'Ödeme Bekliyor', color: 'text-amber-600', badge: 'bg-amber-100 text-amber-800 ring-amber-200' };
+    case 'SUSPENDED': return { icon: ExclamationTriangleIcon, text: 'Askıya Alındı', color: 'text-orange-600', badge: 'bg-orange-100 text-orange-800 ring-orange-200' };
     case 'CANCELLED': return { icon: NoSymbolIcon, text: 'İptal Edildi', color: 'text-red-600', badge: 'bg-red-100 text-red-800 ring-red-200' };
     case 'COMPLETED': return { icon: CheckCircleIcon, text: 'Tamamlandı', color: 'text-sky-600', badge: 'bg-sky-100 text-sky-800 ring-sky-200' };
     default: return { icon: InformationCircleIcon, text: status, color: 'text-neutral-600', badge: 'bg-neutral-100 text-neutral-800 ring-neutral-200' };
@@ -52,6 +54,12 @@ export default function BookingDetailsModal({
   const paymentStatusInfo = getPaymentStatusInfo(booking.paymentStatus);
 
   const bookingTypeLabel = booking.hotelId ? 'Otel' : booking.tourId ? 'Tur' : 'Deneyim';
+
+  const routeText = booking.routeLabel || (
+    booking.fromLocation && booking.toLocation
+      ? `${booking.fromLocation} → ${booking.toLocation}`
+      : booking.fromLocation || booking.toLocation || null
+  );
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -111,10 +119,34 @@ export default function BookingDetailsModal({
                   </div>
 
                   <div className="space-y-3">
+                     {booking.productTitle && (
+                       <div>
+                          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Tur / Deneyim Adı</p>
+                          <p className="text-sm text-neutral-800 font-medium">{booking.productTitle}</p>
+                       </div>
+                     )}
                      <div>
                         <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Rezervasyon Tipi</p>
                         <p className="text-sm text-neutral-800 font-medium">{bookingTypeLabel}</p>
                      </div>
+                     {booking.operatorName && (
+                       <div>
+                          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Tur Firması</p>
+                          <div className="flex items-center text-sm text-neutral-800">
+                            <BuildingStorefrontIcon className="h-4 w-4 text-neutral-400 mr-1.5 flex-shrink-0" />
+                            <span>{booking.operatorName}</span>
+                          </div>
+                       </div>
+                     )}
+                     {routeText && (
+                       <div>
+                          <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Nereden → Nereye</p>
+                          <div className="flex items-center text-sm text-neutral-800">
+                            <MapIcon className="h-4 w-4 text-neutral-400 mr-1.5 flex-shrink-0" />
+                            <span>{routeText}</span>
+                          </div>
+                       </div>
+                     )}
                      <div>
                         <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Tarihler</p>
                         <div className="flex items-center text-sm text-neutral-800">

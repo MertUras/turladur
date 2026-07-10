@@ -1,116 +1,96 @@
 'use client';
 
-import { useState, Fragment } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { MagnifyingGlassIcon, FunnelIcon, PlusIcon, ArrowDownTrayIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { Transition, Menu, Popover } from '@headlessui/react';
 import CustomerCard, { CustomerCardProps } from '@/app/components/partner-dashboard/CustomerCard';
+import { PartnerCustomer } from '@/lib/partner/customers';
 
-// Örnek müşteri verileri
-const demoCustomers: CustomerCardProps[] = [
-  {
-    id: '1',
-    name: 'Ahmet Yılmaz',
-    email: 'ahmet@ornek.com',
-    phone: '+90 (555) 123 4567',
-    location: 'İstanbul, Türkiye',
-    totalBookings: 5,
-    totalSpent: '4.850₺',
-    lastBookingDate: '12 Haz 2023',
-    profileImage: 'https://randomuser.me/api/portraits/men/32.jpg'
-  },
-  {
-    id: '2',
-    name: 'Ayşe Demir',
-    email: 'ayse@ornek.com',
-    phone: '+90 (555) 234 5678',
-    location: 'Ankara, Türkiye',
-    totalBookings: 3,
-    totalSpent: '2.750₺',
-    lastBookingDate: '18 Tem 2023'
-  },
-  {
-    id: '3',
-    name: 'Mehmet Kaya',
-    email: 'mehmet@ornek.com',
-    phone: '+90 (555) 345 6789',
-    location: 'İzmir, Türkiye',
-    totalBookings: 7,
-    totalSpent: '6.200₺',
-    lastBookingDate: '3 Ağu 2023',
-    profileImage: 'https://randomuser.me/api/portraits/men/41.jpg'
-  },
-  {
-    id: '4',
-    name: 'Zeynep Şahin',
-    email: 'zeynep@ornek.com',
-    phone: '+90 (555) 456 7890',
-    location: 'Antalya, Türkiye',
-    totalBookings: 2,
-    totalSpent: '1.950₺',
-    lastBookingDate: '22 Haz 2023',
-    profileImage: 'https://randomuser.me/api/portraits/women/44.jpg'
-  },
-  {
-    id: '5',
-    name: 'Can Öztürk',
-    email: 'can@ornek.com',
-    phone: '+90 (555) 567 8901',
-    location: 'Bursa, Türkiye',
-    totalBookings: 4,
-    totalSpent: '3.600₺',
-    lastBookingDate: '5 Eyl 2023'
-  },
-  {
-    id: '6',
-    name: 'Deniz Aksoy',
-    email: 'deniz@ornek.com',
-    phone: '+90 (555) 678 9012',
-    location: 'Muğla, Türkiye',
-    totalBookings: 6,
-    totalSpent: '5.400₺',
-    lastBookingDate: '29 Tem 2023',
-    profileImage: 'https://randomuser.me/api/portraits/women/29.jpg'
-  }
-];
+const RECENT_DAYS = 30;
+const HIGH_VALUE_THRESHOLD = 5000;
+const FREQUENT_BOOKINGS_THRESHOLD = 4;
+
+function mapCustomerToCard(customer: PartnerCustomer): CustomerCardProps & { totalSpentAmount: number; lastBookingAt: string } {
+  return {
+    id: customer.id,
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    location: customer.location,
+    totalBookings: customer.totalBookings,
+    totalSpent: customer.totalSpentFormatted,
+    lastBookingDate: customer.lastBookingDate,
+    profileImage: customer.profileImage,
+    totalSpentAmount: customer.totalSpent,
+    lastBookingAt: customer.lastBookingAt,
+  };
+}
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState(demoCustomers);
+  const [customers, setCustomers] = useState<(CustomerCardProps & { totalSpentAmount: number; lastBookingAt: string })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('all');
 
-  // Arama işlemi
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/partner/customers');
+      if (!response.ok) {
+        throw new Error('Müşteriler yüklenemedi');
+      }
+      const data = await response.json();
+      setCustomers((data.customers || []).map(mapCustomerToCard));
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
 
-  // Filtreleme işlemi
   const handleFilterChange = (filter: string) => {
     setActiveFilter(filter);
   };
 
-  // Filtrelenmiş ve aranmış müşteriler
-  const filteredCustomers = customers.filter(customer => {
-    // Arama kriteri
-    const matchesSearch = searchTerm.trim() === '' ||
+  const isRecentCustomer = (lastBookingAt: string) => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - RECENT_DAYS);
+    return new Date(lastBookingAt) >= cutoff;
+  };
+
+  const filteredCustomers = customers.filter((customer) => {
+    const matchesSearch =
+      searchTerm.trim() === '' ||
       customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.location.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Filtre kriteri
-    if (activeFilter === 'all') {
-      return matchesSearch;
-    } else if (activeFilter === 'high_value') {
-      return matchesSearch && parseFloat(customer.totalSpent.replace(/[^\d.]/g, '')) > 5000;
-    } else if (activeFilter === 'recent') {
-      return matchesSearch && customer.lastBookingDate.includes('Ağu') || customer.lastBookingDate.includes('Eyl');
-    } else if (activeFilter === 'frequent') {
-      return matchesSearch && customer.totalBookings > 4;
+    if (!matchesSearch) return false;
+
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'high_value') {
+      return customer.totalSpentAmount >= HIGH_VALUE_THRESHOLD;
+    }
+    if (activeFilter === 'recent') {
+      return isRecentCustomer(customer.lastBookingAt);
+    }
+    if (activeFilter === 'frequent') {
+      return customer.totalBookings >= FREQUENT_BOOKINGS_THRESHOLD;
     }
 
-    return matchesSearch;
+    return true;
   });
 
-  // Filtre seçenekleri
   const filterOptions = [
     { id: 'all', name: 'Tümü' },
     { id: 'high_value', name: 'Yüksek Değerli Müşteriler' },
@@ -118,10 +98,33 @@ export default function CustomersPage() {
     { id: 'frequent', name: 'Sık Müşteriler' },
   ];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <button
+            onClick={fetchCustomers}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm"
+          >
+            Tekrar Dene
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Başlık ve Üst Bölüm */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-6 border-b border-gray-200">
           <h1 className="text-2xl font-bold text-gray-900">Müşteriler</h1>
           <div className="flex space-x-3 mt-4 sm:mt-0">
@@ -154,38 +157,23 @@ export default function CustomersPage() {
                   <div className="py-1">
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="#"
-                          className={`${
-                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                          } block px-4 py-2 text-sm`}
-                        >
+                        <span className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}>
                           Excel (.xlsx)
-                        </a>
+                        </span>
                       )}
                     </Menu.Item>
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="#"
-                          className={`${
-                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                          } block px-4 py-2 text-sm`}
-                        >
+                        <span className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}>
                           CSV
-                        </a>
+                        </span>
                       )}
                     </Menu.Item>
                     <Menu.Item>
                       {({ active }) => (
-                        <a
-                          href="#"
-                          className={`${
-                            active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
-                          } block px-4 py-2 text-sm`}
-                        >
+                        <span className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}>
                           PDF
-                        </a>
+                        </span>
                       )}
                     </Menu.Item>
                   </div>
@@ -195,7 +183,6 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        {/* Arama ve Filtreler */}
         <div className="mt-8 mb-6">
           <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-4">
             <div className="flex-1 min-w-0">
@@ -222,7 +209,7 @@ export default function CustomersPage() {
                       } text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200`}
                     >
                       <FunnelIcon className="h-5 w-5 mr-2" />
-                      {filterOptions.find(option => option.id === activeFilter)?.name || 'Filtreler'}
+                      {filterOptions.find((option) => option.id === activeFilter)?.name || 'Filtreler'}
                       <ChevronDownIcon
                         className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`}
                         aria-hidden="true"
@@ -263,13 +250,11 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        {/* Müşteri Sonuçları */}
         <div className="mt-2">
           <p className="text-sm text-gray-500 mb-4">
             {filteredCustomers.length} müşteri gösteriliyor
           </p>
 
-          {/* Müşteri Kartları */}
           <div className="grid grid-cols-1 gap-6">
             {filteredCustomers.length > 0 ? (
               filteredCustomers.map((customer) => (
@@ -282,7 +267,9 @@ export default function CustomersPage() {
                 </div>
                 <h3 className="mt-4 text-lg font-medium text-gray-900">Müşteri bulunamadı</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Farklı bir arama veya filtre deneyin
+                  {customers.length === 0
+                    ? 'Henüz rezervasyon yapan müşteri bulunmuyor'
+                    : 'Farklı bir arama veya filtre deneyin'}
                 </p>
               </div>
             )}
@@ -291,4 +278,4 @@ export default function CustomersPage() {
       </div>
     </div>
   );
-} 
+}

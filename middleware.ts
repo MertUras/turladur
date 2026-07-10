@@ -2,19 +2,15 @@ import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { NextRequest } from 'next/server';
 
-// Partner sayfaları için gerekli yollar
-const partnerAuthRequiredPaths = [
-  '/partner-dashboard',
-  '/partner-dashboard/tours',
-  '/partner-dashboard/reservations',
-  '/partner-dashboard/customers',
-  '/partner-dashboard/financials',
-  '/partner-dashboard/reports',
-  '/partner-dashboard/reviews',
-  '/partner-dashboard/settings',
-  '/partner-dashboard/help',
-  '/partner-dashboard/users',
-];
+const isPartnerDashboardPath = (pathname: string) =>
+  pathname === '/partner-dashboard' || pathname.startsWith('/partner-dashboard/');
+
+function redirectTo(request: NextRequest, pathname: string) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = '';
+  return NextResponse.redirect(url);
+}
 
 // Normal kullanıcı sayfaları için gerekli yollar
 const userAuthRequiredPaths = [
@@ -45,98 +41,81 @@ const permissionRequiredPaths: Record<string, string[]> = {
 };
 
 export async function middleware(request: NextRequest) {
-  const token = await getToken({ 
+  const useSecureCookies = process.env.NODE_ENV === 'production';
+  const sessionCookieName = useSecureCookies
+    ? '__Secure-next-auth.session-token'
+    : 'next-auth.session-token';
+
+  const token = await getToken({
     req: request,
-    secret: process.env.NEXTAUTH_SECRET 
+    secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: useSecureCookies,
+    cookieName: sessionCookieName,
   });
-  
+
   const pathname = request.nextUrl.pathname;
+  const isPartnerUser =
+    token?.provider === 'partner-credentials' &&
+    (token.role === 'TOUR_OPERATOR' || token.role === 'EXPERIENCE_PROVIDER');
 
-  // Debug için log
-  console.log('Middleware çalışıyor:', { 
-    pathname, 
-    tokenExists: !!token, 
-    tokenDetails: {
-      role: token?.role,
-      provider: token?.provider,
-      exp: token?.exp
-    }
-  });
-
-  // Session cookie'sini kontrol et
-  const sessionToken = request.cookies.get('next-auth.session-token')?.value;
-  
   // Partner kullanıcısı için otomatik yönlendirme
-  if (token?.provider === 'partner-credentials' && pathname === '/partner-login') {
-    return NextResponse.redirect(new URL('/partner-dashboard', request.url));
+  if (isPartnerUser && pathname === '/partner-login') {
+    return redirectTo(request, '/partner-dashboard');
   }
 
   // Partner dashboard erişim kontrolü
-  if (partnerAuthRequiredPaths.some(path => pathname.startsWith(path))) {
-    if (!token || !sessionToken) {
-      return NextResponse.redirect(new URL('/partner-login', request.url));
+  if (isPartnerDashboardPath(pathname)) {
+    if (!token) {
+      return redirectTo(request, '/partner-login');
     }
 
     // Token süresi kontrolü
     if (token?.exp && Date.now() >= (token.exp as number) * 1000) {
-      const response = NextResponse.redirect(new URL('/partner-login', request.url));
-      // Süresi dolmuş cookie'leri temizle
-      response.cookies.delete('next-auth.session-token');
+      const response = redirectTo(request, '/partner-login');
+      response.cookies.delete(sessionCookieName);
       response.cookies.delete('next-auth.csrf-token');
       return response;
     }
 
     // Rol kontrolü
-    if ((token.role !== 'TOUR_OPERATOR' && token.role !== 'EXPERIENCE_PROVIDER') || token.provider !== 'partner-credentials') {
-      return NextResponse.redirect(new URL('/partner-login', request.url));
+    if (!isPartnerUser) {
+      return redirectTo(request, '/partner-login');
     }
 
     // Alt kullanıcı yetki kontrolü
     if (!token.isMainUser) {
-      console.log('Alt kullanıcı yetkileri kontrol ediliyor'); // Debug log
       const requiredPermissions = permissionRequiredPaths[pathname];
       if (requiredPermissions) {
         const hasPermission = requiredPermissions.some(
           (permission: string) => (token.permissions as Record<string, boolean>)?.[permission]
         );
         if (!hasPermission) {
-          console.log('Yetersiz yetki, ana sayfaya yönlendiriliyor'); // Debug log
-          return NextResponse.redirect(new URL('/partner-dashboard', request.url));
+          return redirectTo(request, '/partner-dashboard');
         }
       }
     }
 
-    // Session'ı yenile
-    const response = NextResponse.next();
-    if (sessionToken) {
-      response.cookies.set('next-auth.session-token', sessionToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 30 * 24 * 60 * 60 // 30 gün
-      });
-    }
-    return response;
+    return NextResponse.next();
   }
 
   // Normal kullanıcı sayfaları için erişim kontrolü
   if (userAuthRequiredPaths.some(path => pathname.startsWith(path))) {
     if (!token) {
-      const loginUrl = new URL('/login', request.url);
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/login';
       loginUrl.searchParams.set('callbackUrl', pathname + request.nextUrl.search);
       return NextResponse.redirect(loginUrl);
     }
 
-    if (token.role === 'TOUR_OPERATOR') {
-      return NextResponse.redirect(new URL('/partner-dashboard', request.url));
+    if (token.role === 'TOUR_OPERATOR' || token.role === 'EXPERIENCE_PROVIDER') {
+      return redirectTo(request, '/partner-dashboard');
     }
   }
 
   // Partner kullanıcılarının erişemeyeceği sayfalar
   if (partnerRestrictedPaths.some(path => pathname.startsWith(path))) {
-    if (token?.role === 'TOUR_OPERATOR') {
-      return NextResponse.redirect(new URL('/partner-dashboard', request.url));
+    if (token?.role === 'TOUR_OPERATOR' || token?.role === 'EXPERIENCE_PROVIDER') {
+      return redirectTo(request, '/partner-dashboard');
     }
   }
 
@@ -155,5 +134,6 @@ export const config = {
     '/reviews/:path*',
     '/login',
     '/register',
+    '/partner-login',
   ],
 }; 

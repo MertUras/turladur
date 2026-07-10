@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { signIn, useSession, signOut } from 'next-auth/react';
+import { isPartnerSession } from '@/lib/auth/partner-session';
 import {
   ArrowRightIcon as ArrowRightIconSolid,
   EyeIcon as EyeIconSolid,
@@ -36,16 +37,13 @@ export default function PartnerLoginPage() {
   const [error, setError] = useState('');
   const [accountStatus, setAccountStatus] = useState<'PENDING' | 'REJECTED' | 'SUSPENDED' | null>(null);
   const [rememberMe, setRememberMe] = useState(false);
-  const router = useRouter();
   const { data: session, status } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      if (session?.user?.provider === 'partner-credentials') {
-        router.push('/partner-dashboard');
-      } else {
-        signOut({ redirect: false, callbackUrl: '/partner-login' });
-      }
+    if (status === 'loading') return;
+    if (isPartnerSession(session)) {
+      router.replace('/partner-dashboard');
     }
   }, [status, session, router]);
 
@@ -75,7 +73,7 @@ export default function PartnerLoginPage() {
         }
         setError(result.error);
       } else if (result?.ok) {
-        router.push(result.url || '/partner-dashboard');
+        router.replace('/partner-dashboard');
       }
     } catch (error) {
       console.error('Giriş hatası:', error); // Debug log
@@ -120,7 +118,7 @@ export default function PartnerLoginPage() {
     );
   }
 
-  if (status === 'authenticated' && session?.user?.role === 'PARTNER') {
+  if (status === 'authenticated' && isPartnerSession(session)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-sky-600"></div>

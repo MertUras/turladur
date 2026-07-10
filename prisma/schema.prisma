@@ -360,8 +360,24 @@ model Booking {
 // kayıtların ortalamasından hesaplanıp cache'lenir (bkz. lib/membership.ts).
 model PartnerReview {
   id                   String              @id @default(cuid())
+  // Genel ortalama (6 kategori puanının aritmetik ortalaması, yuvarlanmış).
+  // Eski kayıtlarda yalnızca bu alan dolu olabilir; kategori alanları null kalır.
   rating               Int
   comment              String?
+  guideRating          Int?
+  operatorRating       Int?
+  routeRating          Int?
+  foodRating           Int?
+  hotelRating          Int?
+  transportRating      Int?
+  guideFeedback        String?
+  operatorFeedback     String?
+  routeFeedback        String?
+  foodFeedback         String?
+  hotelFeedback        String?
+  transportFeedback    String?
+  responseText         String?
+  respondedAt          DateTime?
   createdAt            DateTime            @default(now())
   userId               String
   bookingId            String              @unique

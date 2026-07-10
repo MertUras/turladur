@@ -1,54 +1,43 @@
 "use client";
 
 import { SessionProvider, useSession } from "next-auth/react";
+import type { Session } from "next-auth";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { signOut } from "next-auth/react";
+import { isCustomerSession, isPartnerSession } from "@/lib/auth/partner-session";
 
 function AuthContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, status } = useSession();
+  const signingOutRef = useRef(false);
 
   useEffect(() => {
-    const isPartnerPath = pathname?.startsWith('/partner');
-    const isAuthPath = pathname?.startsWith('/login') || pathname?.startsWith('/register');
-    const isPartnerAuthPath = pathname?.startsWith('/partner-login') || pathname?.startsWith('/partner-register');
+    if (status === "loading") return;
 
-    // Session durumunu kontrol et
-    if (status === 'loading') return;
+    const isPartnerDashboardPath =
+      pathname === "/partner-dashboard" || pathname?.startsWith("/partner-dashboard/");
+    const isPartnerAuthPath =
+      pathname === "/partner-login" ||
+      pathname?.startsWith("/partner-register") ||
+      pathname?.startsWith("/partner-verification");
 
-    // Partner oturumu varsa ve partner login/register sayfalarındaysak dashboard'a yönlendir
-    if (session?.user?.provider === 'partner-credentials' && isPartnerAuthPath) {
-      router.push('/partner-dashboard');
+    // Partner session on auth pages → send to dashboard (middleware is backup)
+    if (isPartnerSession(session) && isPartnerAuthPath) {
+      router.replace("/partner-dashboard");
       return;
     }
 
-    // Partner oturumu yoksa ve partner sayfalarına erişmeye çalışıyorsa login'e yönlendir
-    if (isPartnerPath && !isPartnerAuthPath && !session?.user?.provider) {
-      router.push('/partner-login');
-      return;
+    // Customer session on partner dashboard → sign out once, then middleware sends to login
+    if (
+      isPartnerDashboardPath &&
+      isCustomerSession(session) &&
+      !signingOutRef.current
+    ) {
+      signingOutRef.current = true;
+      void signOut({ redirect: false, callbackUrl: "/partner-login" });
     }
-
-    // Normal kullanıcı oturumu varsa ve partner sayfasındaysak oturumu sonlandır
-    if (isPartnerPath && !isPartnerAuthPath && session?.user?.provider !== 'partner-credentials') {
-      signOut({ 
-        redirect: false,
-        callbackUrl: '/partner-login'
-      });
-      return;
-    }
-
-    // Session süresi kontrolü
-    const sessionExpiry = session?.expires ? new Date(session.expires) : null;
-    if (sessionExpiry && new Date() > sessionExpiry) {
-      signOut({ 
-        redirect: false,
-        callbackUrl: isPartnerPath ? '/partner-login' : '/login'
-      });
-      return;
-    }
-
   }, [pathname, session, status, router]);
 
   return <>{children}</>;
@@ -56,12 +45,14 @@ function AuthContent({ children }: { children: React.ReactNode }) {
 
 export default function AuthProvider({
   children,
+  session,
 }: {
   children: React.ReactNode;
+  session?: Session | null;
 }) {
   return (
-    <SessionProvider>
+    <SessionProvider session={session}>
       <AuthContent>{children}</AuthContent>
     </SessionProvider>
   );
-} 
+}

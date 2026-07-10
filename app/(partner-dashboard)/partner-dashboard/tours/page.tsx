@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { 
   PlusIcon, 
@@ -18,9 +17,12 @@ import {
   CalendarIcon,
   MapPinIcon,
   UsersIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
+  CheckCircleIcon,
+  XCircleIcon,
 } from '@heroicons/react/24/outline';
 import TourDateModal from '@/app/components/partner-dashboard/TourDateModal';
+import ConfirmDialog from '@/app/components/partner-dashboard/ConfirmDialog';
 
 interface TourDate {
   id: string;
@@ -37,6 +39,8 @@ interface TourDate {
   minParticipants?: number;
   maxParticipants?: number;
   notes?: string;
+  status?: string;
+  isActive?: boolean;
 }
 
 interface Tour {
@@ -66,14 +70,21 @@ export default function PartnerToursPage() {
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [selectedTour, setSelectedTour] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<TourDate | null>(null);
-  const router = useRouter();
-  const { data: session, status } = useSession();
+  const [statusConfirm, setStatusConfirm] = useState<{
+    tourId: string;
+    dateId: string;
+    tourName: string;
+    startDate: Date;
+    endDate: Date;
+    action: 'complete' | 'cancel';
+  } | null>(null);
+  const [statusActionLoading, setStatusActionLoading] = useState(false);
+  const { status } = useSession();
 
   useEffect(() => {
+    if (status === 'loading') return;
     if (status === 'authenticated') {
       fetchTours();
-    } else if (status === 'unauthenticated') {
-      router.push('/auth/signin');
     }
   }, [status]);
 
@@ -156,6 +167,96 @@ export default function PartnerToursPage() {
     setSelectedTour(tourId);
     setSelectedDate(date);
     setIsDateModalOpen(true);
+  };
+
+  const isDateTerminal = (status?: string) =>
+    status === 'COMPLETED' || status === 'CANCELLED';
+
+  const getDateStatusBadge = (status?: string) => {
+    if (status === 'COMPLETED') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+          Tamamlandı
+        </span>
+      );
+    }
+    if (status === 'CANCELLED') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+          İptal Edildi
+        </span>
+      );
+    }
+    return null;
+  };
+
+  const formatDateRange = (startDate: Date, endDate: Date) =>
+    `${new Date(startDate).toLocaleDateString('tr-TR')} - ${new Date(endDate).toLocaleDateString('tr-TR')}`;
+
+  const openDateStatusConfirm = (
+    tour: Tour,
+    date: TourDate,
+    action: 'complete' | 'cancel'
+  ) => {
+    setStatusConfirm({
+      tourId: tour.id,
+      dateId: date.id,
+      tourName: tour.name,
+      startDate: date.startDate,
+      endDate: date.endDate,
+      action,
+    });
+  };
+
+  const closeDateStatusConfirm = () => {
+    if (statusActionLoading) return;
+    setStatusConfirm(null);
+  };
+
+  const executeDateStatusAction = async () => {
+    if (!statusConfirm) return;
+
+    const { tourId, dateId, action } = statusConfirm;
+
+    try {
+      setStatusActionLoading(true);
+      const response = await fetch(`/api/partner/tours/${tourId}/dates/${dateId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Tur tarihi güncellenirken bir hata oluştu');
+      }
+
+      const result = await response.json();
+      const updatedDate = result.tourDate;
+
+      setTours((prev) =>
+        prev.map((tour) => {
+          if (tour.id !== tourId) return tour;
+          return {
+            ...tour,
+            tourDates: tour.tourDates.map((date) =>
+              date.id === dateId
+                ? {
+                    ...date,
+                    status: updatedDate.status,
+                    isActive: updatedDate.isActive,
+                  }
+                : date
+            ),
+          };
+        })
+      );
+      setStatusConfirm(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+    } finally {
+      setStatusActionLoading(false);
+    }
   };
 
   const handleDeleteDate = async (tourId: string, dateId: string) => {
@@ -408,14 +509,19 @@ export default function PartnerToursPage() {
                   </div>
                   {tour.tourDates && tour.tourDates.length > 0 ? (
                     <div className="space-y-4">
-                      {tour.tourDates.map((date) => (
+                      {tour.tourDates.map((date) => {
+                        const terminal = isDateTerminal(date.status);
+                        return (
                         <div key={date.id} className="flex items-center justify-between bg-white p-4 rounded-md border border-gray-200">
                           <div className="flex items-center space-x-4">
                             <CalendarIcon className="h-5 w-5 text-gray-400" />
                             <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                {new Date(date.startDate).toLocaleDateString('tr-TR')} - {new Date(date.endDate).toLocaleDateString('tr-TR')}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm font-medium text-gray-900">
+                                  {new Date(date.startDate).toLocaleDateString('tr-TR')} - {new Date(date.endDate).toLocaleDateString('tr-TR')}
+                                </p>
+                                {getDateStatusBadge(date.status)}
+                              </div>
                               <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
                                 <span>{date.availableSeats} kişilik kontenjan</span>
                                 <span>{date.price} ₺</span>
@@ -439,23 +545,43 @@ export default function PartnerToursPage() {
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
+                            {!terminal && (
+                              <>
+                                <button
+                                  onClick={() => openDateStatusConfirm(tour, date, 'complete')}
+                                  className="inline-flex items-center px-2.5 py-1.5 border border-green-300 shadow-sm text-xs font-medium rounded text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                >
+                                  <CheckCircleIcon className="h-4 w-4 mr-1" />
+                                  Tamamlandı
+                                </button>
+                                <button
+                                  onClick={() => openDateStatusConfirm(tour, date, 'cancel')}
+                                  className="inline-flex items-center px-2.5 py-1.5 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                                >
+                                  <XCircleIcon className="h-4 w-4 mr-1" />
+                                  İptal
+                                </button>
+                              </>
+                            )}
                             <button
                               onClick={() => handleEditDate(tour.id, date)}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+                              disabled={terminal}
+                              className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <PencilSquareIcon className="h-4 w-4 mr-1" />
                               Düzenle
                             </button>
                             <button
                               onClick={() => handleDeleteDate(tour.id, date.id)}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                              disabled={terminal}
+                              className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <TrashIcon className="h-4 w-4 mr-1" />
                               Sil
                             </button>
                           </div>
                         </div>
-                      ))}
+                      );})}
                     </div>
                   ) : (
                     <div className="text-center py-6 bg-gray-50 rounded-lg">
@@ -513,6 +639,38 @@ export default function PartnerToursPage() {
           />
         );
       })()}
+
+      <ConfirmDialog
+        isOpen={!!statusConfirm}
+        onClose={closeDateStatusConfirm}
+        onConfirm={executeDateStatusAction}
+        isLoading={statusActionLoading}
+        title={
+          statusConfirm?.action === 'complete'
+            ? 'Turu Tamamlandı Olarak İşaretle'
+            : 'Tur Tarihini İptal Et'
+        }
+        description={
+          statusConfirm?.action === 'complete'
+            ? 'Bu işlem sonrasında ilgili onaylı rezervasyonlar tamamlandı durumuna geçecek ve müşterileriniz tur deneyimlerini değerlendirebilecek.'
+            : 'Bu işlem sonrasında bu tarihe bağlı tüm rezervasyonlar iptal edilecek. Bu işlem geri alınamaz.'
+        }
+        confirmLabel={
+          statusConfirm?.action === 'complete'
+            ? 'Tamamlandı Olarak İşaretle'
+            : 'İptal Et'
+        }
+        variant={statusConfirm?.action === 'complete' ? 'success' : 'danger'}
+      >
+        {statusConfirm && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+            <p className="text-sm font-medium text-gray-900">{statusConfirm.tourName}</p>
+            <p className="mt-1 text-sm text-gray-500">
+              {formatDateRange(statusConfirm.startDate, statusConfirm.endDate)}
+            </p>
+          </div>
+        )}
+      </ConfirmDialog>
     </div>
   );
 } 

@@ -1,107 +1,96 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { 
-  ArrowPathIcon, 
-  CalendarIcon, 
-  ClockIcon, 
-  MapPinIcon, 
-  UsersIcon, 
-  FunnelIcon, 
-  ArrowsUpDownIcon,
-  BuildingOfficeIcon,
-  GlobeAltIcon,
-  SparklesIcon,
+import {
+  ArrowPathIcon,
+  CalendarIcon,
   ChevronDownIcon,
-  XMarkIcon
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
-import Image from 'next/image';
-import { dummyBookings } from '@/app/lib/dummy-data';
 import { Booking } from '@/app/types';
 import Link from 'next/link';
-import { format } from 'date-fns';
-import { tr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 import BookingCard from './components/BookingCard';
 import BookingDetailsModal from './components/BookingDetailsModal';
 import RatePartnerModal, { ReviewableBooking } from './components/RatePartnerModal';
 import { StarIcon } from '@heroicons/react/24/solid';
+import {
+  mapUserBookingToBooking,
+  matchesStatusFilter,
+  useUserBookings,
+} from '@/lib/user/bookings';
 
-// Filter tipi
 type FilterStatus = 'all' | 'CONFIRMED' | 'PENDING' | 'COMPLETED' | 'CANCELLED';
 type FilterType = 'all' | 'hotel' | 'tour' | 'experience';
 type SortOption = 'date-desc' | 'date-asc' | 'price-desc' | 'price-asc';
 
 export default function BookingsPage() {
   const { data: session, status } = useSession();
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
+  const userId = session?.user?.id ?? '';
+
+  const {
+    bookings: userBookings,
+    isLoading,
+    isRefreshing,
+    error,
+    refetch,
+  } = useUserBookings({
+    enabled: status === 'authenticated',
+    showNewBookingToast: true,
+    showStatusUpdateToast: true,
+  });
+
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-
-  // Süresi dolmuş ve henüz partneri değerlendirilmemiş gerçek rezervasyonlar
-  // (bkz. /api/user/bookings). Üstteki liste hâlâ demo verisiyle çalıştığı
-  // için bu, bağımsız/gerçek bir veri kaynağıdır.
-  const [reviewableBookings, setReviewableBookings] = useState<ReviewableBooking[]>([]);
   const [ratingBooking, setRatingBooking] = useState<ReviewableBooking | null>(null);
+  const [cancelledIds, setCancelledIds] = useState<Set<string>>(new Set());
 
-  // Filtreler
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [typeFilter, setTypeFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
 
-  useEffect(() => {
-    // Gerçek bir API'dan veri çekmek yerine dummy verileri kullanıyoruz
-    // Not: Gerçek uygulamada, bu bir API çağrısı olacaktır
-    const fetchBookings = () => {
-      setLoading(true);
-      // Kullanıcının ID'sine göre filtreleme simülasyonu
-      setTimeout(() => {
-        setBookings(dummyBookings);
-        setLoading(false);
-      }, 500);
-    };
+  const bookings = useMemo(
+    () =>
+      userBookings.map((userBooking) => {
+        const mapped = mapUserBookingToBooking(userBooking, userId);
+        if (cancelledIds.has(mapped.id)) {
+          return { ...mapped, status: 'CANCELLED' as const };
+        }
+        return mapped;
+      }),
+    [userBookings, userId, cancelledIds]
+  );
 
-    if (status === 'authenticated') {
-      fetchBookings();
-    } else if (status === 'unauthenticated') {
-      setLoading(false);
-    }
-  }, [status]);
-
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-
-    fetch('/api/user/bookings')
-      .then((res) => (res.ok ? res.json() : { bookings: [] }))
-      .then((data) => {
-        const eligible = (data.bookings || [])
-          .filter((b: any) => b.canReviewPartner)
-          .map((b: any): ReviewableBooking => ({
+  const reviewableBookings = useMemo(
+    () =>
+      userBookings
+        .filter((b) => b.canReviewPartner && !cancelledIds.has(b.id))
+        .map(
+          (b): ReviewableBooking => ({
             id: b.id,
             bookingNumber: b.bookingNumber,
-            title: b.tour?.name || b.experience?.title || 'Rezervasyon',
-            partnerName: b.tour?.operator?.name || b.experience?.operator?.name || 'Partner',
+            title: b.productTitle || b.tour?.name || b.experience?.title || 'Rezervasyon',
+            partnerName:
+              b.operatorName ||
+              b.tour?.operator?.name ||
+              b.experience?.operator?.name ||
+              'Partner',
             type: b.tourId ? 'tour' : b.experienceId ? 'experience' : undefined,
-          }));
-        setReviewableBookings(eligible);
-      })
-      .catch(() => setReviewableBookings([]));
-  }, [status]);
+            displayDateLabel: b.displayDateLabel ?? undefined,
+            guestCount: b.reviewGroupGuestCount ?? b.guestCount ?? b.adults + b.children,
+            reviewGroupBookingCount: b.reviewGroupBookingCount,
+            reviewGroupKey: b.reviewGroupKey ?? undefined,
+          })
+        ),
+    [userBookings, cancelledIds]
+  );
 
-  const handleReviewSubmitted = (bookingId: string) => {
-    setReviewableBookings((prev) => prev.filter((b) => b.id !== bookingId));
-    setRatingBooking(null);
-  };
-
-  const filteredBookings = bookings.filter(booking => {
-    // Durum filtrelemesi
-    if (statusFilter !== 'all' && booking.status !== statusFilter) {
+  const filteredBookings = bookings.filter((booking) => {
+    if (!matchesStatusFilter(booking.status, statusFilter)) {
       return false;
     }
 
-    // Tip filtrelemesi
     if (typeFilter !== 'all') {
       if (typeFilter === 'hotel' && !booking.hotelId) return false;
       if (typeFilter === 'tour' && !booking.tourId) return false;
@@ -111,7 +100,6 @@ export default function BookingsPage() {
     return true;
   });
 
-  // Sıralama
   const sortedBookings = [...filteredBookings].sort((a, b) => {
     switch (sortBy) {
       case 'date-desc':
@@ -133,57 +121,24 @@ export default function BookingsPage() {
   };
 
   const handleCancelBooking = (bookingId: string) => {
-    // API'ye iptal isteği gönderilecek
     toast.success('Rezervasyon iptal edildi');
-    // Güncelleme yapıldığını simüle ediyoruz
-    setBookings(prevBookings => 
-      prevBookings.map(booking => 
-        booking.id === bookingId 
-          ? { ...booking, status: 'CANCELLED' as const } 
-          : booking
-      )
-    );
+    setCancelledIds((prev) => new Set(prev).add(bookingId));
     setShowDetailsModal(false);
   };
 
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'CONFIRMED':
-        return 'bg-green-100 text-green-800';
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800';
-      case 'COMPLETED':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getBookingTypeIcon = (booking: Booking) => {
-    if (booking.hotelId) {
-      return <BuildingOfficeIcon className="h-5 w-5 text-blue-500" />;
-    } else if (booking.tourId) {
-      return <GlobeAltIcon className="h-5 w-5 text-blue-500" />;
-    } else if (booking.experienceId) {
-      return <SparklesIcon className="h-5 w-5 text-blue-500" />;
-    }
-    return null;
-  };
-
-  const formatDate = (date: Date) => {
-    return format(new Date(date), 'dd MMMM yyyy', { locale: tr });
+  const handleReviewSubmitted = (bookingId: string) => {
+    setRatingBooking(null);
+    void refetch();
   };
 
   const handleClearFilters = () => {
     setStatusFilter('all');
     setTypeFilter('all');
-    setSortBy('date-desc'); // Optionally reset sort order too
+    setSortBy('date-desc');
     toast('Filtreler temizlendi');
   };
 
-  if (status === 'loading' || loading) {
+  if (status === 'loading' || (status === 'authenticated' && isLoading)) {
     return (
       <div className="min-h-screen bg-neutral-50 pt-16 flex items-center justify-center">
         <div className="flex flex-col items-center text-neutral-500">
@@ -199,8 +154,10 @@ export default function BookingsPage() {
       <div className="min-h-screen bg-neutral-50 pt-20">
         <div className="max-w-lg mx-auto px-4 py-16 text-center bg-white rounded-xl border border-neutral-200/50 shadow-sm">
           <h1 className="text-xl font-semibold text-neutral-900 mb-3">Erişim Reddedildi</h1>
-          <p className="text-neutral-600 mb-6">Rezervasyonlarınızı görüntülemek ve yönetmek için lütfen giriş yapın.</p>
-          <Link 
+          <p className="text-neutral-600 mb-6">
+            Rezervasyonlarınızı görüntülemek ve yönetmek için lütfen giriş yapın.
+          </p>
+          <Link
             href="/api/auth/signin"
             className="inline-flex items-center justify-center px-5 py-2.5 bg-sky-600 text-white text-sm font-semibold rounded-lg hover:bg-sky-700 transition-colors shadow-sm active:scale-[0.98]"
           >
@@ -214,28 +171,62 @@ export default function BookingsPage() {
   return (
     <div className="min-h-screen bg-neutral-50 pt-6 pb-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-20">
-        {/* Başlık */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-neutral-900">Rezervasyonlarım</h1>
-          <p className="text-sm text-neutral-600 mt-1">Tüm geçmiş, güncel ve gelecek rezervasyonlarınızı buradan yönetebilirsiniz.</p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-neutral-900">Rezervasyonlarım</h1>
+            <p className="text-sm text-neutral-600 mt-1">
+              Tüm geçmiş, güncel ve gelecek rezervasyonlarınızı buradan yönetebilirsiniz.
+            </p>
+          </div>
+          {isRefreshing && (
+            <div className="flex items-center gap-1.5 text-xs text-neutral-500 shrink-0">
+              <ArrowPathIcon className="h-4 w-4 animate-spin text-sky-600" />
+              Güncelleniyor...
+            </div>
+          )}
         </div>
-        
-        {/* Değerlendirme bekleyen rezervasyonlar */}
+
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
         {reviewableBookings.length > 0 && (
           <div className="bg-amber-50 border border-amber-200/70 rounded-xl p-5 mb-6">
             <div className="flex items-center gap-2 mb-3">
               <StarIcon className="h-5 w-5 text-amber-500" />
-              <h2 className="text-sm font-semibold text-amber-900">Değerlendirmenizi Bekleyen Rezervasyonlar</h2>
+              <h2 className="text-sm font-semibold text-amber-900">
+                Değerlendirmenizi Bekleyen Rezervasyonlar
+              </h2>
             </div>
             <div className="space-y-2">
               {reviewableBookings.map((rb) => (
                 <div
                   key={rb.id}
-                  className="flex items-center justify-between gap-3 bg-white rounded-lg border border-amber-100 px-4 py-3"
+                  className="flex items-center justify-between gap-4 bg-white rounded-lg border border-amber-100 px-4 py-3.5"
                 >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-neutral-900 truncate">{rb.title}</p>
-                    <p className="text-xs text-neutral-500 truncate">{rb.partnerName}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-neutral-900 truncate">{rb.title}</p>
+                    {rb.displayDateLabel && (
+                      <p className="text-sm text-neutral-700 mt-0.5">
+                        {rb.displayDateLabel} tarihli{' '}
+                        {rb.type === 'experience' ? 'aktivitenin değerlendirmesi' : 'turun değerlendirmesi'}{' '}
+                        bekliyor
+                      </p>
+                    )}
+                    <p className="text-xs text-neutral-500 mt-1 truncate">
+                      {[
+                        rb.reviewGroupBookingCount && rb.reviewGroupBookingCount > 1
+                          ? `${rb.reviewGroupBookingCount} rezervasyon · ${rb.guestCount} kişi`
+                          : rb.guestCount
+                            ? `${rb.guestCount} kişi`
+                            : null,
+                        rb.partnerName,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -250,28 +241,25 @@ export default function BookingsPage() {
           </div>
         )}
 
-        {/* Filtre ve sıralama */}
         <div className="bg-white rounded-xl shadow-sm border border-neutral-200/50 p-5 mb-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-4 gap-y-5">
-            
-            {/* Status Filter (Button Group) */}
             <div className="lg:col-span-2">
-              <label className="block text-sm font-medium text-neutral-700 mb-2">
-                Durum
-              </label>
+              <label className="block text-sm font-medium text-neutral-700 mb-2">Durum</label>
               <div className="flex flex-wrap gap-2">
-                {([
-                  { key: 'all', label: 'Tümü' },
-                  { key: 'CONFIRMED', label: 'Onaylı' },
-                  { key: 'PENDING', label: 'Beklemede' },
-                  { key: 'COMPLETED', label: 'Tamamlandı' },
-                  { key: 'CANCELLED', label: 'İptal Edildi' },
-                ] as { key: FilterStatus; label: string }[]).map(statusOpt => (
+                {(
+                  [
+                    { key: 'all', label: 'Tümü' },
+                    { key: 'CONFIRMED', label: 'Onaylı' },
+                    { key: 'PENDING', label: 'Beklemede' },
+                    { key: 'COMPLETED', label: 'Tamamlandı' },
+                    { key: 'CANCELLED', label: 'İptal Edildi' },
+                  ] as { key: FilterStatus; label: string }[]
+                ).map((statusOpt) => (
                   <button
                     key={statusOpt.key}
                     type="button"
                     onClick={() => setStatusFilter(statusOpt.key)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${ 
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
                       statusFilter === statusOpt.key
                         ? 'bg-sky-100 text-sky-700 border-sky-200 ring-1 ring-sky-200'
                         : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300'
@@ -283,36 +271,36 @@ export default function BookingsPage() {
               </div>
             </div>
 
-            {/* Type Filter (Button Group) - Combined with Sort for layout */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5 items-end">
-               <div>
-                 <label className="block text-sm font-medium text-neutral-700 mb-2">
-                   Rezervasyon Tipi
-                 </label>
-                 <div className="flex flex-wrap gap-2">
-                    {([
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Rezervasyon Tipi
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
                       { key: 'all', label: 'Tümü' },
                       { key: 'hotel', label: 'Otel' },
                       { key: 'tour', label: 'Tur' },
                       { key: 'experience', label: 'Deneyim' },
-                    ] as { key: FilterType; label: string }[]).map(typeOpt => (
-                      <button
-                        key={typeOpt.key}
-                        type="button"
-                        onClick={() => setTypeFilter(typeOpt.key)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${ 
-                          typeFilter === typeOpt.key
-                            ? 'bg-sky-100 text-sky-700 border-sky-200 ring-1 ring-sky-200'
-                            : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300'
-                        }`}
-                      >
-                        {typeOpt.label}
-                      </button>
-                    ))}
-                  </div>
-               </div>
+                    ] as { key: FilterType; label: string }[]
+                  ).map((typeOpt) => (
+                    <button
+                      key={typeOpt.key}
+                      type="button"
+                      onClick={() => setTypeFilter(typeOpt.key)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                        typeFilter === typeOpt.key
+                          ? 'bg-sky-100 text-sky-700 border-sky-200 ring-1 ring-sky-200'
+                          : 'bg-white text-neutral-600 border-neutral-200 hover:bg-neutral-50 hover:border-neutral-300'
+                      }`}
+                    >
+                      {typeOpt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-              {/* Sort By (Dropdown) */}
               <div>
                 <label htmlFor="sort-by" className="block text-sm font-medium text-neutral-700 mb-1.5">
                   Sırala
@@ -336,10 +324,9 @@ export default function BookingsPage() {
               </div>
             </div>
 
-            {/* Clear Filters Button */}
             {(statusFilter !== 'all' || typeFilter !== 'all' || sortBy !== 'date-desc') && (
               <div className="lg:col-span-3 flex justify-end mt-3">
-                <button 
+                <button
                   type="button"
                   onClick={handleClearFilters}
                   className="inline-flex items-center text-xs font-medium text-neutral-500 hover:text-sky-600 transition-colors"
@@ -351,37 +338,37 @@ export default function BookingsPage() {
             )}
           </div>
         </div>
-        
-        {/* Rezervasyon listesi */}
+
         {sortedBookings.length > 0 ? (
           <div className="space-y-5">
             {sortedBookings.map((booking) => (
-              <BookingCard 
+              <BookingCard
                 key={booking.id}
                 booking={booking}
                 onViewDetails={handleViewDetails}
-                onCancelBooking={handleCancelBooking}
               />
             ))}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center text-center py-16 px-6 bg-white rounded-xl border border-dashed border-neutral-200 mt-8">
-             <div className="p-3 bg-neutral-100 rounded-full mb-4">
-               <CalendarIcon className="h-8 w-8 text-neutral-400" /> 
-             </div>
-             <h3 className="text-lg font-semibold text-neutral-700">Rezervasyon Bulunamadı</h3>
-             <p className="mt-1 text-neutral-500 text-sm max-w-xs mb-6">Seçtiğiniz filtrelere uygun rezervasyon bulunamadı veya henüz rezervasyon yapmadınız.</p>
-             <Link 
-               href="/"
-               className="inline-flex items-center justify-center px-5 py-2.5 bg-sky-600 text-white text-sm font-semibold rounded-lg hover:bg-sky-700 transition-colors shadow-sm active:scale-[0.98]"
-             >
-               Yeni Rezervasyon Yap
-             </Link>
-           </div>
+            <div className="p-3 bg-neutral-100 rounded-full mb-4">
+              <CalendarIcon className="h-8 w-8 text-neutral-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-neutral-700">Rezervasyon Bulunamadı</h3>
+            <p className="mt-1 text-neutral-500 text-sm max-w-xs mb-6">
+              Seçtiğiniz filtrelere uygun rezervasyon bulunamadı veya henüz rezervasyon
+              yapmadınız.
+            </p>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center px-5 py-2.5 bg-sky-600 text-white text-sm font-semibold rounded-lg hover:bg-sky-700 transition-colors shadow-sm active:scale-[0.98]"
+            >
+              Yeni Rezervasyon Yap
+            </Link>
+          </div>
         )}
       </div>
-      
-      {/* Rezervasyon detayları modal */}
+
       {selectedBooking && (
         <BookingDetailsModal
           isOpen={showDetailsModal}
@@ -391,7 +378,6 @@ export default function BookingsPage() {
         />
       )}
 
-      {/* Partner değerlendirme modalı */}
       {ratingBooking && (
         <RatePartnerModal
           booking={ratingBooking}
@@ -401,4 +387,4 @@ export default function BookingsPage() {
       )}
     </div>
   );
-} 
+}

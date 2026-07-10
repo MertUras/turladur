@@ -46,13 +46,15 @@ interface Tour {
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     // Turu ve ilişkili tarihleri getir
     const tour = await prisma.tour.findUnique({
       where: {
-        id: params.id,
+        id,
       },
       include: {
         tourOperator: {
