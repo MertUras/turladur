@@ -6,7 +6,14 @@ import DestinationsRouteImage from "./DestinationsRouteImage";
 const HOMEPAGE_ROUTE_LIMIT = 4;
 
 export default async function Destinations() {
-  const { routes } = await getRoutesWithStats();
+  let routes;
+  try {
+    ({ routes } = await getRoutesWithStats());
+  } catch (error) {
+    // Preview/local: DATABASE_URL yok veya DB erişilemezse ana sayfa çökmesin
+    console.error("[Destinations] routes unavailable:", error);
+    return null;
+  }
 
   const featuredRoutes = routes
     .filter((route) => route.tourCount > 0)
