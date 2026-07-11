@@ -2,7 +2,13 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is not configured');
+  }
+  return new Resend(apiKey);
+}
 
 export async function POST(request: Request) {
   try {
@@ -42,7 +48,7 @@ export async function POST(request: Request) {
     // Doğrulama e-postasını gönder
     const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/partner-verification/verify?token=${verificationToken}`;
     
-    await resend.emails.send({
+    await getResend().emails.send({
       from: 'TourTech Partner <partner@tourtech.com>',
       to: email,
       subject: 'TourTech Partner Hesabınızı Doğrulayın',
