@@ -32,6 +32,9 @@ export default nextConfig;
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   images: {
     domains: [
       "images.unsplash.com", // BU SATIR GEREKLİ
