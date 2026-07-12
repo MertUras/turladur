@@ -50,7 +50,7 @@ async function refreshTourDates(now: Date) {
 
   let updated = 0;
 
-  for (const dates of byTour.values()) {
+  for (const dates of Array.from(byTour.values())) {
     for (let index = 0; index < dates.length; index++) {
       const date = dates[index];
       const offset = offsets[index % offsets.length];
@@ -97,6 +97,7 @@ async function refreshActivityDates(now: Date) {
   const byExperience = new Map<string, typeof staleDates>();
 
   for (const date of staleDates) {
+    if (!date.experienceId) continue;
     const group = byExperience.get(date.experienceId) ?? [];
     group.push(date);
     byExperience.set(date.experienceId, group);
@@ -104,7 +105,7 @@ async function refreshActivityDates(now: Date) {
 
   let updated = 0;
 
-  for (const dates of byExperience.values()) {
+  for (const dates of Array.from(byExperience.values())) {
     for (let index = 0; index < dates.length; index++) {
       const date = dates[index];
       const startDate = addDays(now, 3 + index);
