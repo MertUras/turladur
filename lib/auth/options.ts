@@ -3,6 +3,10 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { ensureAuthEnv } from "@/lib/auth/ensure-auth-env";
+import {
+  getSessionCookieName,
+  useSecureSessionCookies,
+} from "@/lib/auth/session-cookie";
 
 ensureAuthEnv();
 
@@ -221,12 +225,12 @@ export const authOptions: NextAuthOptions = {
   },
   cookies: {
     sessionToken: {
-      name: 'next-auth.session-token',
+      name: getSessionCookieName(),
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: process.env.NODE_ENV === 'production',
+        secure: useSecureSessionCookies(),
       },
     },
   },

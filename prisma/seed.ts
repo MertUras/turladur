@@ -3,6 +3,35 @@ import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
+const CUSTOMER_PROFILES = [
+  { email: 'musteri1@tourtech.com', name: 'Ayşe Demir' },
+  { email: 'musteri2@tourtech.com', name: 'Mehmet Kaya' },
+  { email: 'musteri3@tourtech.com', name: 'Zeynep Arslan' },
+  { email: 'musteri4@tourtech.com', name: 'Can Öztürk' },
+];
+
+function addDays(base: Date, days: number): Date {
+  const result = new Date(base);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function atMidnight(date: Date): Date {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+function buildTourDateSpecs(basePrice: number, duration: number) {
+  const offsets = [14, 45, 75];
+  return offsets.map((offset, index) => {
+    const startDate = atMidnight(addDays(new Date(), offset));
+    const endDate = atMidnight(addDays(startDate, duration - 1));
+    const price = Math.round(basePrice * (index === 0 ? 1 : 1.1));
+    return { startDate, endDate, price };
+  });
+}
+
 // Yaş aralıkları tanımları
 const defaultAgeRanges = [
   {
@@ -434,6 +463,20 @@ async function main() {
       });
     }
 
+    const customerPassword = await bcrypt.hash('test123', 10);
+    for (const profile of CUSTOMER_PROFILES) {
+      await prisma.user.upsert({
+        where: { email: profile.email },
+        update: { name: profile.name },
+        create: {
+          email: profile.email,
+          password: customerPassword,
+          role: UserRole.USER,
+          name: profile.name,
+        },
+      });
+    }
+
     // Experience Provider oluştur
     const experienceProvider = await prisma.experienceOperator.create({
       data: {
@@ -521,26 +564,21 @@ async function main() {
       });
 
       // Her deneyim için tarihleri oluştur
-      const activityDates = [
-        {
-          startDate: new Date('2025-06-10T09:00:00Z'),
-          endDate: new Date('2025-06-10T13:00:00Z'),
-          price: experience.price,
-          availableSeats: 10,
-          experienceId: createdExperience.id
-        },
-        {
-          startDate: new Date('2025-06-11T09:00:00Z'),
-          endDate: new Date('2025-06-11T13:00:00Z'),
-          price: experience.price,
-          availableSeats: 10,
-          experienceId: createdExperience.id
-        }
-      ];
+      const activityDateOffsets = [3, 4];
+      for (const offset of activityDateOffsets) {
+        const startDate = addDays(new Date(), offset);
+        startDate.setHours(9, 0, 0, 0);
+        const endDate = new Date(startDate);
+        endDate.setHours(13, 0, 0, 0);
 
-      for (const date of activityDates) {
         const createdDate = await prisma.activityDate.create({
-          data: date
+          data: {
+            startDate,
+            endDate,
+            price: experience.price,
+            availableSeats: 10,
+            experienceId: createdExperience.id,
+          },
         });
         // Yaş aralıklarını ekle (TourDateAgeRange ile aynı seed)
         for (const range of defaultAgeRanges) {
@@ -658,138 +696,31 @@ async function main() {
         }
       });
 
-      // Tur tarihlerini ekle
-      const tourDates = [
-        {
-          startDate: new Date('2025-06-15'),
-          endDate: new Date('2025-06-21'),
-          price: 8500,
-          availableSeats: 30,
-          soldSeats: 0,
-          waitingList: 0,
-          minParticipants: 10,
-          maxParticipants: 30,
-          earlyBirdDiscount: 15,
-          lastMinuteDiscount: 10,
-          earlyBirdDeadline: new Date('2025-05-15'),
-          lastMinuteStart: new Date('2025-06-01'),
-          status: 'ACTIVE',
-          isActive: true,
-          tourId: tour.id,
-          ageRanges: [
-            {
-              minAge: 0,
-              maxAge: 2,
-              pricingType: 'free',
-              value: 0
-            },
-            {
-              minAge: 3,
-              maxAge: 6,
-              pricingType: 'percentage',
-              value: 50
-            },
-            {
-              minAge: 7,
-              maxAge: 12,
-              pricingType: 'percentage',
-              value: 25
-            },
-            {
-              minAge: 13,
-              maxAge: null,
-              pricingType: 'fixed',
-              value: 8500
-            }
-          ]
-        },
-        {
-          startDate: new Date('2025-07-13'),
-          endDate: new Date('2025-07-19'),
-          price: 9350,
-          availableSeats: 30,
-            soldSeats: 0,
-            waitingList: 0,
-          minParticipants: 10,
-          maxParticipants: 30,
-          earlyBirdDiscount: 15,
-          lastMinuteDiscount: 10,
-          earlyBirdDeadline: new Date('2025-06-13'),
-          lastMinuteStart: new Date('2025-07-01'),
-            status: 'ACTIVE',
-          isActive: true,
-          tourId: tour.id,
-          ageRanges: [
-            {
-              minAge: 0,
-              maxAge: 2,
-              pricingType: 'free',
-              value: 0
-            },
-            {
-              minAge: 3,
-              maxAge: 6,
-              pricingType: 'percentage',
-              value: 50
-            },
-            {
-              minAge: 7,
-              maxAge: 12,
-              pricingType: 'percentage',
-              value: 25
-            },
-            {
-              minAge: 13,
-              maxAge: null,
-              pricingType: 'fixed',
-              value: 9350
-            }
-          ]
-        },
-        {
-          startDate: new Date('2025-08-17'),
-          endDate: new Date('2025-08-23'),
-          price: 9350,
-          availableSeats: 30,
-          soldSeats: 0,
-          waitingList: 0,
-          minParticipants: 10,
-          maxParticipants: 30,
-          earlyBirdDiscount: 15,
-          lastMinuteDiscount: 10,
-          earlyBirdDeadline: new Date('2025-07-17'),
-          lastMinuteStart: new Date('2025-08-01'),
-          status: 'ACTIVE',
-          isActive: true,
-          tourId: tour.id,
-          ageRanges: [
-            {
-              minAge: 0,
-              maxAge: 2,
-              pricingType: 'free',
-              value: 0
-            },
-            {
-              minAge: 3,
-              maxAge: 6,
-              pricingType: 'percentage',
-              value: 50
-            },
-            {
-              minAge: 7,
-              maxAge: 12,
-              pricingType: 'percentage',
-              value: 25
-            },
-            {
-              minAge: 13,
-              maxAge: null,
-              pricingType: 'fixed',
-              value: 9350
-            }
-          ]
-        }
-      ];
+      // Tur tarihlerini ekle (bugünden itibaren gelecek tarihler)
+      const tourDateSpecs = buildTourDateSpecs(tourData.basePrice, tourData.duration);
+      const tourDates = tourDateSpecs.map(({ startDate, endDate, price }) => ({
+        startDate,
+        endDate,
+        price,
+        availableSeats: tourData.maxParticipants,
+        soldSeats: 0,
+        waitingList: 0,
+        minParticipants: 10,
+        maxParticipants: tourData.maxParticipants,
+        earlyBirdDiscount: 15,
+        lastMinuteDiscount: 10,
+        earlyBirdDeadline: addDays(startDate, -30),
+        lastMinuteStart: addDays(startDate, -14),
+        status: 'ACTIVE',
+        isActive: true,
+        tourId: tour.id,
+        ageRanges: [
+          { minAge: 0, maxAge: 2, pricingType: 'free', value: 0 },
+          { minAge: 3, maxAge: 6, pricingType: 'percentage', value: 50 },
+          { minAge: 7, maxAge: 12, pricingType: 'percentage', value: 25 },
+          { minAge: 13, maxAge: null, pricingType: 'fixed', value: price },
+        ],
+      }));
 
       for (const date of tourDates) {
         const { ageRanges, ...tourDateData } = date;

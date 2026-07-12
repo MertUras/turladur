@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { NextRequest } from 'next/server';
+import {
+  getSessionCookieName,
+  useSecureSessionCookies,
+} from '@/lib/auth/session-cookie';
 
 const isPartnerDashboardPath = (pathname: string) =>
   pathname === '/partner-dashboard' || pathname.startsWith('/partner-dashboard/');
@@ -41,15 +45,12 @@ const permissionRequiredPaths: Record<string, string[]> = {
 };
 
 export async function middleware(request: NextRequest) {
-  const useSecureCookies = process.env.NODE_ENV === 'production';
-  const sessionCookieName = useSecureCookies
-    ? '__Secure-next-auth.session-token'
-    : 'next-auth.session-token';
+  const sessionCookieName = getSessionCookieName();
 
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
-    secureCookie: useSecureCookies,
+    secureCookie: useSecureSessionCookies(),
     cookieName: sessionCookieName,
   });
 
