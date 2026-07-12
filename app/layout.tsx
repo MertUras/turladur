@@ -11,6 +11,15 @@ import { ensureAuthEnv, getMissingAuthEnv } from "@/lib/auth/ensure-auth-env";
 
 ensureAuthEnv();
 
+function isDynamicServerUsageError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.includes('Dynamic server usage') ||
+      (typeof (error as { digest?: string }).digest === 'string' &&
+        (error as { digest?: string }).digest === 'DYNAMIC_SERVER_USAGE'))
+  );
+}
+
 async function getSafeServerSession() {
   const missing = getMissingAuthEnv();
   if (missing.includes("NEXTAUTH_SECRET")) {
@@ -24,6 +33,9 @@ async function getSafeServerSession() {
   try {
     return await getServerSession(authOptions);
   } catch (error) {
+    if (isDynamicServerUsageError(error)) {
+      throw error;
+    }
     console.error("[RootLayout] getServerSession başarısız:", error);
     return null;
   }
