@@ -1,4 +1,5 @@
 import { BookingStatus, Prisma } from '@prisma/client';
+import { IMAGE_PLACEHOLDER } from '@/lib/constants/images';
 import { prisma } from '@/lib/prisma';
 import { translateReservationStatus } from '@/lib/partner/reservations/labels';
 import {
@@ -245,7 +246,7 @@ export class PrismaPartnerDashboardProvider implements PartnerDashboardProvider 
           image:
             Array.isArray(t.images) && t.images.length > 0
               ? String(t.images[0])
-              : '/images/placeholder.jpg',
+              : IMAGE_PLACEHOLDER,
         })),
         'tour'
       ),
@@ -442,7 +443,7 @@ export class PrismaPartnerDashboardProvider implements PartnerDashboardProvider 
           reservationCount: e._count.bookings,
           guestCount: e.bookings.reduce((sum, b) => sum + b.adults + b.children, 0),
           price: e.price,
-          image: e.imageUrl || '/images/placeholder.jpg',
+          image: e.imageUrl || IMAGE_PLACEHOLDER,
         })),
         'experience'
       ),

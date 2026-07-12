@@ -85,7 +85,10 @@ export default function PartnerToursPage() {
     if (status === 'loading') return;
     if (status === 'authenticated') {
       fetchTours();
+      return;
     }
+    setLoading(false);
+    setError('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
   }, [status]);
 
   const fetchTours = async () => {

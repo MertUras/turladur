@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+type RouteParams = { params: Promise<{ id: string }> };
+
 // Yaş aralıklarını getir
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
+  const { id } = await params;
+
   try {
-    // Önce tur tarihinin aktif olup olmadığını kontrol et
     const tourDate = await prisma.tourDate.findUnique({
-      where: {
-        id: params.id
-      },
+      where: { id },
       select: {
         isActive: true,
         status: true,
@@ -31,8 +32,13 @@ export async function GET(
       );
     }
 
-    // Eğer tur tarihi aktif değilse veya geçmiş bir tarihse
     if (!tourDate.isActive || tourDate.status !== 'ACTIVE' || new Date(tourDate.startDate) < new Date()) {
+      console.warn('Yaş aralıkları isteği reddedildi:', {
+        tourDateId: id,
+        isActive: tourDate.isActive,
+        status: tourDate.status,
+        startDate: tourDate.startDate,
+      });
       return NextResponse.json(
         { error: 'Bu tur tarihi artık aktif değil' },
         { status: 400 }
@@ -41,7 +47,7 @@ export async function GET(
 
     return NextResponse.json(tourDate.ageRanges);
   } catch (error) {
-    console.error('Yaş aralıkları getirilemedi:', error);
+    console.error('Yaş aralıkları getirilemedi:', { tourDateId: id, error });
     return NextResponse.json(
       { error: 'Yaş aralıkları getirilemedi' },
       { status: 500 }
@@ -52,13 +58,14 @@ export async function GET(
 // Yeni yaş aralığı ekle
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
+  const { id } = await params;
+
   try {
     const data = await request.json();
     const { minAge, description, pricingType, value } = data;
 
-    // Validasyon
     if (!minAge || !pricingType || value === undefined) {
       return NextResponse.json(
         { error: 'Gerekli alanlar eksik' },
@@ -66,20 +73,19 @@ export async function POST(
       );
     }
 
-    // Yaş aralığı oluştur
     const ageRange = await prisma.tourDateAgeRange.create({
       data: {
         minAge,
         description,
         pricingType,
         value,
-        tourDateId: params.id
+        tourDateId: id
       }
     });
 
     return NextResponse.json(ageRange);
   } catch (error) {
-    console.error('Yaş aralığı eklenemedi:', error);
+    console.error('Yaş aralığı eklenemedi:', { tourDateId: id, error });
     return NextResponse.json(
       { error: 'Yaş aralığı eklenemedi' },
       { status: 500 }
@@ -90,13 +96,14 @@ export async function POST(
 // Yaş aralığını güncelle
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
+  const { id: tourDateId } = await params;
+
   try {
     const data = await request.json();
     const { id, minAge, description, pricingType, value } = data;
 
-    // Validasyon
     if (!id || !minAge || !pricingType || value === undefined) {
       return NextResponse.json(
         { error: 'Gerekli alanlar eksik' },
@@ -104,7 +111,6 @@ export async function PUT(
       );
     }
 
-    // Yaş aralığını güncelle
     const ageRange = await prisma.tourDateAgeRange.update({
       where: { id },
       data: {
@@ -117,7 +123,7 @@ export async function PUT(
 
     return NextResponse.json(ageRange);
   } catch (error) {
-    console.error('Yaş aralığı güncellenemedi:', error);
+    console.error('Yaş aralığı güncellenemedi:', { tourDateId, error });
     return NextResponse.json(
       { error: 'Yaş aralığı güncellenemedi' },
       { status: 500 }
@@ -128,8 +134,10 @@ export async function PUT(
 // Yaş aralığını sil
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
+  const { id: tourDateId } = await params;
+
   try {
     const data = await request.json();
     const { id } = data;
@@ -147,10 +155,10 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Yaş aralığı silinemedi:', error);
+    console.error('Yaş aralığı silinemedi:', { tourDateId, error });
     return NextResponse.json(
       { error: 'Yaş aralığı silinemedi' },
       { status: 500 }
     );
   }
-} 
+}

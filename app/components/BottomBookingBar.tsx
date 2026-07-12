@@ -152,10 +152,15 @@ export default function BottomBookingBar({
       setIsLoading(true);
       setError(null);
       const response = await fetch(`/api/tour-dates/${dateId}/age-ranges`);
-      if (!response.ok) throw new Error('Yaş aralıkları getirilemedi');
+      if (!response.ok) {
+        const { getResponseErrorMessage } = await import('@/lib/utils/normalize-error');
+        throw new Error(await getResponseErrorMessage(response, 'Yaş aralıkları getirilemedi'));
+      }
       setSelectedDateAgeRanges(await response.json());
     } catch (err) {
-      setError('Yaş aralıkları yüklenirken bir hata oluştu');
+      const message = err instanceof Error ? err.message : 'Yaş aralıkları yüklenirken bir hata oluştu';
+      console.error('Yaş aralıkları yüklenemedi:', { dateId, error: err });
+      setError(message);
       setSelectedDateAgeRanges([]);
     } finally {
       setIsLoading(false);

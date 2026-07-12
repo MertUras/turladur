@@ -1,6 +1,10 @@
+'use client';
+
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { StarIcon, UserGroupIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import { IMAGE_PLACEHOLDER } from '@/lib/constants/images';
 
 interface Tour {
   id: string;
@@ -16,6 +20,38 @@ interface Tour {
 
 interface PopularToursProps {
   tours: Tour[];
+}
+
+function TourImage({ src, alt }: { src: string; alt: string }) {
+  const initialSrc =
+    typeof src === 'string' && src.trim() !== '' ? src : IMAGE_PLACEHOLDER;
+  const [imageSrc, setImageSrc] = useState(initialSrc);
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div className="absolute inset-0 flex items-center justify-center bg-gray-200 text-sm text-gray-500">
+        Görsel yok
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={imageSrc}
+      alt={alt}
+      fill
+      unoptimized={imageSrc.endsWith('.svg')}
+      className="object-cover group-hover:scale-105 transition-transform duration-200"
+      onError={() => {
+        if (imageSrc !== IMAGE_PLACEHOLDER) {
+          setImageSrc(IMAGE_PLACEHOLDER);
+          return;
+        }
+        setFailed(true);
+      }}
+    />
+  );
 }
 
 export default function PopularTours({ tours }: PopularToursProps) {
@@ -40,12 +76,7 @@ export default function PopularTours({ tours }: PopularToursProps) {
             className="group block"
           >
             <div className="relative h-48 rounded-lg overflow-hidden">
-              <Image
-                src={typeof tour.image === 'string' && tour.image.trim() !== '' ? tour.image : '/images/placeholder.jpg'}
-                alt={tour.title}
-                fill
-                className="object-cover group-hover:scale-105 transition-transform duration-200"
-              />
+              <TourImage src={tour.image} alt={tour.title} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-4">
                 <h4 className="text-lg font-semibold text-white">{tour.title}</h4>
@@ -83,4 +114,4 @@ export default function PopularTours({ tours }: PopularToursProps) {
       </div>
     </div>
   );
-} 
+}

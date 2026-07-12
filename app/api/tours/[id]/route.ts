@@ -69,6 +69,11 @@ export async function GET(
           },
         },
         tourDates: {
+          where: {
+            isActive: true,
+            status: 'ACTIVE',
+            startDate: { gte: new Date() },
+          },
           include: {
             ageRanges: true
           },

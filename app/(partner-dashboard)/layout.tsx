@@ -27,6 +27,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { signOut, useSession } from 'next-auth/react';
 import MembershipBadge, { type MembershipTier } from '@/app/components/partner-dashboard/MembershipBadge';
+import { LOGO_PATH } from '@/lib/constants/images';
+import { normalizeError } from '@/lib/utils/normalize-error';
 
 interface SidebarLink {
   name: string;
@@ -55,6 +57,7 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [membershipTier, setMembershipTier] = useState<MembershipTier | null>(null);
+  const [logoError, setLogoError] = useState(false);
   const pathname = usePathname();
   const { data: session } = useSession();
   const userRole = session?.user?.role as string;
@@ -67,10 +70,29 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
   // İsim yanında gösterilecek üyelik armasını (Bronze/Silver/Gold) getir
   useEffect(() => {
     if (!session) return;
-    fetch('/api/partner/membership')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setMembershipTier(data?.tier ?? null))
-      .catch(() => setMembershipTier(null));
+
+    let cancelled = false;
+
+    const loadMembership = async () => {
+      try {
+        const response = await fetch('/api/partner/membership');
+        if (!response.ok) {
+          if (!cancelled) setMembershipTier(null);
+          return;
+        }
+        const data = await response.json();
+        if (!cancelled) setMembershipTier(data?.tier ?? null);
+      } catch (error) {
+        console.error('Membership fetch failed:', normalizeError(error, 'Üyelik bilgisi alınamadı'));
+        if (!cancelled) setMembershipTier(null);
+      }
+    };
+
+    void loadMembership();
+
+    return () => {
+      cancelled = true;
+    };
   }, [session]);
 
   // Mobil cihazlarda menü açıldığında sayfanın kaydırılmasını engelle
@@ -140,7 +162,20 @@ export default function PartnerDashboardLayout({ children }: { children: React.R
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
               <div className="h-8 w-8 text-white rounded-md flex items-center justify-center">
-                <Image src="/images/logo.png" alt="TurlaDur Logo" width={32} height={32} />
+                {logoError ? (
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-sky-500 text-xs font-bold text-white">
+                    T
+                  </span>
+                ) : (
+                  <Image
+                    src={LOGO_PATH}
+                    alt="TurlaDur Logo"
+                    width={32}
+                    height={32}
+                    unoptimized
+                    onError={() => setLogoError(true)}
+                  />
+                )}
               </div>
               <div className="ml-2.5 flex flex-col">
                 <span className="text-lg font-semibold text-neutral-800">Turladur</span>

@@ -2,11 +2,92 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
+
+function normalizeImageUrls(images: unknown): string[] {
+  if (!Array.isArray(images)) {
+    return [];
+  }
+
+  return images
+    .map((img) => {
+      if (typeof img === 'string' && img.trim()) {
+        return img.trim();
+      }
+      if (img && typeof img === 'object' && 'url' in img) {
+        const url = (img as { url?: unknown }).url;
+        return typeof url === 'string' && url.trim() ? url.trim() : null;
+      }
+      return null;
+    })
+    .filter((url): url is string => Boolean(url));
+}
+
+function toInt(value: unknown, fallback = 0): number {
+  const parsed = parseInt(String(value ?? ''), 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function toFloat(value: unknown, fallback = 0): number {
+  const parsed = parseFloat(String(value ?? ''));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function toOptionalInt(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const parsed = parseInt(String(value), 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toOptionalFloat(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const parsed = parseFloat(String(value));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function mapPrismaError(error: unknown): string {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    switch (error.code) {
+      case 'P2002':
+        if (
+          error.meta?.target &&
+          String(error.meta.target).includes('tour_date_age_ranges')
+        ) {
+          return 'Aynı yaş aralığı birden fazla kez tanımlanmış. Lütfen yaş aralıklarını kontrol edin.';
+        }
+        return 'Bu tur adı zaten kullanılıyor. Lütfen farklı bir ad seçiniz.';
+      case 'P2003':
+        return 'Tur operatörü bilgisi hatalı. Lütfen tekrar giriş yapınız.';
+      case 'P2011':
+        return 'Zorunlu alanlar eksik. Lütfen tüm gerekli alanları doldurunuz.';
+      case 'P2012':
+        return 'Geçersiz veri formatı. Lütfen tüm alanları kontrol ediniz.';
+      default:
+        return 'Veritabanı hatası. Lütfen tekrar deneyiniz.';
+    }
+  }
+
+  if (error instanceof Error) {
+    if (error.message.includes('Invalid value provided')) {
+      return 'Geçersiz veri formatı. Lütfen tüm alanları kontrol ediniz.';
+    }
+    if (error.message.includes('Invalid date')) {
+      return 'Tarih formatı hatalı. Lütfen tarihleri kontrol ediniz.';
+    }
+    return error.message;
+  }
+
+  return 'Bilinmeyen bir hata oluştu';
+}
 
 // Tur detaylarını getir
 export async function GET(
   request: Request,
-  { params }: { params: { tourId: string } }
+  { params }: { params: Promise<{ tourId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,7 +97,7 @@ export async function GET(
     }
 
     const userId = session.user.id;
-    const tourId = params.tourId;
+    const { tourId } = await params;
     
     // Partner'ı bul
     const partner = await prisma.tourOperator.findFirst({
@@ -127,14 +208,14 @@ export async function GET(
 // Turu güncelle
 export async function PUT(
   request: Request,
-  { params }: { params: { tourId: string } }
+  { params }: { params: Promise<{ tourId: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
     return NextResponse.json({ error: 'Yetkisiz erişim' }, { status: 401 });
   }
 
-  const { tourId } = params;
+  const { tourId } = await params;
   if (!tourId) {
     return NextResponse.json({ error: 'Tur ID\'si eksik' }, { status: 400 });
   }
@@ -147,8 +228,10 @@ export async function PUT(
       featured, departureCity, region, transportation, period, tourType,
       accommodationType, ageRestriction, languages, tags, tourDates,
       pickupPoints, accommodationName, accommodationImage, accommodationLocation,
-      accommodationRating, accommodationFeatures, features
+      accommodationRating, accommodationFeatures, features, data
     } = body;
+
+    const normalizedImages = normalizeImageUrls(images);
 
     // Turun mevcut sahibini kontrol et
     const tourOperator = await prisma.tourOperator.findFirst({
@@ -180,18 +263,19 @@ export async function PUT(
         data: {
           name: title,
           description,
-          duration: parseInt(duration, 10),
-          price: parseFloat(price),
-          discount: discount ? parseFloat(discount) : null,
+          duration: toInt(duration),
+          nights: toInt(data?.nights, 0),
+          price: toFloat(price),
+          discount: toOptionalFloat(discount),
           startDate: startDate ? new Date(startDate) : null,
           endDate: endDate ? new Date(endDate) : null,
-          maxParticipants: parseInt(maxParticipants, 10),
+          maxParticipants: toInt(maxParticipants),
           destinations: destinations || [],
           inclusions: includes || [],
           exclusions: excludes || [],
-          features: features || [],
+          features: features || data?.features || [],
           itinerary: itinerary || [],
-          images: images.map((img: any) => img.url).filter((url: any) => url !== undefined && url !== null) || [], // Undefined değerleri filtrele
+          images: normalizedImages,
           featured: featured || false,
           departureCity: Array.isArray(departureCity) ? departureCity.join(', ') : departureCity,
           region,
@@ -199,9 +283,11 @@ export async function PUT(
           period,
           tourType,
           accommodationType,
-          ageRestriction: ageRestriction ? parseInt(ageRestriction, 10) : null,
+          ageRestriction: toOptionalInt(ageRestriction),
           languages: languages || [],
           tags: tags || [],
+          meetingPoint: data?.meetingPoint || null,
+          meetingTime: data?.meetingTime || null,
         },
       });
 
@@ -273,15 +359,24 @@ export async function PUT(
 
           // Yaş aralıklarını ekle
           if (date.ageRanges && Array.isArray(date.ageRanges) && date.ageRanges.length > 0) {
+            const seenAgeRanges = new Set<string>();
             const ageRangeData = date.ageRanges
               .filter((range: any) => range && typeof range === 'object' && range.minAge !== undefined)
               .map((range: any) => ({
                 tourDateId: createdTourDate.id,
-                minAge: parseInt(range.minAge?.toString() || '0'),
-                maxAge: range.maxAge ? parseInt(range.maxAge.toString()) : null,
+                minAge: parseInt(range.minAge?.toString() || '0', 10),
+                maxAge: range.maxAge ? parseInt(range.maxAge.toString(), 10) : null,
                 pricingType: range.pricingType || 'percentage',
                 value: parseFloat(range.value?.toString() || '0')
-              }));
+              }))
+              .filter((range) => {
+                const key = `${range.minAge}:${range.maxAge ?? 'null'}`;
+                if (seenAgeRanges.has(key)) {
+                  return false;
+                }
+                seenAgeRanges.add(key);
+                return true;
+              });
 
             if (ageRangeData.length > 0) {
               await tx.tourDateAgeRange.createMany({
@@ -299,17 +394,17 @@ export async function PUT(
 
   } catch (error) {
     console.error(`Tur Güncelleme Hatası (ID: ${tourId}):`, error);
-    if (error instanceof Error) {
-        return NextResponse.json({ error: 'Tur güncellenirken bir hata oluştu: ' + error.message }, { status: 500 });
-    }
-    return NextResponse.json({ error: 'Bilinmeyen bir hata oluştu' }, { status: 500 });
+    return NextResponse.json(
+      { error: `Tur güncellenirken bir hata oluştu: ${mapPrismaError(error)}` },
+      { status: 500 }
+    );
   }
 }
 
 // Turu sil
 export async function DELETE(
   request: Request,
-  { params }: { params: { tourId: string } }
+  { params }: { params: Promise<{ tourId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -319,7 +414,7 @@ export async function DELETE(
     }
 
     const userId = session.user.id;
-    const tourId = params.tourId;
+    const { tourId } = await params;
     
     // Partner'ı bul
     const partner = await prisma.tourOperator.findFirst({

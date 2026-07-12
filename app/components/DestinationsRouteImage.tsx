@@ -2,9 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-
-const PLACEHOLDER_IMAGE =
-  "https://placehold.co/800x600/e5e7eb/6b7280?text=G%C3%B6rsel+Yok";
+import { IMAGE_PLACEHOLDER } from "@/lib/constants/images";
 
 export default function DestinationsRouteImage({
   src,
@@ -23,10 +21,11 @@ export default function DestinationsRouteImage({
       alt={alt}
       fill
       priority={priority}
+      unoptimized={imageSrc.endsWith(".svg")}
       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
       className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
       onError={() => {
-        if (imageSrc !== PLACEHOLDER_IMAGE) setImageSrc(PLACEHOLDER_IMAGE);
+        if (imageSrc !== IMAGE_PLACEHOLDER) setImageSrc(IMAGE_PLACEHOLDER);
       }}
     />
   );

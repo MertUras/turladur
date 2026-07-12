@@ -112,9 +112,10 @@ export default function Header() {
 
   const handleAuthClick = (e: React.MouseEvent) => {
     if (session?.user?.provider === 'partner-credentials') {
+      const href = (e.currentTarget as HTMLAnchorElement).getAttribute('href') || '/';
       e.preventDefault();
-      signOut({ redirect: false }).then(() => {
-        window.location.href = e.currentTarget.getAttribute('href') || '/';
+      void signOut({ redirect: false }).then(() => {
+        window.location.href = href;
       });
     }
   };

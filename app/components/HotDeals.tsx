@@ -7,6 +7,7 @@ import { MapPinIcon, StarIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { ArrowRightIcon } from '@heroicons/react/20/solid';
 import { motion } from 'framer-motion';
 import MembershipBadge, { type MembershipTier } from './partner-dashboard/MembershipBadge';
+import { IMAGE_PLACEHOLDER } from '@/lib/constants/images';
 
 // Gerçek turları/aktiviteleri döndüren /api/home/deals'ten gelen kart tipi.
 type Deal = {
@@ -24,7 +25,7 @@ type Deal = {
   discount?: number;
 };
 
-const PLACEHOLDER_IMAGE = 'https://placehold.co/800x600/e5e7eb/6b7280?text=Görsel+Yok';
+const PLACEHOLDER_IMAGE = IMAGE_PLACEHOLDER;
 
 // Simplified price formatter
 const formatPrice = (price: number) => {
@@ -283,6 +284,7 @@ function DealCard({ deal, index, isVisible }: { deal: Deal; index: number; isVis
           fill
           priority={index < 4}
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+          unoptimized={imageSrc.endsWith('.svg')}
           className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           onError={() => {
             if (imageSrc !== PLACEHOLDER_IMAGE) setImageSrc(PLACEHOLDER_IMAGE);

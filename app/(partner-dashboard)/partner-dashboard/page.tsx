@@ -23,6 +23,7 @@ import {
   PartnerDashboardStatTrends,
   PartnerDashboardStats,
 } from '@/lib/partner/dashboard';
+import { normalizeError } from '@/lib/utils/normalize-error';
 
 export default function PartnerDashboardPage() {
   const { data: session } = useSession();
@@ -40,7 +41,7 @@ export default function PartnerDashboardPage() {
         const data = await response.json();
         setDashboardData(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+        setError(normalizeError(err, 'Dashboard verileri yüklenemedi').message);
       } finally {
         setLoading(false);
       }
@@ -92,8 +93,16 @@ export default function PartnerDashboardPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-red-500">{error}</div>
+      <div className="flex flex-col items-center justify-center h-full gap-3 px-4 text-center">
+        <p className="text-red-600 font-medium">Dashboard yüklenemedi</p>
+        <p className="text-sm text-gray-600">{error}</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          Tekrar dene
+        </button>
       </div>
     );
   }

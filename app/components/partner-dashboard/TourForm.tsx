@@ -6,6 +6,8 @@ import { DatePicker } from '../../components/booking/DatePicker';
 import PickupPointForm from './PickupPointForm';
 import dynamic from 'next/dynamic';
 import { useRef } from 'react';
+import { getResponseErrorMessage, normalizeError } from '@/lib/utils/normalize-error';
+import { IMAGE_PLACEHOLDER } from '@/lib/constants/images';
 const MDEditor = dynamic(() => import('@uiw/react-md-editor'), { ssr: false });
 
 // Önceden tanımlanmış seçenekler
@@ -438,7 +440,7 @@ export default function TourForm({
         return prev;
       });
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Görsel yüklenirken bir hata oluştu');
+      setUploadError(normalizeError(err, 'Görsel yüklenirken bir hata oluştu').message);
     } finally {
       setIsUploadingImages(false);
     }
@@ -785,9 +787,19 @@ export default function TourForm({
       return;
     }
 
-    const hasBlobUrls = formData.images.some(img => img.url.startsWith('blob:'));
+    const hasBlobUrls = formData.images.some(img => img?.url?.startsWith('blob:'));
     if (hasBlobUrls) {
       setSubmitError('Görseller geçici bağlantı olarak kaydedilmiş. Lütfen görselleri yeniden yükleyin.');
+      return;
+    }
+
+    if (isUpdateMode && !tourId) {
+      setSubmitError('Tur kimliği bulunamadı. Lütfen sayfayı yenileyip tekrar deneyin.');
+      return;
+    }
+
+    if (!isUpdateMode && !partnerId) {
+      setSubmitError('Tur operatör bilgisi yüklenemedi. Lütfen sayfayı yenileyip tekrar deneyin.');
       return;
     }
 
@@ -812,21 +824,26 @@ export default function TourForm({
         .filter(city => city && city.trim());
 
       const formDataToSubmit = {
-        ...formData,
-        destinations: filteredDestinations,
-        departureCity: filteredDepartureCities, // Filtrelenmiş kalkış şehirleri
         title: formData.title,
         description: formData.description,
-        duration: parseInt(formData.duration),
-        nights: parseInt(formData.nights || '0'),
-        price: parseFloat(formData.price),
-        maxParticipants: parseInt(formData.maxParticipants.toString()),
-        currentParticipants: parseInt(formData.currentParticipants.toString()),
-        images: formData.images.map(img => img.url),
+        duration: parseInt(formData.duration, 10) || 0,
+        nights: parseInt(formData.nights || '0', 10) || 0,
+        price: parseFloat(formData.price) || 0,
+        maxParticipants: parseInt(formData.maxParticipants.toString(), 10) || 0,
+        currentParticipants: parseInt(formData.currentParticipants.toString(), 10) || 0,
+        destinations: filteredDestinations,
+        departureCity: filteredDepartureCities,
+        images: formData.images
+          .map(img => img?.url)
+          .filter((url): url is string => Boolean(url)),
         includes: formData.includes,
         excludes: formData.excludes,
         features: formData.features,
-        itinerary: formData.itinerary,
+        itinerary: formData.itinerary.map(day => ({
+          title: day.title,
+          description: day.description,
+          images: day.images?.map(image => image.url).filter(Boolean) ?? [],
+        })),
         featured: false,
         tourOperatorId: partnerId,
         region: formData.region,
@@ -837,6 +854,9 @@ export default function TourForm({
         ageRestriction: formData.ageRestriction,
         languages: formData.languages,
         tags: formData.tags,
+        accommodationName: formData.accommodationName,
+        meetingPoint: formData.meetingPoint,
+        meetingTime: formData.meetingTime,
         data: {
           meetingPoint: formData.meetingPoint,
           meetingTime: formData.meetingTime,
@@ -847,12 +867,12 @@ export default function TourForm({
           startDate: date.startDate ? new Date(date.startDate).toISOString() : null,
           endDate: date.endDate ? new Date(date.endDate).toISOString() : null,
           price: parseFloat(date.price || '0'),
-          availableSeats: parseInt(date.availableSeats || '0'),
-          soldSeats: parseInt(date.soldSeats || '0'),
-          waitingList: parseInt(date.waitingList || '0'),
+          availableSeats: parseInt(date.availableSeats || '0', 10),
+          soldSeats: parseInt(date.soldSeats || '0', 10),
+          waitingList: parseInt(date.waitingList || '0', 10),
           discount: parseFloat(date.discount || '0'),
-          minParticipants: date.minParticipants && date.minParticipants.trim() ? parseInt(date.minParticipants) : null,
-          maxParticipants: date.maxParticipants && date.maxParticipants.trim() ? parseInt(date.maxParticipants) : null,
+          minParticipants: date.minParticipants && date.minParticipants.trim() ? parseInt(date.minParticipants, 10) : null,
+          maxParticipants: date.maxParticipants && date.maxParticipants.trim() ? parseInt(date.maxParticipants, 10) : null,
           earlyBirdDiscount: date.earlyBirdDiscount && date.earlyBirdDiscount.trim() ? parseFloat(date.earlyBirdDiscount) : 0,
           lastMinuteDiscount: date.lastMinuteDiscount && date.lastMinuteDiscount.trim() ? parseFloat(date.lastMinuteDiscount) : 0,
           earlyBirdDeadlineStart: date.earlyBirdDeadlineStart && date.earlyBirdDeadlineStart.trim() ? new Date(date.earlyBirdDeadlineStart).toISOString() : null,
@@ -865,8 +885,8 @@ export default function TourForm({
             range && typeof range === 'object' && 
             range.minAge !== undefined && range.minAge !== null
           ).map(range => ({
-            minAge: parseInt(range.minAge?.toString() || '0'),
-            maxAge: range.maxAge ? parseInt(range.maxAge.toString()) : null,
+            minAge: parseInt(range.minAge?.toString() || '0', 10),
+            maxAge: range.maxAge ? parseInt(range.maxAge.toString(), 10) : null,
             pricingType: range.pricingType || 'percentage',
             value: parseFloat(range.value?.toString() || '0')
           })) : []
@@ -905,12 +925,22 @@ export default function TourForm({
         credentials: 'include'
       });
 
-      const responseData = await response.json();
-      console.log('API Yanıtı:', responseData);
-
       if (!response.ok) {
-        throw new Error(responseData?.error ?? responseData?.message ?? 'Sunucudan bilinmeyen bir hata döndü');
+        const errorMessage = await getResponseErrorMessage(
+          response,
+          isUpdateMode ? 'Tur güncellenemedi' : 'Tur oluşturulamadı'
+        );
+        throw new Error(errorMessage);
       }
+
+      let responseData: { id?: string; error?: string; message?: string };
+      try {
+        responseData = await response.json();
+      } catch {
+        throw new Error('Sunucudan beklenmeyen bir yanıt alındı. Lütfen tekrar deneyin.');
+      }
+
+      console.log('API Yanıtı:', responseData);
 
       if (!responseData.id) {
         throw new Error('Tur ID bulunamadı');
@@ -922,11 +952,22 @@ export default function TourForm({
 
     } catch (error) {
       console.error('Form gönderimi hatası:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Tur oluşturulurken bir hata oluştu. Lütfen tüm alanları kontrol edip tekrar deneyiniz.';
+      const errorMessage = normalizeError(
+        error,
+        isUpdateMode
+          ? 'Tur güncellenirken bir hata oluştu. Lütfen tüm alanları kontrol edip tekrar deneyiniz.'
+          : 'Tur oluşturulurken bir hata oluştu. Lütfen tüm alanları kontrol edip tekrar deneyiniz.'
+      ).message;
       setSubmitError(errorMessage);
-      alert(errorMessage);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handlePreviewImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = event.currentTarget;
+    if (!target.src.endsWith(IMAGE_PLACEHOLDER)) {
+      target.src = IMAGE_PLACEHOLDER;
     }
   };
 
@@ -1925,10 +1966,11 @@ export default function TourForm({
                   <div key={index} className="relative group">
                     <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200 relative">
                       <Image
-                        src={image.preview || image.url || '/images/placeholder.jpg'}
+                        src={image.preview || image.url || IMAGE_PLACEHOLDER}
                         alt={`Tour image ${index + 1}`}
                         fill
                         className="object-cover"
+                        onError={handlePreviewImageError}
                       />
                       <button
                         type="button"
@@ -1957,11 +1999,12 @@ export default function TourForm({
             {formData.mainImage && (
               <div className="mt-4 relative w-full max-w-xs">
                 <Image
-                  src={formData.mainImage.preview || formData.mainImage.url}
+                  src={formData.mainImage.preview || formData.mainImage.url || IMAGE_PLACEHOLDER}
                   alt="Ana görsel"
                   width={320}
                   height={180}
                   className="rounded-lg object-cover"
+                  onError={handlePreviewImageError}
                 />
               </div>
             )}
@@ -1986,11 +2029,12 @@ export default function TourForm({
               {formData.galleryImages.map((img, idx) => (
                 <div key={idx} className="relative group border rounded-lg p-2 bg-white">
                   <Image
-                    src={img.preview || img.url}
+                    src={img.preview || img.url || IMAGE_PLACEHOLDER}
                     alt={`Galeri görseli ${idx + 1}`}
                     width={160}
                     height={90}
                     className="rounded-lg object-cover"
+                    onError={handlePreviewImageError}
                   />
                   <input
                     type="text"

@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+type RouteParams = { params: Promise<{ id: string }> };
+
 // Yaş aralıklarını getir
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
+  const { id } = await params;
+
   try {
     // Önce aktivite tarihinin aktif olup olmadığını kontrol et
     const activityDate = await prisma.activityDate.findUnique({
       where: {
-        id: params.id
+        id
       },
       select: {
         // isActive ve status alanları ActivityDate modelinde yok, bu yüzden kaldırıldı.
@@ -43,7 +47,7 @@ export async function GET(
 
     return NextResponse.json(activityDate.ageRanges);
   } catch (error) {
-    console.error('Yaş aralıkları getirilemedi:', error);
+    console.error('Yaş aralıkları getirilemedi:', { activityDateId: id, error });
     return NextResponse.json(
       { error: 'Yaş aralıkları getirilemedi' },
       { status: 500 }

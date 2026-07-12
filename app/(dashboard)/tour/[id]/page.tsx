@@ -8,7 +8,7 @@ import { parseJsonString } from "@/app/utils/format";
 import BottomBookingBar from "@/app/components/BottomBookingBar";
 import MembershipBadge from "@/app/components/partner-dashboard/MembershipBadge";
 import OperatorReviewsSection, { OperatorReview } from "@/app/(dashboard)/tour-operator/[id]/components/OperatorReviewsSection";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from 'next/navigation';
 
 // Heroicons bileşenlerini içe aktarıyoruz
@@ -294,6 +294,19 @@ export default function TourPage() {
     fetchTourOperator();
     fetchOtherTours();
   }, [tour?.tourOperator?.id, tour?.id]);
+
+  const today = useMemo(() => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, []);
+
+  const availableTourDates = useMemo(() => {
+    if (!tour?.tourDates) return [];
+    return tour.tourDates
+      .filter((date) => new Date(date.startDate) >= today)
+      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+  }, [tour?.tourDates, today]);
 
   const handleDateSelect = (date: TourDate | null) => {
     setSelectedTourDate(date);
@@ -1044,17 +1057,17 @@ export default function TourPage() {
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-neutral-800">Tur Tarihleri</h3>
                     <div className="text-sm text-neutral-600">
-                      {tour.tourDates?.length || 0} tarih mevcut
+                      {availableTourDates.length} tarih mevcut
                     </div>
                   </div>
                   <div className="flex flex-col gap-4">
-                    {!tour.tourDates || tour.tourDates.length === 0 ? (
+                    {availableTourDates.length === 0 ? (
                       <div className="text-center py-8">
                         <CalendarDaysIcon className="h-12 w-12 text-neutral-400 mx-auto mb-3" />
                         <p className="text-neutral-600">Şu anda mevcut tur tarihi bulunmamaktadır.</p>
                       </div>
                     ) : (
-                      tour.tourDates.map((date) => {
+                      availableTourDates.map((date) => {
                         const isLimited = date.availableSeats <= 5;
                         const startDate = new Date(date.startDate);
                         const endDate = new Date(date.endDate);
@@ -1363,7 +1376,7 @@ export default function TourPage() {
       
       {/* BottomBookingBar Component */}
       <BottomBookingBar
-        tour={tour}
+        tour={tour ? { ...tour, tourDates: availableTourDates } : undefined}
         onDateSelect={handleDateSelect}
         onParticipantsChange={handleParticipantsChange}
         isExpanded={expanded}
