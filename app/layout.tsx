@@ -7,6 +7,28 @@ import ChatWidgetWrapper from "./components/ChatWidgetWrapper";
 import { ThemeProvider } from "./providers/theme-provider";
 import { Toaster } from "react-hot-toast";
 import { authOptions } from "@/lib/auth/options";
+import { ensureAuthEnv, getMissingAuthEnv } from "@/lib/auth/ensure-auth-env";
+
+ensureAuthEnv();
+
+async function getSafeServerSession() {
+  const missing = getMissingAuthEnv();
+  if (missing.includes("NEXTAUTH_SECRET")) {
+    console.error(
+      "[RootLayout] Oturum devre dışı — Vercel Preview env eksik:",
+      missing.join(", ")
+    );
+    return null;
+  }
+
+  try {
+    return await getServerSession(authOptions);
+  } catch (error) {
+    console.error("[RootLayout] getServerSession başarısız:", error);
+    return null;
+  }
+}
+
 const montserrat = Montserrat({
   subsets: ["latin"],
   variable: "--font-montserrat",
@@ -30,7 +52,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getSafeServerSession();
 
   return (
     <html lang="tr" suppressHydrationWarning>

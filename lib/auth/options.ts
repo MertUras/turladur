@@ -2,6 +2,9 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { ensureAuthEnv } from "@/lib/auth/ensure-auth-env";
+
+ensureAuthEnv();
 
 declare module "next-auth" {
   interface User {
