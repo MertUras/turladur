@@ -1,3 +1,4 @@
+import { BookingStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { computeMembershipTier } from '@/lib/membership';
 import {
@@ -50,8 +51,14 @@ async function fetchReviews(
 ): Promise<ReviewRatingRow[]> {
   const where =
     type === 'tour'
-      ? { tourOperatorId: operatorId }
-      : { experienceOperatorId: operatorId };
+      ? {
+          tourOperatorId: operatorId,
+          booking: { status: BookingStatus.COMPLETED },
+        }
+      : {
+          experienceOperatorId: operatorId,
+          booking: { status: BookingStatus.COMPLETED },
+        };
 
   try {
     const reviews = await prisma.partnerReview.findMany({ where, select: reviewSelect });

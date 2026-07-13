@@ -37,7 +37,8 @@ import {
   SunIcon,
   MoonIcon,
   ShieldCheckIcon,
-  PhoneIcon
+  PhoneIcon,
+  ExclamationCircleIcon
 } from "@heroicons/react/24/outline";
 
 // Solid ikonları
@@ -171,6 +172,7 @@ export default function TourPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTourDate, setSelectedTourDate] = useState<TourDate | null>(null);
+  const [showDateSelectionHint, setShowDateSelectionHint] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [participants, setParticipants] = useState<{ [key: string]: number }>({});
   const containerRef = useRef<HTMLDivElement>(null);
@@ -311,9 +313,31 @@ export default function TourPage() {
   const handleDateSelect = (date: TourDate | null) => {
     setSelectedTourDate(date);
     if (date) {
+      setShowDateSelectionHint(false);
       setExpanded(true);
     }
   };
+
+  const promptDateSelection = () => {
+    if (!selectedTourDate) {
+      setShowDateSelectionHint(true);
+    }
+  };
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#booking') {
+        promptDateSelection();
+      }
+    };
+
+    if (window.location.hash === '#booking') {
+      promptDateSelection();
+    }
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [selectedTourDate]);
 
   const handleParticipantsChange = (newParticipants: { [key: string]: number }) => {
     setParticipants(newParticipants);
@@ -517,6 +541,7 @@ export default function TourPage() {
               </Link>
               <Link
                 href="#booking"
+                onClick={promptDateSelection}
                 className={secondaryButtonDarkBgClasses} // Applied adapted SKY secondary style for dark BG
               >
                 <CalendarDaysIcon className="h-5 w-5 mr-2" />
@@ -1053,7 +1078,32 @@ export default function TourPage() {
                 </div>
 
                 {/* Tur Tarihleri */}
-                <div className="bg-neutral-50/60 p-6 rounded-lg border border-neutral-200/70 mb-6">
+                <div className="relative group">
+                  {showDateSelectionHint && (
+                    <div
+                      className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full z-10 pointer-events-none"
+                      role="tooltip"
+                    >
+                      <div className="relative bg-red-600 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-md whitespace-nowrap animate-bounce-subtle">
+                        Tarih seçmek için kartlara tıklayın
+                        <span className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-red-600 rotate-45" />
+                      </div>
+                    </div>
+                  )}
+                  <div
+                    className={`bg-neutral-50/60 p-6 rounded-lg mb-6 transition-all duration-300 ${
+                      showDateSelectionHint
+                        ? 'border-2 border-red-500 ring-2 ring-red-100 animate-pulse'
+                        : 'border border-neutral-200/70'
+                    }`}
+                    title={showDateSelectionHint ? 'Rezervasyon için bir tur tarihi seçin' : undefined}
+                  >
+                  {showDateSelectionHint && (
+                    <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm font-medium">
+                      <ExclamationCircleIcon className="w-5 h-5 flex-shrink-0" />
+                      <span>Önce tarih seçiniz</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-neutral-800">Tur Tarihleri</h3>
                     <div className="text-sm text-neutral-600">
@@ -1080,7 +1130,13 @@ export default function TourPage() {
                             onClick={() => {
                               handleDateSelect(date);
                             }}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-lg border border-neutral-200/70 hover:border-sky-200 transition-colors text-left w-full"
+                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-lg border transition-colors text-left w-full ${
+                              selectedTourDate?.id === date.id
+                                ? 'border-sky-500 ring-2 ring-sky-200'
+                                : showDateSelectionHint
+                                  ? 'border-red-200 hover:border-red-400 hover:bg-red-50/30'
+                                  : 'border-neutral-200/70 hover:border-sky-200'
+                            }`}
                           >
                             <div className="flex items-start gap-3">
                               <CalendarDaysIcon className="h-5 w-5 text-sky-600 flex-shrink-0 mt-1" />
@@ -1127,6 +1183,7 @@ export default function TourPage() {
                         );
                       })
                     )}
+                  </div>
                   </div>
                 </div>
               </div>

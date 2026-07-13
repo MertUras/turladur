@@ -9,6 +9,8 @@ export type FinancialDateRangeId =
 
 export interface FinancialSummary {
   totalRevenue: number;
+  grossSales: number;
+  refundTotal: number;
   pendingPayments: number;
   totalPayouts: number;
   netProfit: number;
@@ -16,6 +18,7 @@ export interface FinancialSummary {
   increase: boolean | null;
   pendingTransactionCount: number;
   completedTransactionCount: number;
+  completedToursCount: number;
   netProfitChange: number | null;
   netProfitIncrease: boolean | null;
 }

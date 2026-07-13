@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
+import { resolveMembershipTier } from '@/lib/membership';
 import {
   formatBookingDisplayDate,
   getBookingGuestCount,
@@ -35,7 +36,7 @@ export async function GET() {
             images: true,
             departureCity: true,
             destinations: true,
-            tourOperator: { select: { id: true, companyName: true, rating: true, membershipTier: true } },
+            tourOperator: { select: { id: true, companyName: true, rating: true, reviewCount: true } },
           },
         },
         experience: {
@@ -48,7 +49,7 @@ export async function GET() {
             userId: true,
             user: {
               select: {
-                experienceOperators: { select: { id: true, companyName: true, rating: true, membershipTier: true } },
+                experienceOperators: { select: { id: true, companyName: true, rating: true, reviewCount: true } },
               },
             },
           },
@@ -131,7 +132,15 @@ export async function GET() {
               departureCity: booking.tour.departureCity,
               destinations: booking.tour.destinations,
               operator: booking.tour.tourOperator
-                ? { id: booking.tour.tourOperator.id, name: booking.tour.tourOperator.companyName, rating: booking.tour.tourOperator.rating, membershipTier: booking.tour.tourOperator.membershipTier }
+                ? {
+                    id: booking.tour.tourOperator.id,
+                    name: booking.tour.tourOperator.companyName,
+                    rating: booking.tour.tourOperator.rating,
+                    membershipTier: resolveMembershipTier(
+                      booking.tour.tourOperator.rating,
+                      booking.tour.tourOperator.reviewCount
+                    ),
+                  }
                 : null,
             }
           : null,
@@ -143,7 +152,15 @@ export async function GET() {
               location: booking.experience.location,
               meetingPoint: booking.experience.meetingPoint,
               operator: experienceOperator
-                ? { id: experienceOperator.id, name: experienceOperator.companyName, rating: experienceOperator.rating, membershipTier: experienceOperator.membershipTier }
+                ? {
+                    id: experienceOperator.id,
+                    name: experienceOperator.companyName,
+                    rating: experienceOperator.rating,
+                    membershipTier: resolveMembershipTier(
+                      experienceOperator.rating,
+                      experienceOperator.reviewCount
+                    ),
+                  }
                 : null,
             }
           : null,

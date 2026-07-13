@@ -176,32 +176,6 @@ export default function Header() {
                 Turladur
               </span>
             </Link>
-
-            {/* Slash */}
-            <div className={`text-2xl font-light ${logoColor}`}>/</div>
-
-            {/* Partner Portal Logo */}
-            <div 
-              role="button"
-              tabIndex={0}
-              className="flex items-center group flex-shrink-0 cursor-pointer"
-              onClick={handlePartnerPortalClick}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  handlePartnerPortalClick();
-                }
-              }}
-            >
-              <div className="flex-shrink-0 flex items-center">
-                <div className="h-8 w-8 text-white rounded-md flex items-center justify-center">
-                  <Image src="/images/logo.png" alt="TurlaDur Logo" width={32} height={32} />
-                </div>
-                <div className="ml-2.5 flex flex-col">
-                  <span className={`text-lg font-semibold ${logoColor}`}>Turladur</span>
-                  <span className={`text-xs ${shouldAppearScrolled ? 'text-sky-600' : 'text-white'} tracking-wide font-medium`}>Partner Portal</span>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Desktop Navigation */}

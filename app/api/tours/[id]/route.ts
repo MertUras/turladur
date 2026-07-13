@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { resolveMembershipTier } from '@/lib/membership';
 
 interface TourDate {
   id: string;
@@ -65,7 +66,6 @@ export async function GET(
             description: true,
             rating: true,
             reviewCount: true,
-            membershipTier: true,
           },
         },
         tourDates: {
@@ -93,6 +93,15 @@ export async function GET(
     // Tarihleri dönüştür
     const transformedTour = {
       ...tour,
+      tourOperator: tour.tourOperator
+        ? {
+            ...tour.tourOperator,
+            membershipTier: resolveMembershipTier(
+              tour.tourOperator.rating,
+              tour.tourOperator.reviewCount
+            ),
+          }
+        : null,
       tourDates: tour.tourDates.map((date: any) => ({
         ...date,
         startDate: date.startDate.toISOString(),

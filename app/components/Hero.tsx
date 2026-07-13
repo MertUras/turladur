@@ -77,23 +77,42 @@ export default function Hero({ variant = "default" }: HeroProps) {
   }, [isSearchModalOpen]);
 
   // Arama modalını açma
-  const openSearchModal = () => {
+  const openSearchModal = (tab: 'location' | 'dates' | 'guests' = 'location') => {
     setIsSearchModalOpen(true);
-    setActiveModalTab('location'); // Konum sekmesiyle başla
+    setActiveModalTab(tab);
   };
 
-  // Modal'dan son arama işlemi
+  const formatDateParam = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const buildToursSearchUrl = () => {
+    const params = new URLSearchParams();
+    const location = selectedLocation || searchQuery.trim();
+
+    if (selectedLocation) {
+      params.set('departureCity', selectedLocation);
+      params.set('search', selectedLocation);
+    } else if (location) {
+      params.set('search', location);
+    }
+
+    if (selectedStartDate) params.set('startDate', formatDateParam(selectedStartDate));
+    if (selectedEndDate) params.set('endDate', formatDateParam(selectedEndDate));
+    if (adultCount > 1) params.set('adults', adultCount.toString());
+    if (childrenCount > 0) params.set('children', childrenCount.toString());
+
+    const query = params.toString();
+    return query ? `/tours?${query}` : '/tours';
+  };
+
+  // Modal'dan veya hero arama butonundan yönlendirme
   const handleFinalSearch = () => {
-    console.log("Final Arama:", {
-      lokasyon: selectedLocation || searchQuery,
-      giriş: selectedStartDate,
-      çıkış: selectedEndDate,
-      yetişkin: adultCount,
-      çocuk: childrenCount
-    });
     setIsSearchModalOpen(false);
-    // Yönlendirme veya API çağrısı burada yapılabilir
-    // Örneğin: router.push(`/search?location=${...}&start=${...}&...`) 
+    router.push(buildToursSearchUrl());
   };
 
   // --- Yardımcı Fonksiyonlar --- 
@@ -550,34 +569,44 @@ export default function Hero({ variant = "default" }: HeroProps) {
         {isRoutesVariant ? (
           renderRoutesSearchForm()
         ) : (
-          /* Tıklanabilir Arama Çubuğu Tetikleyicisi */
+          /* Tıklanabilir Arama Çubuğu */
           <div className="w-full max-w-3xl animate-slideUp delay-200">
-            <button 
-              onClick={openSearchModal}
-              className="w-full grid grid-cols-[1fr_auto_1fr_auto_auto] md:grid-cols-[1fr_auto_1fr_auto_1fr_auto] items-center bg-white/95 backdrop-blur-sm rounded-full shadow-lg p-2 text-left border border-neutral-200/30 hover:shadow-xl transition-shadow duration-300"
-            >
-              <div className="flex-1 flex items-center pl-3 pr-2 min-w-0">
+            <div className="w-full grid grid-cols-[1fr_auto_1fr_auto_1fr_auto] items-center bg-white/95 backdrop-blur-sm rounded-full shadow-lg p-2 text-left border border-neutral-200/30 hover:shadow-xl transition-shadow duration-300">
+              <button
+                type="button"
+                onClick={() => openSearchModal('location')}
+                className="flex-1 flex items-center pl-3 pr-2 min-w-0 text-left"
+              >
                 <MapPinIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
-                <span className="text-neutral-700 text-sm truncate font-medium">{selectedLocation || "Nereye?"}</span>
-              </div>
+                <span className="text-neutral-700 text-sm truncate font-medium">{selectedLocation || searchQuery || "Nereye?"}</span>
+              </button>
               <div className="hidden md:block h-6 border-l border-neutral-200 mx-1"></div>
-              <div className="flex-1 flex items-center pl-3 pr-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => openSearchModal('dates')}
+                className="flex-1 flex items-center pl-3 pr-2 min-w-0 text-left"
+              >
                 <CalendarDaysIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
                 <span className="text-neutral-700 text-sm truncate font-medium">{selectedStartDate ? `${formatDate(selectedStartDate)}${selectedEndDate ? ' - '+formatDate(selectedEndDate) : ''}` : "Tarihler"}</span>
-              </div>
+              </button>
               <div className="hidden md:block h-6 border-l border-neutral-200 mx-1"></div>
-              <div className="flex-1 flex items-center justify-between pl-3 pr-1 md:pr-0 min-w-0">
-                <div className="flex items-center">
-                  <UserGroupIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
-                  <span className="text-neutral-500 text-sm truncate font-medium whitespace-nowrap">{formatGuests()}</span>
-                </div>
-                <div className="flex-shrink-0 ml-2">
-                  <div className="w-8 h-8 md:w-9 md:h-9 bg-sky-600 rounded-full flex items-center justify-center shadow hover:bg-sky-700 transition-colors">
-                    <MagnifyingGlassIcon className="w-4 h-4 text-white"/>
-                  </div>
-                </div>
-              </div>
-            </button>
+              <button
+                type="button"
+                onClick={() => openSearchModal('guests')}
+                className="flex-1 flex items-center pl-3 pr-2 min-w-0 text-left"
+              >
+                <UserGroupIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
+                <span className="text-neutral-500 text-sm truncate font-medium whitespace-nowrap">{formatGuests()}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleFinalSearch}
+                aria-label="Tur ara"
+                className="flex-shrink-0 ml-2 w-8 h-8 md:w-9 md:h-9 bg-sky-600 rounded-full flex items-center justify-center shadow hover:bg-sky-700 transition-colors"
+              >
+                <MagnifyingGlassIcon className="w-4 h-4 text-white"/>
+              </button>
+            </div>
           </div>
         )}
       </div>

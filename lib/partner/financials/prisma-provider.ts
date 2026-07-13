@@ -11,6 +11,13 @@ import {
   startOfMonth,
 } from '@/lib/partner/dashboard/utils';
 import {
+  getRefundAmount,
+  isCompletedTour,
+  isPendingReservation,
+  isSaleBooking,
+  saleWhere,
+} from './booking-rules';
+import {
   FinancialDateRangeId,
   FinancialTransaction,
   FinancialTransactionType,
@@ -18,9 +25,6 @@ import {
   PartnerFinancialsData,
   PartnerFinancialsProvider,
 } from './types';
-
-const REVENUE_STATUSES: BookingStatus[] = [BookingStatus.CONFIRMED, BookingStatus.COMPLETED];
-const PENDING_STATUSES: BookingStatus[] = [BookingStatus.PENDING, BookingStatus.PENDING_PAYMENT];
 
 function percentChange(current: number, previous: number): number | null {
   if (current === 0 && previous === 0) return null;
@@ -88,22 +92,29 @@ function inPeriod(
 
 function mapTransactionType(
   status: BookingStatus,
-  paymentStatus: PaymentStatus
+  paymentStatus: PaymentStatus,
+  refundAmount: number
 ): FinancialTransactionType {
-  if (paymentStatus === PaymentStatus.REFUNDED) return 'iade';
-  if (PENDING_STATUSES.includes(status)) return 'beklemede';
-  return 'ödeme';
+  if (paymentStatus === PaymentStatus.REFUNDED || refundAmount > 0) return 'iade';
+  if (isPendingReservation(status)) return 'beklemede';
+  if (isSaleBooking(status, paymentStatus)) return 'ödeme';
+  return 'beklemede';
 }
 
 function mapTransactionStatus(
   status: BookingStatus,
-  paymentStatus: PaymentStatus
+  paymentStatus: PaymentStatus,
+  refundAmount: number
 ): FinancialTransaction['status'] {
-  if (status === BookingStatus.CANCELLED || paymentStatus === PaymentStatus.REFUNDED) {
+  if (
+    status === BookingStatus.CANCELLED ||
+    paymentStatus === PaymentStatus.REFUNDED ||
+    refundAmount > 0
+  ) {
     return 'iptal';
   }
-  if (PENDING_STATUSES.includes(status)) return 'beklemede';
-  if (REVENUE_STATUSES.includes(status)) return 'tamamlandı';
+  if (isPendingReservation(status)) return 'beklemede';
+  if (isSaleBooking(status, paymentStatus)) return 'tamamlandı';
   return 'beklemede';
 }
 
@@ -111,11 +122,71 @@ function formatPaymentMethodLabel(method: string | null): string {
   if (!method) return 'Belirtilmemiş';
   const labels: Record<string, string> = {
     credit_card: 'Kredi Kartı',
+    card: 'Banka & Kredi Kartı',
     bank_transfer: 'Banka Havalesi',
+    havale: 'Havale / EFT',
     cash: 'Nakit',
     paypal: 'PayPal',
   };
   return labels[method.toLowerCase()] || method;
+}
+
+type PeriodSummary = {
+  grossSales: number;
+  refundTotal: number;
+  totalRevenue: number;
+  pendingPayments: number;
+  pendingTransactionCount: number;
+  paidTransactionCount: number;
+  completedToursCount: number;
+};
+
+function summarizeBookings(
+  bookings: {
+    totalPrice: number;
+    status: BookingStatus;
+    paymentStatus: PaymentStatus;
+    metadata: Prisma.JsonValue | null;
+  }[]
+): PeriodSummary {
+  let grossSales = 0;
+  let refundTotal = 0;
+  let pendingPayments = 0;
+  let pendingTransactionCount = 0;
+  let paidTransactionCount = 0;
+  let completedToursCount = 0;
+
+  for (const booking of bookings) {
+    const refundAmount = getRefundAmount(booking);
+
+    if (isPendingReservation(booking.status)) {
+      pendingPayments += booking.totalPrice;
+      pendingTransactionCount += 1;
+    }
+
+    if (isCompletedTour(booking.status)) {
+      completedToursCount += 1;
+    }
+
+    if (isSaleBooking(booking.status, booking.paymentStatus)) {
+      grossSales += booking.totalPrice;
+      paidTransactionCount += 1;
+    }
+
+    if (refundAmount > 0) {
+      refundTotal += refundAmount;
+    }
+  }
+
+  return {
+    grossSales,
+    refundTotal,
+    totalRevenue: grossSales - refundTotal,
+    pendingPayments,
+    pendingTransactionCount,
+    paidTransactionCount,
+    completedToursCount,
+  };
 }
 
 export class PrismaPartnerFinancialsProvider implements PartnerFinancialsProvider {
@@ -129,91 +200,77 @@ export class PrismaPartnerFinancialsProvider implements PartnerFinancialsProvide
     const periodWhere = inPeriod(baseWhere, dateRange.start, dateRange.end);
     const previousWhere = inPeriod(baseWhere, dateRange.previousStart, dateRange.previousEnd);
 
-    const revenueWhere = { ...periodWhere, status: { in: REVENUE_STATUSES } };
-    const previousRevenueWhere = { ...previousWhere, status: { in: REVENUE_STATUSES } };
+    const bookingSelect = {
+      id: true,
+      totalPrice: true,
+      status: true,
+      paymentStatus: true,
+      paymentMethod: true,
+      metadata: true,
+      createdAt: true,
+      user: { select: { name: true } },
+      tour: { select: { name: true } },
+      experience: { select: { title: true } },
+    } satisfies Prisma.BookingSelect;
 
     const [
-      periodRevenue,
-      previousRevenue,
-      pendingAgg,
-      pendingCount,
-      payoutsAgg,
-      completedCount,
-      refundsAgg,
       periodBookings,
-      allRevenueBookings,
-      paymentMethodGroups,
+      previousBookings,
+      chartBookings,
     ] = await Promise.all([
-      prisma.booking.aggregate({ where: revenueWhere, _sum: { totalPrice: true } }),
-      prisma.booking.aggregate({ where: previousRevenueWhere, _sum: { totalPrice: true } }),
-      prisma.booking.aggregate({
-        where: {
-          ...periodWhere,
-          status: { in: PENDING_STATUSES },
-        },
-        _sum: { totalPrice: true },
-      }),
-      prisma.booking.count({
-        where: {
-          ...periodWhere,
-          status: { in: PENDING_STATUSES },
-        },
-      }),
-      prisma.booking.aggregate({
-        where: revenueWhere,
-        _sum: { totalPrice: true },
-      }),
-      prisma.booking.count({
-        where: revenueWhere,
-      }),
-      prisma.booking.aggregate({
-        where: {
-          ...periodWhere,
-          paymentStatus: PaymentStatus.REFUNDED,
-        },
-        _sum: { totalPrice: true },
-      }),
       prisma.booking.findMany({
         where: periodWhere,
-        include: {
-          user: { select: { name: true } },
-          tour: { select: { name: true } },
-          experience: { select: { title: true } },
-        },
+        select: bookingSelect,
         orderBy: { createdAt: 'desc' },
-        take: 50,
       }),
       prisma.booking.findMany({
-        where: { ...baseWhere, status: { in: REVENUE_STATUSES } },
-        select: { startDate: true, totalPrice: true },
+        where: previousWhere,
+        select: {
+          totalPrice: true,
+          status: true,
+          paymentStatus: true,
+          metadata: true,
+        },
       }),
-      prisma.booking.groupBy({
-        by: ['paymentMethod'],
-        where: revenueWhere,
-        _count: true,
-        _sum: { totalPrice: true },
+      prisma.booking.findMany({
+        where: saleWhere(baseWhere),
+        select: { startDate: true, totalPrice: true },
       }),
     ]);
 
-    const totalRevenue = periodRevenue._sum.totalPrice || 0;
-    const previousTotal = previousRevenue._sum.totalPrice || 0;
-    const refunds = refundsAgg._sum.totalPrice || 0;
-    const compared = percentChange(totalRevenue, previousTotal);
-    const netProfit = totalRevenue - refunds;
-    const previousNet = (previousRevenue._sum.totalPrice || 0);
-    const netProfitChange = percentChange(netProfit, previousNet);
+    const summary = summarizeBookings(periodBookings);
+    const previousSummary = summarizeBookings(previousBookings);
+    const compared = percentChange(summary.totalRevenue, previousSummary.totalRevenue);
+    const netProfitChange = percentChange(summary.totalRevenue, previousSummary.totalRevenue);
 
-    const transactions: FinancialTransaction[] = periodBookings.map((booking) => {
-      const type = mapTransactionType(booking.status, booking.paymentStatus);
-      const amount =
-        type === 'iade' ? -booking.totalPrice : booking.totalPrice;
+    const paymentMethodMap = new Map<string, { count: number; amount: number }>();
+    for (const booking of periodBookings) {
+      if (!isSaleBooking(booking.status, booking.paymentStatus)) continue;
+
+      const method = formatPaymentMethodLabel(booking.paymentMethod);
+      const refundAmount = getRefundAmount(booking);
+      const existing = paymentMethodMap.get(method) || { count: 0, amount: 0 };
+      existing.count += 1;
+      existing.amount += booking.totalPrice - refundAmount;
+      paymentMethodMap.set(method, existing);
+    }
+
+    const transactions: FinancialTransaction[] = periodBookings.slice(0, 50).map((booking) => {
+      const refundAmount = getRefundAmount(booking);
+      const type = mapTransactionType(booking.status, booking.paymentStatus, refundAmount);
+      const signedAmount =
+        type === 'iade'
+          ? -refundAmount
+          : isSaleBooking(booking.status, booking.paymentStatus)
+            ? booking.totalPrice
+            : booking.totalPrice;
 
       return {
         id: booking.id,
         date: formatTurkishDate(booking.createdAt),
         type,
-        amount,
-        status: mapTransactionStatus(booking.status, booking.paymentStatus),
+        amount: signedAmount,
+        status: mapTransactionStatus(booking.status, booking.paymentStatus, refundAmount),
         customer: booking.user.name || 'İsimsiz Müşteri',
         tourName:
           booking.tour?.name || booking.experience?.title || 'Belirtilmemiş',
@@ -221,27 +278,30 @@ export class PrismaPartnerFinancialsProvider implements PartnerFinancialsProvide
     });
 
     const revenueChart: RevenueChartData = {
-      week: groupRevenueByPeriod(allRevenueBookings, 'week', now),
-      month: groupRevenueByPeriod(allRevenueBookings, 'month', now),
-      year: groupRevenueByPeriod(allRevenueBookings, 'year', now),
+      week: groupRevenueByPeriod(chartBookings, 'week', now),
+      month: groupRevenueByPeriod(chartBookings, 'month', now),
+      year: groupRevenueByPeriod(chartBookings, 'year', now),
     };
 
-    const paymentMethods = paymentMethodGroups.map((group) => ({
-      method: formatPaymentMethodLabel(group.paymentMethod),
-      count: group._count,
-      amount: group._sum.totalPrice || 0,
+    const paymentMethods = Array.from(paymentMethodMap.entries()).map(([method, stats]) => ({
+      method,
+      count: stats.count,
+      amount: stats.amount,
     }));
 
     return {
       summary: {
-        totalRevenue,
-        pendingPayments: pendingAgg._sum.totalPrice || 0,
-        totalPayouts: payoutsAgg._sum.totalPrice || 0,
-        netProfit,
+        totalRevenue: summary.totalRevenue,
+        grossSales: summary.grossSales,
+        refundTotal: summary.refundTotal,
+        pendingPayments: summary.pendingPayments,
+        totalPayouts: summary.grossSales,
+        netProfit: summary.totalRevenue,
         comparedToLastPeriod: compared,
         increase: compared === null ? null : compared >= 0,
-        pendingTransactionCount: pendingCount,
-        completedTransactionCount: completedCount,
+        pendingTransactionCount: summary.pendingTransactionCount,
+        completedTransactionCount: summary.paidTransactionCount,
+        completedToursCount: summary.completedToursCount,
         netProfitChange,
         netProfitIncrease: netProfitChange === null ? null : netProfitChange >= 0,
       },

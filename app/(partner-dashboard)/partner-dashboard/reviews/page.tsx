@@ -14,7 +14,7 @@ import {
   PartnerReviewItem,
   resolveCategoryFeedback,
   usePartnerReviews,
-} from '@/lib/partner/reviews';
+} from '@/lib/partner/reviews/client';
 import { CATEGORY_RATING_KEYS, CATEGORY_RATING_LABELS } from '@/lib/reviews/client';
 
 // Rating filtre seçenekleri

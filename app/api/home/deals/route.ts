@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { MembershipTier } from '@prisma/client';
+import { resolveMembershipTier } from '@/lib/membership';
 
 // GET /api/home/deals?type=tour|activity&category=all|popular|lastMinute|discount
 //
@@ -50,8 +51,8 @@ export async function GET(request: Request) {
         discount: tour.discount || 0,
         type: 'tour' as const,
         partnerName: tour.tourOperator?.companyName || null,
-        partnerTier: (tour.tourOperator?.membershipTier || 'BRONZE') as MembershipTier,
-        tierRank: TIER_RANK[(tour.tourOperator?.membershipTier || 'BRONZE') as MembershipTier],
+        partnerTier: resolveMembershipTier(tour.tourOperator?.rating, tour.tourOperator?.reviewCount),
+        tierRank: TIER_RANK[resolveMembershipTier(tour.tourOperator?.rating, tour.tourOperator?.reviewCount)],
         operatorRating: tour.tourOperator?.rating || 0,
       }));
 
@@ -92,8 +93,8 @@ export async function GET(request: Request) {
         discount: 0,
         type: 'activity' as const,
         partnerName: operator?.companyName || null,
-        partnerTier: (operator?.membershipTier || 'BRONZE') as MembershipTier,
-        tierRank: TIER_RANK[(operator?.membershipTier || 'BRONZE') as MembershipTier],
+        partnerTier: resolveMembershipTier(operator?.rating, operator?.reviewCount),
+        tierRank: TIER_RANK[resolveMembershipTier(operator?.rating, operator?.reviewCount)],
         operatorRating: operator?.rating || 0,
       };
     });

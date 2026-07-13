@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
+import { computeMembershipTier, computeStarTier } from '@/lib/membership';
 
 // GET /api/partner/membership
 // Partner dashboard'unun üst kısmında isim yanında gösterilecek üyelik
@@ -21,22 +22,28 @@ export async function GET() {
   if (session.user.role === 'EXPERIENCE_PROVIDER') {
     const experienceOperator = await prisma.experienceOperator.findFirst({
       where: { userId },
-      select: { membershipTier: true, rating: true, reviewCount: true },
+      select: { rating: true, reviewCount: true },
     });
+    const rating = experienceOperator?.rating ?? 0;
+    const reviewCount = experienceOperator?.reviewCount ?? 0;
     return NextResponse.json({
-      tier: experienceOperator?.membershipTier ?? null,
-      rating: experienceOperator?.rating ?? 0,
-      reviewCount: experienceOperator?.reviewCount ?? 0,
+      tier: experienceOperator ? computeMembershipTier(rating, reviewCount) : null,
+      starTier: experienceOperator ? computeStarTier(reviewCount, rating) : 0,
+      rating,
+      reviewCount,
     });
   }
 
   const tourOperator = await prisma.tourOperator.findFirst({
     where: { userId },
-    select: { membershipTier: true, rating: true, reviewCount: true },
+    select: { rating: true, reviewCount: true },
   });
+  const rating = tourOperator?.rating ?? 0;
+  const reviewCount = tourOperator?.reviewCount ?? 0;
   return NextResponse.json({
-    tier: tourOperator?.membershipTier ?? null,
-    rating: tourOperator?.rating ?? 0,
-    reviewCount: tourOperator?.reviewCount ?? 0,
+    tier: tourOperator ? computeMembershipTier(rating, reviewCount) : null,
+    starTier: tourOperator ? computeStarTier(reviewCount, rating) : 0,
+    rating,
+    reviewCount,
   });
 }

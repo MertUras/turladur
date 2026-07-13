@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   CurrencyDollarIcon,
   ArrowUpIcon,
@@ -22,20 +23,22 @@ import {
 } from '@/lib/partner/financials';
 
 export default function FinancialsPage() {
+  const { status: sessionStatus } = useSession();
   const [dateRange, setDateRange] = useState<FinancialDateRangeId>('thisMonth');
   const [paymentFilter, setPaymentFilter] = useState<'all' | FinancialTransactionType>('all');
   const [data, setData] = useState<PartnerFinancialsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchFinancials();
-  }, [dateRange]);
-
-  const fetchFinancials = async () => {
+  const fetchFinancials = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/partner/financials?range=${dateRange}`);
+      const response = await fetch(`/api/partner/financials?range=${dateRange}`, {
+        cache: 'no-store',
+      });
+      if (response.status === 401) {
+        throw new Error('Oturum süresi doldu. Lütfen tekrar giriş yapın.');
+      }
       if (!response.ok) {
         throw new Error('Finansal veriler yüklenemedi');
       }
@@ -47,7 +50,12 @@ export default function FinancialsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  useEffect(() => {
+    if (sessionStatus !== 'authenticated') return;
+    fetchFinancials();
+  }, [sessionStatus, fetchFinancials]);
 
   const getStatusClass = (status: string) => {
     switch (status) {
@@ -102,7 +110,7 @@ export default function FinancialsPage() {
     { id: 'beklemede', name: 'Bekleyenler' },
   ];
 
-  if (loading && !data) {
+  if ((loading && !data) || sessionStatus === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500" />
@@ -208,14 +216,16 @@ export default function FinancialsPage() {
                 <span className="text-xs text-gray-500 ml-1.5">önceki döneme göre</span>
               </div>
             ) : (
-              <div className="mt-4 text-sm text-gray-500">Karşılaştırma verisi yok</div>
+              <div className="mt-4 text-sm text-gray-500">
+                Brüt {formatCurrency(financialSummary?.grossSales || 0)} · İade {formatCurrency(financialSummary?.refundTotal || 0)}
+              </div>
             )}
           </div>
 
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all hover:shadow-md">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-gray-500">Bekleyen Ödemeler</p>
+                <p className="text-sm font-medium text-gray-500">Bekleyen Rezervasyonlar</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {formatCurrency(financialSummary?.pendingPayments || 0)}
                 </p>
@@ -226,7 +236,7 @@ export default function FinancialsPage() {
             </div>
             <div className="mt-4 flex items-center">
               <span className="text-sm text-gray-500">
-                {financialSummary?.pendingTransactionCount || 0} bekleyen işlem
+                {financialSummary?.pendingTransactionCount || 0} bekleyen rezervasyon
               </span>
             </div>
           </div>
@@ -234,9 +244,9 @@ export default function FinancialsPage() {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all hover:shadow-md">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-gray-500">Toplam Ödemeler</p>
+                <p className="text-sm font-medium text-gray-500">Tamamlanan Turlar</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {formatCurrency(financialSummary?.totalPayouts || 0)}
+                  {financialSummary?.completedToursCount || 0}
                 </p>
               </div>
               <div className="p-2.5 bg-green-100 rounded-lg">
@@ -245,7 +255,7 @@ export default function FinancialsPage() {
             </div>
             <div className="mt-4 flex items-center">
               <span className="text-sm text-gray-500">
-                {financialSummary?.completedTransactionCount || 0} başarılı işlem
+                {financialSummary?.completedTransactionCount || 0} ödenmiş satış
               </span>
             </div>
           </div>

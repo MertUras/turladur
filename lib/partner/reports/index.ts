@@ -3,7 +3,7 @@ import { prismaPartnerReportsProvider } from './prisma-provider';
 
 /**
  * Partner raporlama veri katmanı.
- * Şu an Prisma kullanılıyor; ziyaretçi analitiği Firebase için ayrıldı.
+ * Prisma üzerinden rezervasyon verisi; ziyaretçi metrikleri booking proxy kullanır.
  */
 export function getPartnerReportsProvider(): PartnerReportsProvider {
   return prismaPartnerReportsProvider;

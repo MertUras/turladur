@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   ChartBarIcon,
   ChartPieIcon,
@@ -8,34 +9,43 @@ import {
   ClockIcon,
   ArrowDownTrayIcon,
   CalendarIcon,
+  UserGroupIcon,
+  EyeIcon,
 } from '@heroicons/react/24/outline';
-import { PartnerReportsData } from '@/lib/partner/reports';
+import { PartnerReportsData, ReportDateRangeId } from '@/lib/partner/reports';
 
 export default function ReportsPage() {
-  const [dateRange, setDateRange] = useState('thisMonth');
+  const { status: sessionStatus } = useSession();
+  const [dateRange, setDateRange] = useState<ReportDateRangeId>('thisMonth');
   const [reportType, setReportType] = useState('sales');
   const [reportsData, setReportsData] = useState<PartnerReportsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchReports = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await fetch(`/api/partner/reports?dateRange=${dateRange}`);
-        if (!response.ok) throw new Error('Rapor verisi alınamadı');
-        const data = await response.json();
-        setReportsData(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Bir hata oluştu');
-      } finally {
-        setLoading(false);
+  const fetchReports = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/partner/reports?dateRange=${dateRange}`, {
+        cache: 'no-store',
+      });
+      if (response.status === 401) {
+        throw new Error('Oturum süresi doldu. Lütfen tekrar giriş yapın.');
       }
-    };
-
-    fetchReports();
+      if (!response.ok) throw new Error('Rapor verisi alınamadı');
+      const data = await response.json();
+      setReportsData(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+    } finally {
+      setLoading(false);
+    }
   }, [dateRange]);
+
+  useEffect(() => {
+    if (sessionStatus !== 'authenticated') return;
+    fetchReports();
+  }, [sessionStatus, fetchReports]);
 
   const reportTypes = [
     { id: 'sales', name: 'Satış Raporları', icon: ChartBarIcon },
@@ -251,12 +261,129 @@ export default function ReportsPage() {
 
   const renderVisitorsReport = () => {
     if (!reportsData) return null;
+    const { visitors } = reportsData;
 
     return (
-      <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200 text-center">
-        <ChartPieIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h2 className="text-lg font-bold text-gray-800 mb-2">Ziyaretçi Analizi</h2>
-        <p className="text-gray-500">{reportsData.visitors.message}</p>
+      <div className="space-y-8">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+          {visitors.disclaimer}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <SummaryCard
+            label="Benzersiz Ziyaretçi"
+            value={String(visitors.summary.uniqueVisitors)}
+            icon={UserGroupIcon}
+            iconClass="bg-blue-100 text-blue-600"
+            footer={
+              visitors.summary.comparedToLastPeriod !== null ? (
+                <>
+                  <span
+                    className={`text-sm font-medium ${
+                      visitors.summary.increase ? 'text-green-500' : 'text-red-500'
+                    }`}
+                  >
+                    {formatPercentage(visitors.summary.comparedToLastPeriod)}{' '}
+                    {visitors.summary.increase ? 'artış' : 'azalış'}
+                  </span>
+                  <span className="text-xs text-gray-500 ml-1">son döneme göre</span>
+                </>
+              ) : (
+                <span className="text-xs text-gray-500">Karşılaştırma verisi yok</span>
+              )
+            }
+          />
+          <SummaryCard
+            label="Toplam Etkileşim"
+            value={String(visitors.summary.totalInteractions)}
+            icon={EyeIcon}
+            iconClass="bg-green-100 text-green-600"
+            footer={<span className="text-xs text-gray-500">rezervasyon etkileşimi (proxy)</span>}
+          />
+          <SummaryCard
+            label="Dönüşüm Oranı"
+            value={`${visitors.summary.conversionRate}%`}
+            icon={ChartPieIcon}
+            iconClass="bg-purple-100 text-purple-600"
+            footer={<span className="text-xs text-gray-500">satış / etkileşim oranı</span>}
+          />
+          <SummaryCard
+            label="Veri Kaynağı"
+            value="Rezervasyon"
+            icon={DocumentChartBarIcon}
+            iconClass="bg-indigo-100 text-indigo-600"
+            footer={<span className="text-xs text-gray-500">Firebase sonrası gerçek trafik</span>}
+            valueClass="text-lg"
+          />
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-lg font-bold text-gray-800 mb-6">Günlük Ziyaretçi Trendi</h2>
+          {visitors.trend.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Etkileşim</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Benzersiz Ziyaretçi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {visitors.trend.map((point) => (
+                    <tr key={point.label}>
+                      <td className="px-4 py-2 text-sm text-gray-700">{point.label}</td>
+                      <td className="px-4 py-2 text-sm text-gray-700">{point.interactions}</td>
+                      <td className="px-4 py-2 text-sm text-gray-700">{point.uniqueVisitors}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="h-32 bg-gray-50 rounded-md flex items-center justify-center">
+              <p className="text-gray-500">Seçili dönemde ziyaretçi verisi bulunmuyor</p>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-bold text-gray-800">Tur Bazlı Ziyaretçi Dağılımı</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tur Adı</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Etkileşim</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Benzersiz Ziyaretçi</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dönüşüm</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dönüşüm Oranı</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {visitors.tourBreakdown.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
+                      Bu dönemde tur bazlı ziyaretçi verisi bulunmuyor
+                    </td>
+                  </tr>
+                ) : (
+                  visitors.tourBreakdown.map((tour) => (
+                    <tr key={tour.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 text-sm font-medium text-gray-800">{tour.name}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{tour.interactions}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{tour.uniqueVisitors}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{tour.conversions}</td>
+                      <td className="px-6 py-4 text-sm text-gray-700">{tour.conversionRate}%</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     );
   };
@@ -273,7 +400,7 @@ export default function ReportsPage() {
             value={performance.summary.conversionRate !== null ? `${performance.summary.conversionRate}%` : 'N/A'}
             icon={ChartBarIcon}
             iconClass="bg-blue-100 text-blue-600"
-            footer={<span className="text-xs text-gray-500">Firebase sonrası aktif olacak</span>}
+            footer={<span className="text-xs text-gray-500">satış / rezervasyon etkileşimi</span>}
           />
           <SummaryCard
             label="Tamamlanma Oranı"
@@ -565,7 +692,7 @@ export default function ReportsPage() {
         <div className="flex items-center space-x-4">
           <select
             value={dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
+            onChange={(e) => setDateRange(e.target.value as ReportDateRangeId)}
             className="bg-white border border-gray-300 text-gray-700 text-sm rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             {dateRanges.map((range) => (

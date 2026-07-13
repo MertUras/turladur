@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { formatTurkishDate } from '@/lib/partner/dashboard/utils';

@@ -8,7 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 import StarRating from '@/app/components/StarRating';
 import { formatDate } from '@/app/utils/format';
-import { resolveCategoryFeedback } from '@/lib/partner/reviews';
+import { resolveCategoryFeedback } from '@/lib/partner/reviews/client';
 import {
   CATEGORY_RATING_KEYS,
   CATEGORY_RATING_LABELS,

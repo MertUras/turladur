@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import FeaturedHotels from './components/FeaturedHotels';
@@ -17,17 +18,12 @@ export default async function Home() {
   return (
     <main>
       <Header />
-      <Hero />
+      <Suspense fallback={null}>
+        <Hero />
+      </Suspense>
       <Destinations />
       <CTA />
       <HotDeals />
-      <Stats />
-      {/*<FeaturedHotels />*/}
-      <Testimonials />
-      <Newsletter />
-      {/*<Partners />*/}
-      <MobileOfferPopup />
-      <Footer />
       {/* Popüler Turlar */}
       <section className="py-8 md:py-12">
         <div className="container mx-auto px-4">
@@ -43,6 +39,13 @@ export default async function Home() {
           </div>
         </div>
       </section>
+      <Stats />
+      {/*<FeaturedHotels />*/}
+      <Testimonials />
+      <Newsletter />
+      {/*<Partners />*/}
+      <MobileOfferPopup />
+      <Footer />
     </main>
   );
 }

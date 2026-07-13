@@ -9,7 +9,7 @@ import {
 import {
   PartnerReviewCategoryFeedbackByRatingKey,
   PartnerReviewCategoryRatings,
-} from '@/lib/partner/reviews';
+} from '@/lib/partner/reviews/client';
 
 export interface ReviewCardProps {
   id: string;

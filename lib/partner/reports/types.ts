@@ -110,9 +110,36 @@ export interface CustomerReportData {
   satisfactionDistribution: { rating: number; percentage: number }[];
 }
 
+export interface VisitorsSummary {
+  uniqueVisitors: number;
+  totalInteractions: number;
+  conversionRate: number;
+  comparedToLastPeriod: number | null;
+  increase: boolean | null;
+}
+
+export interface VisitorsTrendPoint {
+  label: string;
+  interactions: number;
+  uniqueVisitors: number;
+}
+
+export interface TourVisitorRow {
+  id: string;
+  name: string;
+  interactions: number;
+  uniqueVisitors: number;
+  conversions: number;
+  conversionRate: number;
+}
+
 export interface VisitorsReportData {
-  available: false;
-  message: string;
+  available: true;
+  dataSource: 'booking_proxy';
+  disclaimer: string;
+  summary: VisitorsSummary;
+  trend: VisitorsTrendPoint[];
+  tourBreakdown: TourVisitorRow[];
 }
 
 export interface PartnerReportsData {

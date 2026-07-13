@@ -5,6 +5,8 @@ import {
   getPartnerFinancialsProvider,
 } from '@/lib/partner/financials';
 
+export const dynamic = 'force-dynamic';
+
 const VALID_RANGES: FinancialDateRangeId[] = [
   'thisWeek',
   'thisMonth',

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { parseJsonArray, parseJsonSchedule } from '@/lib/utils';
+import { resolveMembershipTier } from '@/lib/membership';
 
 export const dynamic = 'force-dynamic';
 
@@ -680,7 +681,6 @@ export async function GET(request: Request, { params }: { params: { id: string }
                                 description: true,
                                 rating: true,
                                 reviewCount: true,
-                                membershipTier: true,
                             },
                         },
                     },
@@ -702,6 +702,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
         // görsele düşülür.
         const coverImage = gallery[0] || experience.imageUrl || PLACEHOLDER_IMAGE;
 
+        const operator = experience.user?.experienceOperators?.[0] || null;
         const activityResponse = {
             id: experience.id,
             title: experience.title,
@@ -726,7 +727,12 @@ export async function GET(request: Request, { params }: { params: { id: string }
             meetingPointAddress: experience.meetingPointAddress,
             // `experience.user` bir User kaydıdır; gerçek partner bilgileri
             // (şirket adı, logo, üyelik seviyesi) ExperienceOperator'da yer alır.
-            operator: experience.user?.experienceOperators?.[0] || null,
+            operator: operator
+                ? {
+                    ...operator,
+                    membershipTier: resolveMembershipTier(operator.rating, operator.reviewCount),
+                  }
+                : null,
             ageRestriction: experience.ageRestriction || 'everyone'
         };
 

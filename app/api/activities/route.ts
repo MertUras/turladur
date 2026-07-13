@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { resolveMembershipTier } from '@/lib/membership';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -25,7 +26,6 @@ export async function GET(request: Request) {
                             logo: true,
                             rating: true,
                             reviewCount: true,
-                            membershipTier: true,
                         },
                     },
                 },
@@ -37,9 +37,15 @@ export async function GET(request: Request) {
     // otomatik hesaplanan güncel üyelik seviyesini karta taşıyoruz.
     const withOperator = experiences.map((exp) => {
         const { user, ...rest } = exp as typeof exp & { user?: { experienceOperators: any[] } };
+        const operator = user?.experienceOperators?.[0] ?? null;
         return {
             ...rest,
-            experienceOperator: user?.experienceOperators?.[0] ?? null,
+            experienceOperator: operator
+                ? {
+                    ...operator,
+                    membershipTier: resolveMembershipTier(operator.rating, operator.reviewCount),
+                  }
+                : null,
         };
     });
 

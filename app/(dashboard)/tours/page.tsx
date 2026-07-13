@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { parseJsonString } from "@/app/utils/format";
 import { format, differenceInDays } from 'date-fns';
@@ -59,8 +59,27 @@ interface FilterOptions {
   isEarlyBird: boolean;
   languages: string[];
   tags: string[];
-  departurePoint: string | null;
 }
+
+const DATE_INPUT_CLASS =
+  'w-full py-2.5 pl-4 pr-10 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0';
+
+interface DepartureCityOption {
+  city: string;
+  count: number;
+}
+
+interface RegionOption {
+  region: string;
+  count: number;
+}
+
+const formatDateParam = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 // Fiyat formatlama yardımcı fonksiyonu
 const formatPrice = (price: number) => {
@@ -82,10 +101,14 @@ const mapTourFromApi = (tour: any): Tour => ({
   },
 });
 
-export default function ToursPage() {
+function ToursPageContent() {
   const searchParams = useSearchParams();
   const durationParam = searchParams.get('duration');
   const featuredParam = searchParams.get('featured');
+  const urlSearch = searchParams.get('search');
+  const urlDepartureCity = searchParams.get('departureCity');
+  const urlStartDate = searchParams.get('startDate');
+  const urlEndDate = searchParams.get('endDate');
   
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -116,9 +139,15 @@ export default function ToursPage() {
     isLastMinute: false,
     isEarlyBird: false,
     languages: [],
-    tags: [],
-    departurePoint: null
+    tags: []
   });
+
+  const [departureCityOptions, setDepartureCityOptions] = useState<DepartureCityOption[]>([]);
+  const [filteredDepartureCities, setFilteredDepartureCities] = useState<DepartureCityOption[]>([]);
+  const [regionOptions, setRegionOptions] = useState<RegionOption[]>([]);
+  const [filteredRegions, setFilteredRegions] = useState<RegionOption[]>([]);
+  const [departureSearch, setDepartureSearch] = useState('');
+  const [regionSearch, setRegionSearch] = useState('');
 
   // Sayfalama ve gösterim seçenekleri
   const [currentPage, setCurrentPage] = useState(1);
@@ -129,130 +158,72 @@ export default function ToursPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Turları getir
-  const fetchTours = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: itemsPerPage.toString(),
-        search: searchTerm,
-        sortBy: sortBy === 'popular' ? 'createdAt' : sortBy,
-        sortOrder: 'desc'
-      });
-
-      const response = await fetch(`/api/tours?${params}`);
-      const data = await response.json();
-
-      if (response.ok) {
-        const mappedTours: Tour[] = data.tours.map(mapTourFromApi);
-        setFilteredTours(mappedTours);
-        setTotalTours(data.total);
-      } else {
-        console.error('Error fetching tours:', data.error);
-      }
-    } catch (error) {
-      console.error('Error fetching tours:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentPage, itemsPerPage, searchTerm, sortBy]);
-
   useEffect(() => {
-    fetchTours();
-  }, [fetchTours]);
+    const fetchFilterOptions = async () => {
+      try {
+        const response = await fetch('/api/tours/filters');
+        const data = await response.json();
 
-  // Filtreleme seçenekleri
-  const departureCities = [
-    { city: 'İstanbul', count: 1 },
-    { city: 'Ankara', count: 1 },
-    { city: 'İzmir', count: 2 },
-    { city: 'Antalya', count: 1 },
-    { city: 'Bursa', count: 1 },
-    { city: 'Trabzon', count: 1 },
-    { city: 'Nevşehir', count: 1 },
-    { city: 'Denizli', count: 1 },
-    { city: 'Mardin', count: 1 },
-    { city: 'Van', count: 1 },
-    { city: 'Gaziantep', count: 1 },
-    { city: 'Konya', count: 1 },
-    { city: 'Çanakkale', count: 1 },
-    { city: 'Muğla', count: 1 },
-    { city: 'Aydın', count: 1 },
-    { city: 'Rize', count: 1 },
-    { city: 'Karabük', count: 1 },
-    { city: 'Adıyaman', count: 1 },
-    { city: 'Şanlıurfa', count: 1 }
-  ];
-  
-  const regions = [
-    { region: 'Marmara', count: 2 },
-    { region: 'Ege', count: 3 },
-    { region: 'Akdeniz', count: 2 },
-    { region: 'İç Anadolu', count: 4 },
-    { region: 'Karadeniz', count: 2 },
-    { region: 'Doğu Anadolu', count: 2 },
-    { region: 'Güneydoğu Anadolu', count: 2 }
-  ];
-  
-  const transportationTypes = [
-    { type: 'Uçak', count: 3 },
-    { type: 'Otobüs', count: 8 },
-    { type: 'Tren', count: 2 },
-    { type: 'Uçak + Otobüs', count: 4 },
-    { type: 'Uçak + Tren', count: 1 }
-  ];
-  
-  const durations = [
-    { duration: '1 Gün', count: 6 },
-    { duration: '2 Gün', count: 8 },
-    { duration: '3 Gün', count: 4 },
-    { duration: '4 Gün', count: 1 },
-    { duration: '5 Gün', count: 1 }
-  ];
-  
-  const periods = [
-    { period: 'Nisan 2024', count: 3 },
-    { period: 'Mayıs 2024', count: 4 },
-    { period: 'Haziran 2024', count: 5 },
-    { period: 'Temmuz 2024', count: 4 },
-    { period: 'Ağustos 2024', count: 4 }
-  ];
+        if (response.ok) {
+          setDepartureCityOptions(data.departureCities);
+          setFilteredDepartureCities(data.departureCities);
+          setRegionOptions(data.regions);
+          setFilteredRegions(data.regions);
+        } else {
+          console.error('Error fetching filter options:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching filter options:', error);
+      }
+    };
+
+    fetchFilterOptions();
+  }, []);
+
+  // Hero ve header linklerinden gelen URL parametrelerini uygula
+  useEffect(() => {
+    if (urlSearch) {
+      setSearchTerm((prev) => (prev === urlSearch ? prev : urlSearch));
+    }
+
+    setFilterOptions((prev) => {
+      const nextDateRange: [Date | null, Date | null] =
+        urlStartDate || urlEndDate
+          ? [
+              urlStartDate ? new Date(`${urlStartDate}T00:00:00`) : null,
+              urlEndDate ? new Date(`${urlEndDate}T00:00:00`) : null,
+            ]
+          : prev.dateRange;
+
+      const nextDepartureCity = urlDepartureCity ?? prev.departureCity;
+      const nextDuration = durationParam ?? prev.duration;
+      const nextFeatured = featuredParam === 'true' ? true : prev.featured;
+
+      const dateUnchanged =
+        (prev.dateRange[0]?.getTime() ?? null) === (nextDateRange[0]?.getTime() ?? null) &&
+        (prev.dateRange[1]?.getTime() ?? null) === (nextDateRange[1]?.getTime() ?? null);
+
+      if (
+        prev.departureCity === nextDepartureCity &&
+        prev.duration === nextDuration &&
+        prev.featured === nextFeatured &&
+        dateUnchanged
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        departureCity: nextDepartureCity,
+        duration: nextDuration,
+        featured: nextFeatured,
+        dateRange: nextDateRange,
+      };
+    });
+  }, [urlSearch, urlDepartureCity, urlStartDate, urlEndDate, durationParam, featuredParam]);
 
   // Sayfalama seçenekleri
   const pageSizeOptions = [15, 30, 45, 60]; // Seçenekleri 15'ten başlayacak şekilde güncelledim
-
-  // Filtreleme seçenekleri için sabit değerler
-  const tourTypes = [
-    { type: 'kultur', label: 'Kültür Turu', count: 12 },
-    { type: 'doga', label: 'Doğa Turu', count: 8 },
-    { type: 'macera', label: 'Macera Turu', count: 6 },
-    { type: 'deniz', label: 'Deniz Turu', count: 10 },
-    { type: 'yemek', label: 'Yemek Turu', count: 4 },
-    { type: 'spor', label: 'Spor Turu', count: 3 }
-  ];
-
-  const accommodationTypes = [
-    { type: 'otel', label: 'Otel', count: 15 },
-    { type: 'pansiyon', label: 'Pansiyon', count: 8 },
-    { type: 'kamp', label: 'Kamp', count: 5 },
-    { type: 'villa', label: 'Villa', count: 3 },
-    { type: 'apart', label: 'Apart', count: 4 }
-  ];
-
-  const difficultyLevels = [
-    { level: 'kolay', label: 'Kolay', count: 10 },
-    { level: 'orta', label: 'Orta', count: 15 },
-    { level: 'zor', label: 'Zor', count: 5 }
-  ];
-
-  const languages = [
-    { code: 'tr', label: 'Türkçe', count: 25 },
-    { code: 'en', label: 'İngilizce', count: 20 },
-    { code: 'de', label: 'Almanca', count: 10 },
-    { code: 'fr', label: 'Fransızca', count: 8 },
-    { code: 'ru', label: 'Rusça', count: 5 }
-  ];
 
   // Sıralama seçenekleri
   const sortOptions = [
@@ -309,51 +280,53 @@ export default function ToursPage() {
     }, 1000);
   }, []);
 
-  // Filtreleme fonksiyonunu güncelle
-  useEffect(() => {
-    const applyFilters = async () => {
-      try {
-        setIsLoading(true);
-        const params = new URLSearchParams({
-          page: '1',
-          limit: itemsPerPage.toString(),
-          search: searchTerm,
-          sortBy: sortBy === 'popular' ? 'createdAt' : sortBy,
-          sortOrder: 'desc'
-        });
+  const fetchTours = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+        search: searchTerm,
+        sortBy: sortBy === 'popular' ? 'createdAt' : sortBy,
+        sortOrder: 'desc',
+      });
 
-        // Filtre parametrelerini ekle
-        if (filterOptions.minPrice) params.append('minPrice', filterOptions.minPrice.toString());
-        if (filterOptions.maxPrice) params.append('maxPrice', filterOptions.maxPrice.toString());
-        if (filterOptions.departureCity) params.append('departureCity', filterOptions.departureCity);
-        if (filterOptions.region) params.append('region', filterOptions.region);
-        if (filterOptions.transportation) params.append('transportation', filterOptions.transportation);
-        if (filterOptions.duration) params.append('duration', filterOptions.duration);
-        if (filterOptions.period) params.append('period', filterOptions.period);
-        if (filterOptions.featured) params.append('featured', 'true');
-        if (filterOptions.rating) params.append('minRating', filterOptions.rating.toString());
-        if (filterOptions.dateRange[0]) params.append('startDate', filterOptions.dateRange[0].toISOString());
-        if (filterOptions.dateRange[1]) params.append('endDate', filterOptions.dateRange[1].toISOString());
+      if (filterOptions.minPrice) params.append('minPrice', filterOptions.minPrice.toString());
+      if (filterOptions.maxPrice) params.append('maxPrice', filterOptions.maxPrice.toString());
+      if (filterOptions.departureCity) params.append('departureCity', filterOptions.departureCity);
+      if (filterOptions.region) params.append('region', filterOptions.region);
+      if (filterOptions.transportation) params.append('transportation', filterOptions.transportation);
+      if (filterOptions.duration) params.append('duration', filterOptions.duration);
+      if (filterOptions.period) params.append('period', filterOptions.period);
+      if (filterOptions.featured) params.append('featured', 'true');
+      if (filterOptions.rating) params.append('minRating', filterOptions.rating.toString());
+      if (filterOptions.dateRange[0]) params.append('startDate', formatDateParam(filterOptions.dateRange[0]));
+      if (filterOptions.dateRange[1]) params.append('endDate', formatDateParam(filterOptions.dateRange[1]));
 
-        const response = await fetch(`/api/tours?${params}`);
-        const data = await response.json();
+      const response = await fetch(`/api/tours?${params}`);
+      const data = await response.json();
 
-        if (response.ok) {
-          setFilteredTours(data.tours.map(mapTourFromApi));
-          setTotalTours(data.total);
-          setCurrentPage(1);
-        } else {
-          console.error('Error filtering tours:', data.error);
-        }
-      } catch (error) {
-        console.error('Error filtering tours:', error);
-      } finally {
-        setIsLoading(false);
+      if (response.ok) {
+        setFilteredTours(data.tours.map(mapTourFromApi));
+        setTotalTours(data.total);
+      } else {
+        console.error('Error fetching tours:', data.error);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching tours:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, itemsPerPage, searchTerm, sortBy, filterOptions]);
 
-    applyFilters();
-  }, [filterOptions, itemsPerPage, searchTerm, sortBy]);
+  useEffect(() => {
+    fetchTours();
+  }, [fetchTours]);
+
+  // Filtre veya arama değişince sayfayı başa al
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterOptions, searchTerm, sortBy, itemsPerPage]);
 
   // Filtreleri sıfırla
   const resetFilters = () => {
@@ -380,9 +353,12 @@ export default function ToursPage() {
       isLastMinute: false,
       isEarlyBird: false,
       languages: [],
-      tags: [],
-      departurePoint: null
+      tags: []
     });
+    setDepartureSearch('');
+    setRegionSearch('');
+    setFilteredDepartureCities(departureCityOptions);
+    setFilteredRegions(regionOptions);
     setSortBy("popular");
   };
 
@@ -779,20 +755,6 @@ export default function ToursPage() {
     </div>
   );
 
-  // Filtreleme seçenekleri için sabit değerler
-  const departurePoints = [
-    { id: 'istanbul', name: 'İstanbul', count: 25 },
-    { id: 'ankara', name: 'Ankara', count: 15 },
-    { id: 'izmir', name: 'İzmir', count: 12 },
-    { id: 'antalya', name: 'Antalya', count: 8 },
-    { id: 'bursa', name: 'Bursa', count: 6 },
-    { id: 'adana', name: 'Adana', count: 4 },
-    { id: 'trabzon', name: 'Trabzon', count: 3 },
-    { id: 'gaziantep', name: 'Gaziantep', count: 2 }
-  ];
-
-  const [filteredDeparturePoints, setFilteredDeparturePoints] = useState(departurePoints);
-
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Hero Bölümü */}
@@ -926,32 +888,39 @@ export default function ToursPage() {
                     <input
                       type="text"
                       placeholder="Kalkış noktası ara..."
+                      value={departureSearch}
                       className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mb-2"
                       onChange={(e) => {
-                        const searchTerm = e.target.value.toLowerCase();
-                        const filteredPoints = departurePoints.filter(point => 
-                          point.name.toLowerCase().includes(searchTerm)
+                        const query = e.target.value.toLowerCase();
+                        setDepartureSearch(e.target.value);
+                        setFilteredDepartureCities(
+                          departureCityOptions.filter((item) =>
+                            item.city.toLowerCase().includes(query)
+                          )
                         );
-                        setFilteredDeparturePoints(filteredPoints);
                       }}
                     />
                     <div className="max-h-60 overflow-y-auto space-y-2">
-                      {filteredDeparturePoints.map((point) => (
-                        <button
-                          key={point.id}
-                          onClick={() => setFilterOptions({
-                            ...filterOptions,
-                            departurePoint: filterOptions.departurePoint === point.id ? null : point.id
-                          })}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                            filterOptions.departurePoint === point.id
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                          }`}
-                        >
-                          {point.name} ({point.count})
-                        </button>
-                      ))}
+                      {filteredDepartureCities.length > 0 ? (
+                        filteredDepartureCities.map((item) => (
+                          <button
+                            key={item.city}
+                            onClick={() => setFilterOptions({
+                              ...filterOptions,
+                              departureCity: filterOptions.departureCity === item.city ? null : item.city
+                            })}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                              filterOptions.departureCity === item.city
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            }`}
+                          >
+                            {item.city} ({item.count})
+                          </button>
+                        ))
+                      ) : (
+                        <p className="px-3 py-2 text-sm text-gray-500">Kalkış noktası bulunamadı</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -963,11 +932,11 @@ export default function ToursPage() {
                     <div className="relative">
                       <input
                         type="date"
-                        className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                        value={filterOptions.dateRange[0]?.toISOString().split('T')[0] || ''}
+                        className={DATE_INPUT_CLASS}
+                        value={filterOptions.dateRange[0] ? formatDateParam(filterOptions.dateRange[0]) : ''}
                         onChange={(e) => setFilterOptions({
                           ...filterOptions,
-                          dateRange: [e.target.value ? new Date(e.target.value) : null, filterOptions.dateRange[1]]
+                          dateRange: [e.target.value ? new Date(`${e.target.value}T00:00:00`) : null, filterOptions.dateRange[1]]
                         })}
                       />
                       <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
@@ -975,11 +944,11 @@ export default function ToursPage() {
                     <div className="relative">
                       <input
                         type="date"
-                        className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                        value={filterOptions.dateRange[1]?.toISOString().split('T')[0] || ''}
+                        className={DATE_INPUT_CLASS}
+                        value={filterOptions.dateRange[1] ? formatDateParam(filterOptions.dateRange[1]) : ''}
                         onChange={(e) => setFilterOptions({
                           ...filterOptions,
-                          dateRange: [filterOptions.dateRange[0], e.target.value ? new Date(e.target.value) : null]
+                          dateRange: [filterOptions.dateRange[0], e.target.value ? new Date(`${e.target.value}T00:00:00`) : null]
                         })}
                       />
                       <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
@@ -1032,25 +1001,39 @@ export default function ToursPage() {
                       <input
                         type="text"
                         placeholder="Bölge ara..."
+                        value={regionSearch}
                         className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mb-2"
+                        onChange={(e) => {
+                          const query = e.target.value.toLowerCase();
+                          setRegionSearch(e.target.value);
+                          setFilteredRegions(
+                            regionOptions.filter((item) =>
+                              item.region.toLowerCase().includes(query)
+                            )
+                          );
+                        }}
                       />
                       <div className="max-h-60 overflow-y-auto space-y-2">
-                        {regions.map((item) => (
+                        {filteredRegions.length > 0 ? (
+                          filteredRegions.map((item) => (
                             <button
-                            key={item.region}
+                              key={item.region}
                               onClick={() => setFilterOptions({
                                 ...filterOptions,
-                              region: filterOptions.region === item.region ? null : item.region
+                                region: filterOptions.region === item.region ? null : item.region
                               })}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                              filterOptions.region === item.region
+                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                                filterOptions.region === item.region
                                   ? "bg-blue-600 text-white"
                                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                               }`}
                             >
-                            {item.region} ({item.count})
+                              {item.region} ({item.count})
                             </button>
-                          ))}
+                          ))
+                        ) : (
+                          <p className="px-3 py-2 text-sm text-gray-500">Bölge bulunamadı</p>
+                        )}
                         </div>
                       </div>
                         </div>
@@ -1188,4 +1171,18 @@ export default function ToursPage() {
       </div>
     </div>
   );
-} 
+}
+
+export default function ToursPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" />
+        </div>
+      }
+    >
+      <ToursPageContent />
+    </Suspense>
+  );
+}

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { OperatorRatingSummary } from '@/lib/reviews';
 import { getRatingScoringProvider } from '@/lib/reviews/server';
 import { fetchPartnerReviewsForOperator } from '@/lib/reviews/partner-review-queries';
+import { resolveMembershipTier } from '@/lib/membership';
 
 export async function GET(
   request: Request,
@@ -97,6 +98,7 @@ export async function GET(
       ...tourOperator,
       rating: ratingSummary.overallRating,
       reviewCount: ratingSummary.reviewCount,
+      membershipTier: resolveMembershipTier(ratingSummary.overallRating, ratingSummary.reviewCount),
       categoryAverages: ratingSummary.categoryAverages,
       tours,
       reviews,

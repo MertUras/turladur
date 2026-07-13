@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Prisma } from '@prisma/client';
 import { getTourRatingProvider } from '@/lib/reviews/server';
+import { getCitiesForRegion } from '@/lib/tours/filter-options';
 
 interface PickupPoint {
   id?: string;
@@ -50,21 +51,67 @@ export async function GET(request: Request) {
         },
         ...(minPrice ? [{ price: { gte: parseFloat(minPrice) } }] : []),
         ...(maxPrice ? [{ price: { lte: parseFloat(maxPrice) } }] : []),
-        ...(departureCity ? [{ departureCity }] : []),
-        ...(region ? [{ region }] : []),
+        ...(departureCity
+          ? [
+              {
+                OR: [
+                  { departureCity: { contains: departureCity, mode: 'insensitive' } },
+                  {
+                    pickupPoints: {
+                      some: {
+                        city: { contains: departureCity, mode: 'insensitive' },
+                        isActive: true,
+                      },
+                    },
+                  },
+                  {
+                    destinations: {
+                      string_contains: departureCity,
+                      mode: 'insensitive',
+                    },
+                  },
+                ],
+              },
+            ]
+          : []),
+        ...(region
+          ? [
+              {
+                OR: [
+                  { region: { equals: region, mode: 'insensitive' } },
+                  ...getCitiesForRegion(region).map((city) => ({
+                    departureCity: { contains: city, mode: 'insensitive' as const },
+                  })),
+                  {
+                    pickupPoints: {
+                      some: {
+                        city: { in: getCitiesForRegion(region) },
+                        isActive: true,
+                      },
+                    },
+                  },
+                ],
+              },
+            ]
+          : []),
         ...(transportation ? [{ transportation }] : []),
         ...(duration ? [{ duration: parseInt(duration) }] : []),
         ...(period ? [{ period }] : []),
         ...(featured === 'true' ? [{ featured: true }] : []),
         ...(minRating ? [{ rating: { gte: parseFloat(minRating) } }] : []),
-        ...(startDate && endDate ? [
-          {
-            startDate: {
-              gte: new Date(startDate),
-              lte: new Date(endDate),
-            },
-          },
-        ] : []),
+        ...(startDate || endDate
+          ? [
+              {
+                tourDates: {
+                  some: {
+                    isActive: true,
+                    ...(startDate ? { startDate: { gte: new Date(startDate) } } : {}),
+                    ...(endDate ? { endDate: { lte: new Date(endDate) } } : {}),
+                  },
+                },
+              },
+            ]
+          : []),
       ],
     };
 

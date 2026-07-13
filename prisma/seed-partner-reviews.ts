@@ -3,11 +3,11 @@
 // hesaplanan bir seviye olduğunu göstermek için gerçekçi tamamlanmış
 // rezervasyonlar + partner değerlendirmeleri (PartnerReview) oluşturur.
 //
-// Sonuç:
-// - test.operator@tourtech.com      -> yüksek puanlı review'ler  -> GOLD
-// - test.activity@tourtech.com      -> yüksek puanlı review'ler  -> GOLD
-// - test.silver.operator@tourtech.com -> orta puanlı review'ler  -> SILVER
-// - test.bronze.operator@tourtech.com -> düşük puanlı review'ler -> BRONZE
+// Sonuç (Puan Değerlendirme kuralları — bkz. lib/partner/rating-tier.ts):
+// - test.operator@tourtech.com        -> 50 review, ~4.3 ort. -> GOLD (3★)
+// - test.activity@tourtech.com        -> 50 review, ~4.3 ort. -> GOLD (3★)
+// - test.silver.operator@tourtech.com -> 25 review, ~4.15 ort. -> SILVER (2★)
+// - test.bronze.operator@tourtech.com -> 4 review, düşük ort.  -> BRONZE (0★)
 //
 // Çalıştırma: npx ts-node prisma/seed-partner-reviews.ts
 import { PrismaClient, UserRole, BookingStatus, PaymentStatus } from '@prisma/client';
@@ -224,97 +224,151 @@ async function backfillReviewComments() {
   }
 }
 
+function buildRatingsForTarget(count: number, targetAverage: number): number[] {
+  const fiveStarCount = Math.min(count, Math.max(0, Math.round((targetAverage - 4) * count)));
+  const ratings: number[] = [];
+
+  for (let i = 0; i < fiveStarCount; i++) {
+    ratings.push(5);
+  }
+  for (let i = fiveStarCount; i < count; i++) {
+    ratings.push(4);
+  }
+
+  return ratings;
+}
+
+function buildLowRatings(count: number): number[] {
+  return Array.from({ length: count }, (_, index) => (index % 2 === 0 ? 3 : 2));
+}
+
+async function seedOperatorReviews(params: {
+  operatorId: string;
+  tourIds: string[];
+  customers: { id: string }[];
+  ratings: number[];
+  price?: number;
+}) {
+  const { operatorId, tourIds, customers, ratings, price = 4500 } = params;
+  const bookings = [];
+
+  for (let i = 0; i < ratings.length; i++) {
+    bookings.push(
+      await createCompletedBooking({
+        userId: customers[i % customers.length].id,
+        tourId: tourIds[i % tourIds.length],
+        tourOperatorId: operatorId,
+        price,
+        daysAgo: 6 + i,
+      })
+    );
+  }
+
+  await seedReviewsFor({ bookings, ratings, customers, tourOperatorId: operatorId });
+  await recalculatePartnerTier({ tourOperatorId: operatorId });
+
+  return bookings.length;
+}
+
+async function seedExperienceOperatorReviews(params: {
+  operatorId: string;
+  experienceIds: string[];
+  customers: { id: string }[];
+  ratings: number[];
+}) {
+  const { operatorId, experienceIds, customers, ratings } = params;
+  const experiences = await prisma.experience.findMany({
+    where: { id: { in: experienceIds } },
+    select: { id: true, price: true },
+  });
+  const priceById = new Map(experiences.map((experience) => [experience.id, experience.price]));
+  const bookings = [];
+
+  for (let i = 0; i < ratings.length; i++) {
+    const experienceId = experienceIds[i % experienceIds.length];
+    bookings.push(
+      await createCompletedBooking({
+        userId: customers[i % customers.length].id,
+        experienceId,
+        price: priceById.get(experienceId) ?? 1000,
+        daysAgo: 8 + i,
+      })
+    );
+  }
+
+  await seedReviewsFor({ bookings, ratings, customers, experienceOperatorId: operatorId });
+  await recalculatePartnerTier({ experienceOperatorId: operatorId });
+
+  return bookings.length;
+}
+
 async function main() {
   const customers = await ensureCustomers();
   await backfillReviewComments();
   await ensureOperatorContactInfo();
   const silverBronzeTours = await ensureSilverBronzeTours();
 
-  // --- GOLD: test.operator (tur) ---
+  // --- GOLD: test.operator (tur) — 3 yıldız: min 50 review, min 4.20 ortalama ---
   const tourOperator = await prisma.tourOperator.findFirst({ where: { email: 'test.operator@tourtech.com' } });
   if (tourOperator) {
-    const tours = await prisma.tour.findMany({ where: { tourOperatorId: tourOperator.id }, take: 5, select: { id: true, price: true } });
-    const bookings = [];
-    for (let i = 0; i < Math.min(5, tours.length); i++) {
-      bookings.push(
-        await createCompletedBooking({
-          userId: customers[i % customers.length].id,
-          tourId: tours[i].id,
-          tourOperatorId: tourOperator.id,
-          price: tours[i].price,
-          daysAgo: 10 + i * 5,
-        })
-      );
-    }
-    await seedReviewsFor({ bookings, ratings: [5, 5, 4, 5, 5], customers, tourOperatorId: tourOperator.id });
-    await recalculatePartnerTier({ tourOperatorId: tourOperator.id });
-    console.log(`✔ ${tours.length} tur üzerinden ${bookings.length} tamamlanmış rezervasyon + review -> test.operator GOLD hedefleniyor`);
+    const tours = await prisma.tour.findMany({
+      where: { tourOperatorId: tourOperator.id },
+      select: { id: true },
+    });
+    const goldRatings = buildRatingsForTarget(50, 4.3);
+    const goldCount = await seedOperatorReviews({
+      operatorId: tourOperator.id,
+      tourIds: tours.map((tour) => tour.id),
+      customers,
+      ratings: goldRatings,
+    });
+    console.log(`✔ ${goldCount} tamamlanmış rezervasyon + review -> test.operator GOLD hedefleniyor`);
   }
 
-  // --- GOLD: test.activity (aktivite) ---
+  // --- GOLD: test.activity (aktivite) — 3 yıldız: min 50 review, min 4.20 ortalama ---
   const experienceOperator = await prisma.experienceOperator.findFirst({ where: { email: 'test.activity@tourtech.com' } });
   if (experienceOperator) {
     const activityUser = await prisma.user.findUnique({ where: { email: 'test.activity@tourtech.com' } });
-    const experiences = await prisma.experience.findMany({ where: { userId: activityUser!.id }, select: { id: true, price: true } });
-    const bookings = [];
-    // İki aktiviteyi toplam 4 rezervasyonla kapsayalım
-    const plan = [0, 1, 0, 1].filter((idx) => experiences[idx]);
-    for (let i = 0; i < plan.length; i++) {
-      const exp = experiences[plan[i]];
-      bookings.push(
-        await createCompletedBooking({
-          userId: customers[i % customers.length].id,
-          experienceId: exp.id,
-          price: exp.price,
-          daysAgo: 8 + i * 4,
-        })
-      );
-    }
-    await seedReviewsFor({ bookings, ratings: [5, 4, 5, 5], customers, experienceOperatorId: experienceOperator.id });
-    await recalculatePartnerTier({ experienceOperatorId: experienceOperator.id });
-    console.log(`✔ ${bookings.length} tamamlanmış rezervasyon + review -> test.activity GOLD hedefleniyor`);
+    const experiences = await prisma.experience.findMany({
+      where: { userId: activityUser!.id },
+      select: { id: true },
+    });
+    const goldRatings = buildRatingsForTarget(50, 4.3);
+    const goldCount = await seedExperienceOperatorReviews({
+      operatorId: experienceOperator.id,
+      experienceIds: experiences.map((experience) => experience.id),
+      customers,
+      ratings: goldRatings,
+    });
+    console.log(`✔ ${goldCount} tamamlanmış rezervasyon + review -> test.activity GOLD hedefleniyor`);
   }
 
-  // --- SILVER: test.silver.operator ---
+  // --- SILVER: test.silver.operator — 2 yıldız: min 25 review, min 4.10 ortalama ---
   const silverOperator = await prisma.tourOperator.findFirst({ where: { email: 'test.silver.operator@tourtech.com' } });
   if (silverOperator) {
     const tourIds = silverBronzeTours['test.silver.operator@tourtech.com'] || [];
-    const bookings = [];
-    for (let i = 0; i < 4; i++) {
-      bookings.push(
-        await createCompletedBooking({
-          userId: customers[i % customers.length].id,
-          tourId: tourIds[0],
-          tourOperatorId: silverOperator.id,
-          price: 4500,
-          daysAgo: 6 + i * 3,
-        })
-      );
-    }
-    await seedReviewsFor({ bookings, ratings: [4, 4, 3, 4], customers, tourOperatorId: silverOperator.id });
-    await recalculatePartnerTier({ tourOperatorId: silverOperator.id });
-    console.log(`✔ ${bookings.length} tamamlanmış rezervasyon + review -> test.silver.operator SILVER hedefleniyor`);
+    const silverRatings = buildRatingsForTarget(25, 4.15);
+    const silverCount = await seedOperatorReviews({
+      operatorId: silverOperator.id,
+      tourIds,
+      customers,
+      ratings: silverRatings,
+    });
+    console.log(`✔ ${silverCount} tamamlanmış rezervasyon + review -> test.silver.operator SILVER hedefleniyor`);
   }
 
-  // --- BRONZE: test.bronze.operator ---
+  // --- BRONZE: test.bronze.operator — 25 review altı ve düşük ortalama ---
   const bronzeOperator = await prisma.tourOperator.findFirst({ where: { email: 'test.bronze.operator@tourtech.com' } });
   if (bronzeOperator) {
     const tourIds = silverBronzeTours['test.bronze.operator@tourtech.com'] || [];
-    const bookings = [];
-    for (let i = 0; i < 4; i++) {
-      bookings.push(
-        await createCompletedBooking({
-          userId: customers[i % customers.length].id,
-          tourId: tourIds[0],
-          tourOperatorId: bronzeOperator.id,
-          price: 4500,
-          daysAgo: 5 + i * 2,
-        })
-      );
-    }
-    await seedReviewsFor({ bookings, ratings: [3, 2, 3, 2], customers, tourOperatorId: bronzeOperator.id });
-    await recalculatePartnerTier({ tourOperatorId: bronzeOperator.id });
-    console.log(`✔ ${bookings.length} tamamlanmış rezervasyon + review -> test.bronze.operator BRONZE hedefleniyor`);
+    const bronzeRatings = buildLowRatings(4);
+    const bronzeCount = await seedOperatorReviews({
+      operatorId: bronzeOperator.id,
+      tourIds,
+      customers,
+      ratings: bronzeRatings,
+    });
+    console.log(`✔ ${bronzeCount} tamamlanmış rezervasyon + review -> test.bronze.operator BRONZE hedefleniyor`);
   }
 
   const [go, ao, so, bo] = await Promise.all([
