@@ -213,9 +213,19 @@ export class PrismaPartnerReservationsProvider implements PartnerReservationsPro
     const existing = await prisma.booking.findFirst({ where: ownershipWhere });
     if (!existing) return null;
 
+    const updateData: Prisma.BookingUpdateInput = { status };
+
+    if (
+      status === BookingStatus.CONFIRMED &&
+      (existing.paymentStatus === PaymentStatus.UNPAID ||
+        existing.paymentStatus === PaymentStatus.PARTIALLY_PAID)
+    ) {
+      updateData.paymentStatus = PaymentStatus.PAID;
+    }
+
     const updated = await prisma.booking.update({
       where: { id: bookingId },
-      data: { status },
+      data: updateData,
       include: bookingInclude,
     });
 
