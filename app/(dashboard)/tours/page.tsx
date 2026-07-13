@@ -8,6 +8,7 @@ import { parseJsonString } from "@/app/utils/format";
 import { format, differenceInDays } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { type Tour } from "@/app/types";
+import { parseDepartureCities, parseDestinationCities } from "@/lib/tours/filter-options";
 import MembershipBadge from "@/app/components/partner-dashboard/MembershipBadge";
 import StarRating from "@/app/components/StarRating";
 import { 
@@ -442,12 +443,11 @@ function ToursPageContent() {
     const departureText = formatDepartureCity(tour.departureCity);
 
     const tourImages = parseJsonString<string[]>(tour.images || '[]', []);
-    const rawDestinations = parseJsonString<any[]>(tour.destinations || '[]', []);
-    const destinations = rawDestinations.map(dest => {
-      if (typeof dest === 'string') return dest;
-      if (typeof dest === 'object' && dest.city) return dest.city;
-      return '';
-    }).filter(dest => dest !== '');
+    const destinationCities = parseDestinationCities(tour.destinations);
+    const locationText =
+      destinationCities.length > 0
+        ? destinationCities.join(', ')
+        : tour.region?.trim() || parseDepartureCities(tour.departureCity).join(', ') || '';
     
     const inclusions = parseJsonString<string[]>(tour.inclusions || '[]', []);
     const features = parseJsonString<string[]>((tour as any).features || '[]', []);
@@ -642,16 +642,18 @@ function ToursPageContent() {
             </h3>
             
             {/* Konum ve Tarih */}
-            <div className="flex items-center gap-2 mb-3 text-gray-600 min-h-[1.5rem]">
-              <div className="flex items-center gap-1 flex-1 min-w-0">
-                <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                <span className="text-xs truncate">{destinations.join(', ')}</span>
-            </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <Calendar className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                <span className="text-xs whitespace-nowrap">{tourDateText}</span>
+            <div className="space-y-1 mb-3 min-h-[2.5rem]">
+              {locationText && (
+                <div className="flex items-center gap-1 text-gray-600 min-w-0">
+                  <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0" aria-hidden="true" />
+                  <span className="text-xs truncate">{locationText}</span>
                 </div>
+              )}
+              <div className="flex items-center gap-1 text-gray-600 min-w-0">
+                <Calendar className="w-3 h-3 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                <span className="text-xs truncate">{tourDateText}</span>
               </div>
+            </div>
               
             {/* Puanlama */}
             <div className="flex items-center gap-2 mb-3 min-h-[1.5rem]">
