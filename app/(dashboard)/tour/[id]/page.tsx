@@ -497,7 +497,7 @@ export default function TourPage() {
           </div>
         </div>
         
-        <div className="absolute inset-0 flex items-center justify-center pt-16 sm:pt-20">
+        <div className="absolute inset-0 flex items-center justify-center pt-16 sm:pt-20 pb-28 sm:pb-32 md:pb-36">
           <div className="container px-4 text-center max-w-4xl mx-auto">
              {/* Simplified Badge (SKY Theme) */}
             <div className="inline-flex items-center mb-5 bg-sky-900/30 backdrop-blur-sm px-4 py-1.5 rounded-full border border-sky-400/30">
@@ -531,10 +531,10 @@ export default function TourPage() {
               )}
             </div>
              {/* Standardized Buttons (SKY Theme) */}
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center items-stretch sm:items-center gap-3 sm:gap-4 w-full max-w-xs sm:max-w-none mx-auto">
               <Link
                 href="#itinerary"
-                className={primaryButtonClasses} // Applied standard SKY primary style
+                className={`${primaryButtonClasses} w-full sm:w-auto`}
               >
                 <MapIcon className="h-5 w-5 mr-2" />
                 <span>Tur Programı</span>
@@ -542,7 +542,7 @@ export default function TourPage() {
               <Link
                 href="#booking"
                 onClick={promptDateSelection}
-                className={secondaryButtonDarkBgClasses} // Applied adapted SKY secondary style for dark BG
+                className={`${secondaryButtonDarkBgClasses} w-full sm:w-auto`}
               >
                 <CalendarDaysIcon className="h-5 w-5 mr-2" />
                 <span>Rezervasyon Yap</span>

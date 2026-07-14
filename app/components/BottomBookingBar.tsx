@@ -122,15 +122,41 @@ export default function BottomBookingBar({
   useEffect(() => { setCurrentSelectedDate(initialSelectedDate); }, [initialSelectedDate]);
   
   useEffect(() => {
-    // If the parent wants it expanded (i.e., on mount),
-    // we use a short delay to allow the CSS transition to fire correctly.
     if (isExpanded) {
       const timer = setTimeout(() => {
         setExpanded(true);
-      }, 50); // A minimal delay is enough
+      }, 50);
       return () => clearTimeout(timer);
     }
+    setExpanded(false);
   }, [isExpanded]);
+
+  useEffect(() => {
+    if (!expanded) return;
+
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+
+    document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setExpanded(false);
+        onExpandedChange?.(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscKey);
+
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
+    };
+  }, [expanded]);
 
   useEffect(() => {
     if (forceVisible) { setVisible(true); return; }
@@ -277,14 +303,13 @@ export default function BottomBookingBar({
   }
 
   const handleExpandClick = () => {
-    // We are closing the bar, so trigger animation then notify parent
     if (expanded) {
       setExpanded(false);
-      setTimeout(() => {
-        onExpandedChange?.(false);
-      }, 700); // Duration matches the transition duration
+      onExpandedChange?.(false);
     } else if (onExpandedChange) {
       onExpandedChange(true);
+    } else {
+      setExpanded(true);
     }
   };
 
@@ -374,7 +399,7 @@ export default function BottomBookingBar({
         <CalendarIcon className="w-5 h-5 mr-2 text-sky-600" />
         Tarih Seçin
       </h3>
-      <div className="grid grid-cols-1 gap-2.5 overflow-y-auto scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-neutral-100 scrollbar-thumb-rounded-full flex-grow pr-1">
+      <div className="grid grid-cols-1 gap-2.5 overflow-y-auto overscroll-contain touch-pan-y scrollbar-thin scrollbar-thumb-neutral-300 scrollbar-track-neutral-100 scrollbar-thumb-rounded-full flex-grow min-h-0 pr-1">
         {availableDates.length > 0 ? (
           availableDates.map((date) => (
             <button
@@ -557,21 +582,45 @@ export default function BottomBookingBar({
         <ChevronUpIcon className={`w-4 h-4 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`} />
       </button>
 
+      {expanded && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/50 md:hidden"
+          onClick={handleExpandClick}
+          aria-hidden="true"
+        />
+      )}
+
       <div 
         id="booking-panel"
-        className={`fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-sm border-t border-neutral-200/80 shadow-lg z-40 transition-transform duration-700 ease-out ${visible && expanded ? 'translate-y-0' : 'translate-y-full'}`}
-        style={{ height: 'auto', maxHeight: '85vh' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="booking-panel-title"
+        onClick={(e) => e.stopPropagation()}
+        className={`fixed inset-x-0 bottom-0 top-12 md:top-auto md:inset-x-0 md:bottom-0 bg-white md:bg-white/80 backdrop-blur-sm border-t border-neutral-200/80 shadow-lg z-[101] md:z-50 transition-transform duration-700 ease-out flex flex-col min-h-0 rounded-t-2xl md:rounded-none ${visible && expanded ? 'translate-y-0' : 'translate-y-full'}`}
+        style={{ maxHeight: 'calc(100dvh - 3rem)' }}
       >
-        <div className="container mx-auto px-4 py-6 h-full flex flex-col">
-          <button onClick={handleExpandClick} className="absolute top-3 right-3 p-2 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-full z-10"><XMarkIcon className="w-5 h-5" /></button>
+        <div className="container mx-auto px-4 py-4 md:py-6 h-full flex flex-col min-h-0 max-h-[calc(100dvh-3rem)] md:max-h-[85vh]">
+          <div className="flex items-center justify-between flex-shrink-0 pt-2 md:pt-0 pb-3 md:pb-0 md:relative">
+            <h2 id="booking-panel-title" className="text-lg font-semibold text-neutral-800 md:sr-only">
+              Tarih ve Fiyat Seçenekleri
+            </h2>
+            <button
+              type="button"
+              onClick={handleExpandClick}
+              aria-label="Kapat"
+              className="ml-auto p-2.5 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-full z-20 relative"
+            >
+              <XMarkIcon className="w-6 h-6" />
+            </button>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 flex-grow overflow-hidden mb-4 pt-6" style={{minHeight: '300px'}}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 flex-grow overflow-y-auto overscroll-contain touch-pan-y min-h-0 mb-4 md:overflow-hidden md:min-h-[300px]">
             {renderDatePickerColumn()}
             {entityType === 'tour' ? renderTourParticipantPicker() : renderActivityParticipantPicker()}
             {renderAdvantagesColumn()}
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1 pt-3 border-t border-neutral-200/80 flex-shrink-0">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1 pt-3 border-t border-neutral-200/80 flex-shrink-0 pb-[env(safe-area-inset-bottom)]">
              <div className="flex-1 pr-4 text-center sm:text-left">
                 <span className="text-2xl font-bold text-sky-700">{formatPrice(totalPrice)}</span>
                 <span className="text-neutral-500 text-sm ml-2">toplam fiyat</span>
