@@ -647,61 +647,83 @@ export default function Hero({ variant = "default" }: HeroProps) {
     value,
     onClick,
     hasBorder = true,
+    hasValue = false,
   }: {
     icon: ComponentType<{ className?: string }>;
     label: string;
     value: string;
     onClick: () => void;
     hasBorder?: boolean;
+    hasValue?: boolean;
   }) => (
     <button
       type="button"
       onClick={onClick}
-      className={`w-full flex items-center gap-3 py-3.5 text-left transition-colors hover:bg-neutral-50/80 rounded-lg px-1 ${
+      className={`w-full flex items-center gap-3 py-4 min-h-[64px] text-left transition-colors hover:bg-neutral-50/80 ${
         hasBorder ? 'border-b border-neutral-100' : ''
       }`}
     >
       <Icon className="w-5 h-5 text-sky-600 flex-shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-neutral-500 font-medium">{label}</p>
-        <p className="text-sm text-neutral-800 truncate font-medium">{value}</p>
+      <div className="flex-1 min-w-0 pr-2">
+        <p className="text-[11px] leading-tight text-neutral-500 mb-1">{label}</p>
+        <p className={`text-sm leading-snug truncate ${hasValue ? 'font-semibold text-neutral-900' : 'font-normal text-neutral-500'}`}>
+          {value}
+        </p>
       </div>
-      <ChevronRightIcon className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+      <ChevronRightIcon className="w-4 h-4 text-neutral-400 flex-shrink-0 ml-auto" />
     </button>
   );
 
+  const renderMobileTrustBadges = () => (
+    <div className="flex items-center justify-center gap-x-2.5 mb-4 px-1">
+      {trustBadges.map((badge) => {
+        const Icon = badge.icon;
+        return (
+          <div key={badge.text} className="flex items-center gap-1 text-white/90 flex-shrink-0">
+            <Icon className="w-3 h-3 text-sky-300 flex-shrink-0" />
+            <span className="text-[10px] font-medium leading-none whitespace-nowrap">{badge.text}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   const renderMobileSearchCard = () => (
-    <div className="w-full -mt-6 px-1 animate-slideUp delay-200">
-      <div className="bg-white rounded-2xl shadow-xl border border-neutral-100/80 p-4 text-left">
+    <div className="w-full animate-slideUp delay-200">
+      <div className="mx-4 bg-white rounded-2xl shadow-lg border border-neutral-100/80 px-5 py-4 text-left">
         {renderMobileSearchRow({
           icon: MapPinIcon,
           label: 'Nereye gidiyorsun?',
           value: formatDestinationDisplay(),
+          hasValue: !!(selectedLocation || searchQuery.trim()),
           onClick: () => openSearchModal('location'),
         })}
         {renderMobileSearchRow({
           icon: PaperAirplaneIcon,
           label: 'Nereden?',
           value: formatDepartureDisplay(),
+          hasValue: !!selectedDepartureCity,
           onClick: () => openSearchModal('departure'),
         })}
         {renderMobileSearchRow({
           icon: CalendarDaysIcon,
           label: 'Tarih aralığı',
           value: formatDateRangeDisplay(),
+          hasValue: !!selectedStartDate,
           onClick: () => openSearchModal('dates'),
         })}
         {renderMobileSearchRow({
           icon: UserGroupIcon,
           label: 'Misafir',
           value: formatGuestsMobile(),
+          hasValue: adultCount > 0 || childrenCount > 0,
           onClick: () => openSearchModal('guests'),
           hasBorder: false,
         })}
         <button
           type="button"
           onClick={handleFinalSearch}
-          className="mt-4 w-full flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl py-3.5 transition-colors shadow-sm"
+          className="mt-2 w-full flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl py-3.5 transition-colors shadow-sm"
         >
           <MagnifyingGlassIcon className="w-5 h-5" />
           Tatil Ara
@@ -755,7 +777,7 @@ export default function Hero({ variant = "default" }: HeroProps) {
     <section className={`relative mt-0 w-full overflow-hidden flex ${
       isRoutesVariant
         ? 'min-h-[650px] h-[85vh] max-h-[900px] items-center justify-center'
-        : 'flex-col md:items-center md:justify-center min-h-[480px] md:min-h-[650px] h-auto md:h-[85vh] md:max-h-[900px] pb-6 md:pb-0'
+        : 'flex-col md:items-center md:justify-center min-h-[520px] md:min-h-[650px] h-auto md:h-[85vh] md:max-h-[900px] pb-8 md:pb-0'
     }`}>
       {/* Arka Plan Görseli */}
       <div className="absolute inset-0 w-full h-full">
@@ -777,41 +799,27 @@ export default function Hero({ variant = "default" }: HeroProps) {
         isRoutesVariant ? 'justify-center' : 'justify-start md:justify-center pt-20 md:pt-0'
       }`}>
         
-         <div className={`w-full max-w-4xl animate-fadeIn ${isRoutesVariant ? 'mb-10 md:mb-12' : 'mb-5 md:mb-12'}`}>
-           <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-[64px] font-bold mb-3 md:mb-5 !leading-tight tracking-tight">
+         <div className={`w-full max-w-4xl animate-fadeIn ${isRoutesVariant ? 'mb-10 md:mb-12' : 'mb-4 md:mb-12'}`}>
+           <h1 className="text-[1.75rem] leading-tight sm:text-4xl md:text-6xl lg:text-[64px] font-bold mb-3 md:mb-5 tracking-tight">
             {isRoutesVariant ? (
               <>Popüler Rotaları <span className="text-sky-400">Keşfet</span></>
             ) : (
               <>
-                <span className="md:hidden">Hayalindeki Tatili <span className="text-sky-400">Bul</span></span>
+                <span className="md:hidden">Hayalindeki Tatili <span className="text-sky-400">Bul.</span></span>
                 <span className="hidden md:inline">Hayalindeki Tatili <span className="text-sky-400">Keşfet</span></span>
               </>
             )}
           </h1>
-          <p className="text-base md:text-xl max-w-2xl mx-auto text-white/90 font-light px-2">
+          <p className="text-sm leading-relaxed md:text-xl max-w-2xl mx-auto text-white/85 md:text-white/90 font-light px-1 md:px-2">
             {isRoutesVariant
               ? "Kapadokya, Likya Yolu, Pamukkale ve daha fazlası için tur seçeneklerini inceleyin."
               : (
                 <>
-                  <span className="md:hidden">Türkiye&apos;nin en güzel destinasyonlarında unutulmaz tatil deneyimleri seni bekliyor.</span>
+                  <span className="md:hidden">Türkiye&apos;nin en güzel destinasyonlarında unutulmaz tatil deneyimleri.</span>
                   <span className="hidden md:inline">Türkiye&apos;nin dört bir yanındaki eşsiz otelleri, turları ve deneyimleri kolayca bulun ve rezerve edin.</span>
                 </>
               )}
           </p>
-
-          {!isRoutesVariant && (
-            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-5 md:hidden">
-              {trustBadges.map((badge) => {
-                const Icon = badge.icon;
-                return (
-                  <div key={badge.text} className="flex items-center gap-1.5 text-white/90">
-                    <Icon className="w-4 h-4 text-sky-300 flex-shrink-0" />
-                    <span className="text-xs font-medium">{badge.text}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
         
         {isRoutesVariant ? (
@@ -819,6 +827,7 @@ export default function Hero({ variant = "default" }: HeroProps) {
         ) : (
           <>
             <div className="md:hidden w-full max-w-lg">
+              {renderMobileTrustBadges()}
               {renderMobileSearchCard()}
             </div>
             <div className="hidden md:block w-full">
