@@ -1,19 +1,33 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
   MapPinIcon, 
   CalendarDaysIcon, 
   UserGroupIcon, 
   MagnifyingGlassIcon,
-  XMarkIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  ShieldCheckIcon,
+  CurrencyDollarIcon,
+  PhoneIcon,
+  PaperAirplaneIcon,
 } from '@heroicons/react/24/outline';
+import { DEFAULT_DEPARTURE_CITIES } from '@/lib/tours/filter-options';
+
+type DepartureCityOption = {
+  city: string;
+  count: number;
+};
+
+const trustBadges = [
+  { text: 'Güvenli Ödeme', icon: ShieldCheckIcon },
+  { text: '7/24 Destek', icon: PhoneIcon },
+  { text: 'En İyi Fiyat Garantisi', icon: CurrencyDollarIcon },
+] as const;
 
 // Statik arka plan görseli (Daha modern bir görsel seçilebilir)
 const staticHeroImage = "https://images.unsplash.com/photo-1583062482795-d2bef78e9bc1?q=80&w=2070&auto=format&fit=crop"; 
@@ -44,12 +58,17 @@ export default function Hero({ variant = "default" }: HeroProps) {
   const [routeDuration, setRouteDuration] = useState("");
   const [routeSeason, setRouteSeason] = useState("");
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [selectedDepartureCity, setSelectedDepartureCity] = useState<string | null>(null);
+  const [departureCityOptions, setDepartureCityOptions] = useState<DepartureCityOption[]>(
+    DEFAULT_DEPARTURE_CITIES.map((city) => ({ city, count: 0 }))
+  );
+  const [departureCitySearch, setDepartureCitySearch] = useState('');
   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
-  const [adultCount, setAdultCount] = useState(1); // Yetişkin sayısı 1'den başlasın
+  const [adultCount, setAdultCount] = useState(2);
   const [childrenCount, setChildrenCount] = useState(0);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [activeModalTab, setActiveModalTab] = useState<'location' | 'dates' | 'guests'>('location');
+  const [activeModalTab, setActiveModalTab] = useState<'location' | 'departure' | 'dates' | 'guests'>('location');
   const [currentMonth, setCurrentMonth] = useState(0); // Takvim navigasyonu
   
   const modalRef = useRef<HTMLDivElement>(null);
@@ -57,6 +76,22 @@ export default function Hero({ variant = "default" }: HeroProps) {
 
   useEffect(() => {
     setIsBrowser(true);
+  }, []);
+
+  useEffect(() => {
+    const fetchDepartureCities = async () => {
+      try {
+        const response = await fetch('/api/tours/filters');
+        const data = await response.json();
+        if (response.ok && Array.isArray(data.departureCities) && data.departureCities.length > 0) {
+          setDepartureCityOptions(data.departureCities);
+        }
+      } catch {
+        // Varsayılan şehir listesi kullanılır
+      }
+    };
+
+    fetchDepartureCities();
   }, []);
 
   // Dışarı tıklanınca modal kapatma
@@ -77,7 +112,7 @@ export default function Hero({ variant = "default" }: HeroProps) {
   }, [isSearchModalOpen]);
 
   // Arama modalını açma
-  const openSearchModal = (tab: 'location' | 'dates' | 'guests' = 'location') => {
+  const openSearchModal = (tab: 'location' | 'departure' | 'dates' | 'guests' = 'location') => {
     setIsSearchModalOpen(true);
     setActiveModalTab(tab);
   };
@@ -91,13 +126,14 @@ export default function Hero({ variant = "default" }: HeroProps) {
 
   const buildToursSearchUrl = () => {
     const params = new URLSearchParams();
-    const location = selectedLocation || searchQuery.trim();
+    const destination = selectedLocation || searchQuery.trim();
 
-    if (selectedLocation) {
-      params.set('departureCity', selectedLocation);
-      params.set('search', selectedLocation);
-    } else if (location) {
-      params.set('search', location);
+    if (destination) {
+      params.set('search', destination);
+    }
+
+    if (selectedDepartureCity) {
+      params.set('departureCity', selectedDepartureCity);
     }
 
     if (selectedStartDate) params.set('startDate', formatDateParam(selectedStartDate));
@@ -127,6 +163,32 @@ export default function Hero({ variant = "default" }: HeroProps) {
     if (total === 0) return "Kişi Ekle";
     return `${total} Kişi`;
   };
+
+  const formatGuestsMobile = () => {
+    const parts: string[] = [];
+    if (adultCount > 0) parts.push(`${adultCount} Yetişkin`);
+    if (childrenCount > 0) parts.push(`${childrenCount} Çocuk`);
+    return parts.length > 0 ? parts.join(', ') : 'Misafir ekle';
+  };
+
+  const formatDestinationDisplay = () => {
+    return selectedLocation || searchQuery.trim() || 'Şehir, bölge veya otel adı';
+  };
+
+  const formatDepartureDisplay = () => {
+    return selectedDepartureCity || 'Kalkış yeri seçin';
+  };
+
+  const formatDateRangeDisplay = () => {
+    if (!selectedStartDate) return 'Giriş - Çıkış tarihi';
+    const start = formatDate(selectedStartDate);
+    const end = selectedEndDate ? formatDate(selectedEndDate) : 'Çıkış';
+    return `${start} - ${end}`;
+  };
+
+  const filteredDepartureCities = departureCityOptions.filter((option) =>
+    option.city.toLocaleLowerCase('tr-TR').includes(departureCitySearch.toLocaleLowerCase('tr-TR'))
+  );
 
   const handleDateSelect = (date: Date) => {
      // Tarih seçme mantığı güncellendi: ilk tıklama başlangıç, ikinci tıklama bitiş
@@ -211,23 +273,28 @@ export default function Hero({ variant = "default" }: HeroProps) {
            className="bg-white rounded-xl shadow-xl w-full max-w-3xl animate-slideDownEnter overflow-hidden border border-neutral-200/70"
         >
           {/* Modal Tabs */} 
-           <div className="flex border-b border-neutral-200 bg-neutral-50/50">
+           <div className="flex border-b border-neutral-200 bg-neutral-50/50 overflow-x-auto">
             <button 
               onClick={() => setActiveModalTab('location')}
-               // Tab stili: aktif/pasif durumlar belirginleştirildi
-               className={`flex-1 py-3 px-2 text-center text-sm font-medium transition-all duration-200 border-b-2 ${activeModalTab === 'location' ? 'border-sky-600 text-sky-700 font-semibold' : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
+               className={`flex-1 min-w-[72px] py-3 px-2 text-center text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap ${activeModalTab === 'location' ? 'border-sky-600 text-sky-700 font-semibold' : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
             >
               Konum
             </button>
             <button 
+              onClick={() => setActiveModalTab('departure')}
+               className={`flex-1 min-w-[72px] py-3 px-2 text-center text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap ${activeModalTab === 'departure' ? 'border-sky-600 text-sky-700 font-semibold' : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
+            >
+              Kalkış
+            </button>
+            <button 
               onClick={() => setActiveModalTab('dates')}
-               className={`flex-1 py-3 px-2 text-center text-sm font-medium transition-all duration-200 border-b-2 ${activeModalTab === 'dates' ? 'border-sky-600 text-sky-700 font-semibold' : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
+               className={`flex-1 min-w-[72px] py-3 px-2 text-center text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap ${activeModalTab === 'dates' ? 'border-sky-600 text-sky-700 font-semibold' : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
             >
               Tarihler
             </button>
             <button 
               onClick={() => setActiveModalTab('guests')}
-               className={`flex-1 py-3 px-2 text-center text-sm font-medium transition-all duration-200 border-b-2 ${activeModalTab === 'guests' ? 'border-sky-600 text-sky-700 font-semibold' : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
+               className={`flex-1 min-w-[72px] py-3 px-2 text-center text-sm font-medium transition-all duration-200 border-b-2 whitespace-nowrap ${activeModalTab === 'guests' ? 'border-sky-600 text-sky-700 font-semibold' : 'border-transparent text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100'}`}
             >
               Misafirler
             </button>
@@ -255,7 +322,7 @@ export default function Hero({ variant = "default" }: HeroProps) {
                   {locations.map((location) => (
                     <button 
                       key={location.name}
-                      onClick={() => { setSelectedLocation(location.name); setActiveModalTab('dates'); }}
+                      onClick={() => { setSelectedLocation(location.name); setSearchQuery(location.name); setActiveModalTab('departure'); }}
                        // Lokasyon kart stili güncellendi
                        className="text-left group transition-transform duration-200 ease-out hover:scale-[1.03]"
                     >
@@ -268,8 +335,50 @@ export default function Hero({ variant = "default" }: HeroProps) {
                 </div>
               </div>
             )}
+
+            {activeModalTab === 'departure' && (
+              <div className="animate-fadeIn">
+                <h3 className="text-lg font-semibold mb-4 text-neutral-900">Nereden kalkıyorsunuz?</h3>
+                <div className="relative mb-4">
+                  <MagnifyingGlassIcon className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    className="w-full pl-10 pr-4 py-2.5 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-300 focus:border-sky-500 text-neutral-800 placeholder-neutral-400 text-sm"
+                    placeholder="Kalkış şehri ara..."
+                    value={departureCitySearch}
+                    onChange={(e) => setDepartureCitySearch(e.target.value)}
+                  />
+                </div>
+                <div className="max-h-64 overflow-y-auto space-y-1">
+                  {filteredDepartureCities.map((option) => (
+                    <button
+                      key={option.city}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDepartureCity(option.city);
+                        setDepartureCitySearch('');
+                        setActiveModalTab('dates');
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left text-sm transition-colors ${
+                        selectedDepartureCity === option.city
+                          ? 'bg-sky-50 text-sky-700 font-medium'
+                          : 'text-neutral-700 hover:bg-neutral-50'
+                      }`}
+                    >
+                      <span>{option.city}</span>
+                      {option.count > 0 && (
+                        <span className="text-xs text-neutral-400">{option.count} tur</span>
+                      )}
+                    </button>
+                  ))}
+                  {filteredDepartureCities.length === 0 && (
+                    <p className="text-sm text-neutral-500 text-center py-4">Sonuç bulunamadı</p>
+                  )}
+                </div>
+              </div>
+            )}
             
-            {/* Tarih Sekmesi İçeriği */} 
+            {/* Tarih Sekmesi İçeriği */}
              {activeModalTab === 'dates' && (
                 <div className="animate-fadeIn">
                   <h3 className="text-lg font-semibold mb-5 text-neutral-900">Tarih Aralığı Seçin</h3>
@@ -401,9 +510,11 @@ export default function Hero({ variant = "default" }: HeroProps) {
                onClick={() => {
                  setSearchQuery("");
                  setSelectedLocation(null);
+                 setSelectedDepartureCity(null);
+                 setDepartureCitySearch("");
                  setSelectedStartDate(null);
                  setSelectedEndDate(null);
-                 setAdultCount(1);
+                 setAdultCount(2);
                  setChildrenCount(0);
                  setActiveModalTab('location');
                }}
@@ -530,8 +641,122 @@ export default function Hero({ variant = "default" }: HeroProps) {
 
   const isRoutesVariant = variant === "routes";
 
+  const renderMobileSearchRow = ({
+    icon: Icon,
+    label,
+    value,
+    onClick,
+    hasBorder = true,
+  }: {
+    icon: ComponentType<{ className?: string }>;
+    label: string;
+    value: string;
+    onClick: () => void;
+    hasBorder?: boolean;
+  }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 py-3.5 text-left transition-colors hover:bg-neutral-50/80 rounded-lg px-1 ${
+        hasBorder ? 'border-b border-neutral-100' : ''
+      }`}
+    >
+      <Icon className="w-5 h-5 text-sky-600 flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-neutral-500 font-medium">{label}</p>
+        <p className="text-sm text-neutral-800 truncate font-medium">{value}</p>
+      </div>
+      <ChevronRightIcon className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+    </button>
+  );
+
+  const renderMobileSearchCard = () => (
+    <div className="w-full -mt-6 px-1 animate-slideUp delay-200">
+      <div className="bg-white rounded-2xl shadow-xl border border-neutral-100/80 p-4 text-left">
+        {renderMobileSearchRow({
+          icon: MapPinIcon,
+          label: 'Nereye gidiyorsun?',
+          value: formatDestinationDisplay(),
+          onClick: () => openSearchModal('location'),
+        })}
+        {renderMobileSearchRow({
+          icon: PaperAirplaneIcon,
+          label: 'Nereden?',
+          value: formatDepartureDisplay(),
+          onClick: () => openSearchModal('departure'),
+        })}
+        {renderMobileSearchRow({
+          icon: CalendarDaysIcon,
+          label: 'Tarih aralığı',
+          value: formatDateRangeDisplay(),
+          onClick: () => openSearchModal('dates'),
+        })}
+        {renderMobileSearchRow({
+          icon: UserGroupIcon,
+          label: 'Misafir',
+          value: formatGuestsMobile(),
+          onClick: () => openSearchModal('guests'),
+          hasBorder: false,
+        })}
+        <button
+          type="button"
+          onClick={handleFinalSearch}
+          className="mt-4 w-full flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl py-3.5 transition-colors shadow-sm"
+        >
+          <MagnifyingGlassIcon className="w-5 h-5" />
+          Tatil Ara
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderDesktopSearchBar = () => (
+    <div className="w-full max-w-3xl animate-slideUp delay-200">
+      <div className="w-full grid grid-cols-[1fr_auto_1fr_auto_1fr_auto] items-center bg-white/95 backdrop-blur-sm rounded-full shadow-lg p-2 text-left border border-neutral-200/30 hover:shadow-xl transition-shadow duration-300">
+        <button
+          type="button"
+          onClick={() => openSearchModal('location')}
+          className="flex-1 flex items-center pl-3 pr-2 min-w-0 text-left"
+        >
+          <MapPinIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
+          <span className="text-neutral-700 text-sm truncate font-medium">{selectedLocation || searchQuery || "Nereye?"}</span>
+        </button>
+        <div className="hidden md:block h-6 border-l border-neutral-200 mx-1"></div>
+        <button
+          type="button"
+          onClick={() => openSearchModal('dates')}
+          className="flex-1 flex items-center pl-3 pr-2 min-w-0 text-left"
+        >
+          <CalendarDaysIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
+          <span className="text-neutral-700 text-sm truncate font-medium">{selectedStartDate ? `${formatDate(selectedStartDate)}${selectedEndDate ? ' - '+formatDate(selectedEndDate) : ''}` : "Tarihler"}</span>
+        </button>
+        <div className="hidden md:block h-6 border-l border-neutral-200 mx-1"></div>
+        <button
+          type="button"
+          onClick={() => openSearchModal('guests')}
+          className="flex-1 flex items-center pl-3 pr-2 min-w-0 text-left"
+        >
+          <UserGroupIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
+          <span className="text-neutral-500 text-sm truncate font-medium whitespace-nowrap">{formatGuests()}</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleFinalSearch}
+          aria-label="Tur ara"
+          className="flex-shrink-0 ml-2 w-8 h-8 md:w-9 md:h-9 bg-sky-600 rounded-full flex items-center justify-center shadow hover:bg-sky-700 transition-colors"
+        >
+          <MagnifyingGlassIcon className="w-4 h-4 text-white"/>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    <section className="relative mt-0 min-h-[650px] h-[85vh] max-h-[900px] w-full overflow-hidden flex items-center justify-center">
+    <section className={`relative mt-0 w-full overflow-hidden flex ${
+      isRoutesVariant
+        ? 'min-h-[650px] h-[85vh] max-h-[900px] items-center justify-center'
+        : 'flex-col md:items-center md:justify-center min-h-[480px] md:min-h-[650px] h-auto md:h-[85vh] md:max-h-[900px] pb-6 md:pb-0'
+    }`}>
       {/* Arka Plan Görseli */}
       <div className="absolute inset-0 w-full h-full">
          <Image
@@ -544,70 +769,62 @@ export default function Hero({ variant = "default" }: HeroProps) {
              className="object-cover object-center filter brightness-[0.6]"
           />
          {/* Gradient overlay güncellendi */}
-         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-black/60" />
+         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-black/50 md:from-black/40 md:via-black/20 md:to-black/60" />
       </div>
 
       {/* Hero İçeriği */}
-      <div className="relative z-10 container mx-auto px-6 flex flex-col items-center justify-center text-center text-white">
+      <div className={`relative z-10 container mx-auto px-4 md:px-6 flex flex-col items-center text-center text-white w-full ${
+        isRoutesVariant ? 'justify-center' : 'justify-start md:justify-center pt-20 md:pt-0'
+      }`}>
         
-         <div className="w-full max-w-4xl mb-10 md:mb-12 animate-fadeIn">
-           {/* Başlık ve açıklama stilleri güncellendi */}
-           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[64px] font-bold mb-5 !leading-tight tracking-tight">
+         <div className={`w-full max-w-4xl animate-fadeIn ${isRoutesVariant ? 'mb-10 md:mb-12' : 'mb-5 md:mb-12'}`}>
+           <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-[64px] font-bold mb-3 md:mb-5 !leading-tight tracking-tight">
             {isRoutesVariant ? (
               <>Popüler Rotaları <span className="text-sky-400">Keşfet</span></>
             ) : (
-              <>Hayalindeki Tatili <span className="text-sky-400">Keşfet</span></>
+              <>
+                <span className="md:hidden">Hayalindeki Tatili <span className="text-sky-400">Bul</span></span>
+                <span className="hidden md:inline">Hayalindeki Tatili <span className="text-sky-400">Keşfet</span></span>
+              </>
             )}
           </h1>
-          <p className="text-lg md:text-xl max-w-2xl mx-auto text-white/90 font-light">
+          <p className="text-base md:text-xl max-w-2xl mx-auto text-white/90 font-light px-2">
             {isRoutesVariant
               ? "Kapadokya, Likya Yolu, Pamukkale ve daha fazlası için tur seçeneklerini inceleyin."
-              : "Türkiye'nin dört bir yanındaki eşsiz otelleri, turları ve deneyimleri kolayca bulun ve rezerve edin."}
+              : (
+                <>
+                  <span className="md:hidden">Türkiye&apos;nin en güzel destinasyonlarında unutulmaz tatil deneyimleri seni bekliyor.</span>
+                  <span className="hidden md:inline">Türkiye&apos;nin dört bir yanındaki eşsiz otelleri, turları ve deneyimleri kolayca bulun ve rezerve edin.</span>
+                </>
+              )}
           </p>
+
+          {!isRoutesVariant && (
+            <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mt-5 md:hidden">
+              {trustBadges.map((badge) => {
+                const Icon = badge.icon;
+                return (
+                  <div key={badge.text} className="flex items-center gap-1.5 text-white/90">
+                    <Icon className="w-4 h-4 text-sky-300 flex-shrink-0" />
+                    <span className="text-xs font-medium">{badge.text}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
         
         {isRoutesVariant ? (
           renderRoutesSearchForm()
         ) : (
-          /* Tıklanabilir Arama Çubuğu */
-          <div className="w-full max-w-3xl animate-slideUp delay-200">
-            <div className="w-full grid grid-cols-[1fr_auto_1fr_auto_1fr_auto] items-center bg-white/95 backdrop-blur-sm rounded-full shadow-lg p-2 text-left border border-neutral-200/30 hover:shadow-xl transition-shadow duration-300">
-              <button
-                type="button"
-                onClick={() => openSearchModal('location')}
-                className="flex-1 flex items-center pl-3 pr-2 min-w-0 text-left"
-              >
-                <MapPinIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
-                <span className="text-neutral-700 text-sm truncate font-medium">{selectedLocation || searchQuery || "Nereye?"}</span>
-              </button>
-              <div className="hidden md:block h-6 border-l border-neutral-200 mx-1"></div>
-              <button
-                type="button"
-                onClick={() => openSearchModal('dates')}
-                className="flex-1 flex items-center pl-3 pr-2 min-w-0 text-left"
-              >
-                <CalendarDaysIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
-                <span className="text-neutral-700 text-sm truncate font-medium">{selectedStartDate ? `${formatDate(selectedStartDate)}${selectedEndDate ? ' - '+formatDate(selectedEndDate) : ''}` : "Tarihler"}</span>
-              </button>
-              <div className="hidden md:block h-6 border-l border-neutral-200 mx-1"></div>
-              <button
-                type="button"
-                onClick={() => openSearchModal('guests')}
-                className="flex-1 flex items-center pl-3 pr-2 min-w-0 text-left"
-              >
-                <UserGroupIcon className="w-4 h-4 text-sky-600 mr-2 flex-shrink-0"/>
-                <span className="text-neutral-500 text-sm truncate font-medium whitespace-nowrap">{formatGuests()}</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleFinalSearch}
-                aria-label="Tur ara"
-                className="flex-shrink-0 ml-2 w-8 h-8 md:w-9 md:h-9 bg-sky-600 rounded-full flex items-center justify-center shadow hover:bg-sky-700 transition-colors"
-              >
-                <MagnifyingGlassIcon className="w-4 h-4 text-white"/>
-              </button>
+          <>
+            <div className="md:hidden w-full max-w-lg">
+              {renderMobileSearchCard()}
             </div>
-          </div>
+            <div className="hidden md:block w-full">
+              {renderDesktopSearchBar()}
+            </div>
+          </>
         )}
       </div>
       
