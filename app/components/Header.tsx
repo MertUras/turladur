@@ -105,9 +105,12 @@ export default function Header() {
   }, [mounted]);
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: '/' });
     setActiveDropdown(null);
     setIsMenuOpen(false);
+    // Hard navigation after signOut — client redirect to the same URL (e.g. '/') leaves session stuck in "loading".
+    void signOut({ redirect: false }).then(() => {
+      window.location.href = '/';
+    });
   };
 
   const handleAuthClick = (e: React.MouseEvent) => {
