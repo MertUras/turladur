@@ -5,7 +5,9 @@ import { Booking } from '@/app/types';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
+import { Fragment, useMemo } from 'react';
+import SpecialRequirementsSection from '@/app/components/booking/SpecialRequirementsSection';
+import { extractBookingSpecialConditions } from '@/lib/user/bookings';
 
 interface BookingDetailsModalProps {
   isOpen: boolean;
@@ -59,6 +61,16 @@ export default function BookingDetailsModal({
     booking.fromLocation && booking.toLocation
       ? `${booking.fromLocation} → ${booking.toLocation}`
       : booking.fromLocation || booking.toLocation || null
+  );
+
+  const specialConditionsSummary = useMemo(
+    () =>
+      booking.specialConditionsSummary ??
+      extractBookingSpecialConditions({
+        metadata: booking.metadata,
+        specialRequests: booking.specialRequests,
+      }),
+    [booking.metadata, booking.specialConditionsSummary, booking.specialRequests]
   );
 
   return (
@@ -173,14 +185,7 @@ export default function BookingDetailsModal({
                       </div>
                   </div>
                   
-                  {booking.specialRequests && (
-                    <div className="pt-4">
-                      <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">Özel İstekler</p>
-                      <div className="p-3 bg-neutral-50 rounded-md border border-neutral-200/80 text-sm text-neutral-700">
-                        {booking.specialRequests}
-                      </div>
-                    </div>
-                  )}
+                  <SpecialRequirementsSection summary={specialConditionsSummary} />
                 </div>
 
                 <div className="bg-neutral-50 px-5 py-4 border-t border-neutral-100">

@@ -200,6 +200,8 @@ export interface Booking {
   status: BookingStatus;
   paymentStatus: PaymentStatus;
   specialRequests?: string;
+  metadata?: unknown;
+  specialConditionsSummary?: string[];
   createdAt: Date;
   updatedAt: Date;
   userId: string;

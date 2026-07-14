@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { dummyTours, dummyTourOperators } from "@/app/lib/dummy-data";
 import { parseJsonString } from "@/app/utils/format";
 import BottomBookingBar from "@/app/components/BottomBookingBar";
+import TourItineraryMobile from "@/app/components/tour/TourItineraryMobile";
 import MembershipBadge from "@/app/components/partner-dashboard/MembershipBadge";
 import OperatorReviewsSection, { OperatorReview } from "@/app/(dashboard)/tour-operator/[id]/components/OperatorReviewsSection";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -587,12 +588,6 @@ export default function TourPage() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
           </div>
 
-          {tour.tourOperator?.membershipTier && (
-            <div className="absolute top-6 right-6 z-10">
-              <MembershipBadge tier={tour.tourOperator.membershipTier} variant="onImage" className="text-sm px-2.5 py-1" />
-            </div>
-          )}
-
           <div className="absolute inset-0 z-10 flex items-center justify-center pb-36 pt-20">
             <div className="container px-4 text-center max-w-4xl mx-auto w-full">
               <div className="inline-flex items-center mb-5 bg-sky-900/30 backdrop-blur-sm px-4 py-1.5 rounded-full border border-sky-400/30">
@@ -914,7 +909,17 @@ export default function TourPage() {
             {/* Sol Kolon - Tur Bilgileri */}
             <div className="lg:col-span-2 space-y-16 sm:space-y-20 h-full">
               {/* Tur Programı ve Rotası */}
-              <div id="itinerary" className="bg-white rounded-xl overflow-hidden shadow-md border border-neutral-200/70 scroll-mt-24">
+              <div id="itinerary" className="scroll-mt-24">
+                <div className="md:hidden">
+                  <TourItineraryMobile
+                    itinerary={tour.itinerary}
+                    destinations={destinations}
+                    images={tour.images}
+                    tourStartDate={tour.tourDates?.[0]?.startDate ?? null}
+                  />
+                </div>
+
+                <div className="hidden md:block bg-white rounded-xl overflow-hidden shadow-md border border-neutral-200/70">
                 <div className="p-6 md:p-8">
                   <div className="flex items-center justify-between mb-8">
                     <h3 className="text-2xl font-semibold text-gray-900 flex items-center">
@@ -1190,6 +1195,7 @@ export default function TourPage() {
                       </div>
                     </div>
                   )}
+                </div>
                 </div>
               </div>
 

@@ -87,6 +87,13 @@ export function getBookingGuestCount(adults: number, children: number): number {
   return adults + children;
 }
 
+/** Tamamlanmış ve henüz partner değerlendirmesi yapılmamış rezervasyon sayısı. */
+export function countPendingPartnerReviews(
+  bookings: { canReviewPartner: boolean }[]
+): number {
+  return bookings.filter((booking) => booking.canReviewPartner).length;
+}
+
 /** Aynı tur/aktivite + aynı tarih aralığı için tek partner değerlendirmesi grubu. */
 export interface PartnerReviewGroupInput {
   tourId?: string | null;

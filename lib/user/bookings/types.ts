@@ -49,6 +49,9 @@ export interface UserBooking {
   adults: number;
   children: number;
   specialRequests?: string | null;
+  metadata?: unknown;
+  /** metadata / specialRequests'ten türetilmiş özet satırları */
+  specialConditionsSummary?: string[];
   createdAt?: string;
   updatedAt?: string;
   hotelId?: string | null;

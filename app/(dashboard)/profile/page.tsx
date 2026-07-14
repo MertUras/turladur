@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -23,7 +23,12 @@ import SecurityTab from './components/SecurityTab';
 import HelpTab from './components/HelpTab';
 import ReviewsTab from './components/ReviewsTab';
 import RatePartnerModal, { ReviewableBooking } from '../bookings/components/RatePartnerModal';
+import SpecialRequirementsSection from '@/app/components/booking/SpecialRequirementsSection';
 import { parseJsonArray } from '@/lib/utils';
+import {
+  countPendingPartnerReviews,
+  extractBookingSpecialConditions,
+} from '@/lib/user/bookings';
 
 interface Booking {
   id: string;
@@ -47,6 +52,10 @@ interface Booking {
   partnerName?: string;
   canReviewPartner?: boolean;
   partnerReviewRating?: number;
+  specialConditionsSummary?: string[];
+  displayDateLabel?: string;
+  reviewGroupBookingCount?: number;
+  reviewGroupGuestCount?: number;
 }
 
 interface FavoriteItem {
@@ -172,7 +181,14 @@ export default function ProfilePage() {
     cancelled: []
   });
   const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [pendingReviewCount, setPendingReviewCount] = useState(0);
   const [ratingBooking, setRatingBooking] = useState<ReviewableBooking | null>(null);
+  const savedCardsRef = useRef(savedCards);
+  const expiredToastShownRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    savedCardsRef.current = savedCards;
+  }, [savedCards]);
 
   const fetchBookings = () => {
     setBookingsLoading(true);
@@ -188,6 +204,10 @@ export default function ProfilePage() {
           const hotelImages = parseJsonArray<string>(b.hotel?.images);
           const tourImages = parseJsonArray<string>(b.tour?.images);
           const image = tourImages[0] || b.experience?.imageUrl || hotelImages[0] || null;
+          const specialConditionsSummary = extractBookingSpecialConditions({
+            metadata: b.metadata,
+            specialRequests: b.specialRequests,
+          });
 
           const mapped: Booking = {
             id: b.id,
@@ -203,9 +223,15 @@ export default function ProfilePage() {
             price: b.totalPrice,
             location: 'Türkiye',
             bookingNumber: b.bookingNumber,
-            partnerName: b.tour?.operator?.name || b.experience?.operator?.name || undefined,
+            partnerName:
+              b.operatorName || b.tour?.operator?.name || b.experience?.operator?.name || undefined,
             canReviewPartner: Boolean(b.canReviewPartner),
             partnerReviewRating: b.partnerReview?.rating,
+            specialConditionsSummary:
+              specialConditionsSummary.length > 0 ? specialConditionsSummary : undefined,
+            displayDateLabel: b.displayDateLabel || undefined,
+            reviewGroupBookingCount: b.reviewGroupBookingCount || undefined,
+            reviewGroupGuestCount: b.reviewGroupGuestCount || undefined,
           };
 
           if (b.status === 'CANCELLED') {
@@ -218,8 +244,12 @@ export default function ProfilePage() {
         });
 
         setBookings(buckets);
+        setPendingReviewCount(countPendingPartnerReviews(data.bookings || []));
       })
-      .catch(() => setBookings({ upcoming: [], past: [], cancelled: [] }))
+      .catch(() => {
+        setBookings({ upcoming: [], past: [], cancelled: [] });
+        setPendingReviewCount(0);
+      })
       .finally(() => setBookingsLoading(false));
   };
 
@@ -229,11 +259,35 @@ export default function ProfilePage() {
     }
   }, [session]);
 
+  const reviewableBookings = useMemo(
+    () =>
+      [...bookings.past, ...bookings.upcoming, ...bookings.cancelled]
+        .filter((booking) => booking.canReviewPartner)
+        .map(
+          (booking): ReviewableBooking => ({
+            id: booking.id,
+            bookingNumber: booking.bookingNumber,
+            title: booking.name,
+            partnerName: booking.partnerName || 'Partner',
+            type: booking.type === 'experience' ? 'experience' : 'tour',
+            displayDateLabel: booking.displayDateLabel,
+            guestCount: booking.reviewGroupGuestCount ?? booking.guests,
+            reviewGroupBookingCount: booking.reviewGroupBookingCount,
+          })
+        ),
+    [bookings]
+  );
+
+  const handleOpenRatePartner = (booking: ReviewableBooking) => {
+    setRatingBooking(booking);
+  };
+
   const handleReviewSubmitted = (bookingId: string) => {
     setBookings((prev) => ({
       ...prev,
       past: prev.past.map((b) => (b.id === bookingId ? { ...b, canReviewPartner: false } : b)),
     }));
+    setPendingReviewCount((prev) => Math.max(0, prev - 1));
     setRatingBooking(null);
     toast.success('Değerlendirmeniz kaydedildi');
   };
@@ -311,31 +365,40 @@ export default function ProfilePage() {
   }, [session]);
 
   useEffect(() => {
+    if (!mounted) return;
+
     const checkCardExpiry = () => {
       const currentDate = new Date();
-      setSavedCards(prevCards => 
-        prevCards.map(card => {
-          const [month, year] = card.expiry.split('/');
-          const expiryDate = new Date(2000 + parseInt(year), parseInt(month) - 1);
-          const isExpired = expiryDate < currentDate;
-          
-          if (isExpired && !card.isExpired) {
-            toast.error(`"${card.type} **** ${card.lastFour}" kartınızın süresi doldu.`);
-          }
-          
-          return {
-            ...card,
-            isExpired
-          };
-        })
-      );
+      const toNotify: { id: number; type: string; lastFour: string }[] = [];
+
+      const updatedCards = savedCardsRef.current.map((card) => {
+        const [month, year] = card.expiry.split('/');
+        const expiryDate = new Date(2000 + parseInt(year), parseInt(month) - 1);
+        const isExpired = expiryDate < currentDate;
+
+        if (isExpired && !card.isExpired && !expiredToastShownRef.current.has(card.id)) {
+          toNotify.push({ id: card.id, type: card.type, lastFour: card.lastFour });
+        }
+
+        return { ...card, isExpired };
+      });
+
+      setSavedCards(updatedCards);
+
+      if (toNotify.length > 0) {
+        queueMicrotask(() => {
+          toNotify.forEach(({ id, type, lastFour }) => {
+            if (expiredToastShownRef.current.has(id)) return;
+            expiredToastShownRef.current.add(id);
+            toast.error(`"${type} **** ${lastFour}" kartınızın süresi doldu.`);
+          });
+        });
+      }
     };
 
-    if (mounted) {
-      checkCardExpiry();
-      const interval = setInterval(checkCardExpiry, 1000 * 60 * 60);
-      return () => clearInterval(interval);
-    }
+    checkCardExpiry();
+    const interval = setInterval(checkCardExpiry, 1000 * 60 * 60);
+    return () => clearInterval(interval);
   }, [mounted]);
 
   const formatDate = (dateString: string) => {
@@ -445,7 +508,15 @@ export default function ProfilePage() {
                     <item.icon className={`h-5 w-5 mr-2.5 flex-shrink-0 ${
                       activeTab === item.key ? 'text-sky-600' : 'text-neutral-400'
                     }`} />
-                    {item.label}
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {item.key === 'reviews' && pendingReviewCount > 0 && (
+                      <span
+                        className="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-amber-500 text-white text-[11px] font-semibold leading-none"
+                        aria-label={`${pendingReviewCount} bekleyen değerlendirme`}
+                      >
+                        {pendingReviewCount > 99 ? '99+' : pendingReviewCount}
+                      </span>
+                    )}
                   </button>
                 ))}
               </nav>
@@ -461,22 +532,32 @@ export default function ProfilePage() {
                   <BookingsTab
                     bookings={bookings}
                     loading={bookingsLoading}
+                    pendingReviewBookings={reviewableBookings}
                     onViewDetails={handleViewBookingDetails}
                     onCancelBooking={handleCancelBooking}
                     onRatePartner={(booking) =>
-                      setRatingBooking({
+                      handleOpenRatePartner({
                         id: booking.id,
                         bookingNumber: booking.bookingNumber,
                         title: booking.name,
                         partnerName: booking.partnerName || 'Partner',
                         type: booking.type === 'experience' ? 'experience' : 'tour',
+                        displayDateLabel: booking.displayDateLabel,
+                        guestCount: booking.reviewGroupGuestCount ?? booking.guests,
+                        reviewGroupBookingCount: booking.reviewGroupBookingCount,
                       })
                     }
+                    onRatePendingPartner={handleOpenRatePartner}
                     formatDate={formatDate}
                   />
                 )}
 
-                {activeTab === 'reviews' && <ReviewsTab />}
+                {activeTab === 'reviews' && (
+                  <ReviewsTab
+                    pendingReviewBookings={reviewableBookings}
+                    onRatePartner={handleOpenRatePartner}
+                  />
+                )}
 
                 {activeTab === 'favorites' && (
                   <FavoritesTab
@@ -582,6 +663,10 @@ export default function ProfilePage() {
                   )}
                 </div>
                 
+                {selectedBooking.specialConditionsSummary && (
+                  <SpecialRequirementsSection summary={selectedBooking.specialConditionsSummary} />
+                )}
+
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-2">
                   <div>
                     <p className="text-xs text-neutral-500">Toplam Tutar</p>

@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { CalendarIcon, ClockIcon, UsersIcon, FunnelIcon, ArrowsUpDownIcon, MapPinIcon, XMarkIcon, CheckIcon, BanknotesIcon, StarIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { toast } from 'react-hot-toast';
+import PendingPartnerReviewsSection from '@/app/components/booking/PendingPartnerReviewsSection';
+import type { ReviewableBooking } from '@/app/(dashboard)/bookings/components/RatePartnerModal';
 
 interface Booking {
   id: string;
@@ -24,18 +26,32 @@ interface Booking {
   partnerName?: string;
   canReviewPartner?: boolean;
   partnerReviewRating?: number;
+  displayDateLabel?: string;
+  reviewGroupBookingCount?: number;
+  reviewGroupGuestCount?: number;
 }
 
 interface BookingsTabProps {
   bookings: Record<string, Booking[]>;
   loading?: boolean;
+  pendingReviewBookings?: ReviewableBooking[];
   onViewDetails: (booking: Booking) => void;
   onCancelBooking: (bookingId: string) => void;
   onRatePartner?: (booking: Booking) => void;
+  onRatePendingPartner?: (booking: ReviewableBooking) => void;
   formatDate: (dateString: string) => string;
 }
 
-export default function BookingsTab({ bookings, loading, onViewDetails, onCancelBooking, onRatePartner, formatDate }: BookingsTabProps) {
+export default function BookingsTab({
+  bookings,
+  loading,
+  pendingReviewBookings = [],
+  onViewDetails,
+  onCancelBooking,
+  onRatePartner,
+  onRatePendingPartner,
+  formatDate,
+}: BookingsTabProps) {
   const [bookingTab, setBookingTab] = useState('upcoming');
   const [filterModalOpen, setFilterModalOpen] = useState(false);
   const [sortOrder, setSortOrder] = useState<'dateDesc' | 'dateAsc' | 'priceDesc' | 'priceAsc'>('dateDesc');
@@ -106,6 +122,13 @@ export default function BookingsTab({ bookings, loading, onViewDetails, onCancel
           </div>
         </div>
       </div>
+
+      {pendingReviewBookings.length > 0 && onRatePendingPartner && (
+        <PendingPartnerReviewsSection
+          bookings={pendingReviewBookings}
+          onRatePartner={onRatePendingPartner}
+        />
+      )}
 
       <div className="border-b border-neutral-200">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">

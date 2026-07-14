@@ -175,11 +175,6 @@ export async function GET() {
         guestCount,
       };
     })
-    ).map(
-      ({
-        metadata: _metadata,
-        ...booking
-      }) => booking
     );
 
     return NextResponse.json({ bookings: formatted });

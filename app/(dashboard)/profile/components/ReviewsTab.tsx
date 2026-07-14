@@ -7,6 +7,8 @@ import {
   StarIcon,
 } from '@heroicons/react/24/outline';
 import StarRating from '@/app/components/StarRating';
+import PendingPartnerReviewsSection from '@/app/components/booking/PendingPartnerReviewsSection';
+import type { ReviewableBooking } from '@/app/(dashboard)/bookings/components/RatePartnerModal';
 import { formatDate } from '@/app/utils/format';
 import { resolveCategoryFeedback } from '@/lib/partner/reviews/client';
 import {
@@ -127,8 +129,15 @@ function UserReviewCard({ review }: { review: UserReview }) {
   );
 }
 
-export default function ReviewsTab() {
+export default function ReviewsTab({
+  pendingReviewBookings = [],
+  onRatePartner,
+}: {
+  pendingReviewBookings?: ReviewableBooking[];
+  onRatePartner?: (booking: ReviewableBooking) => void;
+}) {
   const { reviews, isLoading, isRefreshing, error, refetch, lastUpdated } = useUserReviews();
+  const hasPendingReviews = pendingReviewBookings.length > 0;
 
   return (
     <div className="space-y-6">
@@ -169,12 +178,19 @@ export default function ReviewsTab() {
         </div>
       )}
 
+      {hasPendingReviews && onRatePartner && (
+        <PendingPartnerReviewsSection
+          bookings={pendingReviewBookings}
+          onRatePartner={onRatePartner}
+        />
+      )}
+
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
           <ArrowPathIcon className="h-8 w-8 animate-spin text-sky-500 mb-3" />
           <p className="text-sm">Değerlendirmeler yükleniyor...</p>
         </div>
-      ) : reviews.length === 0 ? (
+      ) : reviews.length === 0 && !hasPendingReviews ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-14 h-14 rounded-full bg-neutral-100 flex items-center justify-center mb-4">
             <StarIcon className="h-7 w-7 text-neutral-400" />
