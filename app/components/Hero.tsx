@@ -736,7 +736,7 @@ export default function Hero({ variant = "default" }: HeroProps) {
   );
 
   const renderDesktopSearchBar = () => (
-    <div className="w-full max-w-3xl animate-slideUp delay-200">
+    <div className="w-full max-w-3xl mx-auto animate-slideUp delay-200">
       <div className="w-full grid grid-cols-[1fr_auto_1fr_auto_1fr_auto] items-center bg-white/95 backdrop-blur-sm rounded-full shadow-lg p-2 text-left border border-neutral-200/30 hover:shadow-xl transition-shadow duration-300">
         <button
           type="button"
@@ -833,7 +833,7 @@ export default function Hero({ variant = "default" }: HeroProps) {
               {renderMobileTrustBadges()}
               {renderMobileSearchCard()}
             </div>
-            <div className="hidden md:block w-full">
+            <div className="hidden md:flex md:w-full md:justify-center">
               {renderDesktopSearchBar()}
             </div>
           </>
