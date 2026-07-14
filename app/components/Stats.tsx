@@ -149,22 +149,22 @@ export default function Stats() {
             Özel fırsatlar ve unutulmaz deneyimler sizi bekliyor.
           </p>
           
-          <Link 
-            href="/tours" 
-             // Buton stili güncellendi
-             className="inline-flex items-center justify-center px-6 py-3 bg-sky-600 text-white hover:bg-sky-700 rounded-lg transition-colors duration-200 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 text-sm"
-          >
-            Turları Keşfet
-             <ArrowRightIcon className="w-4 h-4 ml-1.5" />
-          </Link>
-          <Link 
-            href="/activities" 
-             // Buton stili güncellendi
-             className="ml-4 inline-flex items-center justify-center px-6 py-3 bg-sky-600 text-white hover:bg-sky-700 rounded-lg transition-colors duration-200 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 text-sm"
-          >
-            Aktiviteleri Keşfet
-             <ArrowRightIcon className="w-4 h-4 ml-1.5" />
-          </Link>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 mx-auto max-w-xs sm:max-w-none">
+            <Link 
+              href="/tours" 
+              className="inline-flex items-center justify-center w-full sm:w-auto px-6 py-3 bg-sky-600 text-white hover:bg-sky-700 rounded-lg transition-colors duration-200 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 text-sm"
+            >
+              Turları Keşfet
+              <ArrowRightIcon className="w-4 h-4 ml-1.5" />
+            </Link>
+            <Link 
+              href="/activities" 
+              className="inline-flex items-center justify-center w-full sm:w-auto px-6 py-3 bg-sky-600 text-white hover:bg-sky-700 rounded-lg transition-colors duration-200 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 text-sm"
+            >
+              Aktiviteleri Keşfet
+              <ArrowRightIcon className="w-4 h-4 ml-1.5" />
+            </Link>
+          </div>
         </div>
       </div>
     </section>
