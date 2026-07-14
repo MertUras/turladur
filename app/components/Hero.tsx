@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
   MapPinIcon, 
@@ -138,7 +139,7 @@ export default function Hero({ variant = "default" }: HeroProps) {
 
     if (selectedStartDate) params.set('startDate', formatDateParam(selectedStartDate));
     if (selectedEndDate) params.set('endDate', formatDateParam(selectedEndDate));
-    if (adultCount > 1) params.set('adults', adultCount.toString());
+    if (adultCount >= 1) params.set('adults', adultCount.toString());
     if (childrenCount > 0) params.set('children', childrenCount.toString());
 
     const query = params.toString();
@@ -148,7 +149,8 @@ export default function Hero({ variant = "default" }: HeroProps) {
   // Modal'dan veya hero arama butonundan yönlendirme
   const handleFinalSearch = () => {
     setIsSearchModalOpen(false);
-    router.push(buildToursSearchUrl());
+    const url = buildToursSearchUrl();
+    router.push(url);
   };
 
   // --- Yardımcı Fonksiyonlar --- 
@@ -522,13 +524,14 @@ export default function Hero({ variant = "default" }: HeroProps) {
              >
                Temizle
              </button>
-            <button 
+            <button
+              type="button"
               onClick={handleFinalSearch}
                // Arama butonu stili güncellendi
                className="px-6 py-2.5 bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 text-white font-semibold rounded-lg transition-colors text-sm shadow-sm flex items-center gap-2"
             >
               <MagnifyingGlassIcon className="w-4 h-4"/>
-              Ara
+              Tatil Ara
             </button>
           </div>
 
@@ -689,7 +692,7 @@ export default function Hero({ variant = "default" }: HeroProps) {
   );
 
   const renderMobileSearchCard = () => (
-    <div className="w-full animate-slideUp delay-200">
+    <div className="w-full animate-slideUp delay-200 relative z-20">
       <div className="mx-4 bg-white rounded-2xl shadow-lg border border-neutral-100/80 px-5 py-4 text-left">
         {renderMobileSearchRow({
           icon: MapPinIcon,
@@ -720,14 +723,14 @@ export default function Hero({ variant = "default" }: HeroProps) {
           onClick: () => openSearchModal('guests'),
           hasBorder: false,
         })}
-        <button
-          type="button"
-          onClick={handleFinalSearch}
-          className="mt-2 w-full flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl py-3.5 transition-colors shadow-sm"
+        <Link
+          href={buildToursSearchUrl()}
+          onClick={() => setIsSearchModalOpen(false)}
+          className="mt-2 w-full flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl py-3.5 transition-colors shadow-sm relative z-10 touch-manipulation"
         >
           <MagnifyingGlassIcon className="w-5 h-5" />
           Tatil Ara
-        </button>
+        </Link>
       </div>
     </div>
   );
@@ -780,7 +783,7 @@ export default function Hero({ variant = "default" }: HeroProps) {
         : 'flex-col md:items-center md:justify-center min-h-[520px] md:min-h-[650px] h-auto md:h-[85vh] md:max-h-[900px] pb-8 md:pb-0'
     }`}>
       {/* Arka Plan Görseli */}
-      <div className="absolute inset-0 w-full h-full">
+      <div className="absolute inset-0 w-full h-full pointer-events-none">
          <Image
             src={isRoutesVariant ? routesHeroImage : staticHeroImage} 
             alt={isRoutesVariant ? "Türkiye'nin popüler rotalarını keşfedin" : "Türkiye'nin güzelliklerini keşfedin"}
