@@ -377,22 +377,33 @@ export default function TourPage() {
   // Tur programını parse et
   const itinerary = parseJsonString<Record<string, ItineraryItem>>(tour.itinerary || '{}', {});
 
+  const displayRating =
+    tourReviewCount > 0
+      ? tourAverageRating
+      : (tour.rating ?? tourOperator?.rating ?? 0);
+  const displayReviewCount =
+    tourReviewCount > 0
+      ? tourReviewCount
+      : (tourOperator?.reviewCount ?? 0);
+  const nights = Math.max(tour.duration - 1, 0);
+
   // Yıldızları render et
-  const renderStars = (rating: number) => {
+  const renderStars = (rating: number, size: 'sm' | 'md' = 'md') => {
+    const starSize = size === 'sm' ? 'h-3.5 w-3.5' : 'h-5 w-5';
     return (
       <div className="flex items-center">
         {[1, 2, 3, 4, 5].map((star) => {
           return star <= Math.floor(rating) ? (
-            <StarIconSolid key={star} className="h-5 w-5 text-yellow-400" />
+            <StarIconSolid key={star} className={`${starSize} text-yellow-400`} />
           ) : star <= rating ? (
             <div key={star} className="relative">
-              <StarIcon className="h-5 w-5 text-gray-300" />
+              <StarIcon className={`${starSize} text-gray-300`} />
               <div className="absolute inset-0 overflow-hidden" style={{ width: `${(rating % 1) * 100}%` }}>
-                <StarIconSolid className="h-5 w-5 text-yellow-400" />
+                <StarIconSolid className={`${starSize} text-yellow-400`} />
               </div>
             </div>
           ) : (
-            <StarIcon key={star} className="h-5 w-5 text-gray-300" />
+            <StarIcon key={star} className={`${starSize} text-gray-300`} />
           );
         })}
       </div>
@@ -409,141 +420,282 @@ export default function TourPage() {
 
   return (
     <div className="bg-gray-50">
-      {/* Hero Section - ikas Style Refinement (SKY Theme) */}
-      <div className="relative flex flex-col min-h-[80vh] md:block md:h-[90vh]">
-        <div className="absolute inset-0 overflow-hidden">
-          {tour.images.length > 0 ? (
-            <Image
-              src={tour.images[0]}
-              alt={tour.name}
-              fill
-              priority
-              style={{ objectFit: "cover" }}
-              className="brightness-70 transform scale-100 animate-ken-burns-slow"
-            />
-          ) : (
-            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-              <PhotoIcon className="w-20 h-20 text-gray-400" />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
-        </div>
+      {/* Hero Section - Mobile refined / Desktop original (SKY Theme) */}
+      <div className="relative">
+        {/* ── MOBILE HERO (< md) ── */}
+        <div className="md:hidden">
+          <div className="relative h-[380px] overflow-hidden">
+            {tour.images.length > 0 ? (
+              <Image
+                src={tour.images[0]}
+                alt={tour.name}
+                fill
+                priority
+                style={{ objectFit: 'cover' }}
+                className="brightness-[0.85]"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                <PhotoIcon className="w-16 h-16 text-gray-400" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/45 to-black/15" />
 
-        {/* Partner üyelik arması (müşteri değerlendirmelerinden otomatik hesaplanır) */}
-        {tour.tourOperator?.membershipTier && (
-          <div className="absolute top-6 right-6 z-10">
-            <MembershipBadge tier={tour.tourOperator.membershipTier} variant="onImage" className="text-sm px-2.5 py-1" />
-          </div>
-        )}
-
-        {/* Hero content: stacked flow on mobile, centered overlay on desktop */}
-        <div className="relative z-10 flex flex-1 flex-col justify-center px-4 pt-16 pb-6 sm:pt-20 md:absolute md:inset-0 md:flex md:items-center md:justify-center md:pb-36 md:pt-20">
-          <div className="container px-4 text-center max-w-4xl mx-auto w-full">
-            {/* Simplified Badge (SKY Theme) */}
-            <div className="inline-flex items-center mb-4 md:mb-5 bg-sky-900/30 backdrop-blur-sm px-4 py-1.5 rounded-full border border-sky-400/30">
-              <StarIconSolid className="h-4 w-4 text-yellow-300 mr-2"/>
-              <span className="text-sky-100 font-medium uppercase tracking-wider text-[11px]">Popüler Seçim</span>
-            </div>
-            {/* Adjusted Title size and spacing */}
-            <h1 className="text-3xl sm:text-4xl md:text-[3.5rem] lg:text-[4rem] font-bold text-white mb-4 leading-tight animate-fade-in-up drop-shadow-md">{tour.name}</h1>
-            {/* Meta details: hidden on mobile (shown in feature bar below) */}
-            <div className="hidden md:flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-white/90 mb-8 max-w-3xl mx-auto">
-              <div className="flex items-center text-base">
-                <MapPinIcon className="w-4 h-4 mr-1.5 opacity-80" />
-                <span className="font-normal">{destinations.join(', ')}</span>
-              </div>
-              <span className="text-white/50 hidden sm:inline">•</span>
-              <div className="flex items-center text-base">
-                <ClockIcon className="w-4 h-4 mr-1.5 opacity-80" />
-                <span className="font-normal">{tour.duration} gün</span>
-              </div>
-              <span className="text-white/50 hidden sm:inline">•</span>
-              <div className="flex items-center text-base">
-                <UserGroupIcon className="w-4 h-4 mr-1.5 opacity-80" />
-                <span className="font-normal">Maks. {tour.maxParticipants || 10} kişi</span>
-              </div>
-              {/* Otel Adı Badge */}
-              {tour.accommodation?.name && (
-                <span className="inline-flex items-center gap-2 bg-sky-100 text-sky-800 px-3 py-1 rounded-full text-xs font-semibold ml-2">
-                  <BuildingOfficeIcon className="w-4 h-4 text-sky-600" />
-                  Otel: {tour.accommodation.name}
-                </span>
+            {/* Top row: badge + actions */}
+            <div className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between px-4 pt-14">
+              {(tour.isPopular || tour.featured) && (
+                <div className="inline-flex items-center bg-sky-600/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
+                  <StarIconSolid className="h-3.5 w-3.5 text-yellow-300 mr-1.5" />
+                  <span className="text-white font-semibold uppercase tracking-wider text-[10px]">
+                    Popüler Seçim
+                  </span>
+                </div>
               )}
-            </div>
-            {/* Standardized Buttons (SKY Theme) */}
-            <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center items-stretch sm:items-center gap-4 w-full max-w-sm sm:max-w-none mx-auto mb-2 md:mb-0">
-              <Link
-                href="#itinerary"
-                className={`${primaryButtonClasses} w-full sm:w-auto`}
-              >
-                <MapIcon className="h-5 w-5 mr-2" />
-                <span>Tur Programı</span>
-              </Link>
-              <Link
-                href="#booking"
-                onClick={promptDateSelection}
-                className={`${secondaryButtonDarkBgClasses} w-full sm:w-auto`}
-              >
-                <CalendarDaysIcon className="h-5 w-5 mr-2" />
-                <span>Rezervasyon Yap</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Feature Bar - in document flow on mobile, pinned to bottom on desktop */}
-        <div className="relative z-10 bg-black/60 backdrop-blur-md py-4 border-t border-white/10 md:absolute md:bottom-0 md:left-0 md:right-0">
-          <div className="container px-4 mx-auto">
-            <div className="flex flex-wrap items-center justify-center lg:justify-between gap-x-6 gap-y-3">
-              <div className="flex items-center text-white gap-2.5 group">
-                <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
-                  <CalendarDaysIcon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Süre</p>
-                  <p className="text-sm font-semibold">{tour.duration} Gün</p>
-                </div>
-              </div>
-
-              <div className="flex items-center text-white gap-2.5 group">
-                <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
-                  <UserGroupIcon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Grup</p>
-                  <p className="text-sm font-semibold">Maks. {tour.maxParticipants || 10} kişi</p>
-                </div>
-              </div>
-
-              <div className="flex items-center text-white gap-2.5 group">
-                <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
-                  <MapPinIcon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Destinasyon</p>
-                  <p className="text-sm font-semibold truncate max-w-[150px]">
-                    {destinations[0]}{destinations.length > 1 ? ` +${destinations.length - 1}` : ''}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center text-white gap-2.5 group">
-                <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
-                  <StarIcon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Puan</p>
-                  <p className="text-sm font-semibold">4.8/5</p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2 md:ml-auto">
+              <div className={`flex items-center gap-2 ${!(tour.isPopular || tour.featured) ? 'ml-auto' : ''}`}>
                 <button className={iconButtonDarkBgClasses} aria-label="Favorilere Ekle">
                   <HeartIcon className="h-5 w-5" />
                 </button>
                 <button className={iconButtonDarkBgClasses} aria-label="Paylaş">
                   <ShareIcon className="h-5 w-5" />
                 </button>
+              </div>
+            </div>
+
+            {/* Hero text overlay */}
+            <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-14">
+              <div className="flex items-end justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-2xl font-bold text-white leading-tight drop-shadow-md mb-2">
+                    {tour.name}
+                  </h1>
+                  <div className="flex items-start gap-1.5 text-white/90 mb-2.5">
+                    <MapPinIcon className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 opacity-90" />
+                    <span className="text-sm leading-snug">{destinations.join(', ')}</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-white/90 text-sm">
+                    <div className="flex items-center gap-1.5">
+                      <ClockIcon className="w-3.5 h-3.5 opacity-80" />
+                      <span>{tour.duration} gün</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <UserGroupIcon className="w-3.5 h-3.5 opacity-80" />
+                      <span>Maks. {tour.maxParticipants || 10} kişi</span>
+                    </div>
+                  </div>
+                </div>
+
+                {displayRating > 0 && (
+                  <div className="flex-shrink-0 bg-black/55 backdrop-blur-sm rounded-xl px-3 py-2 shadow-lg border border-white/10">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-white font-bold text-base leading-none">
+                        {displayRating.toFixed(1)}
+                      </span>
+                      {renderStars(displayRating, 'sm')}
+                    </div>
+                    {displayReviewCount > 0 && (
+                      <p className="text-white/70 text-[11px] text-center">
+                        ({displayReviewCount} yorum)
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Overlapping white info card + CTAs */}
+          <div className="relative z-20 -mt-10 mx-4 mb-6">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100/80 overflow-hidden">
+              <div className="grid grid-cols-4 divide-x divide-gray-100 px-1 py-4">
+                <div className="flex flex-col items-center text-center px-1">
+                  <div className="p-2 bg-sky-50 rounded-xl mb-1.5">
+                    <CalendarDaysIcon className="h-4 w-4 text-sky-600" />
+                  </div>
+                  <p className="text-[9px] text-gray-500 font-medium leading-tight mb-0.5">Tur Süresi</p>
+                  <p className="text-[10px] font-semibold text-gray-900 leading-tight">
+                    {tour.duration} Gün
+                  </p>
+                  {nights > 0 && (
+                    <p className="text-[9px] text-gray-500 leading-tight">{nights} Gece</p>
+                  )}
+                </div>
+                <div className="flex flex-col items-center text-center px-1">
+                  <div className="p-2 bg-sky-50 rounded-xl mb-1.5">
+                    <UserGroupIcon className="h-4 w-4 text-sky-600" />
+                  </div>
+                  <p className="text-[9px] text-gray-500 font-medium leading-tight mb-0.5">Grup Büyüklüğü</p>
+                  <p className="text-[10px] font-semibold text-gray-900 leading-tight">
+                    Maks. {tour.maxParticipants || 10}
+                  </p>
+                  <p className="text-[9px] text-gray-500 leading-tight">Kişi</p>
+                </div>
+                <div className="flex flex-col items-center text-center px-1">
+                  <div className="p-2 bg-sky-50 rounded-xl mb-1.5">
+                    <ChatBubbleLeftRightIcon className="h-4 w-4 text-sky-600" />
+                  </div>
+                  <p className="text-[9px] text-gray-500 font-medium leading-tight mb-0.5">Rehber</p>
+                  <p className="text-[10px] font-semibold text-gray-900 leading-tight">Profesyonel</p>
+                </div>
+                <div className="flex flex-col items-center text-center px-1">
+                  <div className="p-2 bg-emerald-50 rounded-xl mb-1.5">
+                    <ShieldCheckIcon className="h-4 w-4 text-emerald-600" />
+                  </div>
+                  <p className="text-[9px] text-gray-500 font-medium leading-tight mb-0.5">İptal Güvencesi</p>
+                  <p className="text-[10px] font-semibold text-gray-900 leading-tight">Ücretsiz</p>
+                  <p className="text-[9px] text-gray-500 leading-tight">İptal</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 px-4 pb-4 pt-1">
+                <Link
+                  href="#itinerary"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white border-2 border-sky-600 text-sky-600 text-sm font-semibold rounded-xl transition-colors hover:bg-sky-50 active:scale-[0.98]"
+                >
+                  <MapIcon className="h-4 w-4 flex-shrink-0" />
+                  <span>Tur Programı</span>
+                </Link>
+                <Link
+                  href="#booking"
+                  onClick={promptDateSelection}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm active:scale-[0.98]"
+                >
+                  <CalendarDaysIcon className="h-4 w-4 flex-shrink-0" />
+                  <span>Rezervasyon Yap</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── DESKTOP HERO (md+) — unchanged ── */}
+        <div className="hidden md:block relative h-[90vh]">
+          <div className="absolute inset-0 overflow-hidden">
+            {tour.images.length > 0 ? (
+              <Image
+                src={tour.images[0]}
+                alt={tour.name}
+                fill
+                priority
+                style={{ objectFit: 'cover' }}
+                className="brightness-70 transform scale-100 animate-ken-burns-slow"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                <PhotoIcon className="w-20 h-20 text-gray-400" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+          </div>
+
+          {tour.tourOperator?.membershipTier && (
+            <div className="absolute top-6 right-6 z-10">
+              <MembershipBadge tier={tour.tourOperator.membershipTier} variant="onImage" className="text-sm px-2.5 py-1" />
+            </div>
+          )}
+
+          <div className="absolute inset-0 z-10 flex items-center justify-center pb-36 pt-20">
+            <div className="container px-4 text-center max-w-4xl mx-auto w-full">
+              <div className="inline-flex items-center mb-5 bg-sky-900/30 backdrop-blur-sm px-4 py-1.5 rounded-full border border-sky-400/30">
+                <StarIconSolid className="h-4 w-4 text-yellow-300 mr-2" />
+                <span className="text-sky-100 font-medium uppercase tracking-wider text-[11px]">Popüler Seçim</span>
+              </div>
+              <h1 className="text-[3.5rem] lg:text-[4rem] font-bold text-white mb-4 leading-tight animate-fade-in-up drop-shadow-md">
+                {tour.name}
+              </h1>
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-white/90 mb-8 max-w-3xl mx-auto">
+                <div className="flex items-center text-base">
+                  <MapPinIcon className="w-4 h-4 mr-1.5 opacity-80" />
+                  <span className="font-normal">{destinations.join(', ')}</span>
+                </div>
+                <span className="text-white/50 hidden sm:inline">•</span>
+                <div className="flex items-center text-base">
+                  <ClockIcon className="w-4 h-4 mr-1.5 opacity-80" />
+                  <span className="font-normal">{tour.duration} gün</span>
+                </div>
+                <span className="text-white/50 hidden sm:inline">•</span>
+                <div className="flex items-center text-base">
+                  <UserGroupIcon className="w-4 h-4 mr-1.5 opacity-80" />
+                  <span className="font-normal">Maks. {tour.maxParticipants || 10} kişi</span>
+                </div>
+                {tour.accommodation?.name && (
+                  <span className="inline-flex items-center gap-2 bg-sky-100 text-sky-800 px-3 py-1 rounded-full text-xs font-semibold ml-2">
+                    <BuildingOfficeIcon className="w-4 h-4 text-sky-600" />
+                    Otel: {tour.accommodation.name}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-row flex-wrap justify-center items-center gap-4 w-full mx-auto">
+                <Link href="#itinerary" className={primaryButtonClasses}>
+                  <MapIcon className="h-5 w-5 mr-2" />
+                  <span>Tur Programı</span>
+                </Link>
+                <Link
+                  href="#booking"
+                  onClick={promptDateSelection}
+                  className={secondaryButtonDarkBgClasses}
+                >
+                  <CalendarDaysIcon className="h-5 w-5 mr-2" />
+                  <span>Rezervasyon Yap</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 z-10 bg-black/60 backdrop-blur-md py-4 border-t border-white/10">
+            <div className="container px-4 mx-auto">
+              <div className="flex flex-wrap items-center justify-center lg:justify-between gap-x-6 gap-y-3">
+                <div className="flex items-center text-white gap-2.5 group">
+                  <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
+                    <CalendarDaysIcon className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Süre</p>
+                    <p className="text-sm font-semibold">{tour.duration} Gün</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center text-white gap-2.5 group">
+                  <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
+                    <UserGroupIcon className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Grup</p>
+                    <p className="text-sm font-semibold">Maks. {tour.maxParticipants || 10} kişi</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center text-white gap-2.5 group">
+                  <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
+                    <MapPinIcon className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Destinasyon</p>
+                    <p className="text-sm font-semibold truncate max-w-[150px]">
+                      {destinations[0]}{destinations.length > 1 ? ` +${destinations.length - 1}` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center text-white gap-2.5 group">
+                  <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
+                    <StarIcon className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Puan</p>
+                    <p className="text-sm font-semibold">
+                      {displayRating > 0 ? `${displayRating.toFixed(1)}/5` : '—'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 ml-auto">
+                  <button className={iconButtonDarkBgClasses} aria-label="Favorilere Ekle">
+                    <HeartIcon className="h-5 w-5" />
+                  </button>
+                  <button className={iconButtonDarkBgClasses} aria-label="Paylaş">
+                    <ShareIcon className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
