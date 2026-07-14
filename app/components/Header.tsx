@@ -15,11 +15,14 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [dealsOpen, setDealsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const signingOutRef = useRef(false);
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const authStatus = isSigningOut ? "unauthenticated" : status;
 
   // Client-side kontrolü için mounted state'i
   useEffect(() => {
@@ -104,14 +107,27 @@ export default function Header() {
     }
   }, [mounted]);
 
-  const handleSignOut = () => {
+  const handleSignOut = useCallback(() => {
+    if (signingOutRef.current) return;
+    signingOutRef.current = true;
+    setIsSigningOut(true);
     setActiveDropdown(null);
     setIsMenuOpen(false);
-    // Hard navigation after signOut — client redirect to the same URL (e.g. '/') leaves session stuck in "loading".
-    void signOut({ redirect: false }).then(() => {
-      window.location.href = '/';
-    });
-  };
+    setSearchOpen(false);
+    setDealsOpen(false);
+
+    const redirectHome = () => {
+      window.location.replace("/");
+    };
+
+    // Fallback if signOut hangs — avoids infinite loading skeleton in header.
+    const timeoutId = window.setTimeout(redirectHome, 2000);
+
+    void signOut({ redirect: false, callbackUrl: "/" })
+      .then(redirectHome)
+      .catch(redirectHome)
+      .finally(() => window.clearTimeout(timeoutId));
+  }, []);
 
   const handleAuthClick = (e: React.MouseEvent) => {
     if (session?.user?.provider === 'partner-credentials') {
@@ -263,12 +279,12 @@ export default function Header() {
 
           {/* Desktop Auth Area */} 
            <div className="hidden lg:flex items-center space-x-2 flex-shrink-0">
-            {status === "loading" ? (
+            {authStatus === "loading" ? (
                <div className="flex space-x-2">
                  <div className={`h-8 w-20 rounded-md animate-pulse ${pulseBg}`}></div>
                  <div className={`h-8 w-20 rounded-md animate-pulse ${pulseBg}`}></div>
               </div>
-            ) : status === "authenticated" && session?.user?.provider !== 'partner-credentials' ? (
+            ) : authStatus === "authenticated" && session?.user?.provider !== 'partner-credentials' ? (
               <div className="relative group dropdown-container">
                 <button
                    className={`flex items-center space-x-2 p-1 rounded-full text-sm font-medium transition-colors duration-200 ${linkColor} ${authButtonBgHover}`}
@@ -298,10 +314,12 @@ export default function Header() {
                      <Link href="/bookings" className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-sky-700 hover:bg-sky-50 rounded transition-colors duration-150">Rezervasyonlarım</Link>
                      <div className="border-t border-neutral-100 my-1"></div>
                     <button
+                      type="button"
                       onClick={handleSignOut}
-                       className="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50/70 rounded transition-colors duration-150"
+                      disabled={isSigningOut}
+                       className="w-full text-left px-3 py-1.5 text-sm text-red-600 hover:bg-red-50/70 rounded transition-colors duration-150 disabled:opacity-60"
                     >
-                      Çıkış Yap
+                      {isSigningOut ? "Çıkış yapılıyor..." : "Çıkış Yap"}
                     </button>
                   </div>
                 )}
@@ -409,13 +427,13 @@ export default function Header() {
 
              {/* Mobile Menu Content */}
              <div className="flex-1 py-3 px-3">
-              {status === "loading" ? (
+              {authStatus === "loading" ? (
                   <div className="p-3 space-y-4">
                     <div className="h-12 bg-neutral-200 animate-pulse rounded-md"></div>
                     <div className="h-10 bg-neutral-200 animate-pulse rounded-md"></div>
                     <div className="h-10 bg-neutral-200 animate-pulse rounded-md"></div>
                   </div>
-              ) : status === "authenticated" && session?.user?.provider !== 'partner-credentials' ? (
+              ) : authStatus === "authenticated" && session?.user?.provider !== 'partner-credentials' ? (
                  <Link href="/profile" className="flex items-center space-x-3 p-3 mb-3 rounded-lg hover:bg-sky-50/70 transition-colors" onClick={() => setIsMenuOpen(false)}>
                   {session.user?.image ? (
                     <Image
@@ -555,13 +573,15 @@ export default function Header() {
             </div>
 
              {/* Mobile Footer Buttons (Authenticated) */}
-             {status === "authenticated" && (
+             {authStatus === "authenticated" && session?.user?.provider !== 'partner-credentials' && (
                <div className="sticky bottom-0 bg-white border-t border-neutral-100 p-3 mt-auto">
                 <button
+                  type="button"
                   onClick={handleSignOut}
-                   className="w-full text-center px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
+                  disabled={isSigningOut}
+                   className="w-full text-center px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-md hover:bg-red-100 transition-colors disabled:opacity-60"
                 >
-                  Çıkış Yap
+                  {isSigningOut ? "Çıkış yapılıyor..." : "Çıkış Yap"}
                 </button>
               </div>
             )}
