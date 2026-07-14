@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "WATCHPACK_POLLING=true WATCHPACK_POLLING_INTERVAL=1000 next dev --hostname localhost",
-    "dev:stop": "pkill -f 'next dev --hostname localhost' 2>/dev/null || true; for port in 3000 3001 3002 3003; do lsof -ti :$port 2>/dev/null | xargs kill -9 2>/dev/null || true; done",
+    "dev:stop": "pkill -f 'next dev --hostname localhost' 2>/dev/null || true; for port in $(seq 3000 3010); do lsof -ti :$port 2>/dev/null | xargs kill -9 2>/dev/null || true; done",
     "dev:clean": "npm run dev:stop && sleep 1 && rm -rf .next && npm run dev",
     "build": "next build",
     "start": "next start",
