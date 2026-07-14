@@ -25,22 +25,6 @@ export default function PartnerNavbar() {
                                 Turladur
                             </span>
                         </Link>
-
-                        {/* Slash */}
-                        <div className="text-2xl font-light text-sky-700">/</div>
-
-                        {/* Partner Portal Logo */}
-                        <div className="flex items-center group flex-shrink-0">
-                            <div className="flex-shrink-0 flex items-center">
-                                <div className="h-8 w-8 text-white rounded-md flex items-center justify-center">
-                                    <Image src="/images/logo.png" alt="Turladur Logo" width={32} height={32} />
-                                </div>
-                                <div className="ml-2.5 flex flex-col">
-                                    <span className="text-lg font-semibold text-sky-700">Turladur</span>
-                                    <span className="text-xs text-sky-600 tracking-wide font-medium">Partner Portal</span>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Auth Buttons */}
