@@ -65,9 +65,9 @@ export async function GET(request: Request) {
                     },
                   },
                   {
+                    // JSON fields cannot use mode: 'insensitive' (Postgres lower(jsonb) does not exist)
                     destinations: {
                       string_contains: departureCity,
-                      mode: 'insensitive',
                     },
                   },
                 ],
