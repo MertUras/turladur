@@ -60,15 +60,15 @@ function MainReviewsSection({
     <>
       <div
         id="reviews"
-        className="bg-white rounded-xl overflow-hidden shadow-md border border-neutral-200/70 scroll-mt-24"
+        className="bg-white rounded-2xl md:rounded-xl overflow-hidden shadow-md border border-neutral-200/70 scroll-mt-24"
       >
-        <div className="p-6 md:p-8">
-          <div className="mb-6">
-            <h3 className="text-2xl font-semibold text-gray-900 flex items-center mb-2">
-              <ChatBubbleLeftRightIcon className="h-7 w-7 text-sky-600 mr-3" />
+        <div className="p-4 md:p-6 lg:p-8">
+          <div className="mb-4 md:mb-6">
+            <h3 className="text-xl md:text-2xl font-semibold text-gray-900 flex items-center mb-2">
+              <ChatBubbleLeftRightIcon className="h-6 w-6 md:h-7 md:w-7 text-sky-600 mr-2.5 md:mr-3 flex-shrink-0" />
               <span>Müşteri Değerlendirmeleri</span>
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <StarRating rating={aggregates.averageRating} size="sm" />
               <p className="text-neutral-500 text-sm">
                 {aggregates.averageRating.toFixed(1)}/5 ortalama · {reviewCount} değerlendirme
@@ -76,7 +76,7 @@ function MainReviewsSection({
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {visibleReviews.map((review) => (
               <ReviewCard
                 key={review.id}
@@ -91,7 +91,7 @@ function MainReviewsSection({
             <button
               type="button"
               onClick={() => setModalOpen(true)}
-              className="mt-6 w-full inline-flex items-center justify-center px-6 py-3.5 bg-sky-600 hover:bg-sky-700 text-white text-base font-semibold rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 active:scale-[0.98] duration-150 ease-out"
+              className="mt-4 md:mt-6 w-full inline-flex items-center justify-center px-6 py-3.5 bg-sky-600 hover:bg-sky-700 text-white text-base font-semibold rounded-2xl md:rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 active:scale-[0.98] duration-150 ease-out"
             >
               Tüm Değerlendirmeler ({reviewCount})
             </button>
@@ -148,9 +148,9 @@ function SidebarReviewsSection({
     <>
       <div
         id="reviews"
-        className="bg-white rounded-2xl p-8 shadow-md border border-neutral-200/50 scroll-mt-24 overflow-hidden"
+        className="bg-white rounded-2xl p-4 md:p-8 shadow-md border border-neutral-200/50 scroll-mt-24 overflow-hidden"
       >
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4 md:mb-6">
           <div>
             <h2 className="text-3xl font-bold text-neutral-900 mb-2 flex items-center">
               <ChatBubbleLeftRightIcon className="w-7 h-7 mr-2.5 text-sky-600" />
@@ -230,7 +230,7 @@ function SidebarReviewsSection({
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="mt-6 w-full inline-flex items-center justify-center px-6 py-3.5 bg-sky-600 hover:bg-sky-700 text-white text-base font-semibold rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 active:scale-[0.98] duration-150 ease-out"
+            className="mt-4 md:mt-6 w-full inline-flex items-center justify-center px-6 py-3.5 bg-sky-600 hover:bg-sky-700 text-white text-base font-semibold rounded-2xl md:rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 active:scale-[0.98] duration-150 ease-out"
           >
             Tüm Değerlendirmeler ({reviewCount})
           </button>

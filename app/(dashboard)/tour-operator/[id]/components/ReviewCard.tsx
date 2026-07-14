@@ -116,27 +116,65 @@ export default function ReviewCard({
 
   const hasCategoryRatings = CATEGORY_RATING_KEYS.some((key) => categoryRatings[key] != null);
 
+  const avatar = (
+    <div className="w-10 h-10 rounded-full overflow-hidden bg-sky-100 flex-shrink-0 flex items-center justify-center text-sky-700 font-semibold text-sm">
+      {review.user.image ? (
+        <Image
+          src={review.user.image}
+          alt={customerName}
+          width={40}
+          height={40}
+          className="object-cover w-full h-full"
+        />
+      ) : (
+        customerName.charAt(0).toUpperCase()
+      )}
+    </div>
+  );
+
   return (
     <div
-      className={`flex flex-col overflow-hidden p-5 rounded-xl border border-neutral-200/70 bg-white shadow-sm ${
+      className={`flex flex-col overflow-hidden p-4 md:p-5 rounded-2xl md:rounded-xl border border-neutral-200/70 bg-white shadow-sm ${
         compact ? 'h-[220px]' : ''
       }`}
     >
-      <div className="flex items-start justify-between gap-4 mb-3 flex-shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full overflow-hidden bg-sky-100 flex-shrink-0 flex items-center justify-center text-sky-700 font-semibold text-sm">
-            {review.user.image ? (
-              <Image
-                src={review.user.image}
-                alt={customerName}
-                width={40}
-                height={40}
-                className="object-cover w-full h-full"
-              />
-            ) : (
-              customerName.charAt(0).toUpperCase()
+      {/* Mobile: stacked header — avatar/name, then stars/date, then tour meta */}
+      <div className="md:hidden flex-shrink-0 mb-3">
+        <div className="flex items-center gap-3">
+          {avatar}
+          <p className="font-semibold text-neutral-900 min-w-0 flex-1 leading-snug break-words">
+            {customerName}
+          </p>
+        </div>
+        <div className="flex items-center justify-between gap-3 mt-2 ml-[52px]">
+          <StarRating rating={review.rating} size="sm" />
+          <p className="text-xs text-neutral-500 flex-shrink-0">{formatDate(review.createdAt)}</p>
+        </div>
+        {tourName && !showTourMeta && (
+          <p className="text-xs text-neutral-500 mt-1 ml-[52px] break-words">{tourName}</p>
+        )}
+        {showTourMeta && (tourDateLabel || resolvedOperatorName) && (
+          <div className="mt-3 pt-3 border-t border-neutral-100 space-y-1.5">
+            {tourDateLabel && (
+              <p className="text-xs text-neutral-500 flex items-start gap-1.5 leading-relaxed">
+                <CalendarDaysIcon className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                <span className="min-w-0 break-words">Tur tarihi: {tourDateLabel}</span>
+              </p>
+            )}
+            {resolvedOperatorName && (
+              <p className="text-xs text-neutral-500 flex items-start gap-1.5 leading-relaxed">
+                <BuildingOfficeIcon className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                <span className="min-w-0 break-words">{resolvedOperatorName}</span>
+              </p>
             )}
           </div>
+        )}
+      </div>
+
+      {/* Desktop: original side-by-side header */}
+      <div className="hidden md:flex items-start justify-between gap-4 mb-3 flex-shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          {avatar}
           <div className="min-w-0">
             <p className="font-semibold text-neutral-900 truncate">{customerName}</p>
             {tourName && !showTourMeta && (
@@ -224,7 +262,7 @@ export default function ReviewCard({
         )}
 
         {review.responseText && (
-          <div className="mt-3 ml-4 pl-4 border-l-2 border-sky-200 bg-sky-50/50 rounded-r-lg p-3 flex-shrink-0">
+          <div className="mt-3 ml-0 md:ml-4 pl-3 md:pl-4 border-l-2 border-sky-200 bg-sky-50/50 rounded-r-lg p-3 flex-shrink-0">
             <p className="text-xs font-semibold text-sky-700 mb-1">Operatör Yanıtı</p>
             <p className="text-neutral-700 text-sm leading-relaxed">{review.responseText}</p>
             {review.respondedAt && (

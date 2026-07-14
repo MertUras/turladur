@@ -51,8 +51,31 @@ function UserReviewCard({ review }: { review: UserReview }) {
   );
 
   return (
-    <div className="rounded-xl border border-neutral-200/70 bg-neutral-50/40 p-5">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+    <div className="rounded-2xl md:rounded-xl border border-neutral-200/70 bg-neutral-50/40 p-4 md:p-5">
+      {/* Mobile: title block, then stars + date */}
+      <div className="md:hidden mb-3">
+        <h3 className="font-semibold text-neutral-900 break-words leading-snug">
+          {review.displayTitle}
+        </h3>
+        <p className="text-sm text-neutral-500 mt-1 break-words">{review.operatorName}</p>
+        <p className="text-xs text-neutral-400 mt-1">
+          Rezervasyon #{review.bookingNumber}
+        </p>
+        <div className="flex items-center justify-between gap-3 mt-2">
+          <StarRating rating={review.rating} size="sm" />
+          <p className="text-xs text-neutral-500 flex-shrink-0">
+            {formatDate(review.createdAt)}
+          </p>
+        </div>
+        {!hasResponse && (
+          <span className="inline-flex items-center mt-2 px-2 py-0.5 text-xs font-medium rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+            Yanıt bekleniyor
+          </span>
+        )}
+      </div>
+
+      {/* Desktop: original side-by-side header */}
+      <div className="hidden md:flex md:items-start md:justify-between gap-3 mb-4">
         <div className="min-w-0">
           <h3 className="font-semibold text-neutral-900 truncate">{review.displayTitle}</h3>
           <p className="text-sm text-neutral-500 mt-0.5">{review.operatorName}</p>
@@ -60,7 +83,7 @@ function UserReviewCard({ review }: { review: UserReview }) {
             Rezervasyon #{review.bookingNumber}
           </p>
         </div>
-        <div className="flex flex-col items-start sm:items-end gap-2 flex-shrink-0">
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
           <StarRating rating={review.rating} size="sm" />
           <p className="text-xs text-neutral-500">
             Değerlendirme: {formatDate(review.createdAt)}
@@ -117,7 +140,7 @@ function UserReviewCard({ review }: { review: UserReview }) {
       )}
 
       {hasResponse && (
-        <div className="mt-3 ml-4 pl-4 border-l-2 border-sky-200 bg-sky-50/50 rounded-r-lg p-3">
+        <div className="mt-3 ml-0 md:ml-4 pl-3 md:pl-4 border-l-2 border-sky-200 bg-sky-50/50 rounded-r-lg p-3">
           <p className="text-xs font-semibold text-sky-700 mb-1">Operatör Yanıtı</p>
           <p className="text-neutral-700 text-sm leading-relaxed">{review.responseText}</p>
           {review.respondedAt && (

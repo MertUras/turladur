@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { parseJsonString } from "@/app/utils/format";
 import { format, differenceInDays } from 'date-fns';
@@ -34,6 +34,8 @@ import {
   Hotel,
   ShieldCheck,
   ArrowRight,
+  Trash2,
+  Globe,
 } from "lucide-react";
 import React from "react";
 
@@ -62,8 +64,34 @@ interface FilterOptions {
   tags: string[];
 }
 
-const DATE_INPUT_CLASS =
-  'w-full py-2.5 pl-4 pr-10 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0';
+
+const MOBILE_FILTER_SECTION =
+  'bg-white rounded-2xl p-4 shadow-sm border border-neutral-100/80 lg:bg-transparent lg:rounded-none lg:p-0 lg:shadow-none lg:border-0';
+
+const MOBILE_FILTER_INPUT =
+  'w-full py-2.5 pl-10 pr-4 border border-neutral-200 rounded-xl text-neutral-800 text-sm bg-neutral-50/50 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 focus:bg-white lg:py-2.5 lg:pl-4 lg:rounded-lg lg:bg-white lg:border-gray-300 lg:text-gray-700 lg:focus:border-blue-500 lg:focus:ring-1 lg:focus:ring-blue-500';
+
+const MOBILE_DATE_INPUT_CLASS =
+  'w-full py-2.5 pl-3 pr-11 border border-neutral-200 rounded-xl text-neutral-800 text-sm bg-neutral-50/50 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 focus:bg-white cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer lg:py-2.5 lg:pl-4 lg:pr-10 lg:rounded-lg lg:bg-white lg:border-gray-300 lg:text-gray-700 lg:focus:border-blue-500 lg:focus:ring-1 lg:focus:ring-blue-500';
+
+const MOBILE_PRICE_INPUT =
+  'w-full py-2.5 px-3 border border-neutral-200 rounded-xl text-neutral-800 text-sm bg-neutral-50/50 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 focus:bg-white lg:py-2.5 lg:px-4 lg:rounded-lg lg:bg-white lg:border-gray-300 lg:text-gray-700 lg:focus:border-blue-500 lg:focus:ring-1 lg:focus:ring-blue-500';
+
+function countActiveFilters(options: FilterOptions): number {
+  let count = 0;
+  if (options.departureCity) count++;
+  if (options.region) count++;
+  if (options.minPrice != null) count++;
+  if (options.maxPrice != null) count++;
+  if (options.dateRange[0] || options.dateRange[1]) count++;
+  if (options.transportation) count++;
+  if (options.duration) count++;
+  if (options.period) count++;
+  if (options.featured) count++;
+  if (options.rating) count++;
+  if (options.isPopular || options.isLastMinute || options.isEarlyBird) count++;
+  return count;
+}
 
 interface DepartureCityOption {
   city: string;
@@ -158,6 +186,8 @@ function ToursPageContent() {
 
   const [loadingMore, setLoadingMore] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  const activeFilterCount = useMemo(() => countActiveFilters(filterOptions), [filterOptions]);
 
   useEffect(() => {
     const fetchFilterOptions = async () => {
@@ -838,209 +868,297 @@ function ToursPageContent() {
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Mobil Filtre Butonu */}
           <div className="lg:hidden mb-4">
-                            <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="w-full flex items-center justify-center gap-2 bg-white py-3 px-4 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className="w-full flex items-center gap-2.5 bg-white py-3.5 px-4 rounded-2xl shadow-sm border border-neutral-100/80 hover:shadow-md transition-shadow"
             >
-              <Filter className="h-5 w-5 text-blue-600" />
-              <span className="font-medium text-gray-900">Filtreler</span>
-              <span className="ml-auto text-sm text-gray-500">
-                {Object.values(filterOptions).filter(v => v !== null && v !== false).length} aktif
-              </span>
-                            </button>
-                </div>
-                
+              <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-sky-50">
+                <SlidersHorizontal className="h-4 w-4 text-sky-600" />
+              </div>
+              <span className="font-semibold text-neutral-900">Filtreler</span>
+              {activeFilterCount > 0 && (
+                <span className="bg-sky-600 text-white text-[11px] font-bold min-w-[1.25rem] h-5 px-1.5 rounded-full flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+              <ChevronRight className="h-4 w-4 text-neutral-400 ml-auto" />
+            </button>
+          </div>
+
           {/* Overlay */}
           {isFilterOpen && (
-            <div 
+            <div
               className="fixed inset-0 bg-black/50 z-40 lg:hidden"
               onClick={() => setIsFilterOpen(false)}
+              aria-hidden="true"
             />
           )}
 
           {/* Yandan Açılır Filtre Menüsü */}
-          <div className={`
-            fixed inset-y-0 right-0 w-full lg:w-80 bg-gray-50 shadow-lg transform transition-transform duration-300 ease-in-out z-30
+          <div
+            className={`
+            fixed inset-y-0 right-0 w-full max-w-sm lg:max-w-none bg-neutral-50 shadow-2xl transform transition-transform duration-300 ease-in-out z-50
             ${isFilterOpen ? 'translate-x-0' : 'translate-x-full'}
-            lg:relative lg:translate-x-0 lg:shadow-none lg:w-72 xl:w-80
-          `}>
+            lg:relative lg:translate-x-0 lg:shadow-none lg:w-72 xl:w-80 lg:z-auto
+          `}
+          >
             <div className="h-full flex flex-col">
-              <div className="bg-gray-50 border-b border-gray-100 pt-0 pb-3 px-6 flex justify-between items-center">
-                <h3 className="font-bold text-gray-900 flex items-center">
-                  <Filter className="h-5 w-5 mr-2 text-blue-600" />
+              {/* Header */}
+              <div className="bg-white border-b border-neutral-100 px-4 pt-4 pb-3 lg:bg-gray-50 lg:border-gray-100 lg:px-6 lg:pt-0 lg:pb-3 flex justify-between items-center shrink-0">
+                <h3 className="font-bold text-neutral-900 flex items-center text-base lg:text-inherit">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-50 mr-2.5 lg:bg-transparent lg:w-auto lg:h-auto lg:rounded-none lg:mr-2">
+                    <Filter className="h-4 w-4 lg:h-5 lg:w-5 text-sky-600" />
+                  </div>
                   Filtreler
+                  {activeFilterCount > 0 && (
+                    <span className="ml-2 lg:hidden bg-sky-100 text-sky-700 text-xs font-semibold px-2 py-0.5 rounded-full">
+                      {activeFilterCount} aktif
+                    </span>
+                  )}
                 </h3>
-                <div className="flex items-center gap-2">
-                <button 
-                    onClick={() => setIsFilterOpen(false)}
-                    className="lg:hidden text-gray-500 hover:text-gray-700"
+                <button
+                  onClick={() => setIsFilterOpen(false)}
+                  className="lg:hidden p-2 -mr-1 text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 rounded-xl transition-colors"
+                  aria-label="Filtreleri kapat"
                 >
-                    <X className="h-5 w-5" />
+                  <X className="h-5 w-5" />
                 </button>
-                </div>
               </div>
-              
-              <div className="flex-1 overflow-y-auto p-4 lg:p-6">
-                {/* Mevcut filtre içeriği */}
-                <div className="space-y-6">
-                {/* Kalkış Noktası */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Kalkış Noktası</h4>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Kalkış noktası ara..."
-                      value={departureSearch}
-                      className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mb-2"
-                      onChange={(e) => {
-                        const query = e.target.value.toLowerCase();
-                        setDepartureSearch(e.target.value);
-                        setFilteredDepartureCities(
-                          departureCityOptions.filter((item) =>
-                            item.city.toLowerCase().includes(query)
-                          )
-                        );
-                      }}
-                    />
-                    <div className="max-h-60 overflow-y-auto space-y-2">
-                      {filteredDepartureCities.length > 0 ? (
-                        filteredDepartureCities.map((item) => (
-                          <button
-                            key={item.city}
-                            onClick={() => setFilterOptions({
-                              ...filterOptions,
-                              departureCity: filterOptions.departureCity === item.city ? null : item.city
-                            })}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                              filterOptions.departureCity === item.city
-                                ? "bg-blue-600 text-white"
-                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            }`}
-                          >
-                            {item.city} ({item.count})
-                          </button>
-                        ))
-                      ) : (
-                        <p className="px-3 py-2 text-sm text-gray-500">Kalkış noktası bulunamadı</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
 
-                {/* Tarih Aralığı */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Tarih Aralığı</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="relative">
-                      <input
-                        type="date"
-                        className={DATE_INPUT_CLASS}
-                        value={filterOptions.dateRange[0] ? formatDateParam(filterOptions.dateRange[0]) : ''}
-                        onChange={(e) => setFilterOptions({
-                          ...filterOptions,
-                          dateRange: [e.target.value ? new Date(`${e.target.value}T00:00:00`) : null, filterOptions.dateRange[1]]
-                        })}
-                      />
-                      <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="date"
-                        className={DATE_INPUT_CLASS}
-                        value={filterOptions.dateRange[1] ? formatDateParam(filterOptions.dateRange[1]) : ''}
-                        onChange={(e) => setFilterOptions({
-                          ...filterOptions,
-                          dateRange: [filterOptions.dateRange[0], e.target.value ? new Date(`${e.target.value}T00:00:00`) : null]
-                        })}
-                      />
-                      <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500 pointer-events-none" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Fiyat Aralığı */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Fiyat Aralığı</h4>
-                    <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
+              {/* Scrollable filter content */}
+              <div className="flex-1 overflow-y-auto p-4 lg:p-6 pb-28 lg:pb-6">
+                <div className="space-y-4 lg:space-y-6">
+                  {/* Kalkış Noktası */}
+                  <div className={MOBILE_FILTER_SECTION}>
+                    <h4 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2 text-sm lg:font-medium">
+                      <MapPin className="h-4 w-4 text-sky-600 lg:hidden shrink-0" />
+                      Kalkış Noktası
+                    </h4>
+                    <div className="relative mb-3">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400 pointer-events-none lg:hidden" />
                       <input
                         type="text"
-                        placeholder="₺ Min"
-                        className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                        value={filterOptions.minPrice ? filterOptions.minPrice.toLocaleString('tr-TR') : ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^\d]/g, '');
-                          setFilterOptions({
-                            ...filterOptions,
-                            minPrice: value ? parseInt(value) : null
-                          });
-                        }}
-                      />
-                    </div>
-                    <span className="text-gray-400">-</span>
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        placeholder="₺ Max"
-                        className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                        value={filterOptions.maxPrice ? filterOptions.maxPrice.toLocaleString('tr-TR') : ''}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/[^\d]/g, '');
-                          setFilterOptions({
-                            ...filterOptions,
-                            maxPrice: value ? parseInt(value) : null
-                          });
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                  {/* Bölge */}
-                      <div>
-                    <h4 className="font-medium text-gray-900 mb-3">Bölge</h4>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Bölge ara..."
-                        value={regionSearch}
-                        className="w-full py-2.5 px-4 border border-gray-300 rounded-lg text-gray-700 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 mb-2"
+                        placeholder="Kalkış noktası ara..."
+                        value={departureSearch}
+                        className={`${MOBILE_FILTER_INPUT} mb-0 lg:mb-2`}
                         onChange={(e) => {
                           const query = e.target.value.toLowerCase();
-                          setRegionSearch(e.target.value);
-                          setFilteredRegions(
-                            regionOptions.filter((item) =>
-                              item.region.toLowerCase().includes(query)
+                          setDepartureSearch(e.target.value);
+                          setFilteredDepartureCities(
+                            departureCityOptions.filter((item) =>
+                              item.city.toLowerCase().includes(query)
                             )
                           );
                         }}
                       />
-                      <div className="max-h-60 overflow-y-auto space-y-2">
-                        {filteredRegions.length > 0 ? (
-                          filteredRegions.map((item) => (
-                            <button
-                              key={item.region}
-                              onClick={() => setFilterOptions({
-                                ...filterOptions,
-                                region: filterOptions.region === item.region ? null : item.region
-                              })}
-                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                                filterOptions.region === item.region
-                                  ? "bg-blue-600 text-white"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                              }`}
-                            >
-                              {item.region} ({item.count})
-                            </button>
-                          ))
-                        ) : (
-                          <p className="px-3 py-2 text-sm text-gray-500">Bölge bulunamadı</p>
-                        )}
+                    </div>
+                    <div className="max-h-44 lg:max-h-60 overflow-y-auto -mx-1 px-1">
+                      {filteredDepartureCities.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 lg:flex-col lg:space-y-2 lg:gap-0">
+                          {filteredDepartureCities.map((item) => {
+                            const isSelected = filterOptions.departureCity === item.city;
+                            return (
+                              <button
+                                key={item.city}
+                                onClick={() =>
+                                  setFilterOptions({
+                                    ...filterOptions,
+                                    departureCity: isSelected ? null : item.city,
+                                  })
+                                }
+                                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-colors lg:w-full lg:justify-start lg:rounded-lg lg:px-3 lg:py-2 lg:font-normal ${
+                                  isSelected
+                                    ? 'bg-sky-600 text-white shadow-sm lg:bg-blue-600'
+                                    : 'bg-neutral-100 text-neutral-700 border border-neutral-200/80 hover:bg-neutral-200 lg:border-0 lg:bg-gray-100 lg:hover:bg-gray-200'
+                                }`}
+                              >
+                                <span>{item.city}</span>
+                                <span
+                                  className={`text-xs ${
+                                    isSelected ? 'text-sky-100 lg:text-white' : 'text-neutral-500 lg:text-inherit'
+                                  }`}
+                                >
+                                  ({item.count})
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
+                      ) : (
+                        <p className="px-1 py-2 text-sm text-neutral-500">Kalkış noktası bulunamadı</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Tarih Aralığı */}
+                  <div className={MOBILE_FILTER_SECTION}>
+                    <h4 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2 text-sm lg:font-medium">
+                      <Calendar className="h-4 w-4 text-sky-600 lg:hidden shrink-0" />
+                      Tarih Aralığı
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2.5 lg:gap-2">
+                      <div className="relative">
+                        <input
+                          type="date"
+                          aria-label="Başlangıç tarihi"
+                          className={MOBILE_DATE_INPUT_CLASS}
+                          value={filterOptions.dateRange[0] ? formatDateParam(filterOptions.dateRange[0]) : ''}
+                          onChange={(e) =>
+                            setFilterOptions({
+                              ...filterOptions,
+                              dateRange: [
+                                e.target.value ? new Date(`${e.target.value}T00:00:00`) : null,
+                                filterOptions.dateRange[1],
+                              ],
+                            })
+                          }
+                        />
+                        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-neutral-400 lg:text-gray-500 pointer-events-none" />
                       </div>
-                        </div>
+                      <div className="relative">
+                        <input
+                          type="date"
+                          aria-label="Bitiş tarihi"
+                          className={MOBILE_DATE_INPUT_CLASS}
+                          value={filterOptions.dateRange[1] ? formatDateParam(filterOptions.dateRange[1]) : ''}
+                          onChange={(e) =>
+                            setFilterOptions({
+                              ...filterOptions,
+                              dateRange: [
+                                filterOptions.dateRange[0],
+                                e.target.value ? new Date(`${e.target.value}T00:00:00`) : null,
+                              ],
+                            })
+                          }
+                        />
+                        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-neutral-400 lg:text-gray-500 pointer-events-none" />
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Fiyat Aralığı */}
+                  <div className={MOBILE_FILTER_SECTION}>
+                    <h4 className="font-semibold text-neutral-900 mb-3 text-sm lg:font-medium">
+                      Fiyat Aralığı
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Min ₺"
+                          className={MOBILE_PRICE_INPUT}
+                          value={filterOptions.minPrice ? filterOptions.minPrice.toLocaleString('tr-TR') : ''}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^\d]/g, '');
+                            setFilterOptions({
+                              ...filterOptions,
+                              minPrice: value ? parseInt(value) : null,
+                            });
+                          }}
+                        />
+                      </div>
+                      <span className="text-neutral-300 font-light lg:text-gray-400">—</span>
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Max ₺"
+                          className={MOBILE_PRICE_INPUT}
+                          value={filterOptions.maxPrice ? filterOptions.maxPrice.toLocaleString('tr-TR') : ''}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/[^\d]/g, '');
+                            setFilterOptions({
+                              ...filterOptions,
+                              maxPrice: value ? parseInt(value) : null,
+                            });
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bölge */}
+                  <div className={MOBILE_FILTER_SECTION}>
+                    <h4 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2 text-sm lg:font-medium">
+                      <Globe className="h-4 w-4 text-sky-600 lg:hidden shrink-0" />
+                      Bölge
+                    </h4>
+                    <div className="relative mb-3">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400 pointer-events-none lg:hidden" />
+                      <input
+                        type="text"
+                        placeholder="Bölge ara..."
+                        value={regionSearch}
+                        className={`${MOBILE_FILTER_INPUT} mb-0 lg:mb-2`}
+                        onChange={(e) => {
+                          const query = e.target.value.toLowerCase();
+                          setRegionSearch(e.target.value);
+                          setFilteredRegions(
+                            regionOptions.filter((item) => item.region.toLowerCase().includes(query))
+                          );
+                        }}
+                      />
+                    </div>
+                    <div className="max-h-44 lg:max-h-60 overflow-y-auto -mx-1 px-1">
+                      {filteredRegions.length > 0 ? (
+                        <div className="flex flex-wrap gap-2 lg:flex-col lg:space-y-2 lg:gap-0">
+                          {filteredRegions.map((item) => {
+                            const isSelected = filterOptions.region === item.region;
+                            return (
+                              <button
+                                key={item.region}
+                                onClick={() =>
+                                  setFilterOptions({
+                                    ...filterOptions,
+                                    region: isSelected ? null : item.region,
+                                  })
+                                }
+                                className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-colors lg:w-full lg:justify-start lg:rounded-lg lg:px-3 lg:py-2 lg:font-normal ${
+                                  isSelected
+                                    ? 'bg-sky-600 text-white shadow-sm lg:bg-blue-600'
+                                    : 'bg-neutral-100 text-neutral-700 border border-neutral-200/80 hover:bg-neutral-200 lg:border-0 lg:bg-gray-100 lg:hover:bg-gray-200'
+                                }`}
+                              >
+                                <span>{item.region}</span>
+                                <span
+                                  className={`text-xs ${
+                                    isSelected ? 'text-sky-100 lg:text-white' : 'text-neutral-500 lg:text-inherit'
+                                  }`}
+                                >
+                                  ({item.count})
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
+                      ) : (
+                        <p className="px-1 py-2 text-sm text-neutral-500">Bölge bulunamadı</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sticky mobile footer */}
+              <div className="lg:hidden shrink-0 border-t border-neutral-100 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+                <div className="flex gap-3">
+                  <button
+                    onClick={resetFilters}
+                    disabled={activeFilterCount === 0}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-3 px-4 rounded-xl border border-neutral-200 text-neutral-700 text-sm font-semibold hover:bg-neutral-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Temizle
+                  </button>
+                  <button
+                    onClick={() => setIsFilterOpen(false)}
+                    className="flex-[1.4] py-3 px-4 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold transition-colors shadow-sm"
+                  >
+                    Filtreleri Uygula
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
           
