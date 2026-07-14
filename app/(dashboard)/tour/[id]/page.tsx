@@ -410,7 +410,7 @@ export default function TourPage() {
   return (
     <div className="bg-gray-50">
       {/* Hero Section - ikas Style Refinement (SKY Theme) */}
-      <div className="relative h-[80vh] md:h-[90vh]">
+      <div className="relative flex flex-col min-h-[80vh] md:block md:h-[90vh]">
         <div className="absolute inset-0 overflow-hidden">
           {tour.images.length > 0 ? (
             <Image
@@ -435,79 +435,19 @@ export default function TourPage() {
             <MembershipBadge tier={tour.tourOperator.membershipTier} variant="onImage" className="text-sm px-2.5 py-1" />
           </div>
         )}
-        
-        {/* Feature Bar - Refined Style (SKY Theme) */}
-        <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-md py-4 border-t border-white/10">
-          <div className="container px-4 mx-auto">
-            <div className="flex flex-wrap items-center justify-center lg:justify-between gap-x-6 gap-y-3">
-              {/* Feature Item Example - Refined */}
-              <div className="flex items-center text-white gap-2.5 group">
-                <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
-                  <CalendarDaysIcon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Süre</p>
-                  <p className="text-sm font-semibold">{tour.duration} Gün</p>
-                </div>
-              </div>
-              
-              {/* Other features refined similarly */}
-              <div className="flex items-center text-white gap-2.5 group">
-                 <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
-                  <UserGroupIcon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Grup</p>
-                  <p className="text-sm font-semibold">Maks. {tour.maxParticipants || 10} kişi</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center text-white gap-2.5 group">
-                 <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
-                  <MapPinIcon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Destinasyon</p>
-                  <p className="text-sm font-semibold truncate max-w-[150px]">
-                    {destinations[0]}{destinations.length > 1 ? ` +${destinations.length - 1}` : ''}
-                  </p>
-                </div>
-              </div>
-              
-              <div className="flex items-center text-white gap-2.5 group">
-                 <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
-                  <StarIcon className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Puan</p>
-                  <p className="text-sm font-semibold">4.8/5</p> {/* Replace with actual data if available */}
-                </div>
-              </div>
-              
-              {/* Action Icons - Using standardized style */}
-              <div className="flex items-center space-x-2 ml-auto">
-                <button className={iconButtonDarkBgClasses} aria-label="Favorilere Ekle">
-                  <HeartIcon className="h-5 w-5" />
-                </button>
-                <button className={iconButtonDarkBgClasses} aria-label="Paylaş">
-                  <ShareIcon className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="absolute inset-0 flex items-center justify-center pt-16 sm:pt-20 pb-28 sm:pb-32 md:pb-36">
-          <div className="container px-4 text-center max-w-4xl mx-auto">
-             {/* Simplified Badge (SKY Theme) */}
-            <div className="inline-flex items-center mb-5 bg-sky-900/30 backdrop-blur-sm px-4 py-1.5 rounded-full border border-sky-400/30">
+
+        {/* Hero content: stacked flow on mobile, centered overlay on desktop */}
+        <div className="relative z-10 flex flex-1 flex-col justify-center px-4 pt-16 pb-6 sm:pt-20 md:absolute md:inset-0 md:flex md:items-center md:justify-center md:pb-36 md:pt-20">
+          <div className="container px-4 text-center max-w-4xl mx-auto w-full">
+            {/* Simplified Badge (SKY Theme) */}
+            <div className="inline-flex items-center mb-4 md:mb-5 bg-sky-900/30 backdrop-blur-sm px-4 py-1.5 rounded-full border border-sky-400/30">
               <StarIconSolid className="h-4 w-4 text-yellow-300 mr-2"/>
               <span className="text-sky-100 font-medium uppercase tracking-wider text-[11px]">Popüler Seçim</span>
             </div>
             {/* Adjusted Title size and spacing */}
-            <h1 className="text-4xl sm:text-5xl md:text-[3.5rem] lg:text-[4rem] font-bold text-white mb-4 leading-tight animate-fade-in-up drop-shadow-md">{tour.name}</h1>
-             {/* Refined details display */}
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-white/90 mb-8 max-w-3xl mx-auto">
+            <h1 className="text-3xl sm:text-4xl md:text-[3.5rem] lg:text-[4rem] font-bold text-white mb-4 leading-tight animate-fade-in-up drop-shadow-md">{tour.name}</h1>
+            {/* Meta details: hidden on mobile (shown in feature bar below) */}
+            <div className="hidden md:flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-white/90 mb-8 max-w-3xl mx-auto">
               <div className="flex items-center text-base">
                 <MapPinIcon className="w-4 h-4 mr-1.5 opacity-80" />
                 <span className="font-normal">{destinations.join(', ')}</span>
@@ -530,8 +470,8 @@ export default function TourPage() {
                 </span>
               )}
             </div>
-             {/* Standardized Buttons (SKY Theme) */}
-            <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center items-stretch sm:items-center gap-3 sm:gap-4 w-full max-w-xs sm:max-w-none mx-auto">
+            {/* Standardized Buttons (SKY Theme) */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center items-stretch sm:items-center gap-4 w-full max-w-sm sm:max-w-none mx-auto mb-2 md:mb-0">
               <Link
                 href="#itinerary"
                 className={`${primaryButtonClasses} w-full sm:w-auto`}
@@ -547,6 +487,64 @@ export default function TourPage() {
                 <CalendarDaysIcon className="h-5 w-5 mr-2" />
                 <span>Rezervasyon Yap</span>
               </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Feature Bar - in document flow on mobile, pinned to bottom on desktop */}
+        <div className="relative z-10 bg-black/60 backdrop-blur-md py-4 border-t border-white/10 md:absolute md:bottom-0 md:left-0 md:right-0">
+          <div className="container px-4 mx-auto">
+            <div className="flex flex-wrap items-center justify-center lg:justify-between gap-x-6 gap-y-3">
+              <div className="flex items-center text-white gap-2.5 group">
+                <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
+                  <CalendarDaysIcon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Süre</p>
+                  <p className="text-sm font-semibold">{tour.duration} Gün</p>
+                </div>
+              </div>
+
+              <div className="flex items-center text-white gap-2.5 group">
+                <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
+                  <UserGroupIcon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Grup</p>
+                  <p className="text-sm font-semibold">Maks. {tour.maxParticipants || 10} kişi</p>
+                </div>
+              </div>
+
+              <div className="flex items-center text-white gap-2.5 group">
+                <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
+                  <MapPinIcon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Destinasyon</p>
+                  <p className="text-sm font-semibold truncate max-w-[150px]">
+                    {destinations[0]}{destinations.length > 1 ? ` +${destinations.length - 1}` : ''}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center text-white gap-2.5 group">
+                <div className="p-2 bg-white/10 rounded-lg ring-1 ring-white/10 group-hover:bg-white/20 transition-colors duration-150 ease-out">
+                  <StarIcon className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Puan</p>
+                  <p className="text-sm font-semibold">4.8/5</p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 md:ml-auto">
+                <button className={iconButtonDarkBgClasses} aria-label="Favorilere Ekle">
+                  <HeartIcon className="h-5 w-5" />
+                </button>
+                <button className={iconButtonDarkBgClasses} aria-label="Paylaş">
+                  <ShareIcon className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -764,7 +762,7 @@ export default function TourPage() {
             {/* Sol Kolon - Tur Bilgileri */}
             <div className="lg:col-span-2 space-y-16 sm:space-y-20 h-full">
               {/* Tur Programı ve Rotası */}
-              <div className="bg-white rounded-xl overflow-hidden shadow-md border border-neutral-200/70">
+              <div id="itinerary" className="bg-white rounded-xl overflow-hidden shadow-md border border-neutral-200/70 scroll-mt-24">
                 <div className="p-6 md:p-8">
                   <div className="flex items-center justify-between mb-8">
                     <h3 className="text-2xl font-semibold text-gray-900 flex items-center">
