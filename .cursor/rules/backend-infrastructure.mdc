@@ -1,0 +1,662 @@
+---
+description: Backend altyapı servisleri — cache, queue, realtime, email, payment, logging, search detayları
+globs: "apps/api/src/core/**,apps/api/src/modules/**/services/**"
+alwaysApply: false
+---
+
+# Backend Altyapı Servisleri (Detay)
+
+## 1. Cache (Redis)
+
+### Teknoloji
+- **Paket:** `@nestjs/cache-manager` + `cache-manager-ioredis`
+- **Bağlantı:** `REDIS_URL` env variable
+
+### Ne Zaman Cache Kullanılır?
+
+| Durum | Cache? | TTL |
+|-------|--------|-----|
+| Arama sonuçları (tur, otel) | Evet | 5 dk |
+| Tekil detay sayfası (tur detay) | Evet | 15 dk |
+| Kullanıcı session/profil | Evet | 30 dk |
+| Fiyat bilgisi | Evet | 2 dk (sık değişir) |
+| Rezervasyon listesi | Hayır | — (her zaman güncel olmalı) |
+| Ödeme durumu | Hayır | — (her zaman güncel olmalı) |
+| Dashboard istatistikleri | Evet | 10 dk |
+
+### Cache Service Pattern
+
+```typescript
+// apps/api/src/core/cache/cache.service.ts
+import { Injectable, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+
+@Injectable()
+export class CacheService {
+  constructor(@Inject(CACHE_MANAGER) private cache: Cache) {}
+
+  async get<T>(key: string): Promise<T | null> {
+    return this.cache.get<T>(key);
+  }
+
+  async set<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
+    await this.cache.set(key, value, ttlSeconds * 1000);
+  }
+
+  async del(key: string): Promise<void> {
+    await this.cache.del(key);
+  }
+
+  async invalidatePattern(pattern: string): Promise<void> {
+    // Redis SCAN ile pattern'e uyan tüm key'leri sil
+    // Ör: 'tours:search:*' → tüm arama cache'lerini temizle
+    const keys = await this.cache.store.keys(pattern);
+    if (keys.length) await Promise.all(keys.map((k) => this.cache.del(k)));
+  }
+}
+```
+
+### Cache Key Naming
+
+```
+{modül}:{kaynak}:{id_veya_parametre}
+
+Örnekler:
+- catalog:tour:clx123abc         → Tek tur detay
+- catalog:tours:search:{hash}    → Arama sonucu (params hash'i)
+- catalog:hotel:clx456def        → Tek otel detay
+- identity:user:session:clx789   → Kullanıcı session
+- partner:stats:clx111           → Partner dashboard stats
+```
+
+### Cache Invalidation Kuralları
+- Veri güncellendiğinde → ilgili cache key silinir
+- Event listener ile: `PriceUpdatedEvent` → `cache.invalidatePattern('catalog:tours:search:*')`
+- Manuel invalidation ASLA unutulmamalı
+
+---
+
+## 2. Queue / Background Jobs (BullMQ)
+
+### Teknoloji
+- **Paket:** `@nestjs/bullmq` + `bullmq`
+- **Backend:** Redis (aynı instance, farklı DB numarası)
+
+### Ne Zaman Queue Kullanılır?
+
+| İş | Queue? | Neden |
+|----|--------|-------|
+| Email gönderme | Evet | 3. parti API yavaş olabilir, retry gerekir |
+| Ödeme callback işleme | Evet | Güvenilir olmalı, kaybolmamalı |
+| Resim boyutlandırma (WebP) | Evet | CPU-intensive, ana thread'i bloklamaz |
+| Rapor oluşturma (PDF/Excel) | Evet | Uzun sürer |
+| Bildirim gönderme (push) | Evet | Batch işlem |
+| Cache warmup | Evet | Startup sırasında |
+| Tur tarihi süresi kontrolü | Evet | Cron job (her saat) |
+
+### Queue Yapısı
+
+```typescript
+// apps/api/src/core/queue/queue.module.ts
+import { BullModule } from '@nestjs/bullmq';
+
+@Module({
+  imports: [
+    BullModule.forRoot({
+      connection: { host: 'localhost', port: 6379 },
+    }),
+    BullModule.registerQueue(
+      { name: 'email' },
+      { name: 'notification' },
+      { name: 'image-processing' },
+      { name: 'reports' },
+      { name: 'payment-webhook' },
+    ),
+  ],
+})
+export class QueueModule {}
+```
+
+### Queue Processor Örneği
+
+```typescript
+// apps/api/src/core/queue/processors/email.processor.ts
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Job } from 'bullmq';
+
+@Processor('email')
+export class EmailProcessor extends WorkerHost {
+  constructor(private readonly mailService: MailService) { super(); }
+
+  async process(job: Job<{ to: string; template: string; data: Record<string, unknown> }>) {
+    const { to, template, data } = job.data;
+    await this.mailService.send(to, template, data);
+  }
+}
+```
+
+### Job Ekleme
+
+```typescript
+// Herhangi bir service'ten
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+
+@Injectable()
+export class BookingService {
+  constructor(@InjectQueue('email') private emailQueue: Queue) {}
+
+  async confirmBooking(bookingId: string) {
+    // ... iş mantığı
+    await this.emailQueue.add('booking-confirmation', {
+      to: booking.contactEmail,
+      template: 'booking-confirmed',
+      data: { bookingId, tourName: booking.tour.title },
+    }, {
+      attempts: 3,          // 3 kez dene
+      backoff: { type: 'exponential', delay: 5000 }, // 5s, 10s, 20s
+    });
+  }
+}
+```
+
+### Cron Jobs (Tekrarlayan İşler)
+
+```typescript
+// apps/api/src/core/queue/cron/tour-date-expiry.cron.ts
+import { Injectable } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+
+@Injectable()
+export class TourDateExpiryCron {
+  constructor(private readonly catalogService: CatalogService) {}
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleExpiredDates() {
+    await this.catalogService.markExpiredDatesAsInactive();
+  }
+
+  @Cron('0 2 * * *') // Her gece 02:00
+  async handleDailyReports() {
+    // Günlük rapor oluştur
+  }
+}
+```
+
+---
+
+## 3. Realtime (WebSocket)
+
+### Teknoloji
+- **Paket:** `@nestjs/websockets` + `socket.io`
+- **Ne zaman?** Anlık bildirimler, canlı fiyat güncellemesi, chat
+
+### Kullanım Alanları
+
+| Feature | Realtime? | Yöntem |
+|---------|-----------|--------|
+| Bildirimler (yeni rezervasyon) | Evet | WebSocket |
+| Chat (müşteri-operatör) | Evet | WebSocket |
+| Canlı fiyat değişimi | Opsiyonel | SSE (Server-Sent Events) |
+| Arama sonuçları | Hayır | REST + polling |
+| Dashboard metrikler | Opsiyonel | SSE veya 30sn polling |
+
+### WebSocket Gateway Template
+
+```typescript
+// apps/api/src/core/realtime/notification.gateway.ts
+import { WebSocketGateway, WebSocketServer, OnGatewayConnection } from '@nestjs/websockets';
+import { Server, Socket } from 'socket.io';
+
+@WebSocketGateway({ cors: { origin: process.env.FRONTEND_URL }, namespace: '/notifications' })
+export class NotificationGateway implements OnGatewayConnection {
+  @WebSocketServer() server: Server;
+
+  handleConnection(client: Socket) {
+    const userId = client.handshake.auth.userId;
+    if (userId) client.join(`user:${userId}`);
+  }
+
+  sendToUser(userId: string, event: string, data: unknown) {
+    this.server.to(`user:${userId}`).emit(event, data);
+  }
+
+  sendToPartner(partnerId: string, event: string, data: unknown) {
+    this.server.to(`partner:${partnerId}`).emit(event, data);
+  }
+}
+```
+
+---
+
+## 4. Email Servisi
+
+### Teknoloji
+- **Transactional:** Resend (API-based, güvenilir)
+- **Development:** Mailhog (localhost:8025 — tüm email'ler yakalanır)
+- **Template Engine:** React Email (JSX ile email template)
+
+### Email Service
+
+```typescript
+// apps/api/src/core/mail/mail.service.ts
+import { Injectable } from '@nestjs/common';
+import { Resend } from 'resend';
+
+@Injectable()
+export class MailService {
+  private resend: Resend;
+
+  constructor(private config: ConfigService) {
+    this.resend = new Resend(config.get('RESEND_API_KEY'));
+  }
+
+  async sendBookingConfirmation(to: string, data: { bookingId: string; tourName: string; date: string }) {
+    await this.resend.emails.send({
+      from: 'TurlaDur <bildirim@turladur.com>',
+      to,
+      subject: `Rezervasyonunuz Onaylandı — ${data.tourName}`,
+      html: this.renderTemplate('booking-confirmed', data),
+    });
+  }
+
+  async sendPartnerVerification(to: string, data: { verifyUrl: string; partnerName: string }) {
+    await this.resend.emails.send({
+      from: 'TurlaDur <dogrulama@turladur.com>',
+      to,
+      subject: 'Email Adresinizi Doğrulayın',
+      html: this.renderTemplate('partner-verification', data),
+    });
+  }
+
+  async sendPasswordReset(to: string, data: { resetUrl: string }) {
+    await this.resend.emails.send({
+      from: 'TurlaDur <guvenlik@turladur.com>',
+      to,
+      subject: 'Şifre Sıfırlama Talebi',
+      html: this.renderTemplate('password-reset', data),
+    });
+  }
+}
+```
+
+### Email Template Listesi
+
+| Template | Tetikleyen Event | Alıcı |
+|----------|-----------------|-------|
+| `booking-confirmed` | BookingConfirmedEvent | Müşteri |
+| `booking-cancelled` | BookingCancelledEvent | Müşteri + Partner |
+| `payment-received` | PaymentCompletedEvent | Müşteri |
+| `payment-failed` | PaymentFailedEvent | Müşteri |
+| `partner-verification` | PartnerRegisteredEvent | Partner |
+| `partner-approved` | PartnerApprovedEvent | Partner |
+| `password-reset` | PasswordResetRequestedEvent | Kullanıcı |
+| `welcome` | UserRegisteredEvent | Müşteri |
+| `new-review` | ReviewCreatedEvent | Partner |
+| `daily-report` | Cron (her gün 08:00) | Partner |
+
+---
+
+## 5. Payment (Ödeme) Entegrasyonu
+
+### Teknoloji
+- **Birincil:** İyzico (Türkiye için)
+- **İkincil (ileride):** Stripe (uluslararası)
+- **Pattern:** Adapter pattern — gateway değişse kod değişmez
+
+### Ödeme Akışı
+
+```
+1. Müşteri "Öde" butonuna basar
+2. Frontend → POST /api/v1/payment/initialize
+3. Backend → İyzico API'ye ödeme formu isteği atar
+4. İyzico → Ödeme formu HTML'i döner
+5. Frontend → İframe/popup içinde ödeme formunu gösterir
+6. Müşteri kart bilgilerini girer (backend'e GELMEZ — PCI DSS)
+7. İyzico → Ödemeyi işler
+8. İyzico → POST /api/v1/payment/webhook/iyzico (callback)
+9. Backend → Ödeme sonucunu doğrular, Booking status günceller
+10. Backend → PaymentCompletedEvent emit eder
+11. Notification modülü → Müşteriye email gönderir
+```
+
+### Payment Adapter Pattern
+
+```typescript
+// apps/api/src/modules/payment/adapters/payment-gateway.interface.ts
+export interface PaymentGateway {
+  initialize(params: PaymentInitParams): Promise<PaymentInitResult>;
+  verify(token: string): Promise<PaymentVerifyResult>;
+  refund(transactionId: string, amount: number): Promise<RefundResult>;
+  cancel(transactionId: string): Promise<CancelResult>;
+}
+
+// apps/api/src/modules/payment/adapters/iyzico.adapter.ts
+@Injectable()
+export class IyzicoAdapter implements PaymentGateway {
+  async initialize(params: PaymentInitParams): Promise<PaymentInitResult> {
+    // İyzico SDK çağrısı
+  }
+  async verify(token: string): Promise<PaymentVerifyResult> { /* ... */ }
+  async refund(transactionId: string, amount: number): Promise<RefundResult> { /* ... */ }
+  async cancel(transactionId: string): Promise<CancelResult> { /* ... */ }
+}
+
+// apps/api/src/modules/payment/payment.module.ts
+@Module({
+  providers: [
+    { provide: 'PAYMENT_GATEWAY', useClass: IyzicoAdapter },
+    PaymentService,
+  ],
+})
+export class PaymentModule {}
+```
+
+**Kural:** Yarın Stripe'a geçersen sadece yeni adapter yazarsın, `PaymentService` değişmez.
+
+### Ödeme Güvenliği
+- Kart bilgileri backend'e ASLA gelmez (PCI DSS uyumu)
+- İyzico iframe/3D Secure kullanılır
+- Webhook IP whitelist ile korunur
+- Idempotency key ile mükerrer ödeme engellenir
+- Her ödeme işlemi `payment.Transactions` tablosuna loglanır
+
+---
+
+## 6. Logging & Monitoring
+
+### Teknoloji
+- **Logger:** Pino (structured JSON, çok hızlı)
+- **Log aggregation:** Grafana Loki veya Datadog (production)
+- **Metrics:** Prometheus + Grafana
+- **Error tracking:** Sentry
+
+### Log Seviyeleri
+
+| Seviye | Ne Zaman | Örnek |
+|--------|----------|-------|
+| `error` | Beklenmeyen hata, veri kaybı riski | DB bağlantısı kesildi, ödeme başarısız |
+| `warn` | Olası sorun ama sistem çalışıyor | Rate limit yaklaşıyor, disk %80 |
+| `info` | Önemli business event | Booking oluşturuldu, ödeme alındı |
+| `debug` | Geliştirme detayı | Query süresi, cache hit/miss |
+
+### Logger Kullanımı
+
+```typescript
+import { Logger } from '@nestjs/common';
+
+@Injectable()
+export class BookingService {
+  private readonly logger = new Logger(BookingService.name);
+
+  async create(dto: CreateBookingDto, userId: string) {
+    this.logger.log(`Booking creating: userId=${userId}, tourDateId=${dto.tourDateId}`);
+
+    try {
+      const booking = await this.prisma.reservation.create({ /* ... */ });
+      this.logger.log(`Booking created: id=${booking.id}, userId=${userId}`);
+      return booking;
+    } catch (error) {
+      this.logger.error(`Booking failed: userId=${userId}, error=${error.message}`, error.stack);
+      throw error;
+    }
+  }
+}
+```
+
+### Loglamada Yasaklar
+- Şifre, kart numarası, CVV ASLA loglanmaz
+- Tam request body loglanmaz (sadece ilgili alan)
+- Production'da `debug` seviyesi KAPALI
+
+### Health Check
+
+```typescript
+// apps/api/src/core/health/health.controller.ts
+@Controller('health')
+export class HealthController {
+  constructor(
+    private health: HealthCheckService,
+    private db: PrismaHealthIndicator,
+    private redis: RedisHealthIndicator,
+  ) {}
+
+  @Get()
+  @Public()
+  check() {
+    return this.health.check([
+      () => this.db.pingCheck('database'),
+      () => this.redis.pingCheck('redis'),
+    ]);
+  }
+}
+```
+
+**URL:** `GET /api/v1/health` → `{ status: 'ok', details: { database: 'up', redis: 'up' } }`
+
+---
+
+## 7. Search (Arama)
+
+### Strateji
+
+| Aşama | Teknoloji | Ne Zaman |
+|-------|-----------|----------|
+| Başlangıç | PostgreSQL `ILIKE` + `tsvector` | 0-100K kayıt |
+| Büyüme | Redis cached search + PostgreSQL | 100K-1M kayıt |
+| Ölçek | Elasticsearch / Meilisearch | 1M+ kayıt |
+
+### PostgreSQL Full-Text Search (Başlangıç)
+
+```prisma
+model Tour {
+  // ...
+  searchVector Unsupported("tsvector")?
+
+  @@index([searchVector], type: Gin)
+  @@schema("catalog")
+}
+```
+
+```sql
+-- Migration'da
+ALTER TABLE catalog."Tour" 
+ADD COLUMN "searchVector" tsvector 
+GENERATED ALWAYS AS (
+  setweight(to_tsvector('turkish', coalesce(title, '')), 'A') ||
+  setweight(to_tsvector('turkish', coalesce(description, '')), 'B')
+) STORED;
+
+CREATE INDEX idx_tour_search ON catalog."Tour" USING GIN("searchVector");
+```
+
+### Search Service
+
+```typescript
+@Injectable()
+export class SearchService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
+
+  async searchTours(query: string, filters: SearchFilters) {
+    const cacheKey = `catalog:tours:search:${this.hashParams(query, filters)}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
+    const results = await this.prisma.$queryRaw(Prisma.sql`
+      SELECT id, title, slug, price, "coverImage", 
+             ts_rank("searchVector", plainto_tsquery('turkish', ${query})) as rank
+      FROM catalog."Tour"
+      WHERE "searchVector" @@ plainto_tsquery('turkish', ${query})
+        AND "deletedAt" IS NULL
+        AND status = 'ACTIVE'
+      ORDER BY rank DESC
+      LIMIT ${filters.limit} OFFSET ${(filters.page - 1) * filters.limit}
+    `);
+
+    await this.cache.set(cacheKey, results, 300);
+    return results;
+  }
+}
+```
+
+---
+
+## 8. Error Handling (Global)
+
+### Exception Filter
+
+```typescript
+// apps/api/src/core/filters/global-exception.filter.ts
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+
+@Catch()
+export class GlobalExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger('ExceptionFilter');
+
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse();
+
+    let status = HttpStatus.INTERNAL_SERVER_ERROR;
+    let code = 'INTERNAL_ERROR';
+    let message = 'Bir sorun oluştu, lütfen tekrar deneyin.';
+
+    if (exception instanceof HttpException) {
+      status = exception.getStatus();
+      const res = exception.getResponse() as { code?: string; message?: string };
+      code = res.code || `HTTP_${status}`;
+      message = res.message || exception.message;
+    }
+
+    if (exception instanceof BusinessException) {
+      status = exception.statusCode;
+      code = exception.code;
+      message = exception.message;
+    }
+
+    // 5xx → logla (production'da kullanıcıya detay verme)
+    if (status >= 500) {
+      this.logger.error(`${code}: ${message}`, (exception as Error).stack);
+      message = 'Bir sorun oluştu, lütfen tekrar deneyin.';
+    }
+
+    response.status(status).json({
+      success: false,
+      data: null,
+      error: { code, message },
+    });
+  }
+}
+```
+
+### Custom Business Exceptions
+
+```typescript
+// apps/api/src/shared/exceptions/business.exception.ts
+export class BusinessException extends Error {
+  constructor(
+    public readonly code: string,
+    public readonly message: string,
+    public readonly statusCode: number = 422,
+  ) { super(message); }
+}
+
+// Kullanım örnekleri
+export class TourNotAvailableException extends BusinessException {
+  constructor() { super('BOOKING_TOUR_NOT_AVAILABLE', 'Seçilen tarihte müsaitlik bulunmamaktadır.', 422); }
+}
+
+export class InsufficientBalanceException extends BusinessException {
+  constructor() { super('PAYMENT_INSUFFICIENT_BALANCE', 'Yetersiz bakiye.', 422); }
+}
+
+export class PartnerNotVerifiedException extends BusinessException {
+  constructor() { super('PARTNER_NOT_VERIFIED', 'Hesabınız henüz doğrulanmamış.', 403); }
+}
+```
+
+---
+
+## 9. Tercih Edilen Paketler (Tam Liste)
+
+### Backend (NestJS)
+
+| Kategori | Paket | Neden Bu |
+|----------|-------|----------|
+| Framework | `@nestjs/core` `@nestjs/common` | Enterprise Node.js standard |
+| CQRS | `@nestjs/cqrs` | Native NestJS, modüler monolit için |
+| ORM | `@prisma/client` `prisma` | Type-safe, migration, multi-schema |
+| Cache | `@nestjs/cache-manager` `cache-manager-ioredis` | Redis entegrasyonu |
+| Queue | `@nestjs/bullmq` `bullmq` | Redis-backed, retry, cron |
+| Validation | `class-validator` `class-transformer` | DTO validation, NestJS native |
+| Auth | `@nestjs/passport` `passport-jwt` | JWT strategy |
+| Swagger | `@nestjs/swagger` | Otomatik API dokümantasyonu |
+| Events | `@nestjs/event-emitter` `eventemitter2` | Modüller arası iletişim |
+| Config | `@nestjs/config` `joi` | Type-safe env management |
+| Logger | `nestjs-pino` `pino` | Structured JSON, performanslı |
+| Storage | `@aws-sdk/client-s3` `@aws-sdk/s3-request-presigner` | S3/MinIO uyumlu |
+| Email | `resend` | Modern transactional email |
+| Schedule | `@nestjs/schedule` | Cron jobs |
+| Throttle | `@nestjs/throttler` | Rate limiting |
+| Health | `@nestjs/terminus` | Health check endpoints |
+| WebSocket | `@nestjs/websockets` `socket.io` | Realtime |
+| Helmet | `helmet` | Security headers |
+| Compression | `compression` | Response compression |
+| Error tracking | `@sentry/nestjs` | Production error monitoring |
+
+### Frontend (Next.js)
+
+| Kategori | Paket | Neden Bu |
+|----------|-------|----------|
+| UI | `tailwindcss` `@shadcn/ui` | Utility-first + accessible components |
+| State (server) | `@tanstack/react-query` | Cache, retry, background refetch |
+| State (client) | `zustand` | Minimal, performanslı |
+| Forms | `react-hook-form` `@hookform/resolvers` | Performanslı form management |
+| Validation | `zod` | Runtime type validation |
+| HTTP | `axios` | Interceptors, instance config |
+| Auth | `next-auth` | Session, OAuth, JWT |
+| Toast | `sonner` | Modern bildirimler |
+| Date | `date-fns` | Tree-shakeable, lightweight |
+| Icons | `lucide-react` | Modern SVG icon set |
+| Upload | `react-dropzone` | Drag & drop file upload |
+| Charts | `recharts` | React-native chart kütüphanesi |
+| Maps | `react-leaflet` veya `@vis.gl/react-google-maps` | Harita görüntüleme |
+| Animation | `framer-motion` | Smooth UI transitions |
+| Table | `@tanstack/react-table` | Headless, performanslı tablolar |
+| Editor | `@tiptap/react` | Rich text editor |
+| Error tracking | `@sentry/nextjs` | Production error monitoring |
+
+### Monorepo & Tooling
+
+| Kategori | Paket | Neden Bu |
+|----------|-------|----------|
+| Monorepo | `nx` | Module boundaries, affected, generators |
+| Package manager | `pnpm` | Hızlı, disk-efficient |
+| Linting | `eslint` `prettier` | Kod kalitesi |
+| Testing (BE) | `jest` `@nestjs/testing` | NestJS native test |
+| Testing (FE) | `vitest` `@testing-library/react` | Hızlı, modern |
+| E2E | `playwright` | Cross-browser E2E |
+| Git hooks | `husky` `lint-staged` | Pre-commit lint/format |
+| Commit | `commitlint` | Commit message formatı zorunlu |
+
+---
+
+## 10. Kullanılmaması Gereken Paketler
+
+| Paket | Neden KULLANMA | Alternatif |
+|-------|----------------|-----------|
+| Redux / Redux Toolkit | Gereksiz karmaşıklık, over-engineering | Zustand + TanStack Query |
+| Express.js (direkt) | NestJS zaten Express üzerinde | NestJS |
+| TypeORM | Prisma daha type-safe ve migration'ı daha iyi | Prisma |
+| Sequelize | Eski, TypeScript desteği zayıf | Prisma |
+| Moment.js | Devasa bundle, deprecated | date-fns |
+| lodash (full) | Bundle size | Native JS veya lodash-es (tree-shake) |
+| Material UI (full) | Çok ağır, Tailwind ile conflict | Shadcn/ui |
+| Formik | Daha yavaş, daha az özellik | React Hook Form |
+| styled-components | Tailwind zaten var, runtime CSS overhead | Tailwind CSS |
+| GraphQL (Apollo) | Bu projede REST yeterli, complexity artırır | REST + TanStack Query |
+| Mongoose | MongoDB değil PostgreSQL kullanıyoruz | Prisma |

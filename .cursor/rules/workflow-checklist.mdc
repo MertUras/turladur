@@ -1,0 +1,134 @@
+---
+description: Her görev öncesi ve sonrası kontrol + çıktı raporu kuralları
+globs: 
+alwaysApply: true
+---
+
+# İş Akışı — Kontrol & Rapor Kuralları
+
+## Her Görev Başlamadan ÖNCE Kontrol Et
+
+Kod yazmaya başlamadan önce şu soruları cevapla:
+
+1. **Hangi modüle ait?** (catalog, booking, payment, identity, review, notification, partner, analytics)
+2. **Hangi katman?** (controller, service, command, query, dto, frontend page, component)
+3. **İlgili rules dosyalarını oku:** Hangi `.cursor/rules/*.mdc` bu göreve uygulanıyor?
+4. **Mevcut kodu incele:** Değiştireceğin dosyaları oku, mevcut yapıyı anla
+5. **Breaking change var mı?** Mevcut çalışan bir şeyi bozacak mısın?
+
+## Her Görev Bittikten SONRA Kontrol Et
+
+Kod yazdıktan sonra şu kontrolleri yap:
+
+### Backend Değişikliği Yapıldıysa:
+- [ ] Modül bağımsızlığı korunuyor mu? (başka modülden service import yok)
+- [ ] DTO'da class-validator decorator var mı?
+- [ ] Swagger decorator'ları (@ApiTags, @ApiOperation) eklendi mi?
+- [ ] Response formatı doğru mu? `{ success, data, error }`
+- [ ] Event emit gerekiyor mu? (başka modülleri ilgilendiriyor mu?)
+- [ ] Cache eklenmeli mi? (read-heavy endpoint ise)
+- [ ] Auth guard doğru mu? (@Public veya @Roles)
+- [ ] Error handling var mı? (NotFoundException, BusinessException)
+- [ ] Linter hatası var mı?
+
+### Frontend Değişikliği Yapıldıysa:
+- [ ] Doğru route group'ta mı? (marketing/customer/partner/admin)
+- [ ] Server vs Client component doğru seçildi mi?
+- [ ] Loading state var mı?
+- [ ] Error state var mı?
+- [ ] TanStack Query kullanıldı mı? (doğrudan fetch yok)
+- [ ] Responsive mi? (mobile-first)
+- [ ] SEO metadata var mı? (public sayfaysa)
+- [ ] Import sırası doğru mu?
+- [ ] Linter hatası var mı?
+
+### Veritabanı Değişikliği Yapıldıysa:
+- [ ] `@@schema("{modül}")` var mı?
+- [ ] `id`, `createdAt`, `updatedAt`, `deletedAt` var mı?
+- [ ] Foreign key'lerde `@@index` var mı?
+- [ ] Migration adı açıklayıcı İngilizce snake_case mi?
+- [ ] Shared types güncellendi mi?
+
+### Dosya Oluşturulduysa:
+- [ ] Dosya adı `kebab-case` mi?
+- [ ] Doğru klasörde mi?
+- [ ] İsimlendirme kurallarına uyuyor mu?
+
+## Görev Tamamlandığında Kullanıcıya RAPOR Ver
+
+Her görev bittiğinde aşağıdaki formatta özet çıktı ver:
+
+```
+═══════════════════════════════════════════
+✓ TAMAMLANDI
+═══════════════════════════════════════════
+
+📁 Oluşturulan dosyalar:
+  - apps/api/src/modules/review/controllers/review.controller.ts
+  - apps/api/src/modules/review/services/review.service.ts
+  - apps/api/src/modules/review/dto/create-review.dto.ts
+
+✏️  Değiştirilen dosyalar:
+  - apps/api/src/app.module.ts (ReviewModule import eklendi)
+  - packages/shared-types/src/index.ts (Review tipi export eklendi)
+
+🗑️  Silinen dosyalar:
+  - (yok)
+
+📋 Kontrol sonuçları:
+  ✓ Modül bağımsızlığı → Korunuyor
+  ✓ DTO validation → class-validator decorator'ları mevcut
+  ✓ Swagger → @ApiTags, @ApiOperation eklendi
+  ✓ Response format → { success, data, error } uygulandı
+  ✓ Auth guard → @UseGuards(JwtAuthGuard) aktif
+  ✓ Cache → GET /reviews/:tourId endpoint'inde Redis (TTL: 10dk)
+  ✓ Event → ReviewCreatedEvent emit ediliyor
+  ✓ Linter → Hata yok
+
+⚠️  Dikkat edilmesi gerekenler:
+  - Migration çalıştırılmalı: pnpm --filter api prisma migrate dev --name create_review_table
+  - Seed verisi henüz eklenmedi (opsiyonel)
+
+🔗 İlgili kurallar:
+  - backend-conventions.mdc ✓
+  - module-guide.mdc ✓
+  - api-design.mdc ✓
+  - naming-conventions.mdc ✓
+═══════════════════════════════════════════
+```
+
+## Rapor Kuralları
+
+1. **Her zaman Türkçe** rapor ver.
+2. **Dosya listesi tam olsun** — neyi oluşturdun, neyi değiştirdin, neyi sildin.
+3. **Kontrol sonuçlarını listele** — hangi kurallar kontrol edildi, geçti mi?
+4. **Uyarılar** — kullanıcının yapması gereken ek adımlar varsa belirt (migration çalıştır, env ekle, vb.).
+5. **Kısa ve net** — gereksiz açıklama yapma, sadece sonuçları göster.
+6. **Başarısız kontrol varsa** — ❌ ile işaretle ve nasıl düzeltileceğini yaz.
+
+## Birden Fazla Dosya Değiştirildiğinde
+
+Eğer görev büyükse ve çok dosya değiştiyse, raporu kategorize et:
+
+```
+📁 Backend (5 dosya):
+  + modules/review/review.module.ts (yeni)
+  + modules/review/controllers/review.controller.ts (yeni)
+  + modules/review/services/review.service.ts (yeni)
+  ~ app.module.ts (değiştirildi)
+  ~ prisma/schema.prisma (değiştirildi)
+
+📁 Frontend (3 dosya):
+  + components/features/review/review-form.tsx (yeni)
+  + components/features/review/review-list.tsx (yeni)
+  ~ app/(marketing)/tours/[id]/page.tsx (değiştirildi)
+
+📁 Shared (1 dosya):
+  ~ packages/shared-types/src/review.types.ts (yeni)
+```
+
+## Ne Zaman Rapor VERİLMEZ
+
+- Sadece soru cevaplıyorsan (kod değişikliği yoksa)
+- Sadece dosya okuyorsan
+- Kullanıcıyla plan tartışıyorsan
