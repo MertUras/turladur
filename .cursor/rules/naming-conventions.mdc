@@ -1,0 +1,96 @@
+---
+description: Dosya, klasör, değişken ve genel isimlendirme standartları
+globs: 
+alwaysApply: true
+---
+
+# İsimlendirme Kuralları
+
+## Dosya ve Klasör İsimlendirme
+
+| Tür | Format | Örnek |
+|-----|--------|-------|
+| Klasör | `kebab-case` | `tour-card/`, `shared-types/`, `booking/` |
+| React bileşen dosyası | `kebab-case.tsx` | `tour-card.tsx`, `booking-form.tsx` |
+| Service dosyası | `kebab-case.service.ts` | `hotel.service.ts`, `pricing.service.ts` |
+| Controller dosyası | `kebab-case.controller.ts` | `tour.controller.ts` |
+| Module dosyası | `kebab-case.module.ts` | `catalog.module.ts` |
+| DTO dosyası | `kebab-case.dto.ts` | `create-tour.dto.ts` |
+| Guard dosyası | `kebab-case.guard.ts` | `jwt-auth.guard.ts` |
+| Event dosyası | `kebab-case.event.ts` | `booking-created.event.ts` |
+| Hook dosyası | `use-kebab-case.ts` | `use-auth.ts`, `use-search.ts` |
+| Store dosyası | `kebab-case.store.ts` | `cart.store.ts` |
+| Test dosyası | `kebab-case.spec.ts` | `hotel.service.spec.ts` |
+| Type dosyası | `kebab-case.types.ts` | `booking.types.ts` |
+| Schema dosyası | `kebab-case.schema.ts` | `booking.schema.ts` (Zod) |
+| Constant dosyası | `kebab-case.ts` | `routes.ts`, `roles.ts` |
+
+## Kod İsimlendirme
+
+| Tür | Format | Örnek |
+|-----|--------|-------|
+| React bileşeni | `PascalCase` | `TourCard`, `BookingForm`, `SearchBar` |
+| Fonksiyon | `camelCase` | `calculatePrice`, `formatDate`, `getUserById` |
+| Değişken | `camelCase` | `tourList`, `isLoading`, `currentUser` |
+| Sabit (const) | `UPPER_SNAKE_CASE` | `MAX_GUESTS`, `API_BASE_URL`, `DEFAULT_CURRENCY` |
+| Enum adı | `PascalCase` | `BookingStatus`, `UserRole`, `TourCategory` |
+| Enum değeri | `UPPER_SNAKE_CASE` | `PENDING`, `CONFIRMED`, `CANCELLED` |
+| Interface | `PascalCase` | `TourResponse`, `BookingFilters` |
+| Type alias | `PascalCase` | `CreateTourInput`, `SearchParams` |
+| Class | `PascalCase` | `TourService`, `CreateTourCommand` |
+| NestJS decorator | `PascalCase` | `@CurrentUser()`, `@Roles()`, `@Public()` |
+| CSS class (Tailwind) | — | Tailwind utility kullan, custom class adı `kebab-case` |
+| Env değişkeni | `UPPER_SNAKE_CASE` | `DATABASE_URL`, `NEXTAUTH_SECRET` |
+| DB tablo | `PascalCase` (Prisma model) | `Hotel`, `TourDate`, `Reservation` |
+| DB kolon | `camelCase` | `firstName`, `createdAt`, `tourOperatorId` |
+
+## Prefix/Suffix Kuralları
+
+| Tür | Pattern | Örnek |
+|-----|---------|-------|
+| Boolean değişken | `is/has/can/should` | `isLoading`, `hasAccess`, `canEdit` |
+| Event handler (React) | `handle[Event]` | `handleSubmit`, `handleClick`, `handleSearch` |
+| Event handler (prop) | `on[Event]` | `onSubmit`, `onClick`, `onChange` |
+| Async fonksiyon | fiil ile başla | `fetchTours`, `createBooking`, `sendEmail` |
+| Custom hook | `use` prefix | `useAuth`, `useSearch`, `useDebounce` |
+| Guard | `[İsim]Guard` | `JwtAuthGuard`, `RolesGuard` |
+| Interceptor | `[İsim]Interceptor` | `LoggingInterceptor`, `TransformInterceptor` |
+| Pipe | `[İsim]Pipe` | `ValidationPipe`, `ParseIntPipe` |
+| Filter | `[İsim]Filter` | `HttpExceptionFilter`, `BusinessExceptionFilter` |
+| Command | `[Eylem][Kaynak]Command` | `CreateTourCommand`, `CancelBookingCommand` |
+| Query | `[Get/Search/List][Kaynak]Query` | `SearchToursQuery`, `GetHotelDetailQuery` |
+| Event | `[Kaynak][Olay]Event` | `BookingCreatedEvent`, `PaymentCompletedEvent` |
+| DTO | `[Eylem][Kaynak]Dto` | `CreateTourDto`, `UpdateHotelDto`, `SearchToursDto` |
+| Response DTO | `[Kaynak]ResponseDto` | `TourResponseDto`, `BookingResponseDto` |
+
+## Git Branch İsimlendirme
+
+```
+feat/[kısa-açıklama]       → feat/tour-search-filters
+fix/[kısa-açıklama]        → fix/booking-date-validation
+refactor/[kısa-açıklama]   → refactor/payment-module-structure
+chore/[kısa-açıklama]      → chore/update-dependencies
+docs/[kısa-açıklama]       → docs/api-swagger-annotations
+```
+
+## Git Commit Mesajı
+
+Format: `type(scope): açıklama`
+
+```
+feat(catalog): add hotel search with Redis cache
+fix(booking): resolve date overlap validation bug
+refactor(payment): extract iyzico adapter to separate class
+chore(deps): update nestjs to v11.2
+docs(api): add swagger annotations to catalog module
+test(booking): add unit tests for availability service
+```
+
+Tipler: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `perf`, `ci`
+
+## Yasaklar
+- Türkçe değişken/fonksiyon adı KULLANILMAZ (kod tamamen İngilizce).
+- Kısaltma KULLANILMAZ (`btn` → `button`, `msg` → `message`, `usr` → `user`). İstisna: `id`, `url`, `dto`, `api`.
+- Tek harfli değişken KULLANILMAZ (döngü değişkeni `i`, `j` hariç).
+- `any` tipi KULLANILMAZ — her zaman doğru tip belirt.
+- `I` prefix'i interface'lerde KULLANILMAZ (`IUserService` değil → `UserService` interface).

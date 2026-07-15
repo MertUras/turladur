@@ -1,0 +1,275 @@
+---
+description: Güvenlik kuralları — authentication, authorization, veri koruma, KVKK
+globs: 
+alwaysApply: true
+---
+
+# Güvenlik Kuralları
+
+## 1. Authentication (Kimlik Doğrulama)
+
+### JWT Yapısı
+- Access Token: Kısa ömürlü (15 dakika).
+- Refresh Token: Uzun ömürlü (7 gün), HttpOnly cookie ile saklanır.
+- Token payload'da sadece: `userId`, `role`, `partnerId` (varsa). Hassas veri ASLA token'da olmaz.
+- Refresh token rotate edilir — her kullanımda eski geçersiz, yeni verilir.
+
+### Token Saklama (Frontend)
+- Access Token → memory (değişken, localStorage DEĞİL).
+- Refresh Token → HttpOnly, Secure, SameSite=Strict cookie.
+- localStorage veya sessionStorage'a token YAZILMAZ (XSS riski).
+
+### Şifre Kuralları
+- Minimum 8 karakter, en az 1 büyük harf, 1 rakam.
+- Bcrypt ile hash (salt rounds: 12).
+- Düz metin şifre hiçbir yerde loglanmaz veya saklanmaz.
+- Şifre sıfırlama token'ı: tek kullanımlık, 1 saat geçerli.
+
+### Keycloak Entegrasyonu
+- Kullanıcı kayıt/giriş: Keycloak üzerinden OAuth2 + OIDC.
+- Backend JWT doğrulama: Keycloak public key ile imza kontrolü.
+- Multi-tenant: Her partner kendi realm'inde (ileride).
+- MFA (2FA): Keycloak'ta TOTP ile (kritik işlemler için zorunlu).
+
+---
+
+## 2. Authorization (Yetkilendirme)
+
+### Rol Tabanlı Erişim (RBAC)
+```typescript
+enum Role {
+  CUSTOMER = 'CUSTOMER',       // Normal kullanıcı
+  PARTNER = 'PARTNER',         // Tur operatörü / otel sahibi
+  PARTNER_STAFF = 'PARTNER_STAFF',  // Partner alt kullanıcı
+  ADMIN = 'ADMIN',             // Platform yöneticisi
+  SUPER_ADMIN = 'SUPER_ADMIN', // Teknik admin
+}
+```
+
+### Endpoint Koruma Kuralları
+- Varsayılan: TÜM endpoint'ler `JwtAuthGuard` ile korunur.
+- Herkese açık endpoint'ler: `@Public()` decorator ile işaretlenir.
+- Rol kontrolü: `@Roles(Role.ADMIN)` decorator.
+- Resource ownership: Kullanıcı sadece kendi verisine erişir (id kontrolü service katmanında).
+
+```typescript
+// Doğru: ownership kontrolü
+async getBooking(bookingId: string, userId: string) {
+  const booking = await this.prisma.booking.findUnique({ where: { id: bookingId } });
+  if (booking.userId !== userId) throw new ForbiddenException();
+  return booking;
+}
+```
+
+### Partner İzolasyonu
+- Partner A, Partner B'nin verilerini ASLA göremez.
+- Her query'de `partnerId` filtresi zorunlu (service katmanında).
+- Admin paneli hariç, cross-partner veri erişimi imkansız.
+
+---
+
+## 3. API Güvenliği
+
+### Rate Limiting
+```typescript
+@Throttle({ default: { limit: 100, ttl: 60000 } })  // 100 req/dk
+@Controller('catalog')
+export class CatalogController {}
+
+@Throttle({ default: { limit: 5, ttl: 60000 } })    // 5 req/dk
+@Post('auth/login')
+async login() {}
+```
+
+| Endpoint | Limit | Neden |
+|----------|-------|-------|
+| Login/Register | 5/dk | Brute force koruması |
+| Şifre sıfırlama | 3/dk | Spam koruması |
+| Search | 30/dk | DB yükü koruması |
+| Genel API | 100/dk | DDoS temel koruma |
+| Webhook | Limitsiz | IP whitelist ile korunur |
+
+### CORS
+```typescript
+app.enableCors({
+  origin: [process.env.FRONTEND_URL],  // Sadece kendi frontend'in
+  credentials: true,
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+});
+```
+- Wildcard (`*`) origin ASLA kullanılmaz (production'da).
+- `credentials: true` olduğunda origin belirtmek zorunlu.
+
+### CSRF Koruması
+- SameSite=Strict cookie → CSRF'ye karşı birincil savunma.
+- State-changing işlemler (POST/PATCH/DELETE) mutlaka auth header gerektirir.
+- GET endpoint'i ile veri değiştirme ASLA yapılmaz.
+
+### Request Validation
+- Tüm gelen veri DTO + class-validator ile doğrulanır.
+- `whitelist: true` → DTO'da tanımlı olmayan alanlar otomatik atılır.
+- `forbidNonWhitelisted: true` → Ekstra alan gönderilirse 400 döner.
+- `transform: true` → String → Number dönüşümleri otomatik.
+
+```typescript
+// main.ts
+app.useGlobalPipes(new ValidationPipe({
+  whitelist: true,
+  forbidNonWhitelisted: true,
+  transform: true,
+  transformOptions: { enableImplicitConversion: true },
+}));
+```
+
+### Helmet (HTTP Headers)
+```typescript
+import helmet from 'helmet';
+app.use(helmet());
+```
+Otomatik eklenen güvenlik header'ları:
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `X-XSS-Protection: 0` (modern tarayıcılarda CSP tercih edilir)
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+- `Content-Security-Policy: default-src 'self'`
+
+---
+
+## 4. Veri Güvenliği
+
+### SQL Injection Koruması
+- Prisma ORM parametrized queries kullanır → SQL injection imkansız.
+- `$queryRaw` kullanılacaksa: `Prisma.sql` template literal ile (parameterized).
+- String concatenation ile SQL ASLA yazılmaz.
+
+```typescript
+// DOĞRU
+const users = await prisma.$queryRaw(Prisma.sql`SELECT * FROM identity."User" WHERE email = ${email}`);
+
+// YANLIŞ — ASLA
+const users = await prisma.$queryRaw(`SELECT * FROM "User" WHERE email = '${email}'`);
+```
+
+### XSS Koruması
+- React varsayılan olarak HTML escape yapar → güvenli.
+- `dangerouslySetInnerHTML` ASLA kullanılmaz (zorunluysa DOMPurify ile sanitize).
+- Kullanıcı girdisi render edilmeden önce sanitize edilir.
+- Rich text editör çıktısı (TipTap): backend'de sanitize-html ile temizlenir.
+
+### Hassas Veri Yönetimi
+- Şifre, kart numarası, CVV: ASLA loglanmaz, ASLA response'a eklenmez.
+- Prisma `select` ile hassas alanlar varsayılan olarak exclude edilir.
+- PCI DSS: Kart bilgileri backend'e gelmez, direkt İyzico/Stripe iframe ile işlenir.
+- Telefon, email: maskelenmiş gösterilir (`a***@gmail.com`, `+90 555 *** ** 67`).
+
+```typescript
+// Prisma'da hassas alan gizleme
+const user = await prisma.user.findUnique({
+  where: { id },
+  select: {
+    id: true,
+    email: true,
+    firstName: true,
+    passwordHash: false,  // ASLA döndürülmez
+  },
+});
+```
+
+### Dosya Upload Güvenliği
+- Dosya tipi kontrolü: MIME type + magic bytes (sadece uzantıya güvenme).
+- Maksimum boyut: 5MB (görseller), 20MB (belgeler).
+- Dosya adı: UUID ile yeniden adlandır (orijinal ad kullanılmaz).
+- Upload path: web-accessible olmayan dizin veya doğrudan S3/MinIO.
+- Antivirüs tarama: production'da ClamAV ile (opsiyonel).
+
+---
+
+## 5. KVKK / GDPR Uyumluluğu
+
+### Veri Saklama
+- Kişisel veriler encrypt edilmiş PostgreSQL'de saklanır.
+- Gereksiz veri toplanmaz (data minimization).
+- Veri saklama süreleri belirlenir (ör: iptal edilen booking → 2 yıl sonra anonim).
+- Kullanıcı "hesabımı sil" dediğinde: soft delete + 30 gün sonra kalıcı anonim hale getirme.
+
+### Kullanıcı Hakları
+- Verilerimi gör (data export — JSON format).
+- Verilerimi sil (right to be forgotten).
+- İzin yönetimi (marketing email opt-in/opt-out).
+- Çerez onayı (cookie consent banner).
+
+### Audit Log
+- Kim, ne zaman, ne yaptı → `audit_log` tablosu.
+- Kritik işlemler loglanır: giriş, şifre değiştirme, rezervasyon, ödeme, veri silme.
+- Log'lar 5 yıl saklanır (yasal zorunluluk).
+
+```typescript
+interface AuditLog {
+  id: string;
+  userId: string;
+  action: string;        // 'LOGIN', 'PASSWORD_CHANGE', 'BOOKING_CREATE', 'DATA_DELETE'
+  resource: string;      // 'User', 'Booking', 'Payment'
+  resourceId: string;
+  metadata: JsonValue;   // Değişen alanlar (hassas veri HARİÇ)
+  ipAddress: string;
+  userAgent: string;
+  createdAt: DateTime;
+}
+```
+
+---
+
+## 6. Altyapı Güvenliği
+
+### Environment Variables
+- Secret'lar ASLA kod içinde hardcode edilmez.
+- `.env` dosyaları ASLA commit edilmez (.gitignore'da).
+- Production secret'ları: Railway/Vercel secret manager veya HashiCorp Vault.
+- Farklı ortamlar farklı secret kullanır (dev ≠ staging ≠ prod).
+
+### Docker Güvenliği
+- Container'lar root kullanıcı ile ÇALIŞTIRILMAZ.
+- Multi-stage build: final image'da build tool'ları olmaz.
+- Base image: `alpine` varyantları (minimal attack surface).
+- Image tarama: GitHub Actions'ta Trivy ile vulnerability scan.
+
+```dockerfile
+# Doğru: non-root user
+FROM node:20-alpine AS runner
+RUN addgroup --system app && adduser --system --ingroup app app
+USER app
+```
+
+### Network Güvenliği
+- Backend API: public internet'e açık ama rate-limited.
+- PostgreSQL: sadece backend container'ından erişilebilir (iç network).
+- Redis: sadece backend container'ından erişilebilir.
+- Keycloak admin: sadece iç network veya VPN üzerinden.
+- MinIO: presigned URL ile erişim (direkt public erişim yok).
+
+### Dependency Güvenliği
+- `pnpm audit` — her CI run'da.
+- Dependabot / Renovate: otomatik güvenlik güncellemesi PR'ları.
+- Kritik CVE: 24 saat içinde patch.
+
+---
+
+## 7. Hata Yönetimi ve Loglama (Güvenlik Perspektifi)
+
+### Hata Mesajları
+- Production'da kullanıcıya ASLA stack trace gösterilmez.
+- Hata detayı sadece loglara yazılır.
+- Genel hata: "Bir sorun oluştu, lütfen tekrar deneyin."
+- Auth hataları: "Email veya şifre hatalı" (hangisinin yanlış olduğu söylenmez).
+
+### Güvenlik Logları
+- Başarısız login denemeleri loglanır (IP + email).
+- 5 başarısız deneme → hesap 15 dk kilitlenir.
+- Şüpheli aktivite (farklı ülkeden giriş) → email uyarısı.
+- Admin işlemleri: hepsi loglanır.
+
+### Monitoring & Alerting
+- 5xx hata spike → Slack/email alert.
+- Anormal trafik → rate limit artırımı veya IP ban.
+- Başarısız auth oranı > %20 → alert.

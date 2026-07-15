@@ -1,0 +1,123 @@
+---
+description: Test yazma kuralları ve stratejisi
+globs: "**/*.spec.ts,**/*.test.ts,**/test/**,**/__tests__/**"
+alwaysApply: false
+---
+
+# Test Kuralları
+
+## Test Piramidi
+
+```
+         /  E2E  \          ← Az (kritik akışlar)
+        / Integration \      ← Orta (modül sınırları)
+       /    Unit Tests   \   ← Çok (iş mantığı)
+```
+
+## Backend Testleri (NestJS)
+
+### Unit Test
+- Her service dosyası için bir `*.spec.ts` olmalı.
+- Mock: Prisma, Redis, external service'ler mock'lanır.
+- Framework: Jest.
+
+```typescript
+// modules/catalog/services/__tests__/tour.service.spec.ts
+describe('TourService', () => {
+  let service: TourService;
+  let prisma: DeepMockProxy<PrismaClient>;
+
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        TourService,
+        { provide: PrismaService, useValue: mockDeep<PrismaClient>() },
+        { provide: CacheService, useValue: mockCacheService },
+      ],
+    }).compile();
+
+    service = module.get(TourService);
+    prisma = module.get(PrismaService);
+  });
+
+  describe('search', () => {
+    it('should return paginated tours matching filters', async () => {
+      prisma.tour.findMany.mockResolvedValue(mockTours);
+      prisma.tour.count.mockResolvedValue(50);
+
+      const result = await service.search({ category: 'CULTURAL', page: 1, limit: 20 });
+
+      expect(result.data).toHaveLength(mockTours.length);
+      expect(result.meta.total).toBe(50);
+    });
+  });
+});
+```
+
+### Integration Test
+- Gerçek veritabanı (test DB) ile çalışır.
+- Modül sınırlarını test eder (event yayılımı vb.).
+- Her modül için en az 1 integration test.
+
+### E2E Test
+- `test/e2e/` altında.
+- Supertest ile HTTP endpoint'leri test edilir.
+- Kritik akışlar: kayıt → giriş → arama → rezervasyon → ödeme.
+
+## Frontend Testleri (Next.js)
+
+### Component Test
+- Framework: Vitest + Testing Library.
+- Her feature bileşeni için test olmalı.
+- UI state değişikliklerini test et (loading, error, success).
+
+```typescript
+// components/features/tour/__tests__/tour-card.test.tsx
+describe('TourCard', () => {
+  it('should display tour title and price', () => {
+    render(<TourCard tour={mockTour} />);
+    expect(screen.getByText('Kapadokya Turu')).toBeInTheDocument();
+    expect(screen.getByText('₺2.500')).toBeInTheDocument();
+  });
+
+  it('should call onBook when book button clicked', async () => {
+    const onBook = vi.fn();
+    render(<TourCard tour={mockTour} onBook={onBook} />);
+    await userEvent.click(screen.getByRole('button', { name: /rezervasyon/i }));
+    expect(onBook).toHaveBeenCalledWith(mockTour.id);
+  });
+});
+```
+
+### Hook Test
+- Custom hook'lar `renderHook` ile test edilir.
+
+### E2E (Frontend)
+- Framework: Playwright.
+- Kritik kullanıcı akışları test edilir.
+
+## Test Dosya Konumları
+
+| Tür | Konum |
+|-----|-------|
+| Backend unit test | `apps/api/src/modules/[modül]/__tests__/[dosya].spec.ts` |
+| Backend integration | `apps/api/test/integration/[modül].integration.spec.ts` |
+| Backend E2E | `apps/api/test/e2e/[akış].e2e.spec.ts` |
+| Frontend component | `apps/web/src/components/[...]/[bileşen].test.tsx` |
+| Frontend hook | `apps/web/src/hooks/__tests__/[hook].test.ts` |
+| Frontend E2E | `apps/web/e2e/[akış].spec.ts` |
+
+## Test Adlandırma
+
+- Dosya: `[kaynak].spec.ts` (backend), `[kaynak].test.tsx` (frontend)
+- describe bloğu: Class/bileşen adı
+- it/test bloğu: `should [beklenen davranış] when [koşul]`
+
+## Minimum Coverage Hedefleri
+
+| Katman | Hedef |
+|--------|-------|
+| Backend services | %80 |
+| Backend commands/queries | %90 |
+| Frontend features | %70 |
+| Shared packages | %95 |
