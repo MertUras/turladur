@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["identity", "catalog", "booking", "payment"]
+}
+
+// ─── identity ───────────────────────────────────────────
+
+enum UserRole {
+  CUSTOMER
+  PARTNER
+  PARTNER_STAFF
+  ADMIN
+  SUPER_ADMIN
+
+  @@schema("identity")
+}
+
+enum PartnerStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+
+  @@schema("identity")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  phone        String?
+  role         UserRole  @default(CUSTOMER)
+  isActive     Boolean   @default(true)
+  partnerId    String?
+  partner      Partner?  @relation(fields: [partnerId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  @@index([partnerId])
+  @@index([role])
+  @@index([deletedAt])
+  @@schema("identity")
+}
+
+model Partner {
+  id                String        @id @default(cuid())
+  companyName       String
+  taxNumber         String?
+  contactEmail      String
+  contactPhone      String?
+  status            PartnerStatus @default(PENDING)
+  verificationToken String?       @unique
+  verifiedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  deletedAt         DateTime?
+  users             User[]
+  tours             Tour[]
+
+  @@index([status])
+  @@index([deletedAt])
+  @@schema("identity")
+}
+
+// ─── catalog ────────────────────────────────────────────
+
+enum TourStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  ARCHIVED
+
+  @@schema("catalog")
+}
+
+enum TourCategory {
+  CULTURAL
+  ADVENTURE
+  GASTRONOMY
+  NATURE
+  CITY
+  BEACH
+
+  @@schema("catalog")
+}
+
+model Tour {
+  id          String       @id @default(cuid())
+  title       String       @db.VarChar(200)
+  slug        String       @unique @db.VarChar(220)
+  description String       @db.Text
+  coverUrl    String?
+  price       Decimal      @db.Decimal(10, 2)
+  currency    String       @default("TRY") @db.VarChar(3)
+  category    TourCategory
+  status      TourStatus   @default(DRAFT)
+  durationDays Int         @default(1)
+  partnerId   String
+  partner     Partner      @relation(fields: [partnerId], references: [id])
+  dates       TourDate[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  @@index([partnerId])
+  @@index([category, status])
+  @@index([slug])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+model TourDate {
+  id               String    @id @default(cuid())
+  tourId           String
+  tour             Tour      @relation(fields: [tourId], references: [id])
+  startDate        DateTime  @db.Date
+  endDate          DateTime  @db.Date
+  capacity         Int
+  remainingCapacity Int
+  priceOverride    Decimal?  @db.Decimal(10, 2)
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  @@index([tourId, startDate])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+// ─── booking ────────────────────────────────────────────
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  PAYMENT_FAILED
+
+  @@schema("booking")
+}
+
+model Reservation {
+  id             String        @id @default(cuid())
+  bookingNumber  String        @unique @db.VarChar(20)
+  userId         String
+  tourId         String
+  tourDateId     String
+  partnerId      String
+  status         BookingStatus @default(PENDING)
+  adults         Int           @default(1)
+  children       Int           @default(0)
+  totalAmount    Decimal       @db.Decimal(10, 2)
+  currency       String        @default("TRY") @db.VarChar(3)
+  contactEmail   String
+  contactPhone   String?
+  guests         Json
+  cancelledAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  @@index([userId])
+  @@index([tourDateId])
+  @@index([partnerId])
+  @@index([status])
+  @@index([deletedAt])
+  @@schema("booking")
+}
+
+// ─── payment ────────────────────────────────────────────
+
+enum PaymentStatus {
+  PENDING
+  AWAITING_3DS
+  SUCCESS
+  FAILED
+  REFUNDED
+
+  @@schema("payment")
+}
+
+enum PaymentProvider {
+  IYZICO
+  MOCK
+
+  @@schema("payment")
+}
+
+model PaymentTransaction {
+  id                String          @id @default(cuid())
+  reservationId     String
+  amount            Decimal         @db.Decimal(10, 2)
+  currency          String          @default("TRY") @db.VarChar(3)
+  status            PaymentStatus   @default(PENDING)
+  provider          PaymentProvider @default(IYZICO)
+  conversationId    String          @unique
+  providerPaymentId String?
+  errorMessage      String?
+  rawResponse       Json?
+  paidAt            DateTime?
+  refundedAt        DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([reservationId])
+  @@index([status])
+  @@schema("payment")
+}

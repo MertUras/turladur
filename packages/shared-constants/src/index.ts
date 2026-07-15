@@ -1,0 +1,44 @@
+export enum Role {
+  CUSTOMER = 'CUSTOMER',
+  PARTNER = 'PARTNER',
+  PARTNER_STAFF = 'PARTNER_STAFF',
+  ADMIN = 'ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+}
+
+export enum BookingStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+  PAYMENT_FAILED = 'PAYMENT_FAILED',
+}
+
+export enum PaymentStatus {
+  PENDING = 'PENDING',
+  AWAITING_3DS = 'AWAITING_3DS',
+  SUCCESS = 'SUCCESS',
+  FAILED = 'FAILED',
+  REFUNDED = 'REFUNDED',
+}
+
+export enum TourCategory {
+  CULTURAL = 'CULTURAL',
+  ADVENTURE = 'ADVENTURE',
+  GASTRONOMY = 'GASTRONOMY',
+  NATURE = 'NATURE',
+  CITY = 'CITY',
+  BEACH = 'BEACH',
+}
+
+export enum TourStatus {
+  DRAFT = 'DRAFT',
+  PENDING_REVIEW = 'PENDING_REVIEW',
+  PUBLISHED = 'PUBLISHED',
+  ARCHIVED = 'ARCHIVED',
+}
+
+export const DEFAULT_PAGE = 1;
+export const DEFAULT_PAGE_LIMIT = 20;
+export const MAX_PAGE_LIMIT = 100;
+export const DEFAULT_CURRENCY = 'TRY';
