@@ -1,0 +1,146 @@
+---
+description: Ekip çalışması, ortak veritabanı, ortam yönetimi ve yazılımcılar arası iş akışı
+globs: 
+alwaysApply: true
+---
+
+# Ekip Çalışması & Ortak Geliştirme Kuralları
+
+## Veritabanı Stratejisi — Ortam Ayrımı
+
+### 3 Ortam, 3 Farklı Veritabanı
+
+| Ortam | DB | Erişim | Kullanım |
+|-------|-----|--------|----------|
+| **Local (her dev)** | Docker PostgreSQL (localhost:5433) | Sadece kendi makinesi | Geliştirme, deneme |
+| **Staging (paylaşılan)** | Neon branch: `staging` | Tüm ekip | Test, demo, entegrasyon |
+| **Production** | Neon branch: `main` | Sadece CI/CD | Canlı sistem |
+
+### Her Yazılımcının Kendi Local DB'si Olmalı
+
+```bash
+# Her dev kendi Docker'ını başlatır
+docker compose -f infrastructure/docker/docker-compose.yml up -d
+
+# Migration'ları uygular
+pnpm --filter api prisma migrate deploy
+
+# Seed verisini yükler
+pnpm --filter api prisma db seed
+```
+
+**Neden local?**
+- Birisi tabloyu bozarsa sadece kendi bozulur
+- İstediğin veriyi test için değiştirebilirsin
+- İnternetsiz çalışabilirsin
+- Migration denemelerini rahatça yaparsın
+
+### Staging DB — Ekip Paylaşımlı
+
+```env
+# .env.staging (Neon staging branch)
+DATABASE_URL="postgresql://USER:PASS@ep-xxx-staging.neon.tech/neondb?sslmode=require"
+```
+
+**Staging ne zaman kullanılır?**
+- Feature tamamlandı, PR açıldı → staging'e deploy edilir
+- QA testi yapılır
+- Ekip arkadaşların "benim eklediğim turu görebiliyor musun?" test eder
+- Demo sunumları
+
+### Birisi Migration Eklediğinde Ne Olur?
+
+```
+Dev A: Yeni tablo ekler → migration oluşturur → PR açar → merge edilir
+Dev B: git pull → pnpm --filter api prisma migrate deploy → Yeni tablo hazır
+```
+
+**Adım adım:**
+1. Dev A: `prisma migrate dev --name create_campaign_table` → local'de çalışır
+2. Dev A: PR açar, `prisma/migrations/` klasöründeki yeni dosya commit'e dahil
+3. Code review + merge
+4. Dev B: `git pull` → yeni migration dosyasını alır
+5. Dev B: `pnpm --filter api prisma migrate deploy` → local DB güncellenir
+6. CI/CD: Staging'e deploy sırasında `prisma migrate deploy` otomatik çalışır
+
+### Neon Branching (Gelişmiş — Opsiyonel)
+
+Neon, her branch için sıfır maliyetli DB kopyası oluşturur:
+
+```bash
+# Feature branch için DB branch oluştur
+neonctl branches create --name feat/tour-search --parent staging
+
+# Bu branch'in URL'ini al
+neonctl connection-string feat/tour-search
+```
+
+Feature branch merge edildiğinde DB branch silinir. Production verisi asla bozulmaz.
+
+---
+
+## Ekip İçi İletişim Kuralları
+
+### PR Açarken Checklist
+
+```markdown
+## Değişiklikler
+- [ ] Yeni migration var mı? → Evet ise belirt
+- [ ] Yeni env variable gerekiyor mu? → Evet ise .env.example güncelle
+- [ ] Breaking API change var mı? → Evet ise frontend'i de güncelle
+- [ ] Yeni npm paketi eklendi mi? → Evet ise `pnpm install` gerekli
+
+## Test
+- [ ] Unit test eklendi/güncellendi
+- [ ] Local'de çalıştığını doğruladım
+- [ ] Staging'de test ettim (varsa)
+```
+
+### Yeni Ortam Değişkeni Ekleme
+
+1. `.env.example` dosyasına ekle (açıklama ile)
+2. PR açıklamasına yaz: "Yeni env: `IYZICO_API_KEY` gerekli"
+3. Staging/production env'e ekle (Railway/Vercel)
+4. Ekibe Slack/Discord'dan bildir
+
+### Conflict Çözme — Prisma Migration
+
+Eğer iki kişi aynı anda migration oluşturduysa:
+
+```bash
+# Conflict'i çöz
+git pull origin develop
+# Eğer migration_lock.toml'da conflict varsa → her ikisini de koru
+# Prisma otomatik sıralayacak (timestamp bazlı)
+pnpm --filter api prisma migrate deploy
+```
+
+**Kural:** İki kişi AYNI tabloya aynı anda migration eklemesin. Planlama toplantısında "ben User tablosuna alan ekliyorum" denilmeli.
+
+---
+
+## Code Review Kuralları
+
+### Backend PR İnceleme Kontrol Listesi
+
+- [ ] Modül bağımsızlığı korunuyor mu? (başka modül service import edilmemiş mi?)
+- [ ] DTO'da validation var mı?
+- [ ] Swagger decorator'ları tam mı?
+- [ ] Event emit ediliyor mu? (başka modülleri ilgilendiren bir işlem varsa)
+- [ ] Cache düşünülmüş mü? (read-heavy endpoint)
+- [ ] Error handling var mı? (custom exception)
+- [ ] N+1 query yok mu? (include/select kullanılmış mı?)
+- [ ] Ownership check var mı? (kullanıcı başkasının verisine erişemiyor mu?)
+- [ ] Soft delete mi? (deletedAt)
+- [ ] Test var mı?
+
+### Frontend PR İnceleme Kontrol Listesi
+
+- [ ] Server vs Client component doğru seçilmiş mi?
+- [ ] Loading/Error/Empty state var mı?
+- [ ] Responsive mi? (mobile'da test edildi mi?)
+- [ ] TanStack Query kullanılmış mı? (doğrudan fetch yok)
+- [ ] Form validation var mı? (Zod + React Hook Form)
+- [ ] Erişilebilirlik (alt text, aria label)?
+- [ ] SEO metadata (public sayfaysa)?
+- [ ] Console.log kalmamış mı?
