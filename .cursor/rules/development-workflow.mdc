@@ -1,0 +1,190 @@
+---
+description: Geliştirme ortamı, Docker, CI/CD ve workflow kuralları
+globs: "**/infrastructure/**,**/docker/**,.github/**"
+alwaysApply: false
+---
+
+# Geliştirme Ortamı ve Workflow
+
+## Geliştirme Ortamını Başlatma
+
+### Ön Gereksinimler
+- Node.js 20+ (LTS)
+- pnpm 9+
+- Docker Desktop
+- Git
+
+### İlk Kurulum
+```bash
+# 1. Repo'yu klonla
+git clone https://github.com/MertUras/turladur.git
+cd turladur
+
+# 2. Bağımlılıkları kur
+pnpm install
+
+# 3. Altyapı servislerini başlat (PostgreSQL, Redis, MinIO, Keycloak)
+docker compose -f infrastructure/docker/docker-compose.yml up -d
+
+# 4. Ortam değişkenlerini ayarla
+cp .env.example apps/web/.env.local
+cp .env.example apps/api/.env
+
+# 5. Veritabanını hazırla
+pnpm --filter api prisma migrate deploy
+pnpm --filter api prisma db seed
+
+# 6. Tüm uygulamaları başlat
+pnpm dev
+```
+
+### Tek Uygulama Başlatma
+```bash
+pnpm --filter web dev      # Sadece frontend (localhost:3000)
+pnpm --filter api dev      # Sadece backend (localhost:4000)
+```
+
+## Docker Compose (Geliştirme)
+
+```yaml
+# infrastructure/docker/docker-compose.yml
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports: ["5433:5432"]
+    environment:
+      POSTGRES_USER: tourtech
+      POSTGRES_PASSWORD: tourtech
+      POSTGRES_DB: tourtech
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  minio:
+    image: minio/minio:latest
+    ports: ["9000:9000", "9001:9001"]
+    environment:
+      MINIO_ROOT_USER: tourtech
+      MINIO_ROOT_PASSWORD: tourtech123
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    ports: ["8080:8080"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    command: start-dev
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports: ["1025:1025", "8025:8025"]
+```
+
+## Port Haritası
+
+| Servis | Port | URL |
+|--------|------|-----|
+| Frontend (Next.js) | 3000 | http://localhost:3000 |
+| Backend (NestJS) | 4000 | http://localhost:4000 |
+| API Docs (Swagger) | 4000 | http://localhost:4000/api/docs |
+| PostgreSQL | 5433 | localhost:5433 |
+| Redis | 6379 | localhost:6379 |
+| MinIO Console | 9001 | http://localhost:9001 |
+| MinIO API | 9000 | http://localhost:9000 |
+| Keycloak | 8080 | http://localhost:8080 |
+| Mailhog UI | 8025 | http://localhost:8025 |
+
+## Nx Komutları
+
+```bash
+# Tüm projeleri build et
+pnpm nx run-many -t build
+
+# Sadece değişen projeleri build et
+pnpm nx affected -t build
+
+# Tek proje build
+pnpm nx run web:build
+pnpm nx run api:build
+
+# Test
+pnpm nx run-many -t test
+pnpm nx run api:test --watch
+
+# Lint
+pnpm nx run-many -t lint
+
+# Dependency graph görselleştir
+pnpm nx graph
+
+# Yeni kütüphane oluştur
+pnpm nx g @nx/js:library shared-types --directory=packages/shared-types
+```
+
+## CI/CD Pipeline
+
+### PR Açıldığında (ci.yml)
+1. `pnpm install`
+2. `nx affected -t lint` — sadece değişen projeleri lint et
+3. `nx affected -t test` — sadece değişen projeleri test et
+4. `nx affected -t build` — sadece değişen projeleri build et
+5. Build başarılıysa → PR merge edilebilir
+
+### Main Branch'e Merge (deploy)
+1. `nx run web:build` → Vercel'e deploy
+2. `nx run api:build` → Docker image build → Railway'e push
+3. `prisma migrate deploy` → Production DB migration
+
+## Ortam Değişkenleri Yönetimi
+
+| Ortam | Web (.env) | API (.env) |
+|-------|-----------|-----------|
+| Local | `apps/web/.env.local` | `apps/api/.env` |
+| Staging | Vercel env vars | Railway env vars |
+| Production | Vercel env vars | Railway env vars |
+
+### Zorunlu Env Değişkenleri (API)
+```
+DATABASE_URL=postgresql://tourtech:tourtech@localhost:5433/tourtech?schema=public
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=<random-secret>
+KEYCLOAK_URL=http://localhost:8080
+KEYCLOAK_REALM=tourtech
+KEYCLOAK_CLIENT_ID=tourtech-api
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_ACCESS_KEY=tourtech
+MINIO_SECRET_KEY=tourtech123
+RESEND_API_KEY=<optional>
+```
+
+### Zorunlu Env Değişkenleri (Web)
+```
+NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=<random-secret>
+```
+
+## Branch Stratejisi
+
+```
+main (production)
+├── staging (pre-production test)
+└── develop (aktif geliştirme)
+    ├── feat/tour-search
+    ├── feat/payment-integration
+    ├── fix/booking-validation
+    └── refactor/catalog-module
+```
+
+- `develop` → `staging`: Her sprint sonunda
+- `staging` → `main`: QA onayı sonrası
+- Feature branch → `develop`: PR + code review + CI geçmeli

@@ -1,0 +1,437 @@
+---
+description: Yeni NestJS modülü, feature veya migration oluşturma rehberi. "Modül oluştur", "yeni özellik ekle", "tablo ekle", "migration yap" gibi isteklerde kullan.
+globs: apps/api/src/modules/**
+alwaysApply: false
+---
+
+# Modül & Feature & Migration Oluşturma Rehberi
+
+Bu rehber 3 senaryoyu kapsar:
+1. Yeni Backend Modülü Oluşturma
+2. End-to-End Feature Geliştirme (Frontend + Backend + Types)
+3. Veritabanı Migration Oluşturma
+
+---
+
+## BÖLÜM 1: Yeni NestJS Modülü Oluşturma
+
+### Gereksinimler
+- Modül adı (İngilizce, kebab-case): ör. "loyalty", "campaign", "transfer"
+- Ana kaynak(lar): ör. "Campaign", "Reward"
+- Hangi event'leri yayacak / dinleyecek
+
+### Klasör Yapısı
+
+```
+apps/api/src/modules/{module-name}/
+├── {module-name}.module.ts
+├── controllers/
+│   └── {resource}.controller.ts
+├── services/
+│   └── {resource}.service.ts
+├── commands/
+│   └── create-{resource}/
+│       ├── create-{resource}.command.ts
+│       └── create-{resource}.handler.ts
+├── queries/
+│   └── get-{resource}/
+│       ├── get-{resource}.query.ts
+│       └── get-{resource}.handler.ts
+├── events/
+│   └── {resource}-created.event.ts
+├── listeners/
+├── dto/
+│   ├── create-{resource}.dto.ts
+│   ├── update-{resource}.dto.ts
+│   └── {resource}-response.dto.ts
+├── interfaces/
+└── __tests__/
+    └── {resource}.service.spec.ts
+```
+
+### Module Dosyası
+
+```typescript
+import { Module } from '@nestjs/common';
+import { CqrsModule } from '@nestjs/cqrs';
+import { PrismaModule } from '@/core/database/prisma.module';
+import { CacheModule } from '@/core/cache/redis.module';
+
+import { {Resource}Controller } from './controllers/{resource}.controller';
+import { {Resource}Service } from './services/{resource}.service';
+import { Create{Resource}Handler } from './commands/create-{resource}/create-{resource}.handler';
+import { Get{Resource}Handler } from './queries/get-{resource}/get-{resource}.handler';
+
+const CommandHandlers = [Create{Resource}Handler];
+const QueryHandlers = [Get{Resource}Handler];
+const EventListeners = [];
+
+@Module({
+  imports: [CqrsModule, PrismaModule, CacheModule],
+  controllers: [{Resource}Controller],
+  providers: [
+    {Resource}Service,
+    ...CommandHandlers,
+    ...QueryHandlers,
+    ...EventListeners,
+  ],
+})
+export class {ModuleName}Module {}
+```
+
+### Controller Template
+
+```typescript
+import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '@/core/auth/guards/jwt-auth.guard';
+import { RolesGuard } from '@/core/auth/guards/roles.guard';
+import { Roles } from '@/core/auth/decorators/roles.decorator';
+import { CurrentUser } from '@/core/auth/decorators/current-user.decorator';
+import { Public } from '@/core/auth/decorators/public.decorator';
+import { Role } from '@/shared/enums/role.enum';
+
+@Controller('{module-name}/{resource-plural}')
+@ApiTags('{ModuleName}')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+export class {Resource}Controller {
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
+  ) {}
+
+  @Post()
+  @Roles(Role.PARTNER, Role.ADMIN)
+  @ApiOperation({ summary: 'Create new {resource}' })
+  @ApiResponse({ status: 201 })
+  async create(@Body() dto: Create{Resource}Dto, @CurrentUser() user: UserPayload) {
+    return this.commandBus.execute(new Create{Resource}Command(dto, user.id));
+  }
+
+  @Get(':id')
+  @Public()
+  @ApiOperation({ summary: 'Get {resource} by ID' })
+  async getById(@Param('id') id: string) {
+    return this.queryBus.execute(new Get{Resource}Query(id));
+  }
+}
+```
+
+### Service Template
+
+```typescript
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PrismaService } from '@/core/database/prisma.service';
+import { CacheService } from '@/core/cache/cache.service';
+
+@Injectable()
+export class {Resource}Service {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
+
+  async create(dto: Create{Resource}Dto, userId: string) {
+    const {resource} = await this.prisma.{resource}.create({
+      data: { ...dto, createdById: userId },
+    });
+    this.eventEmitter.emit('{resource}.created', { {resource}Id: {resource}.id, userId });
+    return { success: true, data: {resource}, error: null };
+  }
+
+  async findById(id: string) {
+    const cacheKey = `{resource}:${id}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return { success: true, data: cached, error: null };
+
+    const {resource} = await this.prisma.{resource}.findUnique({ where: { id, deletedAt: null } });
+    if (!{resource}) throw new NotFoundException('{Resource} not found');
+
+    await this.cache.set(cacheKey, {resource}, 900);
+    return { success: true, data: {resource}, error: null };
+  }
+}
+```
+
+### DTO Template
+
+```typescript
+import { IsString, IsNotEmpty, MaxLength, IsOptional, IsNumber, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class Create{Resource}Dto {
+  @ApiProperty({ maxLength: 200 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  title: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  description?: string;
+
+  @ApiProperty({ minimum: 0 })
+  @IsNumber()
+  @Min(0)
+  price: number;
+}
+```
+
+### Command + Handler Template
+
+```typescript
+// create-{resource}.command.ts
+export class Create{Resource}Command {
+  constructor(public readonly dto: Create{Resource}Dto, public readonly userId: string) {}
+}
+
+// create-{resource}.handler.ts
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+
+@CommandHandler(Create{Resource}Command)
+export class Create{Resource}Handler implements ICommandHandler<Create{Resource}Command> {
+  constructor(private readonly service: {Resource}Service) {}
+  async execute(command: Create{Resource}Command) {
+    return this.service.create(command.dto, command.userId);
+  }
+}
+```
+
+### Query + Handler Template
+
+```typescript
+// get-{resource}.query.ts
+export class Get{Resource}Query {
+  constructor(public readonly id: string) {}
+}
+
+// get-{resource}.handler.ts
+import { QueryHandler, IQueryHandler } from '@nestjs/cqrs';
+
+@QueryHandler(Get{Resource}Query)
+export class Get{Resource}Handler implements IQueryHandler<Get{Resource}Query> {
+  constructor(private readonly service: {Resource}Service) {}
+  async execute(query: Get{Resource}Query) {
+    return this.service.findById(query.id);
+  }
+}
+```
+
+### Son Adımlar
+1. `app.module.ts`'e modülü import et
+2. Prisma schema'ya model ekle (`@@schema("{module-name}")`)
+3. `pnpm --filter api prisma migrate dev --name create_{resource}_table`
+4. `packages/shared-types/src/{module}.types.ts` oluştur
+5. Seed verisi ekle: `apps/api/prisma/seed/{module}.seed.ts`
+
+---
+
+## BÖLÜM 2: End-to-End Feature Geliştirme
+
+### Akış Sırası
+
+```
+1. Backend DTO → 2. Command/Query → 3. Service → 4. Controller
+5. Shared Types → 6. Shared Validators (Zod)
+7. Frontend Service → 8. Page → 9. Component → 10. Form (varsa)
+```
+
+### Frontend Sayfa Yönlendirme
+
+| Kullanıcı Tipi | Route Group | Örnek Yol |
+|---|---|---|
+| Herkes (SEO) | `(marketing)/` | `/tours`, `/hotels`, `/activities` |
+| Giriş yapmış müşteri | `(customer)/` | `/bookings`, `/profile`, `/checkout` |
+| Partner | `(partner)/` | `/partner/dashboard`, `/partner/tours` |
+| Admin | `(admin)/` | `/admin/dashboard`, `/admin/users` |
+| Auth sayfaları | `(auth)/` | `/login`, `/register` |
+
+### Frontend Service Template
+
+```typescript
+// apps/web/src/services/{module}.service.ts
+import { apiClient } from './api-client';
+import type { Tour, TourSearchResponse } from '@turladur/shared-types';
+
+export const catalogService = {
+  searchTours: (params: Record<string, unknown>) =>
+    apiClient.get<ApiResponse<TourSearchResponse>>('/catalog/tours/search', { params }),
+  getTourById: (id: string) =>
+    apiClient.get<ApiResponse<Tour>>(`/catalog/tours/${id}`),
+};
+```
+
+### Frontend Page (Public/SEO)
+
+```typescript
+// apps/web/src/app/(marketing)/tours/page.tsx
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Tur Ara | TurlaDur',
+  description: "Türkiye'nin en güzel turlarını keşfedin.",
+};
+
+export default async function ToursPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
+  const params = await searchParams;
+  const res = await fetch(`${process.env.API_URL}/api/v1/catalog/tours/search?${new URLSearchParams(params)}`, {
+    next: { revalidate: 300 },
+  });
+  const data = await res.json();
+  return <TourSearchPage initialData={data.data} />;
+}
+```
+
+### Frontend Page (Protected)
+
+```typescript
+// apps/web/src/app/(customer)/bookings/page.tsx
+'use client';
+import { useQuery } from '@tanstack/react-query';
+import { bookingService } from '@/services/booking.service';
+
+export default function BookingsPage() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['bookings', 'my'],
+    queryFn: () => bookingService.getMyBookings(),
+  });
+  if (isLoading) return <LoadingSpinner />;
+  return <BookingList bookings={data.data} />;
+}
+```
+
+### Frontend Form (React Hook Form + Zod)
+
+```typescript
+'use client';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createBookingSchema, type CreateBookingInput } from '@turladur/shared-validators';
+
+export function BookingForm({ tourDateId }: { tourDateId: string }) {
+  const form = useForm<CreateBookingInput>({
+    resolver: zodResolver(createBookingSchema),
+    defaultValues: { tourDateId },
+  });
+
+  const mutation = useMutation({
+    mutationFn: bookingService.createBooking,
+    onSuccess: () => toast.success('Rezervasyon oluşturuldu!'),
+    onError: (err) => toast.error(err.message),
+  });
+
+  return (
+    <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))}>
+      {/* form fields */}
+    </form>
+  );
+}
+```
+
+---
+
+## BÖLÜM 3: Veritabanı Migration
+
+### Schema Eşleştirme
+
+| Schema | Modül | İçerik |
+|--------|-------|--------|
+| `catalog` | Catalog | Hotel, Room, Tour, TourDate, Activity, Route |
+| `booking` | Booking | Reservation, Cart, CartItem, GuestInfo |
+| `payment` | Payment | Transaction, Invoice, Refund |
+| `identity` | Identity | User, Partner, SubUser, Role, Session |
+| `review` | Review | Review, PartnerReview |
+| `notification` | Notification | Notification, NotificationPreference |
+
+### Yeni Model Template
+
+```prisma
+model NewResource {
+  id          String    @id @default(cuid())
+  title       String    @db.VarChar(200)
+  slug        String    @unique
+  description String?   @db.Text
+  price       Decimal?  @db.Decimal(10, 2)
+  status      ResourceStatus @default(DRAFT)
+
+  operatorId  String
+  operator    TourOperator @relation(fields: [operatorId], references: [id])
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@index([operatorId])
+  @@index([status])
+  @@schema("catalog")
+}
+```
+
+### Zorunlu Kurallar
+- Her model: `id`, `createdAt`, `updatedAt`, `deletedAt` alanları ŞART
+- Her model: `@@schema("{module}")` ŞART
+- Her foreign key: `@@index([fkColumn])` ŞART
+- Enum'lar da `@@schema()` almalı
+- Yeni NOT NULL alan eklerken `@default()` zorunlu
+- Migration adı: İngilizce `snake_case` (ör: `create_campaign_table`)
+
+### Migration Komutu
+```bash
+cd apps/api
+pnpm prisma migrate dev --name {descriptive_name}
+pnpm prisma generate
+```
+
+### Seed Template
+
+```typescript
+// apps/api/prisma/seed/{module}.seed.ts
+import { PrismaClient } from '@prisma/client';
+
+export async function seedCampaigns(prisma: PrismaClient) {
+  const items = [
+    { id: 'seed-campaign-1', title: 'Erken Rezervasyon', discountPercent: 20, status: 'ACTIVE' },
+  ];
+  for (const item of items) {
+    await prisma.campaign.upsert({ where: { id: item.id }, update: item, create: item });
+  }
+  console.log(`✓ Campaign seed (${items.length} kayıt)`);
+}
+```
+
+---
+
+## Modül Checklist (Her İşlem Sonunda Kontrol Et)
+
+- [ ] Modül başka modülün service'ini import ETMİYOR
+- [ ] Modüller arası iletişim SADECE event ile
+- [ ] DTO'larda class-validator + @ApiProperty decorator var
+- [ ] Controller'da @ApiTags, @ApiOperation var
+- [ ] Response formatı: `{ success, data, error, meta? }`
+- [ ] URL: `/api/v1/{module}/{resource}`
+- [ ] Prisma model: `@@schema("{module}")` + audit alanları
+- [ ] Shared types: packages/shared-types'a export edildi
+- [ ] Cache: okuma ağırlıklı endpoint'lerde Redis (TTL 5-15dk)
+- [ ] Auth: default protected, public olanlar @Public()
+- [ ] Ownership check: kullanıcı sadece kendi verisine erişir
+- [ ] Test: en az bir `__tests__/*.spec.ts` dosyası var
+
+## Modüller Arası Event Matrisi
+
+| Kaynak | Event | Dinleyen | Aksiyon |
+|--------|-------|----------|---------|
+| Booking | BookingCreatedEvent | Payment | Ödeme başlat |
+| Booking | BookingCreatedEvent | Notification | Email gönder |
+| Payment | PaymentCompletedEvent | Booking | Status → CONFIRMED |
+| Payment | PaymentCompletedEvent | Notification | Onay email'i |
+| Payment | PaymentFailedEvent | Booking | Status → FAILED |
+| Catalog | TourCreatedEvent | Notification | Admin bildirimi |
+| Catalog | PriceUpdatedEvent | Cache | Cache invalidate |
+| Review | ReviewCreatedEvent | Catalog | Rating güncelle |
+| Identity | PartnerVerifiedEvent | Notification | Hoşgeldin email'i |

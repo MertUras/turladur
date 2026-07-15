@@ -1,0 +1,189 @@
+---
+description: REST API tasarım kuralları ve endpoint standartları
+globs: "**/controllers/**,**/dto/**"
+alwaysApply: false
+---
+
+# API Tasarım Kuralları
+
+## URL Yapısı
+
+### Format
+```
+/api/v1/{modül}/{kaynak}/{id?}/{alt-kaynak?}
+```
+
+### Örnekler
+```
+GET    /api/v1/catalog/tours                    → Tur listesi
+GET    /api/v1/catalog/tours/:id                → Tur detay
+POST   /api/v1/catalog/tours                    → Tur oluştur
+PATCH  /api/v1/catalog/tours/:id                → Tur güncelle
+DELETE /api/v1/catalog/tours/:id                → Tur sil (soft delete)
+
+GET    /api/v1/catalog/tours/:id/dates          → Tur tarihleri
+GET    /api/v1/catalog/hotels/search            → Otel ara
+
+POST   /api/v1/booking/reservations             → Rezervasyon oluştur
+GET    /api/v1/booking/reservations/:id         → Rezervasyon detay
+PATCH  /api/v1/booking/reservations/:id/cancel  → Rezervasyon iptal
+
+POST   /api/v1/payment/checkout                 → Ödeme başlat
+POST   /api/v1/payment/webhook/iyzico           → Payment gateway callback
+
+GET    /api/v1/identity/me                      → Mevcut kullanıcı
+PATCH  /api/v1/identity/me                      → Profil güncelle
+
+GET    /api/v1/partner/dashboard/stats          → Partner istatistikleri
+GET    /api/v1/partner/tours                    → Partner'ın turları
+```
+
+## Versiyonlama
+- URL-based: `/api/v1/`, `/api/v2/`
+- Major breaking change → yeni versiyon
+- Eski versiyon minimum 6 ay desteklenir (deprecation notice)
+
+## HTTP Method Kullanımı
+
+| Method | Kullanım | Idempotent | Body |
+|--------|----------|------------|------|
+| GET | Veri oku | Evet | Yok |
+| POST | Yeni kaynak oluştur / Action tetikle | Hayır | Var |
+| PATCH | Kısmi güncelleme | Evet | Var |
+| PUT | Tam güncelleme (KULLANMA — PATCH tercih et) | Evet | Var |
+| DELETE | Sil (soft delete) | Evet | Yok |
+
+## Request Format
+
+### Query Parameters (GET istekleri)
+```
+GET /api/v1/catalog/tours?page=1&limit=20&sort=price&order=asc&category=cultural&minPrice=500&maxPrice=5000&region=antalya
+```
+
+### Pagination
+```typescript
+interface PaginationQuery {
+  page: number;    // 1-based (default: 1)
+  limit: number;   // max: 100 (default: 20)
+  sort?: string;   // Alan adı
+  order?: 'asc' | 'desc';  // default: desc
+}
+```
+
+### Request Body (POST/PATCH)
+```typescript
+// POST /api/v1/booking/reservations
+{
+  "tourDateId": "clx123...",
+  "guests": [
+    { "firstName": "Ahmet", "lastName": "Yılmaz", "birthDate": "1990-05-15" }
+  ],
+  "contactEmail": "ahmet@example.com",
+  "contactPhone": "+905551234567",
+  "notes": "Vegeteryan yemek tercihi"
+}
+```
+
+## Response Format
+
+### Başarılı Response (Tekil)
+```typescript
+{
+  "success": true,
+  "data": {
+    "id": "clx123...",
+    "title": "Kapadokya Balon Turu",
+    "price": 2500,
+    "status": "CONFIRMED"
+  },
+  "error": null
+}
+```
+
+### Başarılı Response (Liste)
+```typescript
+{
+  "success": true,
+  "data": [
+    { "id": "clx1...", "title": "Kapadokya Turu" },
+    { "id": "clx2...", "title": "Efes Turu" }
+  ],
+  "error": null,
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 156,
+    "totalPages": 8
+  }
+}
+```
+
+### Hata Response
+```typescript
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "TOUR_DATE_NOT_AVAILABLE",
+    "message": "Seçilen tarih için yeterli kontenjan bulunmamaktadır.",
+    "details": [
+      { "field": "tourDateId", "message": "Bu tarih dolu" }
+    ]
+  }
+}
+```
+
+## HTTP Status Codes
+
+| Code | Kullanım |
+|------|----------|
+| 200 | Başarılı GET, PATCH, DELETE |
+| 201 | Başarılı POST (kaynak oluşturuldu) |
+| 204 | Başarılı ama body yok (nadir) |
+| 400 | Validation hatası, kötü request |
+| 401 | Authentication gerekli (token yok/geçersiz) |
+| 403 | Yetki yok (token geçerli ama izin yok) |
+| 404 | Kaynak bulunamadı |
+| 409 | Conflict (duplicate, stale data) |
+| 422 | İş kuralı ihlali (ör: geçmiş tarihe rezervasyon) |
+| 429 | Rate limit aşıldı |
+| 500 | Sunucu hatası (loglanır, kullanıcıya detay verilmez) |
+
+## Error Codes (Business)
+
+Her modülün kendi error code prefix'i vardır:
+
+| Modül | Prefix | Örnek |
+|-------|--------|-------|
+| Catalog | `CATALOG_` | `CATALOG_TOUR_NOT_FOUND` |
+| Booking | `BOOKING_` | `BOOKING_DATE_NOT_AVAILABLE` |
+| Payment | `PAYMENT_` | `PAYMENT_CARD_DECLINED` |
+| Identity | `AUTH_` | `AUTH_INVALID_CREDENTIALS` |
+| Partner | `PARTNER_` | `PARTNER_NOT_VERIFIED` |
+
+## Güvenlik Headers
+
+Tüm response'lara eklenir:
+```
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-XSS-Protection: 1; mode=block
+Strict-Transport-Security: max-age=31536000
+```
+
+## Rate Limiting
+
+| Endpoint Tipi | Limit |
+|---------------|-------|
+| Auth (login/register) | 5 req/dk |
+| Search | 30 req/dk |
+| General API | 100 req/dk |
+| Webhook | unlimited (IP whitelist) |
+| Admin | 200 req/dk |
+
+## Swagger/OpenAPI
+
+- Her controller `@ApiTags` ile gruplı.
+- Her endpoint `@ApiOperation({ summary })` ile açıklamalı.
+- Response tipleri `@ApiResponse({ type: ResponseDto })` ile belirli.
+- Swagger UI: `/api/docs` endpoint'inde erişilebilir (sadece dev/staging).
