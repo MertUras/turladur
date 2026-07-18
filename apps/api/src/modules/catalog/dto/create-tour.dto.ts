@@ -47,6 +47,6 @@ export class CreateTourDto {
 
   @ApiPropertyOptional({ example: 'https://cdn.example.com/kapadokya.jpg' })
   @IsOptional()
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   coverUrl?: string;
 }

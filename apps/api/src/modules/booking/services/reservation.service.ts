@@ -126,7 +126,7 @@ export class ReservationService {
       });
     }
 
-    this.assertAccess(reservation, userId, role);
+    this.assertAccess(reservation, userId, role, undefined);
 
     return {
       success: true,
@@ -160,7 +160,7 @@ export class ReservationService {
       });
     }
 
-    this.assertAccess(reservation, userId, role);
+    this.assertAccess(reservation, userId, role, undefined);
 
     if (
       reservation.status === 'CANCELLED' ||
@@ -240,12 +240,19 @@ export class ReservationService {
   }
 
   private assertAccess(
-    reservation: { userId: string },
+    reservation: { userId: string; partnerId: string },
     userId: string,
     role: string,
+    partnerId?: string,
   ) {
     const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    if (isAdmin || reservation.userId === userId) {
+    const isOwner = reservation.userId === userId;
+    const isPartnerOwner =
+      (role === 'PARTNER' || role === 'PARTNER_STAFF') &&
+      Boolean(partnerId) &&
+      reservation.partnerId === partnerId;
+
+    if (isAdmin || isOwner || isPartnerOwner) {
       return;
     }
 

@@ -135,11 +135,20 @@
 
 ### Definition of Done
 
-- [ ] Müşteri tur tarihi seçip rezervasyon oluşturabiliyor
-- [ ] İyzico test kartı ile ödeme yapılabiliyor
-- [ ] Ödeme başarılı → Booking status otomatik CONFIRMED oluyor
-- [ ] Ödeme başarısız → Booking status PAYMENT_FAILED oluyor
-- [ ] İade işlemi çalışıyor
+- [x] Müşteri tur tarihi seçip rezervasyon oluşturabiliyor
+- [x] İyzico test kartı ile ödeme yapılabiliyor
+- [x] Ödeme başarılı → Booking status otomatik CONFIRMED oluyor
+- [x] Ödeme başarısız → Booking status PAYMENT_FAILED oluyor
+- [x] İade işlemi çalışıyor
+
+> **DoD doğrulandı (16 Jul 2026):** `apps/api` — `booking` + `payment` schema; CQRS + event (`payment.completed` → CONFIRMED, `payment.failed` → PAYMENT_FAILED).
+>
+> - Rezervasyon kapasite düşürür; iptalde geri verir
+> - Ödeme: `IYZICO_*` boşsa **MockPaymentGateway** (`…0000` → fail). Key dolunca Iyzico adapter (SDK scaffold)
+> - Webhook `POST /payment/webhook/iyzico`; Refund Admin `POST /payment/refund`
+> - Shared Zod: `@turladur/shared-validators`
+> - Legacy root Prisma / UI dokunulmadı
+> - Sonraki: gerçek İyzico SDK + 3DS HTML wiring
 
 ---
 
@@ -149,32 +158,41 @@
 
 ### Görevler
 
-| #     | Görev                                                   | Öncelik | Çıktı                                                                                   |
-| ----- | ------------------------------------------------------- | ------- | --------------------------------------------------------------------------------------- |
-| 15.0  | **(ex-12.2/12.3)** Legacy Prisma → multi-schema cutover | P0      | Staging backup → root tablolar → `identity`/`catalog`/…; root `prisma/` deprecate planı |
-| 15.1  | `apps/web/` — Layout, Header, Footer                    | P0      | Temel sayfa iskeleti                                                                    |
-| 15.2  | API client setup (axios instance + interceptors)        | P0      | `services/api-client.ts`                                                                |
-| 15.3  | Auth provider (NextAuth → Keycloak/JWT)                 | P0      | Login/register çalışıyor                                                                |
-| 15.4  | `(marketing)/` — Ana sayfa                              | P0      | Hero, popüler turlar, SEO                                                               |
-| 15.5  | `(marketing)/tours/` — Tur listesi + arama              | P0      | Filter, sort, pagination                                                                |
-| 15.6  | `(marketing)/tours/[id]/` — Tur detay                   | P0      | Galeri, fiyat, tarihler, rezervasyon butonu                                             |
-| 15.7  | `(marketing)/hotels/` — Otel listesi                    | P1      | Arama, filtre                                                                           |
-| 15.8  | `(marketing)/hotels/[id]/` — Otel detay                 | P1      | Oda seçimi                                                                              |
-| 15.9  | `(marketing)/activities/` — Aktivite listesi            | P1      | Kategori filtre                                                                         |
-| 15.10 | `(auth)/login` + `(auth)/register`                      | P0      | Auth sayfaları                                                                          |
-| 15.11 | `(customer)/checkout/` — Ödeme sayfası                  | P0      | Booking form + İyzico iframe                                                            |
-| 15.12 | `(customer)/bookings/` — Rezervasyonlarım               | P0      | Liste + detay                                                                           |
-| 15.13 | `(customer)/profile/` — Profil sayfası                  | P1      | Bilgi güncelleme                                                                        |
-| 15.14 | Responsive kontrol (tüm sayfalar mobile-first)          | P0      | Tablet + mobile uyum                                                                    |
-| 15.15 | SEO metadata (tüm public sayfalar)                      | P0      | Title, description, OG tags                                                             |
+| #     | Görev                                                   | Öncelik | Çıktı                                                            |
+| ----- | ------------------------------------------------------- | ------- | ---------------------------------------------------------------- |
+| 15.0  | **(ex-12.2/12.3)** Legacy Prisma → multi-schema cutover | P0      | **ERTELENDİ** — Nest customer UI sonrası; staging backup zorunlu |
+| 15.1  | `apps/web/` — Layout, Header, Footer                    | P0      | Temel sayfa iskeleti                                             |
+| 15.2  | API client setup (axios instance + interceptors)        | P0      | `services/api-client.ts`                                         |
+| 15.3  | Auth provider (NextAuth → Keycloak/JWT)                 | P0      | Login/register çalışıyor                                         |
+| 15.4  | `(marketing)/` — Ana sayfa                              | P0      | Hero, popüler turlar, SEO                                        |
+| 15.5  | `(marketing)/tours/` — Tur listesi + arama              | P0      | Filter, sort, pagination                                         |
+| 15.6  | `(marketing)/tours/[id]/` — Tur detay                   | P0      | Galeri, fiyat, tarihler, rezervasyon butonu                      |
+| 15.7  | `(marketing)/hotels/` — Otel listesi                    | P1      | Arama, filtre                                                    |
+| 15.8  | `(marketing)/hotels/[id]/` — Otel detay                 | P1      | Oda seçimi                                                       |
+| 15.9  | `(marketing)/activities/` — Aktivite listesi            | P1      | Kategori filtre                                                  |
+| 15.10 | `(auth)/login` + `(auth)/register`                      | P0      | Auth sayfaları                                                   |
+| 15.11 | `(customer)/checkout/` — Ödeme sayfası                  | P0      | Booking form + İyzico iframe                                     |
+| 15.12 | `(customer)/bookings/` — Rezervasyonlarım               | P0      | Liste + detay                                                    |
+| 15.13 | `(customer)/profile/` — Profil sayfası                  | P1      | Bilgi güncelleme                                                 |
+| 15.14 | Responsive kontrol (tüm sayfalar mobile-first)          | P0      | Tablet + mobile uyum                                             |
+| 15.15 | SEO metadata (tüm public sayfalar)                      | P0      | Title, description, OG tags                                      |
 
 ### Definition of Done
 
-- [ ] Kullanıcı giriş yapıp tur arayabiliyor
-- [ ] Tur detay sayfası SSR ile render ediliyor (Google indexleyebilir)
-- [ ] Checkout akışı çalışıyor (form → ödeme → onay)
-- [ ] Mobilde düzgün görünüyor
-- [ ] Lighthouse SEO skoru > 90
+- [x] Kullanıcı giriş yapıp tur arayabiliyor
+- [x] Tur detay sayfası SSR ile render ediliyor (Google indexleyebilir)
+- [x] Checkout akışı çalışıyor (form → ödeme → onay)
+- [x] Mobilde düzgün görünüyor
+- [ ] Lighthouse SEO skoru > 90 _(ölçüm sonraki tur)_
+
+> **Güvenli taşıma notu (18 Jul 2026):**
+>
+> - **15.0 ERTELENDİ** — root Prisma cutover legacy `pnpm dev` + `app/api/*` kırar; Nest UI olgunlaşınca
+> - Yeni UI: `apps/web` port **3001** (`pnpm dev:web`) — legacy **3000** dokunulmadı
+> - Brand: sky + Poppins/Montserrat (legacy ile uyumlu, yeniden yazılmış Header/Footer)
+> - Data: sadece Nest (`NEXT_PUBLIC_API_URL`) — Prisma/NextAuth yok
+> - P0: home, tours list/detail SSR, login/register, checkout, bookings
+> - P1 ertelendi: hotels, activities, profile, gerçek İyzico 3DS UI
 
 ---
 
@@ -184,31 +202,32 @@
 
 ### Görevler
 
-| #     | Görev                                              | Öncelik | Çıktı                                    |
-| ----- | -------------------------------------------------- | ------- | ---------------------------------------- |
-| 16.1  | `modules/partner/` — Dashboard stats endpoint      | P0      | Gelir, rezervasyon, yorum istatistikleri |
-| 16.2  | Partner — Tour management (CRUD from partner view) | P0      | Tur oluştur/düzenle/sil                  |
-| 16.3  | Partner — Reservation management                   | P0      | Gelen rezervasyonları gör/onayla/reddet  |
-| 16.4  | Partner — Financial reports                        | P1      | Gelir raporu, komisyon hesaplama         |
-| 16.5  | Partner — Customer list                            | P1      | Geçmiş müşteriler                        |
-| 16.6  | `(partner)/dashboard/` — Frontend dashboard        | P0      | İstatistik kartları, grafikler           |
-| 16.7  | `(partner)/tours/` — Tur yönetim sayfaları         | P0      | Liste, oluştur, düzenle                  |
-| 16.8  | `(partner)/reservations/` — Rezervasyon listesi    | P0      | Filtre, status güncelle                  |
-| 16.9  | `(partner)/financials/` — Finansal rapor sayfası   | P1      | Grafik, tablo                            |
-| 16.10 | `(admin)/dashboard/` — Admin istatistikleri        | P0      | Platform geneli metrikler                |
-| 16.11 | `(admin)/users/` — Kullanıcı yönetimi              | P0      | Liste, ban, rol değiştir                 |
-| 16.12 | `(admin)/tours/` — Tur onaylama                    | P0      | Pending turları incele/onayla            |
-| 16.13 | `(admin)/agencies/` — Partner onaylama             | P0      | Doğrulama bekleyen partner'lar           |
-| 16.14 | `(admin)/payments/` — Ödeme takibi                 | P1      | Transaction listesi                      |
-| 16.15 | Image upload entegrasyonu (partner tur görselleri) | P0      | Presigned URL + gallery                  |
+| #     | Görev                                              | Öncelik | Çıktı                                     |
+| ----- | -------------------------------------------------- | ------- | ----------------------------------------- |
+| 16.1  | `modules/partner/` — Dashboard stats endpoint      | P0 ✅   | Gelir, rezervasyon (yorum → Sprint 17)    |
+| 16.2  | Partner — Tour management (CRUD from partner view) | P0 ✅   | Liste + oluştur (+ catalog update/delete) |
+| 16.3  | Partner — Reservation management                   | P0 ✅   | Liste + CONFIRMED/CANCELLED               |
+| 16.4  | Partner — Financial reports                        | P1      | Gelir raporu, komisyon hesaplama          |
+| 16.5  | Partner — Customer list                            | P1      | Geçmiş müşteriler                         |
+| 16.6  | `(partner)/dashboard/` — Frontend dashboard        | P0 ✅   | İstatistik kartları (grafik → P1)         |
+| 16.7  | `(partner)/tours/` — Tur yönetim sayfaları         | P0 ✅   | Liste + oluştur (+ kapak upload)          |
+| 16.8  | `(partner)/reservations/` — Rezervasyon listesi    | P0 ✅   | Status güncelle                           |
+| 16.9  | `(partner)/financials/` — Finansal rapor sayfası   | P1      | Grafik, tablo                             |
+| 16.10 | `(admin)/dashboard/` — Admin istatistikleri        | P0 ✅   | Platform geneli metrikler                 |
+| 16.11 | `(admin)/users/` — Kullanıcı yönetimi              | P0 ✅   | Liste, aktif/pasif, rol değiştir          |
+| 16.12 | `(admin)/tours/` — Tur onaylama                    | P0 ✅   | Pending turları incele/onayla             |
+| 16.13 | `(admin)/agencies/` — Partner onaylama             | P0 ✅   | Doğrulama bekleyen partner'lar            |
+| 16.14 | `(admin)/payments/` — Ödeme takibi                 | P1      | Transaction listesi                       |
+| 16.15 | Image upload entegrasyonu (partner tur görselleri) | P0 ✅   | Presigned URL (yeni tur formu)            |
 
 ### Definition of Done
 
-- [ ] Partner giriş yapıp tur oluşturabiliyor (görsel dahil)
-- [ ] Partner gelen rezervasyonları görebiliyor
-- [ ] Admin yeni partner'ları onaylayabiliyor
-- [ ] Admin turları review edip yayına alabiliyor
+- [x] Partner giriş yapıp tur oluşturabiliyor (görsel dahil)
+- [x] Partner gelen rezervasyonları görebiliyor
+- [x] Admin yeni partner'ları onaylayabiliyor
+- [x] Admin turları review edip yayına alabiliyor
 - [ ] Dashboard grafikleri gerçek veriyle çalışıyor
+  - Not: P0 istatistik kartları canlı Nest verisiyle çalışıyor; grafik (chart) kütüphanesi P1 olarak Sprint 16 sonrası / polishasyon sprint'ine bırakıldı (16.4/16.9 financials ile birlikte).
 
 ---
 

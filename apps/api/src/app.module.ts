@@ -14,6 +14,8 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { IdentityModule } from './modules/identity/identity.module';
 import { BookingModule } from './modules/booking/booking.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { PartnerModule } from './modules/partner/partner.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -34,6 +36,8 @@ import { PaymentModule } from './modules/payment/payment.module';
     CatalogModule,
     BookingModule,
     PaymentModule,
+    PartnerModule,
+    AdminModule,
   ],
 })
 export class AppModule {}

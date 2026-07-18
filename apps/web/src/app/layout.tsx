@@ -1,21 +1,31 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Montserrat, Poppins } from 'next/font/google';
+
+import { AuthProvider } from '@/providers/auth-provider';
+import { QueryProvider } from '@/providers/query-provider';
 
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const montserrat = Montserrat({
   subsets: ['latin'],
+  variable: '--font-montserrat',
+  display: 'swap',
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const poppins = Poppins({
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-poppins',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'TurlaDur',
-  description: 'Turizm ekosistem platformu',
+  title: {
+    default: 'TurlaDur',
+    template: '%s | TurlaDur',
+  },
+  description:
+    'Turizm ekosistem platformu — turlar, rezervasyon, güvenli ödeme',
 };
 
 export default function RootLayout({
@@ -26,9 +36,11 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${montserrat.variable} ${poppins.variable} font-[family-name:var(--font-poppins)] antialiased`}
       >
-        {children}
+        <QueryProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

@@ -59,7 +59,8 @@ export class TourService {
         durationDays: dto.durationDays ?? 1,
         coverUrl: dto.coverUrl,
         partnerId,
-        status: 'PUBLISHED',
+        // Partner tours await admin review (Sprint 16); keeps public catalog clean
+        status: 'PENDING_REVIEW',
       },
     });
 

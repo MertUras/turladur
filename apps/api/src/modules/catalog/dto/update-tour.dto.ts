@@ -56,6 +56,6 @@ export class UpdateTourDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUrl()
+  @IsUrl({ require_tld: false })
   coverUrl?: string;
 }
