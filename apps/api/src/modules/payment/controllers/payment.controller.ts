@@ -1,5 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
+import { SkipThrottle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@turladur/shared-constants';
 
@@ -30,6 +31,7 @@ export class PaymentController {
   }
 
   @Public()
+  @SkipThrottle()
   @Post('webhook/iyzico')
   @ApiOperation({ summary: 'İyzico / sandbox payment callback' })
   webhook(@Body() dto: IyzicoWebhookDto) {

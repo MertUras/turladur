@@ -9,7 +9,7 @@ export function generateBookingNumber(): string {
 export function calculateAgeRangePrice(
   basePrice: number,
   pricingType: string,
-  value: number
+  value: number,
 ): number {
   switch (pricingType) {
     case 'free':
@@ -68,41 +68,45 @@ export function findChildAgeRange(ranges: AgeRangeLike[]): AgeRangeLike | null {
   if (!childRanges.length) return null;
 
   const schoolAge = childRanges.find(
-    (r) => r.minAge >= 7 && (r.maxAge === null || r.maxAge <= 12)
+    (r) => r.minAge >= 7 && (r.maxAge === null || r.maxAge <= 12),
   );
   if (schoolAge) return schoolAge;
 
   const preschool = childRanges.find(
-    (r) => r.minAge >= 3 && (r.maxAge === null || r.maxAge <= 6)
+    (r) => r.minAge >= 3 && (r.maxAge === null || r.maxAge <= 6),
   );
   if (preschool) return preschool;
 
   return childRanges.reduce((best, r) => (r.minAge > best.minAge ? r : best));
 }
 
-/** Adults pay full tier price; percentage/half/free on a shared range apply to children only. */
+/**
+ * Adults pay the published per-person (tour date) price.
+ * Child discounts (percentage / half / free / fixed) never apply to adults.
+ * Optional: fixed adult override only when an explicit positive value is set.
+ */
 export function getAdultUnitPrice(
   basePrice: number,
-  range: AgeRangePricingLike
+  range: AgeRangePricingLike,
 ): number {
-  if (
-    range.pricingType === 'percentage' ||
-    range.pricingType === 'half' ||
-    range.pricingType === 'free'
-  ) {
-    return basePrice;
+  if (range.pricingType === 'fixed' && Number(range.value) > 0) {
+    return Number(range.value);
   }
-  return calculateAgeRangePrice(basePrice, range.pricingType, range.value);
+  return basePrice;
 }
 
 /** Child price from child tier, or discounted base when sharing the adult range. */
 export function getChildUnitPrice(
   basePrice: number,
   adultRange: AgeRangePricingLike,
-  childRange: AgeRangePricingLike
+  childRange: AgeRangePricingLike,
 ): number {
   if (adultRange.id !== childRange.id) {
-    return calculateAgeRangePrice(basePrice, childRange.pricingType, childRange.value);
+    return calculateAgeRangePrice(
+      basePrice,
+      childRange.pricingType,
+      childRange.value,
+    );
   }
 
   switch (childRange.pricingType) {
@@ -123,22 +127,33 @@ export function computeTourPricing(
   basePrice: number,
   ranges: AgeRangePricingLike[],
   adults: number,
-  children: number
+  children: number,
 ): { total: number; breakdown: TourPriceBreakdownLine[] } {
   const adultRange = findAdultAgeRange(ranges) as AgeRangePricingLike | null;
   const childRange = findChildAgeRange(ranges) as AgeRangePricingLike | null;
   const breakdown: TourPriceBreakdownLine[] = [];
   let total = 0;
 
-  if (adults > 0 && adultRange) {
-    const unitPrice = getAdultUnitPrice(basePrice, adultRange);
+  if (adults > 0) {
+    const unitPrice = adultRange
+      ? getAdultUnitPrice(basePrice, adultRange)
+      : basePrice;
     const subtotal = unitPrice * adults;
     total += subtotal;
     breakdown.push({ label: 'Yetişkin', count: adults, unitPrice, subtotal });
   }
 
-  if (children > 0 && childRange && adultRange) {
-    const unitPrice = getChildUnitPrice(basePrice, adultRange, childRange);
+  if (children > 0) {
+    let unitPrice = basePrice;
+    if (childRange && adultRange) {
+      unitPrice = getChildUnitPrice(basePrice, adultRange, childRange);
+    } else if (childRange) {
+      unitPrice = calculateAgeRangePrice(
+        basePrice,
+        childRange.pricingType,
+        childRange.value,
+      );
+    }
     const subtotal = unitPrice * children;
     total += subtotal;
     breakdown.push({ label: 'Çocuk', count: children, unitPrice, subtotal });
@@ -150,7 +165,7 @@ export function computeTourPricing(
 export function adultChildToParticipants(
   adults: number,
   children: number,
-  ranges: AgeRangeLike[]
+  ranges: AgeRangeLike[],
 ): Record<string, number> {
   const result: Record<string, number> = {};
   const adultRange = findAdultAgeRange(ranges);
@@ -171,7 +186,7 @@ export function adultChildToParticipants(
 
 export function participantsToAdultChild(
   participants: Record<string, number>,
-  ranges: AgeRangeLike[]
+  ranges: AgeRangeLike[],
 ): { adults: number; children: number } {
   if (SHARED_ADULT_KEY in participants || SHARED_CHILD_KEY in participants) {
     return {
@@ -207,9 +222,12 @@ export function participantsToAdultChild(
 
 export function countParticipants(
   participants: Record<string, number>,
-  ageRanges: AgeRangeLike[]
+  ageRanges: AgeRangeLike[],
 ): { adults: number; children: number; total: number } {
-  const { adults, children } = participantsToAdultChild(participants, ageRanges);
+  const { adults, children } = participantsToAdultChild(
+    participants,
+    ageRanges,
+  );
   const total = adults + children;
 
   if (total === 0) {
@@ -220,7 +238,9 @@ export function countParticipants(
   return { adults, children, total };
 }
 
-export function parseParticipantsParam(raw: string | null): Record<string, number> {
+export function parseParticipantsParam(
+  raw: string | null,
+): Record<string, number> {
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw);
@@ -229,7 +249,7 @@ export function parseParticipantsParam(raw: string | null): Record<string, numbe
     }
     if (typeof parsed === 'object' && parsed !== null) {
       return Object.fromEntries(
-        Object.entries(parsed).map(([k, v]) => [k, Number(v) || 0])
+        Object.entries(parsed).map(([k, v]) => [k, Number(v) || 0]),
       );
     }
   } catch {
@@ -238,7 +258,9 @@ export function parseParticipantsParam(raw: string | null): Record<string, numbe
   return {};
 }
 
-export function getParticipantTotal(participants: Record<string, number>): number {
+export function getParticipantTotal(
+  participants: Record<string, number>,
+): number {
   if (typeof participants.total === 'number') {
     return participants.total;
   }

@@ -51,6 +51,8 @@ export interface Tour {
   category: TourCategory;
   status: TourStatus;
   durationDays: number;
+  averageRating: string;
+  reviewCount: number;
   partnerId: string;
   createdAt: string;
   updatedAt: string;
@@ -114,4 +116,38 @@ export interface PaymentTransaction {
   conversationId: string;
   providerPaymentId: string | null;
   paidAt: string | null;
+}
+
+export interface Review {
+  id: string;
+  tourId: string;
+  reservationId: string;
+  userId: string;
+  partnerId: string;
+  rating: number;
+  comment: string | null;
+  photoUrls: string[];
+  partnerReply: string | null;
+  partnerRepliedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type NotificationType =
+  | 'BOOKING_CONFIRMED'
+  | 'BOOKING_COMPLETED'
+  | 'REVIEW_RECEIVED'
+  | 'REVIEW_REQUEST'
+  | 'WELCOME'
+  | 'GENERIC';
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: NotificationType | string;
+  title: string;
+  body: string;
+  data: Record<string, unknown> | null;
+  readAt: string | null;
+  createdAt: string;
 }

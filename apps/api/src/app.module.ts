@@ -16,6 +16,10 @@ import { BookingModule } from './modules/booking/booking.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { PartnerModule } from './modules/partner/partner.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { ReviewModule } from './modules/review/review.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { ThrottlingModule } from './core/throttling/throttling.module';
 
 @Module({
   imports: [
@@ -23,6 +27,7 @@ import { AdminModule } from './modules/admin/admin.module';
       isGlobal: true,
       envFilePath: ['.env', '../../.env'],
     }),
+    ThrottlingModule,
     EventEmitterModule.forRoot(),
     LoggerModule,
     PrismaModule,
@@ -38,6 +43,9 @@ import { AdminModule } from './modules/admin/admin.module';
     PaymentModule,
     PartnerModule,
     AdminModule,
+    ReviewModule,
+    NotificationModule,
+    AnalyticsModule,
   ],
 })
 export class AppModule {}

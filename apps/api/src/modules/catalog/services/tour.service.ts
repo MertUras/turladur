@@ -23,6 +23,7 @@ import { CreateTourDto } from '../dto/create-tour.dto';
 import { SearchToursDto } from '../dto/search-tours.dto';
 import { UpdateTourDto } from '../dto/update-tour.dto';
 import { TourCreatedEvent } from '../events/tour-created.event';
+import { TourSearchPerformedEvent } from '../events/tour-search-performed.event';
 import { slugify } from '../utils/slugify';
 
 const SEARCH_CACHE_TTL_SECONDS = 300;
@@ -177,6 +178,10 @@ export class TourService {
     }>(cacheKey);
 
     if (cached) {
+      this.eventEmitter.emit(
+        'catalog.tour.search',
+        new TourSearchPerformedEvent(q, dto.category, cached.meta.total, true),
+      );
       return {
         success: true,
         data: cached.items,
@@ -214,6 +219,11 @@ export class TourService {
     const meta = { page, limit, total };
 
     await this.cache.set(cacheKey, { items, meta }, SEARCH_CACHE_TTL_SECONDS);
+
+    this.eventEmitter.emit(
+      'catalog.tour.search',
+      new TourSearchPerformedEvent(q, dto.category, total, false),
+    );
 
     return {
       success: true,
@@ -366,6 +376,8 @@ export class TourService {
     category: SharedTour['category'];
     status: SharedTour['status'];
     durationDays: number;
+    averageRating?: Prisma.Decimal;
+    reviewCount?: number;
     partnerId: string;
     createdAt: Date;
     updatedAt: Date;
@@ -381,6 +393,8 @@ export class TourService {
       category: tour.category,
       status: tour.status,
       durationDays: tour.durationDays,
+      averageRating: (tour.averageRating ?? new Prisma.Decimal(0)).toString(),
+      reviewCount: tour.reviewCount ?? 0,
       partnerId: tour.partnerId,
       createdAt: tour.createdAt.toISOString(),
       updatedAt: tour.updatedAt.toISOString(),

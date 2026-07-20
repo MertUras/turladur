@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Tour } from '@turladur/shared-types';
 
@@ -16,11 +17,13 @@ export function TourCard({ tour }: { tour: Tour }) {
     <article className="group flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
       <div className="relative aspect-[16/10] overflow-hidden bg-neutral-100">
         {tour.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={tour.coverUrl}
             alt={tour.title}
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+            fill
+            sizes="(max-width: 768px) 100vw, 33vw"
+            className="object-cover transition duration-500 group-hover:scale-105"
+            loading="lazy"
           />
         ) : (
           <div className="flex h-full items-center justify-center bg-gradient-to-br from-sky-100 to-sky-200 text-sky-800">

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { TourReviews } from '@/components/features/review/tour-reviews';
 import { getTourById, getTourDates } from '@/services/catalog';
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -77,6 +78,14 @@ export default async function TourDetailPage({ params }: PageProps) {
           </p>
           <p className="mt-6 text-3xl font-bold text-neutral-900">{price}</p>
           <p className="text-sm text-neutral-500">{tour.durationDays} gün</p>
+          {tour.reviewCount > 0 ? (
+            <p className="mt-2 text-sm text-amber-700">
+              ★ {Number(tour.averageRating).toFixed(1)} · {tour.reviewCount}{' '}
+              yorum
+            </p>
+          ) : (
+            <p className="mt-2 text-sm text-neutral-500">Henüz puan yok</p>
+          )}
 
           <div className="mt-8">
             <h2 className="text-lg font-semibold text-neutral-900">
@@ -114,6 +123,8 @@ export default async function TourDetailPage({ params }: PageProps) {
           </Link>
         </div>
       </div>
+
+      <TourReviews tourId={tour.id} />
     </div>
   );
 }

@@ -26,7 +26,10 @@ export default function PartnerReservationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reload on token only
   }, [accessToken]);
 
-  async function handleStatus(id: string, status: 'CONFIRMED' | 'CANCELLED') {
+  async function handleStatus(
+    id: string,
+    status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED',
+  ) {
     if (!accessToken) return;
     setBusyId(id);
     setError(null);
@@ -72,13 +75,15 @@ export default function PartnerReservationsPage() {
               disabled={busyId === row.id}
               defaultValue=""
               onChange={(e) => {
-                const v = e.target.value as 'CONFIRMED' | 'CANCELLED' | '';
+                const v = e.target.value as
+                  'CONFIRMED' | 'CANCELLED' | 'COMPLETED' | '';
                 if (v) void handleStatus(row.id, v);
                 e.target.value = '';
               }}
             >
               <option value="">Durum güncelle</option>
               <option value="CONFIRMED">CONFIRMED</option>
+              <option value="COMPLETED">COMPLETED</option>
               <option value="CANCELLED">CANCELLED</option>
             </select>
           </li>

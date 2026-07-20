@@ -9,6 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -42,6 +43,7 @@ export class TourController {
   ) {}
 
   @Public()
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @Get('search')
   @ApiOperation({ summary: 'Search published tours (Redis cached)' })
   search(@Query() dto: SearchToursDto) {

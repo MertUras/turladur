@@ -15,6 +15,7 @@ import { PrismaService } from '../../../core/database/prisma.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
 import { CreateReservationDto } from '../dto/create-reservation.dto';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
+import { BookingCompletedEvent } from '../events/booking-completed.event';
 import { BookingCreatedEvent } from '../events/booking-created.event';
 
 @Injectable()
@@ -211,6 +212,71 @@ export class ReservationService {
 
   async markPaymentFailed(reservationId: string) {
     return this.transition(reservationId, ['PENDING'], 'PAYMENT_FAILED');
+  }
+
+  /**
+   * Partner/admin marks a confirmed booking as completed after the tour ends.
+   * Required for Sprint 17 review eligibility.
+   */
+  async markCompleted(
+    reservationId: string,
+    actor?: {
+      userId: string;
+      role: string;
+      partnerId?: string;
+    },
+  ) {
+    const reservation = await this.prisma.reservation.findFirst({
+      where: { id: reservationId, deletedAt: null },
+    });
+
+    if (!reservation) {
+      throw new NotFoundException({
+        code: 'RESERVATION_NOT_FOUND',
+        message: 'Rezervasyon bulunamadı',
+      });
+    }
+
+    if (actor) {
+      this.assertAccess(reservation, actor.userId, actor.role, actor.partnerId);
+    }
+
+    if (reservation.status === 'COMPLETED') {
+      return {
+        success: true,
+        data: this.toShared(reservation),
+        error: null,
+      };
+    }
+
+    if (reservation.status !== 'CONFIRMED') {
+      throw new BusinessException(
+        'INVALID_STATUS_TRANSITION',
+        'Sadece onaylı rezervasyonlar tamamlanabilir',
+      );
+    }
+
+    const updated = await this.prisma.reservation.update({
+      where: { id: reservationId },
+      data: { status: 'COMPLETED' },
+    });
+
+    this.eventEmitter.emit(
+      'booking.completed',
+      new BookingCompletedEvent(
+        updated.id,
+        updated.userId,
+        updated.tourId,
+        updated.partnerId,
+        updated.contactEmail,
+      ),
+    );
+
+    return {
+      success: true,
+      data: this.toShared(updated),
+      error: null,
+    };
   }
 
   private async transition(

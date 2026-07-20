@@ -73,6 +73,21 @@ export class MailService {
           subject: 'Partner hesabınızı doğrulayın — TurlaDur',
           html: `<p>Merhaba,</p><p><strong>${String(data.companyName ?? '')}</strong> partner kaydınız oluşturuldu.</p><p>Doğrulamak için: <a href="${String(data.verifyUrl ?? '#')}">Hesabı doğrula</a></p><p>Token: <code>${String(data.token ?? '')}</code></p>`,
         };
+      case 'new-review':
+        return {
+          subject: `Yeni yorum — ${String(data.tourName ?? 'Tur')}`,
+          html: `<p>Merhaba ${String(data.companyName ?? '')},</p><p><strong>${String(data.tourName ?? '')}</strong> için ${String(data.rating ?? '')}/5 puanlı yeni bir yorum aldınız.</p>`,
+        };
+      case 'review-request':
+        return {
+          subject: 'Turunuzu değerlendirin — TurlaDur',
+          html: `<p>Merhaba,</p><p>Tamamlanan turunuz için deneyiminizi paylaşır mısınız?</p><p><a href="${String(data.reviewUrl ?? '#')}">Yorum yaz</a></p>`,
+        };
+      case 'booking-cancelled':
+        return {
+          subject: 'Rezervasyon iptal edildi',
+          html: `<p>Rezervasyonunuz iptal edildi.</p><p>Kod: ${String(data.bookingId ?? '')}</p>`,
+        };
       default:
         return {
           subject: String(data.subject ?? 'TurlaDur Bildirim'),

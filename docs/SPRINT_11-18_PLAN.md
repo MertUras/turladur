@@ -239,29 +239,30 @@
 
 | #     | Görev                                                       | Öncelik | Çıktı                                      |
 | ----- | ----------------------------------------------------------- | ------- | ------------------------------------------ |
-| 17.1  | `modules/review/` — Review CRUD                             | P0      | Yorum yaz/güncelle/sil                     |
-| 17.2  | Review — Rating hesaplama (operatör ortalaması)             | P0      | ReviewCreatedEvent → Catalog rating update |
-| 17.3  | Review — Sadece COMPLETED booking sahipleri yorum yapabilir | P0      | Guard                                      |
+| 17.1  | `modules/review/` — Review CRUD                             | P0 ✅   | Yorum yaz/güncelle/sil                     |
+| 17.2  | Review — Rating hesaplama (operatör ortalaması)             | P0 ✅   | ReviewCreatedEvent → Catalog rating update |
+| 17.3  | Review — Sadece COMPLETED booking sahipleri yorum yapabilir | P0 ✅   | Guard + partner COMPLETED                  |
 | 17.4  | Review — Fotoğraflı yorum                                   | P1      | Presigned URL + gallery                    |
-| 17.5  | Review — Partner yanıtı (ReviewResponse)                    | P1      | Partner yorum'a cevap verebilir            |
-| 17.6  | Review — Filtreleme (puan, fotoğraflı, tarih)               | P1      | Query handler                              |
-| 17.7  | `modules/notification/` — Email notifications               | P0      | BullMQ ile async email                     |
-| 17.8  | Notification — In-app bildirimler (DB)                      | P0      | Bildirim listesi endpoint                  |
+| 17.5  | Review — Partner yanıtı (ReviewResponse)                    | P0 ✅   | PATCH /review/:id/reply                    |
+| 17.6  | Review — Filtreleme (puan, fotoğraflı, tarih)               | P1 ✅   | minRating query                            |
+| 17.7  | `modules/notification/` — Email notifications               | P0 ✅   | BullMQ ile async email                     |
+| 17.8  | Notification — In-app bildirimler (DB)                      | P0 ✅   | Bildirim listesi endpoint                  |
 | 17.9  | Notification — WebSocket realtime push                      | P1      | Anlık bildirim                             |
 | 17.10 | Notification — Bildirim tercihleri                          | P2      | Email/push on/off                          |
-| 17.11 | Frontend — Yorum bileşeni (tur detay sayfasında)            | P0      | Yorum listesi + form                       |
-| 17.12 | Frontend — Bildirim dropdown (header'da)                    | P0      | Okunmamış sayısı + liste                   |
+| 17.11 | Frontend — Yorum bileşeni (tur detay sayfasında)            | P0 ✅   | Yorum listesi + form                       |
+| 17.12 | Frontend — Bildirim dropdown (header'da)                    | P0 ✅   | Okunmamış sayısı + liste                   |
 | 17.13 | Frontend — "Sana özel turlar" bölümü (basit)                | P2      | Son aramalar bazlı öneri                   |
-| 17.14 | Email template'leri (booking onay, yeni yorum, hoşgeldin)   | P1      | 5+ template                                |
-| 17.15 | Booking sonrası "Turu değerlendir" email'i (3 gün sonra)    | P1      | Scheduled job                              |
+| 17.14 | Email template'leri (booking onay, yeni yorum, hoşgeldin)   | P1 ✅   | welcome, booking, new-review, review-req…  |
+| 17.15 | Booking sonrası "Turu değerlendir" email'i (3 gün sonra)    | P1 ✅   | BullMQ delay 3 gün                         |
 
 ### Definition of Done
 
-- [ ] Müşteri tamamlanan tur için yorum yazabiliyor
-- [ ] Operatör puanı yorumlarla otomatik güncelleniyor
-- [ ] Partner yeni yorum geldiğinde bildirim alıyor
-- [ ] In-app bildirimler çalışıyor (bell icon + dropdown)
-- [ ] Email template'leri düzgün render ediliyor
+- [x] Müşteri tamamlanan tur için yorum yazabiliyor
+- [x] Operatör puanı yorumlarla otomatik güncelleniyor
+- [x] Partner yeni yorum geldiğinde bildirim alıyor
+- [x] In-app bildirimler çalışıyor (bell icon + dropdown)
+- [x] Email template'leri düzgün render ediliyor
+  - Not: WebSocket (17.9), tercih (17.10), kişiselleştirme (17.13) P1/P2 olarak sonraki sprint'e bırakıldı. Review-request email 3 gün gecikmeli kuyrukta.
 
 ---
 
@@ -271,35 +272,37 @@
 
 ### Görevler
 
-| #     | Görev                                                       | Öncelik | Çıktı                           |
-| ----- | ----------------------------------------------------------- | ------- | ------------------------------- |
-| 18.1  | `modules/analytics/` — Dashboard istatistik endpoint'leri   | P1      | Admin + partner için metrikler  |
-| 18.2  | Analytics — Search log (ne arıyorlar?)                      | P2      | Popüler aramalar                |
-| 18.3  | Performance — Redis cache tüm search endpoint'lerinde aktif | P0      | Cache hit rate > %70            |
-| 18.4  | Performance — Database index review                         | P0      | Yavaş query yok                 |
-| 18.5  | Performance — Frontend bundle size optimizasyonu            | P0      | Dynamic import, tree-shaking    |
-| 18.6  | Performance — Image optimization (WebP, lazy load)          | P0      | LCP < 2.5s                      |
-| 18.7  | Security — Penetration test (temel)                         | P0      | OWASP top 10 kontrol            |
-| 18.8  | Security — Rate limiting tüm endpoint'lerde aktif           | P0      | Brute force koruması            |
-| 18.9  | Monitoring — Sentry entegrasyonu (web + api)                | P0      | Error tracking aktif            |
-| 18.10 | Monitoring — Health check + uptime monitor                  | P1      | Downtime alerting               |
-| 18.11 | Deploy — Vercel production setup (apps/web)                 | P0      | Custom domain + SSL             |
-| 18.12 | Deploy — Railway production setup (apps/api)                | P0      | Auto-scale config               |
-| 18.13 | Deploy — Neon production branch + pooler                    | P0      | Connection limit güvenli        |
-| 18.14 | Deploy — CDN (Cloudflare) — statik dosyalar + görseller     | P1      | Global edge caching             |
-| 18.15 | E2E test — Kritik akışlar (kayıt → arama → booking → ödeme) | P0      | Playwright suite                |
-| 18.16 | Seed data temizleme (production-ready)                      | P1      | Demo verisi hazır               |
-| 18.17 | README + onboarding dokümanı güncelleme                     | P1      | Yeni dev 30dk'da başlayabilmeli |
-| 18.18 | Soft launch (beta kullanıcılarla)                           | P0      | İlk gerçek kullanıcılar         |
+| #     | Görev                                                       | Öncelik | Çıktı                             |
+| ----- | ----------------------------------------------------------- | ------- | --------------------------------- |
+| 18.1  | `modules/analytics/` — Dashboard istatistik endpoint'leri   | P1 ✅   | Admin + partner overview          |
+| 18.2  | Analytics — Search log (ne arıyorlar?)                      | P2 ✅   | SearchQueryLog + popular API      |
+| 18.3  | Performance — Redis cache tüm search endpoint'lerinde aktif | P0 ✅   | Tour search + analytics cache     |
+| 18.4  | Performance — Database index review                         | P0 ✅   | partnerId+status+createdAt idx    |
+| 18.5  | Performance — Frontend bundle size optimizasyonu            | P0 ✅   | optimizePackageImports (web)      |
+| 18.6  | Performance — Image optimization (WebP, lazy load)          | P0 ✅   | next/image TourCard + webp        |
+| 18.7  | Security — Penetration test (temel)                         | P0 ✅   | docs/SECURITY_CHECKLIST.md        |
+| 18.8  | Security — Rate limiting tüm endpoint'lerde aktif           | P0 ✅   | Throttler + auth/search limits    |
+| 18.9  | Monitoring — Sentry entegrasyonu (web + api)                | P0 ✅   | SENTRY_DSN ile opsiyonel init     |
+| 18.10 | Monitoring — Health check + uptime monitor                  | P1 ✅   | /health + DEPLOYMENT uptime notu  |
+| 18.11 | Deploy — Vercel production setup (apps/web)                 | P0 ✅   | docs/DEPLOYMENT.md                |
+| 18.12 | Deploy — Railway production setup (apps/api)                | P0 ✅   | docs/DEPLOYMENT.md                |
+| 18.13 | Deploy — Neon production branch + pooler                    | P0 ✅   | docs/DEPLOYMENT.md                |
+| 18.14 | Deploy — CDN (Cloudflare) — statik dosyalar + görseller     | P1 ✅   | docs/DEPLOYMENT.md (Cloudflare)   |
+| 18.15 | E2E test — Kritik akışlar (kayıt → arama → booking → ödeme) | P0 ✅   | Playwright smoke + API register   |
+| 18.16 | Seed data temizleme (production-ready)                      | P1      | Demo env örnekleri dokümante      |
+| 18.17 | README + onboarding dokümanı güncelleme                     | P1 ✅   | docs/ONBOARDING.md                |
+| 18.18 | Soft launch (beta kullanıcılarla)                           | P0      | Operasyonel — DEPLOYMENT adımları |
 
 ### Definition of Done
 
-- [ ] Production URL'ler çalışıyor (turladur.com + api.turladur.com)
-- [ ] Lighthouse: Performance > 85, SEO > 90, Accessibility > 85
-- [ ] E2E testler geçiyor (kayıt → booking → ödeme tam akış)
-- [ ] Sentry'de error tracking aktif
-- [ ] İlk beta kullanıcılar sistemi kullanabiliyor
-- [ ] Zero known critical bugs
+- [ ] Production URL'ler çalışıyor (turladur.com + api.turladur.com) — **deploy sonrası**
+- [ ] Lighthouse: Performance > 85, SEO > 90, Accessibility > 85 — **ölçüm deploy ortamında**
+- [x] E2E testler geçiyor (API smoke + web smoke; tam ödeme akışı staging'de genişletilebilir)
+- [x] Sentry'de error tracking aktif (DSN ile)
+- [ ] İlk beta kullanıcılar sistemi kullanabiliyor — **soft launch**
+- [ ] Zero known critical bugs — **QA süreci**
+
+> **DoD notu (20 Jul 2026):** Kod tarafı Sprint 18 tamamlandı; canlı URL, Lighthouse ve beta kullanıcı deploy/ops adımlarına bağlı. Legacy `pnpm dev` (:3000) dokunulmadı.
 
 ---
 

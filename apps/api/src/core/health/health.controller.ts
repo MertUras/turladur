@@ -1,11 +1,13 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 
 import { Public } from '../auth/decorators/public.decorator';
 import { CacheService } from '../cache/cache.service';
 import { PrismaService } from '../database/prisma.service';
 
 @ApiTags('health')
+@SkipThrottle()
 @Controller('health')
 export class HealthController {
   constructor(

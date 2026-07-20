@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["identity", "catalog", "booking", "payment"]
+  schemas  = ["identity", "catalog", "booking", "payment", "review", "notification", "analytics"]
 }
 
 // ─── identity ───────────────────────────────────────────
@@ -60,6 +60,8 @@ model Partner {
   status            PartnerStatus @default(PENDING)
   verificationToken String?       @unique
   verifiedAt        DateTime?
+  averageRating     Decimal       @default(0) @db.Decimal(3, 2)
+  reviewCount       Int           @default(0)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   deletedAt         DateTime?
@@ -94,22 +96,24 @@ enum TourCategory {
 }
 
 model Tour {
-  id          String       @id @default(cuid())
-  title       String       @db.VarChar(200)
-  slug        String       @unique @db.VarChar(220)
-  description String       @db.Text
-  coverUrl    String?
-  price       Decimal      @db.Decimal(10, 2)
-  currency    String       @default("TRY") @db.VarChar(3)
-  category    TourCategory
-  status      TourStatus   @default(DRAFT)
-  durationDays Int         @default(1)
-  partnerId   String
-  partner     Partner      @relation(fields: [partnerId], references: [id])
-  dates       TourDate[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  deletedAt   DateTime?
+  id            String       @id @default(cuid())
+  title         String       @db.VarChar(200)
+  slug          String       @unique @db.VarChar(220)
+  description   String       @db.Text
+  coverUrl      String?
+  price         Decimal      @db.Decimal(10, 2)
+  currency      String       @default("TRY") @db.VarChar(3)
+  category      TourCategory
+  status        TourStatus   @default(DRAFT)
+  durationDays  Int          @default(1)
+  averageRating Decimal      @default(0) @db.Decimal(3, 2)
+  reviewCount   Int          @default(0)
+  partnerId     String
+  partner       Partner      @relation(fields: [partnerId], references: [id])
+  dates         TourDate[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
 
   @@index([partnerId])
   @@index([category, status])
@@ -174,6 +178,7 @@ model Reservation {
   @@index([partnerId])
   @@index([status])
   @@index([deletedAt])
+  @@index([partnerId, status, createdAt])
   @@schema("booking")
 }
 
@@ -215,4 +220,62 @@ model PaymentTransaction {
   @@index([reservationId])
   @@index([status])
   @@schema("payment")
+}
+
+// ─── review ─────────────────────────────────────────────
+
+model Review {
+  id               String    @id @default(cuid())
+  tourId           String
+  reservationId    String    @unique
+  userId           String
+  partnerId        String
+  rating           Int
+  comment          String?   @db.Text
+  photoUrls        String[]  @default([])
+  partnerReply     String?   @db.Text
+  partnerRepliedAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  @@index([tourId])
+  @@index([partnerId])
+  @@index([userId])
+  @@index([rating])
+  @@index([deletedAt])
+  @@schema("review")
+}
+
+// ─── notification ───────────────────────────────────────
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String    @db.VarChar(64)
+  title     String    @db.VarChar(200)
+  body      String    @db.Text
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@schema("notification")
+}
+
+// ─── analytics ──────────────────────────────────────────
+
+model SearchQueryLog {
+  id          String   @id @default(cuid())
+  query       String   @db.VarChar(500)
+  category    String?  @db.VarChar(64)
+  resultCount Int      @default(0)
+  cacheHit    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([query])
+  @@schema("analytics")
 }

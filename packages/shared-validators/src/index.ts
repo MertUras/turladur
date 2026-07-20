@@ -43,4 +43,19 @@ export const checkoutPaymentSchema = z.object({
   cvc: z.string().min(3).max(4),
 });
 
-export type CheckoutPaymentInput = z.infer<typeof checkoutPaymentSchema>;
+export const createReviewSchema = z.object({
+  reservationId: z.string().min(1),
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().min(3).max(2000).optional(),
+  photoUrls: z.array(z.string().url()).max(5).optional(),
+});
+
+export type CreateReviewInput = z.infer<typeof createReviewSchema>;
+
+export const updateReviewSchema = z.object({
+  rating: z.number().int().min(1).max(5).optional(),
+  comment: z.string().min(3).max(2000).nullable().optional(),
+  photoUrls: z.array(z.string().url()).max(5).optional(),
+});
+
+export type UpdateReviewInput = z.infer<typeof updateReviewSchema>;

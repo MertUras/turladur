@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -31,6 +32,7 @@ export class IdentityController {
   ) {}
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('register')
   @ApiOperation({ summary: 'Register a new customer user' })
   @ApiResponse({ status: 201, description: 'User registered' })
@@ -39,6 +41,7 @@ export class IdentityController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('login')
   @ApiOperation({ summary: 'Login and receive JWT access token' })
   login(@Body() dto: LoginUserDto) {
@@ -60,6 +63,7 @@ export class IdentityController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('partners/register')
   @ApiOperation({ summary: 'Register a partner company + owner account' })
   registerPartner(@Body() dto: RegisterPartnerDto) {

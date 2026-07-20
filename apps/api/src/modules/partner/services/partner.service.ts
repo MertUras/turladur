@@ -3,14 +3,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '../../../generated/prisma';
 
 import { PrismaService } from '../../../core/database/prisma.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
+import { BookingCompletedEvent } from '../../booking/events/booking-completed.event';
 
 @Injectable()
 export class PartnerService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async getDashboardStats(partnerId: string | undefined) {
     this.requirePartnerId(partnerId);
@@ -102,7 +107,7 @@ export class PartnerService {
   async updateReservationStatus(
     reservationId: string,
     partnerId: string | undefined,
-    status: 'CONFIRMED' | 'CANCELLED',
+    status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED',
   ) {
     this.requirePartnerId(partnerId);
 
@@ -125,6 +130,37 @@ export class PartnerService {
         'INVALID_STATUS_TRANSITION',
         'Bu rezervasyon güncellenemez',
       );
+    }
+
+    if (status === 'COMPLETED') {
+      if (reservation.status !== 'CONFIRMED') {
+        throw new BusinessException(
+          'INVALID_STATUS_TRANSITION',
+          'Sadece onaylı rezervasyonlar tamamlanabilir',
+        );
+      }
+
+      const updated = await this.prisma.reservation.update({
+        where: { id: reservation.id },
+        data: { status: 'COMPLETED' },
+      });
+
+      this.eventEmitter.emit(
+        'booking.completed',
+        new BookingCompletedEvent(
+          updated.id,
+          updated.userId,
+          updated.tourId,
+          updated.partnerId,
+          updated.contactEmail,
+        ),
+      );
+
+      return {
+        success: true,
+        data: this.toReservation(updated),
+        error: null,
+      };
     }
 
     if (status === 'CANCELLED') {

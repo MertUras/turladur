@@ -7,6 +7,7 @@ import { Menu, Search, User, X } from 'lucide-react';
 
 import { useAuth } from '@/providers/auth-provider';
 import { cn } from '@/lib/utils';
+import { NotificationBell } from '@/components/layout/notification-bell';
 
 const NAV = [
   { href: '/tours', label: 'Turlar' },
@@ -90,6 +91,7 @@ export function Header() {
           >
             <Search className="h-5 w-5" />
           </Link>
+          <NotificationBell solid={solid} />
           {isAuthenticated ? (
             <>
               <span
@@ -159,13 +161,21 @@ export function Header() {
               </Link>
             ))}
             {isAuthenticated ? (
-              <button
-                type="button"
-                onClick={logout}
-                className="rounded-lg bg-sky-600 px-4 py-2 text-left text-sm font-medium text-white"
-              >
-                Çıkış
-              </button>
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-neutral-800">
+                    Bildirimler
+                  </span>
+                  <NotificationBell solid />
+                </div>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="rounded-lg bg-sky-600 px-4 py-2 text-left text-sm font-medium text-white"
+                >
+                  Çıkış
+                </button>
+              </>
             ) : (
               <Link
                 href="/login"

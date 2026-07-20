@@ -1,3 +1,11 @@
+# TurlaDur (tourtech)
+
+Nx monorepo: legacy Next.js (`pnpm dev` → :3000) + Nest API + `apps/web` (`pnpm dev:apps` → API :4000, web :3001).
+
+**Yeni geliştirici:** [docs/ONBOARDING.md](docs/ONBOARDING.md) · **Production:** [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

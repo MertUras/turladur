@@ -10,9 +10,9 @@ import { UserPayload } from '../../../core/auth/types/auth.types';
 import { PartnerService } from '../services/partner.service';
 
 class UpdatePartnerReservationDto {
-  @ApiProperty({ enum: ['CONFIRMED', 'CANCELLED'] })
-  @IsIn(['CONFIRMED', 'CANCELLED'])
-  status!: 'CONFIRMED' | 'CANCELLED';
+  @ApiProperty({ enum: ['CONFIRMED', 'CANCELLED', 'COMPLETED'] })
+  @IsIn(['CONFIRMED', 'CANCELLED', 'COMPLETED'])
+  status!: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
 }
 
 @ApiTags('Partner')

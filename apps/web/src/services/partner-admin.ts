@@ -45,7 +45,7 @@ export async function listPartnerReservations(token: string) {
 
 export async function updatePartnerReservation(
   id: string,
-  status: 'CONFIRMED' | 'CANCELLED',
+  status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED',
   token: string,
 ) {
   return apiRequest<PartnerReservation>(`/partner/reservations/${id}`, {

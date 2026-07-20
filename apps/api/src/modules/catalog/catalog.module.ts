@@ -6,6 +6,7 @@ import { CreateTourHandler } from './commands/create-tour/create-tour.handler';
 import { DeleteTourHandler } from './commands/delete-tour/delete-tour.handler';
 import { UpdateTourHandler } from './commands/update-tour/update-tour.handler';
 import { TourController } from './controllers/tour.controller';
+import { ReviewRatingListener } from './listeners/review-rating.listener';
 import { GetTourHandler } from './queries/get-tour/get-tour.handler';
 import { ListTourDatesHandler } from './queries/list-tour-dates/list-tour-dates.handler';
 import { SearchToursHandler } from './queries/search-tours/search-tours.handler';
@@ -27,6 +28,11 @@ const QueryHandlers = [
 @Module({
   imports: [CqrsModule],
   controllers: [TourController],
-  providers: [TourService, ...CommandHandlers, ...QueryHandlers],
+  providers: [
+    TourService,
+    ReviewRatingListener,
+    ...CommandHandlers,
+    ...QueryHandlers,
+  ],
 })
 export class CatalogModule {}
