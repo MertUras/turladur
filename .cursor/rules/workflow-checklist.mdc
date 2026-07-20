@@ -127,6 +127,39 @@ Eğer görev büyükse ve çok dosya değiştiyse, raporu kategorize et:
   ~ packages/shared-types/src/review.types.ts (yeni)
 ```
 
+## Browser Test Kuralı
+
+Bir feature veya sprint görevi tamamlandığında:
+
+1. `pnpm dev:apps` çalıştığından emin ol (web:3001 + api:4000)
+2. Browser ile ilgili sayfayı aç ve kontrol et:
+   - Sayfa yükleniyor mu? (white screen yok)
+   - API çağrıları başarılı mı? (console'da 4xx/5xx yok)
+   - Temel UI render ediliyor mu? (bileşenler görünüyor)
+   - Form varsa: doldur + submit et → başarılı sonuç
+   - Responsive: viewport 375px'de de çalışıyor mu?
+3. Test sonuçlarını rapora ekle:
+
+```
+🌐 Browser Test:
+  ✓ http://localhost:3001/hotels → Sayfa yüklendi, otel kartları görünüyor
+  ✓ API: GET /api/v1/catalog/hotels → 200 OK
+  ✓ Mobil (375px) → Layout düzgün
+  ✗ Filtre butonu tıklanınca hata → [düzeltildi]
+```
+
+### Ne Zaman Browser Test YAPILIR?
+- Yeni sayfa oluşturulduğunda
+- Mevcut sayfa değiştirildiğinde
+- API endpoint eklendikten sonra (Swagger'dan kontrol)
+- Sprint görevi "Definition of Done" kontrol edilirken
+- Kullanıcı "test et" dediğinde
+
+### Ne Zaman Browser Test YAPILMAZ?
+- Sadece backend service/dto değişikliği (UI'a etkisi yoksa)
+- Sadece type/constant değişikliği
+- Sadece rules/docs dosyası düzenleme
+
 ## Ne Zaman Rapor VERİLMEZ
 
 - Sadece soru cevaplıyorsan (kod değişikliği yoksa)
