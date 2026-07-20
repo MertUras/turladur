@@ -137,18 +137,36 @@ pnpm nx g @nx/js:library shared-types --directory=packages/shared-types
 4. `nx affected -t build` — sadece değişen projeleri build et
 5. Build başarılıysa → PR merge edilebilir
 
-### Main Branch'e Merge (deploy)
-1. `nx run web:build` → Vercel'e deploy
-2. `nx run api:build` → Docker image build → Railway'e push
+### Develop Branch'e Merge (deploy-dev.yml)
+1. `prisma migrate deploy` → Dev DB migration (Neon develop branch)
+2. `nx run api:build` → Docker image → dev-api.turladur.com deploy
+3. Mobil + Web ekip hemen kullanabilir
+
+### Staging Branch'e Merge (deploy-staging.yml)
+1. `prisma migrate deploy` → Staging DB migration
+2. `prisma db seed` → Test verisi yenile
+3. `nx run web:build` → staging.turladur.com deploy
+4. `nx run api:build` → staging-api.turladur.com deploy
+5. QA süreci başlar
+
+### Main Branch'e Merge (deploy-prod.yml)
+1. `nx run web:build` → Vercel'e deploy (turladur.com)
+2. `nx run api:build` → Docker image → Railway'e push (api.turladur.com)
 3. `prisma migrate deploy` → Production DB migration
+
+### Scheduled: Dev DB Reset (weekly-reset.yml — Pazar 03:00)
+1. `neonctl branches reset develop --parent main` → Temiz veri
+2. `prisma migrate deploy` → Migration'lar tekrar
+3. `prisma db seed` → Seed veri yeniden oluştur
 
 ## Ortam Değişkenleri Yönetimi
 
-| Ortam | Web (.env) | API (.env) |
-|-------|-----------|-----------|
-| Local | `apps/web/.env.local` | `apps/api/.env` |
-| Staging | Vercel env vars | Railway env vars |
-| Production | Vercel env vars | Railway env vars |
+| Ortam | Web (.env) | API (.env) | DB |
+|-------|-----------|-----------|-----|
+| Local | `apps/web/.env.local` | `apps/api/.env` | Docker localhost:5433 |
+| Dev (paylaşılan) | - | Railway env vars | Neon `develop` branch |
+| Staging | Vercel env vars | Railway env vars | Neon `staging` branch |
+| Production | Vercel env vars | Railway env vars | Neon `main` branch |
 
 ### Zorunlu Env Değişkenleri (API)
 ```

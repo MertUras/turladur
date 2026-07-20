@@ -8,13 +8,17 @@ alwaysApply: true
 
 ## Veritabanı Stratejisi — Ortam Ayrımı
 
-### 3 Ortam, 3 Farklı Veritabanı
+### 4 Ortam — Web + Mobil Ekip Ortak Kullanır
 
-| Ortam | DB | Erişim | Kullanım |
-|-------|-----|--------|----------|
-| **Local (her dev)** | Docker PostgreSQL (localhost:5433) | Sadece kendi makinesi | Geliştirme, deneme |
-| **Staging (paylaşılan)** | Neon branch: `staging` | Tüm ekip | Test, demo, entegrasyon |
-| **Production** | Neon branch: `main` | Sadece CI/CD | Canlı sistem |
+| Ortam | DB | API URL | Kim Kullanır | Güncelleme Sıklığı |
+|-------|-----|---------|-------------|---------------------|
+| **Local** | Docker PostgreSQL (localhost:5433) | localhost:4000 | Her dev (kendi) | Her `git pull` sonrası migrate |
+| **Dev (paylaşılan)** | Neon branch: `develop` | dev-api.turladur.com | Web + Mobil ekip | Her merge to `develop` (otomatik) |
+| **Staging** | Neon branch: `staging` | staging-api.turladur.com | QA + Demo | 1-3 günde bir (sprint arası) |
+| **Production** | Neon branch: `main` | api.turladur.com | Son kullanıcılar | Release sonrası |
+
+> **KRİTİK:** Mobil ve Web ekipleri **aynı NestJS API**'yi kullanır. İki ayrı backend YOKTUR.
+> Mobil için ayrı bir DB veya API çalıştırılmaz.
 
 ### Her Yazılımcının Kendi Local DB'si Olmalı
 
@@ -63,13 +67,90 @@ Dev B: git pull → pnpm --filter api prisma migrate deploy → Yeni tablo hazı
 5. Dev B: `pnpm --filter api prisma migrate deploy` → local DB güncellenir
 6. CI/CD: Staging'e deploy sırasında `prisma migrate deploy` otomatik çalışır
 
-### Neon Branching (Gelişmiş — Opsiyonel)
+### Otomatik DB Senkronizasyon (CI/CD ile)
+
+Her ortam, GitHub Actions pipeline ile otomatik güncellenir:
+
+```yaml
+# .github/workflows/deploy-dev.yml
+# Trigger: develop branch'e her push/merge
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  deploy-dev:
+    steps:
+      - uses: actions/checkout@v4
+      - run: pnpm --filter api prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+      - run: pnpm --filter api build
+      - # Railway/Fly.io deploy → dev-api.turladur.com
+```
+
+```yaml
+# .github/workflows/deploy-staging.yml
+# Trigger: staging branch'e merge veya scheduled (her 1-3 gün)
+on:
+  push:
+    branches: [staging]
+  schedule:
+    - cron: '0 9 */2 * *'  # Her 2 günde bir sabah 09:00
+
+jobs:
+  deploy-staging:
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: staging
+      - run: pnpm --filter api prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      - run: pnpm --filter api prisma db seed
+      - # Deploy staging API + Web
+```
+
+### Haftalık Dev DB Reset (Temiz Veri)
+
+Production verisinden sapma olmaması için haftalık reset:
+
+```bash
+# GitHub Actions scheduled job (haftalık pazar 03:00)
+neonctl branches reset develop --parent main
+pnpm --filter api prisma migrate deploy  # tüm migration'lar tekrar
+pnpm --filter api prisma db seed         # seed veri tekrar
+```
+
+### Mobil Ekip Çalışma Kuralları
+
+| Kural | Açıklama |
+|-------|----------|
+| API URL | Mobil her zaman `dev-api.turladur.com` kullanır (geliştirme sırasında) |
+| Yeni endpoint | Backend ekibine issue açar veya kendi PR gönderir |
+| Breaking change | API'de breaking change YASAK — field deprecation, yeni versiyon `/v2/` |
+| Swagger | `dev-api.turladur.com/api/docs` → tüm endpoint'leri, request/response'ları görebilir |
+| Auth | Aynı Keycloak, aynı JWT token yapısı — platform farkı yok |
+
+### Mobil Ekip Hızlı Başlangıç
+
+```bash
+# Eğer mobil dev local API çalıştırmak isterse:
+git clone https://github.com/MertUras/turladur.git
+cd turladur
+pnpm install
+docker compose -f infrastructure/docker/docker-compose.yml up -d
+pnpm dev:api
+# → localhost:4000 → Swagger: localhost:4000/api/docs
+```
+
+### Neon Branching (Gelişmiş — Feature Branch DB)
 
 Neon, her branch için sıfır maliyetli DB kopyası oluşturur:
 
 ```bash
 # Feature branch için DB branch oluştur
-neonctl branches create --name feat/tour-search --parent staging
+neonctl branches create --name feat/tour-search --parent develop
 
 # Bu branch'in URL'ini al
 neonctl connection-string feat/tour-search
@@ -87,13 +168,15 @@ Feature branch merge edildiğinde DB branch silinir. Production verisi asla bozu
 ## Değişiklikler
 - [ ] Yeni migration var mı? → Evet ise belirt
 - [ ] Yeni env variable gerekiyor mu? → Evet ise .env.example güncelle
-- [ ] Breaking API change var mı? → Evet ise frontend'i de güncelle
+- [ ] Breaking API change var mı? → Evet ise frontend + mobil ekibe bildir
+- [ ] Mobil uyumluluk: Endpoint silindi veya response değişti mi? → YASAK, deprecate yap
 - [ ] Yeni npm paketi eklendi mi? → Evet ise `pnpm install` gerekli
 
 ## Test
 - [ ] Unit test eklendi/güncellendi
 - [ ] Local'de çalıştığını doğruladım
 - [ ] Staging'de test ettim (varsa)
+- [ ] Mobil ekip etkileniyor mu? → Evet ise Swagger dokümanı güncellendi
 ```
 
 ### Yeni Ortam Değişkeni Ekleme
