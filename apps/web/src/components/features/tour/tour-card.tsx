@@ -26,17 +26,22 @@ export function TourCard({ tour }: { tour: Tour }) {
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-gradient-to-br from-sky-100 to-sky-200 text-sky-800">
+          <div className="flex h-full items-center justify-center bg-gradient-to-br from-neutral-100 to-neutral-200 text-neutral-700">
             <span className="text-sm font-medium">{tour.category}</span>
           </div>
         )}
+        {tour.featured ? (
+          <span className="absolute left-3 top-3 rounded-md bg-neutral-950 px-2 py-1 text-xs font-semibold text-white">
+            Öne çıkan
+          </span>
+        ) : null}{' '}
       </div>
       <div className="flex flex-1 flex-col gap-2 p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-sky-700">
+        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
           {tour.category}
         </p>
         <h3 className="text-lg font-semibold text-neutral-900">
-          <Link href={`/tours/${tour.id}`} className="hover:text-sky-700">
+          <Link href={`/tours/${tour.id}`} className="hover:text-neutral-600">
             {tour.title}
           </Link>
         </h3>
@@ -52,7 +57,7 @@ export function TourCard({ tour }: { tour: Tour }) {
           </div>
           <Link
             href={`/tours/${tour.id}`}
-            className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700"
+            className="rounded-lg bg-neutral-950 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800"
           >
             İncele
           </Link>

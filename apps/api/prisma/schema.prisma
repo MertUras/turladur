@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["identity", "catalog", "booking", "payment", "review", "notification", "analytics"]
+  schemas  = ["identity", "catalog", "booking", "payment", "review", "notification", "analytics", "content"]
 }
 
 // ─── identity ───────────────────────────────────────────
@@ -30,6 +30,25 @@ enum PartnerStatus {
   @@schema("identity")
 }
 
+/// Partner hesabının sunduğu ürün türleri — ayrı kayıt + dashboard yönlendirmesi.
+/// Legacy: TourOperator vs ExperienceOperator ayrı tablolardı; Nest'te tek Partner + capabilities.
+enum PartnerCapability {
+  TOURS
+  EXPERIENCES
+  HOTELS
+
+  @@schema("identity")
+}
+
+/// Üyelik / öne çıkarma rozeti (legacy MembershipTier).
+enum MembershipTier {
+  BRONZE
+  SILVER
+  GOLD
+
+  @@schema("identity")
+}
+
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
@@ -37,10 +56,25 @@ model User {
   firstName    String?
   lastName     String?
   phone        String?
+  /// TC Kimlik No (11 hane) — fatura / rezervasyon misafir bilgisi.
+  identityNumber String?
+  birthDate    DateTime? @db.Date
+  /// Kişisel adres (tek satır / serbest metin).
+  address      String?
+  /// Fatura adresi alanları.
+  billingLine1      String?
+  billingLine2      String?
+  billingCity       String?
+  billingState      String?
+  billingPostalCode String?
+  billingCountry    String?  @default("Türkiye")
   role         UserRole  @default(CUSTOMER)
   isActive     Boolean   @default(true)
+  /// PARTNER_STAFF izinleri (legacy SubUser.permissions).
+  permissions  Json?
   partnerId    String?
   partner      Partner?  @relation(fields: [partnerId], references: [id])
+  agencies     Agency[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
@@ -52,23 +86,94 @@ model User {
 }
 
 model Partner {
-  id                String        @id @default(cuid())
+  id                String              @id @default(cuid())
   companyName       String
   taxNumber         String?
   contactEmail      String
   contactPhone      String?
-  status            PartnerStatus @default(PENDING)
-  verificationToken String?       @unique
+  status            PartnerStatus       @default(PENDING)
+  /// Tur operatörü → [TOURS], aktiviteci → [EXPERIENCES], ikisi birden mümkün.
+  capabilities      PartnerCapability[] @default([])
+  membershipTier    MembershipTier      @default(BRONZE)
+  address           String?
+  city              String?
+  country           String?
+  website           String?
+  logo              String?
+  license           String?
+  verificationToken String?             @unique
   verifiedAt        DateTime?
-  averageRating     Decimal       @default(0) @db.Decimal(3, 2)
-  reviewCount       Int           @default(0)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  averageRating     Decimal             @default(0) @db.Decimal(3, 2)
+  reviewCount       Int                 @default(0)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   deletedAt         DateTime?
   users             User[]
+  subUsers          SubUser[]
   tours             Tour[]
+  hotels            Hotel[]
+  experiences       Experience[]
 
   @@index([status])
+  @@index([membershipTier])
+  @@index([deletedAt])
+  @@schema("identity")
+}
+
+enum AgencyStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+
+  @@schema("identity")
+}
+
+/// B2B acente (legacy Agency). Partner (operatör) ile ayrı; satış kanalı.
+model Agency {
+  id          String       @id @default(cuid())
+  name        String       @db.VarChar(200)
+  description String?      @db.Text
+  address     String?
+  city        String?
+  country     String?
+  phone       String?
+  email       String?
+  website     String?
+  logo        String?
+  license     String?
+  status      AgencyStatus @default(PENDING)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@index([deletedAt])
+  @@schema("identity")
+}
+
+/// Partner alt kullanıcı (legacy SubUser). Auth User ile eşleşebilir (userId).
+model SubUser {
+  id          String    @id @default(cuid())
+  partnerId   String
+  partner     Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  userId      String?
+  name        String    @db.VarChar(200)
+  email       String
+  role        String    @default("USER") @db.VarChar(40)
+  permissions Json      @default("{}")
+  status      String    @default("ACTIVE") @db.VarChar(40)
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@unique([partnerId, email])
+  @@index([partnerId])
+  @@index([userId])
   @@index([deletedAt])
   @@schema("identity")
 }
@@ -101,16 +206,22 @@ model Tour {
   slug          String       @unique @db.VarChar(220)
   description   String       @db.Text
   coverUrl      String?
+  galleryUrls   String[]     @default([])
+  extras        Json         @default("{}")
   price         Decimal      @db.Decimal(10, 2)
   currency      String       @default("TRY") @db.VarChar(3)
   category      TourCategory
   status        TourStatus   @default(DRAFT)
   durationDays  Int          @default(1)
+  /// Legacy parity — öne çıkan turlar.
+  featured      Boolean      @default(false)
   averageRating Decimal      @default(0) @db.Decimal(3, 2)
   reviewCount   Int          @default(0)
   partnerId     String
   partner       Partner      @relation(fields: [partnerId], references: [id])
   dates         TourDate[]
+  accommodation TourAccommodation?
+  pickupPoints  TourPickupPoint[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   deletedAt     DateTime?
@@ -118,25 +229,259 @@ model Tour {
   @@index([partnerId])
   @@index([category, status])
   @@index([slug])
+  @@index([featured, status])
   @@index([deletedAt])
   @@schema("catalog")
 }
 
 model TourDate {
-  id               String    @id @default(cuid())
-  tourId           String
-  tour             Tour      @relation(fields: [tourId], references: [id])
-  startDate        DateTime  @db.Date
-  endDate          DateTime  @db.Date
-  capacity         Int
+  id                String             @id @default(cuid())
+  tourId            String
+  tour              Tour               @relation(fields: [tourId], references: [id])
+  startDate         DateTime           @db.Date
+  endDate           DateTime           @db.Date
+  capacity          Int
   remainingCapacity Int
-  priceOverride    Decimal?  @db.Decimal(10, 2)
-  isActive         Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  deletedAt        DateTime?
+  priceOverride     Decimal?           @db.Decimal(10, 2)
+  isActive          Boolean            @default(true)
+  ageRanges         TourDateAgeRange[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  deletedAt         DateTime?
 
   @@index([tourId, startDate])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+/// Tur paketindeki konaklama özeti (1:1). Detay sayfası + partner form için legacy parity.
+model TourAccommodation {
+  id          String   @id @default(cuid())
+  tourId      String   @unique
+  tour        Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(200)
+  image       String
+  location    String   @db.VarChar(200)
+  type        String   @db.VarChar(80)
+  rating      Float    @default(0)
+  features    Json     @default("[]")
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+/// Kalkış / yolcu alma noktaları (çoklu). Filtre ve buluşma bilgisi.
+model TourPickupPoint {
+  id          String   @id @default(cuid())
+  tourId      String
+  tour        Tour     @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  city        String   @db.VarChar(120)
+  location    String   @db.VarChar(200)
+  time        String   @db.VarChar(20)
+  description String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([tourId, order])
+  @@index([city])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+enum AgePricingType {
+  FREE
+  HALF
+  PERCENTAGE
+  FIXED
+
+  @@schema("catalog")
+}
+
+/// Tur tarihi bazlı yaş fiyatlandırması (0–2 ücretsiz, çocuk %50, vb.).
+model TourDateAgeRange {
+  id          String         @id @default(cuid())
+  tourDateId  String
+  tourDate    TourDate       @relation(fields: [tourDateId], references: [id], onDelete: Cascade)
+  minAge      Int
+  maxAge      Int?
+  pricingType AgePricingType
+  value       Decimal        @db.Decimal(10, 2)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+
+  @@unique([tourDateId, minAge, maxAge])
+  @@index([tourDateId])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+enum HotelType {
+  HOTEL
+  BOUTIQUE_HOTEL
+  RESORT
+  HOSTEL
+  APARTMENT
+  VILLA
+  GUESTHOUSE
+
+  @@schema("catalog")
+}
+
+model Hotel {
+  id           String    @id @default(cuid())
+  name         String    @db.VarChar(200)
+  slug         String    @unique @db.VarChar(220)
+  description  String?   @db.Text
+  address      String?
+  city         String    @db.VarChar(120)
+  country      String    @default("Türkiye") @db.VarChar(120)
+  postalCode   String?
+  phone        String?
+  email        String?
+  website      String?
+  stars        Int?
+  type         HotelType @default(HOTEL)
+  amenities    Json      @default("{}")
+  images       Json      @default("[]")
+  latitude     Float?
+  longitude    Float?
+  checkInTime  String?
+  checkOutTime String?
+  partnerId    String
+  partner      Partner   @relation(fields: [partnerId], references: [id])
+  rooms        Room[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  @@index([partnerId])
+  @@index([city])
+  @@index([type])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+model Room {
+  id          String   @id @default(cuid())
+  hotelId     String
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(200)
+  description String?  @db.Text
+  type        String?
+  capacity    Int
+  price       Decimal  @db.Decimal(10, 2)
+  discount    Decimal? @db.Decimal(10, 2)
+  size        Float?
+  bedType     String?
+  images      Json     @default("[]")
+  amenities   Json     @default("{}")
+  available   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([hotelId])
+  @@index([available])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+enum ExperienceStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  ARCHIVED
+
+  @@schema("catalog")
+}
+
+/// Yerel deneyim / aktivite.
+/// Sahip: `Partner` with `capabilities` containing EXPERIENCES (legacy ExperienceOperator).
+model Experience {
+  id                  String           @id @default(cuid())
+  title               String           @db.VarChar(200)
+  slug                String           @unique @db.VarChar(220)
+  description         String           @db.Text
+  longDescription     String           @db.Text
+  category            String           @db.VarChar(120)
+  location            String           @db.VarChar(200)
+  duration            String           @db.VarChar(80)
+  price               Decimal          @db.Decimal(10, 2)
+  currency            String           @default("TRY") @db.VarChar(3)
+  ageRestriction      String?
+  imageUrl            String?
+  gallery             Json             @default("[]")
+  included            Json             @default("[]")
+  notIncluded         Json             @default("[]")
+  schedule            Json?
+  highlights          Json             @default("[]")
+  averageRating       Decimal          @default(0) @db.Decimal(3, 2)
+  reviewCount         Int              @default(0)
+  featured            Boolean          @default(false)
+  popularityRate      Float            @default(0)
+  status              ExperienceStatus @default(DRAFT)
+  meetingPoint        String?
+  meetingPointAddress String?
+  partnerId           String
+  partner             Partner          @relation(fields: [partnerId], references: [id])
+  dates               ActivityDate[]
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  deletedAt           DateTime?
+
+  @@index([partnerId])
+  @@index([category, status])
+  @@index([location])
+  @@index([slug])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+/// Legacy `ActivityDate` — deneyim müsaitlik / fiyat penceresi.
+model ActivityDate {
+  id                String                    @id @default(cuid())
+  experienceId      String
+  experience        Experience                @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  startDate         DateTime                  @db.Date
+  endDate           DateTime                  @db.Date
+  price             Decimal                   @db.Decimal(10, 2)
+  availableSeats    Int
+  remainingCapacity Int?
+  isActive          Boolean                   @default(true)
+  ageRanges         ExperienceDateAgeRange[]
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  deletedAt         DateTime?
+
+  @@index([experienceId, startDate])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+/// Aktivite tarihi bazlı yaş fiyatlandırması (tur age range ile aynı mantık).
+model ExperienceDateAgeRange {
+  id             String         @id @default(cuid())
+  activityDateId String
+  activityDate   ActivityDate   @relation(fields: [activityDateId], references: [id], onDelete: Cascade)
+  minAge         Int
+  maxAge         Int?
+  pricingType    AgePricingType
+  value          Decimal        @db.Decimal(10, 2)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+
+  @@unique([activityDateId, minAge, maxAge])
+  @@index([activityDateId])
   @@index([deletedAt])
   @@schema("catalog")
 }
@@ -145,36 +490,64 @@ model TourDate {
 
 enum BookingStatus {
   PENDING
+  PENDING_PAYMENT
   CONFIRMED
   COMPLETED
   CANCELLED
+  SUSPENDED
   PAYMENT_FAILED
 
   @@schema("booking")
 }
 
+enum ReservationPaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  REFUNDED
+
+  @@schema("booking")
+}
+
+/// Tur / otel / aktivite rezervasyonu (legacy Booking birleşimi).
 model Reservation {
-  id             String        @id @default(cuid())
-  bookingNumber  String        @unique @db.VarChar(20)
-  userId         String
-  tourId         String
-  tourDateId     String
-  partnerId      String
-  status         BookingStatus @default(PENDING)
-  adults         Int           @default(1)
-  children       Int           @default(0)
-  totalAmount    Decimal       @db.Decimal(10, 2)
-  currency       String        @default("TRY") @db.VarChar(3)
-  contactEmail   String
-  contactPhone   String?
-  guests         Json
-  cancelledAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  deletedAt      DateTime?
+  id              String                    @id @default(cuid())
+  bookingNumber   String                    @unique @db.VarChar(20)
+  userId          String
+  /// En az bir ürün referansı dolu olmalı (uygulama katmanı).
+  tourId          String?
+  tourDateId      String?
+  hotelId         String?
+  roomId          String?
+  experienceId    String?
+  activityDateId  String?
+  agencyId        String?
+  partnerId       String
+  status          BookingStatus             @default(PENDING)
+  paymentStatus   ReservationPaymentStatus  @default(UNPAID)
+  paymentMethod   String?
+  adults          Int                       @default(1)
+  children        Int                       @default(0)
+  totalAmount     Decimal                   @db.Decimal(10, 2)
+  currency        String                    @default("TRY") @db.VarChar(3)
+  contactEmail    String
+  contactPhone    String?
+  guests          Json
+  specialRequests String?                   @db.Text
+  metadata        Json?
+  startDate       DateTime?
+  endDate         DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  deletedAt       DateTime?
 
   @@index([userId])
+  @@index([tourId])
   @@index([tourDateId])
+  @@index([hotelId])
+  @@index([experienceId])
+  @@index([activityDateId])
   @@index([partnerId])
   @@index([status])
   @@index([deletedAt])
@@ -224,24 +597,47 @@ model PaymentTransaction {
 
 // ─── review ─────────────────────────────────────────────
 
+enum ReviewTargetType {
+  TOUR
+  EXPERIENCE
+  HOTEL
+  PARTNER
+
+  @@schema("review")
+}
+
+/// Ürün / partner değerlendirmesi (legacy Review + ActivityReview + PartnerReview birleşimi).
 model Review {
-  id               String    @id @default(cuid())
-  tourId           String
-  reservationId    String    @unique
+  id               String           @id @default(cuid())
+  targetType       ReviewTargetType @default(TOUR)
+  tourId           String?
+  experienceId     String?
+  hotelId          String?
+  reservationId    String           @unique
   userId           String
   partnerId        String
   rating           Int
-  comment          String?   @db.Text
-  photoUrls        String[]  @default([])
-  partnerReply     String?   @db.Text
+  comment          String?          @db.Text
+  photoUrls        String[]         @default([])
+  /// Legacy PartnerReview kategori puanları (opsiyonel).
+  guideRating      Int?
+  operatorRating   Int?
+  routeRating      Int?
+  foodRating       Int?
+  hotelRating      Int?
+  transportRating  Int?
+  partnerReply     String?          @db.Text
   partnerRepliedAt DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
   deletedAt        DateTime?
 
   @@index([tourId])
+  @@index([experienceId])
+  @@index([hotelId])
   @@index([partnerId])
   @@index([userId])
+  @@index([targetType])
   @@index([rating])
   @@index([deletedAt])
   @@schema("review")
@@ -278,4 +674,58 @@ model SearchQueryLog {
   @@index([createdAt])
   @@index([query])
   @@schema("analytics")
+}
+
+// ─── content ────────────────────────────────────────────
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique @db.VarChar(120)
+  slug        String   @unique @db.VarChar(140)
+  description String?  @db.Text
+  posts       Post[]   @relation("CategoryToPost")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([deletedAt])
+  @@schema("content")
+}
+
+model Post {
+  id          String     @id @default(cuid())
+  title       String     @db.VarChar(300)
+  slug        String     @unique @db.VarChar(320)
+  content     String     @db.Text
+  excerpt     String?    @db.Text
+  coverImage  String?
+  published   Boolean    @default(false)
+  publishedAt DateTime?
+  authorId    String
+  comments    Comment[]
+  categories  Category[] @relation("CategoryToPost")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+
+  @@index([authorId])
+  @@index([published, publishedAt])
+  @@index([deletedAt])
+  @@schema("content")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  authorId  String
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([deletedAt])
+  @@schema("content")
 }

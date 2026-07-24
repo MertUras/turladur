@@ -19,6 +19,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { ReviewModule } from './modules/review/review.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { ContentModule } from './modules/content/content.module';
 import { ThrottlingModule } from './core/throttling/throttling.module';
 
 @Module({
@@ -46,6 +47,7 @@ import { ThrottlingModule } from './core/throttling/throttling.module';
     ReviewModule,
     NotificationModule,
     AnalyticsModule,
+    ContentModule,
   ],
 })
 export class AppModule {}

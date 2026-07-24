@@ -1,15 +1,21 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '../../../generated/prisma';
 
 import { CacheService } from '../../../core/cache/cache.service';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
+import {
+  CreatePostDto,
+  SearchPostsDto,
+  UpdatePostDto,
+} from '../../content/dto/content.dto';
+import { ContentService } from '../../content/services/content.service';
 
 @Injectable()
 export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
+    private readonly contentService: ContentService,
   ) {}
 
   async getDashboardStats() {
@@ -19,6 +25,8 @@ export class AdminService {
       partnersPending,
       tours,
       toursPending,
+      experiences,
+      experiencesPending,
       reservations,
       paymentsSuccess,
     ] = await Promise.all([
@@ -31,6 +39,10 @@ export class AdminService {
       this.prisma.tour.count({
         where: { deletedAt: null, status: 'PENDING_REVIEW' },
       }),
+      this.prisma.experience.count({ where: { deletedAt: null } }),
+      this.prisma.experience.count({
+        where: { deletedAt: null, status: 'PENDING_REVIEW' },
+      }),
       this.prisma.reservation.count({ where: { deletedAt: null } }),
       this.prisma.paymentTransaction.count({ where: { status: 'SUCCESS' } }),
     ]);
@@ -41,6 +53,7 @@ export class AdminService {
         users,
         partners: { total: partners, pending: partnersPending },
         tours: { total: tours, pendingReview: toursPending },
+        experiences: { total: experiences, pendingReview: experiencesPending },
         reservations,
         paymentsSuccess,
       },
@@ -204,6 +217,60 @@ export class AdminService {
     };
   }
 
+  async listPendingExperiences() {
+    const rows = await this.prisma.experience.findMany({
+      where: { deletedAt: null, status: 'PENDING_REVIEW' },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    return {
+      success: true,
+      data: rows.map((e) => ({
+        id: e.id,
+        title: e.title,
+        partnerId: e.partnerId,
+        price: e.price.toString(),
+        currency: e.currency,
+        category: e.category,
+        location: e.location,
+        status: e.status,
+        createdAt: e.createdAt.toISOString(),
+      })),
+      error: null,
+    };
+  }
+
+  async setExperienceStatus(
+    experienceId: string,
+    status: 'PUBLISHED' | 'ARCHIVED' | 'DRAFT',
+  ) {
+    const experience = await this.prisma.experience.findFirst({
+      where: { id: experienceId, deletedAt: null },
+    });
+    if (!experience) {
+      throw new NotFoundException({
+        code: 'EXPERIENCE_NOT_FOUND',
+        message: 'Deneyim bulunamadı',
+      });
+    }
+
+    const updated = await this.prisma.experience.update({
+      where: { id: experienceId },
+      data: { status },
+    });
+
+    return {
+      success: true,
+      data: {
+        id: updated.id,
+        title: updated.title,
+        status: updated.status,
+      },
+      error: null,
+    };
+  }
+
   async setTourStatus(
     tourId: string,
     status: 'PUBLISHED' | 'ARCHIVED' | 'DRAFT',
@@ -247,5 +314,91 @@ export class AdminService {
       },
       error: null,
     };
+  }
+
+  async listAgencies(status?: string) {
+    const agencies = await this.prisma.agency.findMany({
+      where: {
+        deletedAt: null,
+        ...(status
+          ? {
+              status: status as
+                'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED',
+            }
+          : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    return {
+      success: true,
+      data: agencies.map((a) => ({
+        id: a.id,
+        name: a.name,
+        status: a.status,
+        userId: a.userId,
+        email: a.email,
+        city: a.city,
+        createdAt: a.createdAt.toISOString(),
+      })),
+      error: null,
+    };
+  }
+
+  async setAgencyStatus(
+    agencyId: string,
+    status: 'APPROVED' | 'REJECTED' | 'SUSPENDED',
+  ) {
+    const agency = await this.prisma.agency.findFirst({
+      where: { id: agencyId, deletedAt: null },
+    });
+    if (!agency) {
+      throw new NotFoundException({
+        code: 'AGENCY_NOT_FOUND',
+        message: 'Acente bulunamadı',
+      });
+    }
+
+    const updated = await this.prisma.agency.update({
+      where: { id: agency.id },
+      data: { status },
+    });
+
+    return {
+      success: true,
+      data: {
+        id: updated.id,
+        name: updated.name,
+        status: updated.status,
+      },
+      error: null,
+    };
+  }
+
+  async listContentPosts(dto: SearchPostsDto) {
+    return this.contentService.searchPosts(
+      { ...dto, includeDrafts: true },
+      true,
+    );
+  }
+
+  async createContentPost(dto: CreatePostDto, authorId: string) {
+    return this.contentService.createPost(dto, authorId);
+  }
+
+  async updateContentPost(
+    postId: string,
+    dto: UpdatePostDto,
+    user: { userId: string; role: string },
+  ) {
+    return this.contentService.updatePost(postId, dto, user);
+  }
+
+  async deleteContentPost(
+    postId: string,
+    user: { userId: string; role: string },
+  ) {
+    return this.contentService.softDeletePost(postId, user);
   }
 }

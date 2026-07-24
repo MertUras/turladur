@@ -62,7 +62,16 @@ export class ReviewService {
 
     const review = await this.prisma.review.create({
       data: {
+        targetType: reservation.tourId
+          ? 'TOUR'
+          : reservation.experienceId
+            ? 'EXPERIENCE'
+            : reservation.hotelId
+              ? 'HOTEL'
+              : 'PARTNER',
         tourId: reservation.tourId,
+        experienceId: reservation.experienceId,
+        hotelId: reservation.hotelId,
         reservationId: reservation.id,
         userId,
         partnerId: reservation.partnerId,
@@ -80,6 +89,7 @@ export class ReviewService {
         review.partnerId,
         review.userId,
         review.rating,
+        review.experienceId,
       ),
     );
 
@@ -108,7 +118,12 @@ export class ReviewService {
 
     this.eventEmitter.emit(
       'review.updated',
-      new ReviewUpdatedEvent(updated.id, updated.tourId, updated.partnerId),
+      new ReviewUpdatedEvent(
+        updated.id,
+        updated.tourId,
+        updated.partnerId,
+        updated.experienceId,
+      ),
     );
 
     return { success: true, data: this.toShared(updated), error: null };
@@ -131,7 +146,12 @@ export class ReviewService {
 
     this.eventEmitter.emit(
       'review.deleted',
-      new ReviewDeletedEvent(review.id, review.tourId, review.partnerId),
+      new ReviewDeletedEvent(
+        review.id,
+        review.tourId,
+        review.partnerId,
+        review.experienceId,
+      ),
     );
 
     return {
@@ -194,15 +214,186 @@ export class ReviewService {
     };
   }
 
+  async listForPartner(partnerId: string | undefined) {
+    if (!partnerId) {
+      throw new ForbiddenException({
+        code: 'PARTNER_REQUIRED',
+        message: 'Partner hesabı gerekli',
+      });
+    }
+
+    const rows = await this.prisma.review.findMany({
+      where: { partnerId, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+
+    const userIds = [...new Set(rows.map((r) => r.userId))];
+    const tourIds = [
+      ...new Set(rows.map((r) => r.tourId).filter((id): id is string => !!id)),
+    ];
+    const experienceIds = [
+      ...new Set(
+        rows.map((r) => r.experienceId).filter((id): id is string => !!id),
+      ),
+    ];
+
+    const [users, tours, experiences] = await Promise.all([
+      userIds.length
+        ? this.prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          })
+        : Promise.resolve(
+            [] as Array<{
+              id: string;
+              firstName: string | null;
+              lastName: string | null;
+              email: string;
+            }>,
+          ),
+      tourIds.length
+        ? this.prisma.tour.findMany({
+            where: { id: { in: tourIds } },
+            select: { id: true, title: true },
+          })
+        : Promise.resolve([] as Array<{ id: string; title: string }>),
+      experienceIds.length
+        ? this.prisma.experience.findMany({
+            where: { id: { in: experienceIds } },
+            select: { id: true, title: true },
+          })
+        : Promise.resolve([] as Array<{ id: string; title: string }>),
+    ]);
+
+    const userMap = new Map(users.map((u) => [u.id, u]));
+    const tourTitle = new Map(tours.map((t) => [t.id, t.title]));
+    const experienceTitle = new Map(experiences.map((e) => [e.id, e.title]));
+
+    const reviews = rows.map((r) => {
+      const user = userMap.get(r.userId);
+      const customerName = user
+        ? [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
+          user.email
+        : 'Misafir';
+      const productType = r.experienceId
+        ? ('experience' as const)
+        : ('tour' as const);
+      const tourName = r.tourId
+        ? (tourTitle.get(r.tourId) ?? 'Tur')
+        : r.experienceId
+          ? (experienceTitle.get(r.experienceId) ?? 'Aktivite')
+          : 'Ürün';
+
+      return {
+        id: r.id,
+        customerName,
+        customerImage: null as string | null,
+        tourName,
+        tourId: r.tourId ?? r.experienceId ?? '',
+        productType,
+        rating: r.rating,
+        categoryRatings: {
+          guideRating: r.guideRating ?? r.rating,
+          operatorRating: r.operatorRating ?? r.rating,
+          routeRating: r.routeRating ?? r.rating,
+          foodRating: r.foodRating ?? r.rating,
+          hotelRating: r.hotelRating ?? r.rating,
+          transportRating: r.transportRating ?? r.rating,
+        },
+        categoryFeedback: {
+          guideFeedback: null,
+          operatorFeedback: null,
+          routeFeedback: null,
+          foodFeedback: null,
+          hotelFeedback: null,
+          transportFeedback: null,
+        },
+        reviewDate: r.createdAt.toLocaleDateString('tr-TR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        }),
+        reviewDateRaw: r.createdAt.toISOString(),
+        reviewText: r.comment ?? '',
+        isResponded: Boolean(r.partnerReply),
+        responseText: r.partnerReply ?? undefined,
+      };
+    });
+
+    const responded = reviews.filter((r) => r.isResponded).length;
+    const avg =
+      reviews.length === 0
+        ? 0
+        : Math.round(
+            (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10,
+          ) / 10;
+
+    return {
+      success: true,
+      data: {
+        reviews,
+        stats: {
+          total: reviews.length,
+          responded,
+          pending: reviews.length - responded,
+          averageRating: avg,
+        },
+      },
+      error: null,
+    };
+  }
+
   async listMine(userId: string) {
     const rows = await this.prisma.review.findMany({
       where: { userId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
       take: 50,
     });
+
+    const tourIds = [
+      ...new Set(rows.map((r) => r.tourId).filter((id): id is string => !!id)),
+    ];
+    const experienceIds = [
+      ...new Set(
+        rows.map((r) => r.experienceId).filter((id): id is string => !!id),
+      ),
+    ];
+
+    const [tours, experiences] = await Promise.all([
+      tourIds.length
+        ? this.prisma.tour.findMany({
+            where: { id: { in: tourIds } },
+            select: { id: true, title: true },
+          })
+        : Promise.resolve([] as Array<{ id: string; title: string }>),
+      experienceIds.length
+        ? this.prisma.experience.findMany({
+            where: { id: { in: experienceIds } },
+            select: { id: true, title: true },
+          })
+        : Promise.resolve([] as Array<{ id: string; title: string }>),
+    ]);
+
+    const tourTitle = new Map(tours.map((t) => [t.id, t.title]));
+    const experienceTitle = new Map(experiences.map((e) => [e.id, e.title]));
+
     return {
       success: true,
-      data: rows.map((r) => this.toShared(r)),
+      data: rows.map((r) =>
+        this.toShared(r, {
+          targetTitle: r.tourId
+            ? (tourTitle.get(r.tourId) ?? null)
+            : r.experienceId
+              ? (experienceTitle.get(r.experienceId) ?? null)
+              : null,
+        }),
+      ),
       error: null,
     };
   }
@@ -254,23 +445,30 @@ export class ReviewService {
     return review;
   }
 
-  private toShared(row: {
-    id: string;
-    tourId: string;
-    reservationId: string;
-    userId: string;
-    partnerId: string;
-    rating: number;
-    comment: string | null;
-    photoUrls: string[];
-    partnerReply: string | null;
-    partnerRepliedAt: Date | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }): SharedReview {
+  private toShared(
+    row: {
+      id: string;
+      tourId: string | null;
+      experienceId?: string | null;
+      hotelId?: string | null;
+      reservationId: string;
+      userId: string;
+      partnerId: string;
+      rating: number;
+      comment: string | null;
+      photoUrls: string[];
+      partnerReply: string | null;
+      partnerRepliedAt: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+    },
+    extras?: { targetTitle?: string | null },
+  ): SharedReview {
     return {
       id: row.id,
       tourId: row.tourId,
+      experienceId: row.experienceId ?? null,
+      hotelId: row.hotelId ?? null,
       reservationId: row.reservationId,
       userId: row.userId,
       partnerId: row.partnerId,
@@ -279,6 +477,7 @@ export class ReviewService {
       photoUrls: row.photoUrls,
       partnerReply: row.partnerReply,
       partnerRepliedAt: row.partnerRepliedAt?.toISOString() ?? null,
+      targetTitle: extras?.targetTitle ?? null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

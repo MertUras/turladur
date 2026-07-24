@@ -21,8 +21,8 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: {
-    default: 'TurlaDur',
-    template: '%s | TurlaDur',
+    default: 'turta',
+    template: '%s | turta',
   },
   description:
     'Turizm ekosistem platformu — turlar, rezervasyon, güvenli ödeme',

@@ -1,9 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { TourCategory, TourStatus } from '@turladur/shared-constants';
 import {
+  IsArray,
   IsEnum,
   IsInt,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   IsUrl,
@@ -58,4 +60,17 @@ export class UpdateTourDto {
   @IsOptional()
   @IsUrl({ require_tld: false })
   coverUrl?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  galleryUrls?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Legacy form fields including healthPrivileges (string[]).',
+  })
+  @IsOptional()
+  @IsObject()
+  extras?: Record<string, unknown>;
 }

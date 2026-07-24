@@ -1,44 +1,55 @@
-"use client";
+'use client';
 
-import { SessionProvider, useSession } from "next-auth/react";
-import type { Session } from "next-auth";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
-import { signOut } from "next-auth/react";
-import { isCustomerSession, isPartnerSession } from "@/lib/auth/partner-session";
+import { SessionProvider, useSession } from 'next-auth/react';
+import type { Session } from 'next-auth';
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
+import { signOut } from 'next-auth/react';
+import {
+  isCustomerSession,
+  isPartnerSession,
+} from '@/lib/auth/partner-session';
+
+const NEW_WEB_URL =
+  process.env.NEXT_PUBLIC_APPS_WEB_URL ?? 'http://localhost:3001';
 
 function AuthContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { data: session, status } = useSession();
   const signingOutRef = useRef(false);
 
   useEffect(() => {
-    if (status === "loading") return;
+    if (status === 'loading') return;
 
     const isPartnerDashboardPath =
-      pathname === "/partner-dashboard" || pathname?.startsWith("/partner-dashboard/");
+      pathname === '/partner-dashboard' ||
+      pathname?.startsWith('/partner-dashboard/');
     const isPartnerAuthPath =
-      pathname === "/partner-login" ||
-      pathname?.startsWith("/partner-register") ||
-      pathname?.startsWith("/partner-verification");
+      pathname === '/partner-login' ||
+      pathname?.startsWith('/partner-register') ||
+      pathname?.startsWith('/partner-verification');
 
-    // Partner session on auth pages → send to dashboard (middleware is backup)
-    if (isPartnerSession(session) && isPartnerAuthPath) {
-      router.replace("/partner-dashboard");
+    // Partner auth/dashboard → Nest apps/web (tek portal)
+    if (
+      isPartnerSession(session) &&
+      (isPartnerAuthPath || isPartnerDashboardPath)
+    ) {
+      window.location.replace(`${NEW_WEB_URL}/login`);
       return;
     }
 
-    // Customer session on partner dashboard → sign out once, then middleware sends to login
+    // Customer session on partner dashboard → sign out once
     if (
       isPartnerDashboardPath &&
       isCustomerSession(session) &&
       !signingOutRef.current
     ) {
       signingOutRef.current = true;
-      void signOut({ redirect: false, callbackUrl: "/partner-login" });
+      void signOut({ redirect: false }).then(() => {
+        window.location.replace(`${NEW_WEB_URL}/login`);
+      });
     }
-  }, [pathname, session, status, router]);
+  }, [pathname, session, status]);
 
   return <>{children}</>;
 }

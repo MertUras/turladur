@@ -27,9 +27,19 @@
 
 ## Neon
 
-- Staging: branch `staging`; production: branch `main`
-- Connection string: `-pooler` host for serverless/API
+- Develop: branch `develop`; Staging: branch `staging`; Production: branch `production`
+- Connection string: `-pooler` host for serverless/API runtime; **Direct** for `prisma migrate deploy`
+- CI secrets: `DEV_DATABASE_URL`, `STAGING_DATABASE_URL` (bkz. `.github/workflows/deploy-*.yml`)
 - Migration öncesi staging backup (Neon snapshot / `pg_dump`)
+
+## GitHub Actions (Sprint 19)
+
+| Workflow             | Trigger        | Secret                 |
+| -------------------- | -------------- | ---------------------- |
+| `deploy-dev.yml`     | push `develop` | `DEV_DATABASE_URL`     |
+| `deploy-staging.yml` | push `staging` | `STAGING_DATABASE_URL` |
+
+Repo → Settings → Secrets and variables → Actions → Neon Direct URL ekle.
 
 ## Cloudflare (P1)
 

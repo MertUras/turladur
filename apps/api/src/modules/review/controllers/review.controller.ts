@@ -37,6 +37,14 @@ export class ReviewController {
   }
 
   @ApiBearerAuth()
+  @Get('partner')
+  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'List reviews for authenticated partner' })
+  listForPartner(@CurrentUser() user: UserPayload) {
+    return this.reviewService.listForPartner(user.partnerId);
+  }
+
+  @ApiBearerAuth()
   @Get('me')
   @ApiOperation({ summary: 'My reviews' })
   listMine(@CurrentUser() user: UserPayload) {

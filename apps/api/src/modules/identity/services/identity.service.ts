@@ -15,13 +15,17 @@ import { randomUUID } from 'crypto';
 import { JwtPayload } from '../../../core/auth/types/auth.types';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { EmailQueueService } from '../../../core/queue/email-queue.service';
-import { UserRole } from '../../../generated/prisma';
+import { UserRole, Prisma } from '../../../generated/prisma';
 import { PartnerRegisteredEvent } from '../events/partner-registered.event';
 import { PartnerVerifiedEvent } from '../events/partner-verified.event';
 import { UserRegisteredEvent } from '../events/user-registered.event';
+import { ChangePasswordDto } from '../dto/change-password.dto';
 import { LoginUserDto } from '../dto/login-user.dto';
 import { RegisterPartnerDto } from '../dto/register-partner.dto';
 import { RegisterUserDto } from '../dto/register-user.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
+import { isValidTckn } from '../../../shared/utils/tckn';
+import { BusinessException } from '../../../shared/exceptions/business.exception';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -116,6 +120,78 @@ export class IdentityService {
     };
   }
 
+  /**
+   * Guest checkout: create a CUSTOMER for a new email and issue JWT.
+   * If email already exists, client must login (no silent takeover).
+   */
+  async guestBootstrap(dto: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    address: string;
+    billingLine1: string;
+    billingCity: string;
+    billingCountry?: string;
+    identityNumber: string;
+  }) {
+    const email = dto.email.toLowerCase().trim();
+    const existing = await this.prisma.user.findFirst({
+      where: { email, deletedAt: null },
+    });
+
+    if (existing) {
+      throw new ConflictException({
+        code: 'EMAIL_ALREADY_REGISTERED',
+        message:
+          'Bu e-posta ile kayıtlı bir hesap var. Devam etmek için giriş yapın.',
+      });
+    }
+
+    if (!isValidTckn(dto.identityNumber)) {
+      throw new BusinessException(
+        'INVALID_IDENTITY_NUMBER',
+        'TC Kimlik No geçersiz',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(randomUUID(), BCRYPT_ROUNDS);
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        phone: dto.phone.trim(),
+        address: dto.address.trim(),
+        billingLine1: dto.billingLine1.trim(),
+        billingCity: dto.billingCity.trim(),
+        billingCountry: dto.billingCountry?.trim() || 'Türkiye',
+        identityNumber: dto.identityNumber.trim(),
+        role: UserRole.CUSTOMER,
+      },
+    });
+
+    this.eventEmitter.emit(
+      'user.registered',
+      new UserRegisteredEvent(user.id, user.email, user.role),
+    );
+
+    const tokens = await this.issueTokens({
+      sub: user.id,
+      role: Role.CUSTOMER,
+    });
+
+    return {
+      success: true,
+      data: {
+        ...tokens,
+        user: this.toSharedUser(user),
+      },
+      error: null,
+    };
+  }
+
   async getProfile(userId: string) {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
@@ -131,6 +207,108 @@ export class IdentityService {
     return {
       success: true,
       data: this.toSharedUser(user),
+      error: null,
+    };
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    await this.requireUser(userId);
+
+    if (dto.identityNumber != null && dto.identityNumber !== '') {
+      if (!isValidTckn(dto.identityNumber)) {
+        throw new BusinessException(
+          'INVALID_IDENTITY_NUMBER',
+          'TC Kimlik No geçersiz',
+        );
+      }
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.firstName !== undefined
+          ? { firstName: dto.firstName.trim() }
+          : {}),
+        ...(dto.lastName !== undefined
+          ? { lastName: dto.lastName.trim() }
+          : {}),
+        ...(dto.phone !== undefined
+          ? { phone: dto.phone?.trim() || null }
+          : {}),
+        ...(dto.identityNumber !== undefined
+          ? {
+              identityNumber:
+                dto.identityNumber === '' || dto.identityNumber == null
+                  ? null
+                  : dto.identityNumber,
+            }
+          : {}),
+        ...(dto.birthDate !== undefined
+          ? {
+              birthDate:
+                dto.birthDate === '' || dto.birthDate == null
+                  ? null
+                  : new Date(dto.birthDate),
+            }
+          : {}),
+        ...(dto.address !== undefined
+          ? { address: dto.address?.trim() || null }
+          : {}),
+        ...(dto.billingLine1 !== undefined
+          ? { billingLine1: dto.billingLine1?.trim() || null }
+          : {}),
+        ...(dto.billingLine2 !== undefined
+          ? { billingLine2: dto.billingLine2?.trim() || null }
+          : {}),
+        ...(dto.billingCity !== undefined
+          ? { billingCity: dto.billingCity?.trim() || null }
+          : {}),
+        ...(dto.billingState !== undefined
+          ? { billingState: dto.billingState?.trim() || null }
+          : {}),
+        ...(dto.billingPostalCode !== undefined
+          ? { billingPostalCode: dto.billingPostalCode?.trim() || null }
+          : {}),
+        ...(dto.billingCountry !== undefined
+          ? { billingCountry: dto.billingCountry?.trim() || null }
+          : {}),
+      },
+    });
+
+    return {
+      success: true,
+      data: this.toSharedUser(updated),
+      error: null,
+    };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.requireUser(userId);
+
+    const ok = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!ok) {
+      throw new UnauthorizedException({
+        code: 'INVALID_CURRENT_PASSWORD',
+        message: 'Mevcut şifre hatalı',
+      });
+    }
+
+    if (dto.currentPassword === dto.newPassword) {
+      throw new BusinessException(
+        'PASSWORD_UNCHANGED',
+        'Yeni şifre mevcut şifre ile aynı olamaz',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    return {
+      success: true,
+      data: { updated: true },
       error: null,
     };
   }
@@ -196,7 +374,7 @@ export class IdentityService {
       template: 'partner-verify',
       data: {
         companyName: result.partner.companyName,
-        verifyUrl: `${frontendUrl}/partner/verify?token=${verificationToken}`,
+        verifyUrl: `${frontendUrl}/partner-verification/verify?token=${verificationToken}`,
         token: verificationToken,
       },
     });
@@ -281,6 +459,19 @@ export class IdentityService {
     }
   }
 
+  private async requireUser(userId: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+    });
+    if (!user) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'Kullanıcı bulunamadı',
+      });
+    }
+    return user;
+  }
+
   private async issueTokens(payload: JwtPayload) {
     const accessToken = await this.jwtService.signAsync(payload);
     return {
@@ -300,20 +491,49 @@ export class IdentityService {
     firstName: string | null;
     lastName: string | null;
     phone: string | null;
+    identityNumber?: string | null;
+    birthDate?: Date | null;
+    address?: string | null;
+    billingLine1?: string | null;
+    billingLine2?: string | null;
+    billingCity?: string | null;
+    billingState?: string | null;
+    billingPostalCode?: string | null;
+    billingCountry?: string | null;
     role: UserRole;
     partnerId: string | null;
+    permissions?: Prisma.JsonValue | null;
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
   }): SharedUser {
+    const permissions =
+      user.permissions &&
+      typeof user.permissions === 'object' &&
+      !Array.isArray(user.permissions)
+        ? (user.permissions as SharedUser['permissions'])
+        : null;
+
     return {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       phone: user.phone,
+      identityNumber: user.identityNumber ?? null,
+      birthDate: user.birthDate
+        ? user.birthDate.toISOString().slice(0, 10)
+        : null,
+      address: user.address ?? null,
+      billingLine1: user.billingLine1 ?? null,
+      billingLine2: user.billingLine2 ?? null,
+      billingCity: user.billingCity ?? null,
+      billingState: user.billingState ?? null,
+      billingPostalCode: user.billingPostalCode ?? null,
+      billingCountry: user.billingCountry ?? null,
       role: user.role,
       partnerId: user.partnerId,
+      permissions,
       isActive: user.isActive,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),

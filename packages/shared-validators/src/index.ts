@@ -23,14 +23,47 @@ export const bookingGuestSchema = z.object({
   identityNumber: z.string().min(5).max(20).optional(),
 });
 
-export const createReservationSchema = z.object({
-  tourDateId: z.string().min(1),
-  adults: z.number().int().min(1).max(50),
-  children: z.number().int().min(0).max(50).default(0),
-  contactEmail: z.string().email(),
-  contactPhone: z.string().min(7).max(20).optional(),
-  guests: z.array(bookingGuestSchema).min(1),
-});
+export const createReservationSchema = z
+  .object({
+    tourDateId: z.string().min(1).optional(),
+    roomId: z.string().min(1).optional(),
+    hotelId: z.string().min(1).optional(),
+    activityDateId: z.string().min(1).optional(),
+    startDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    endDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    adults: z.number().int().min(1).max(50),
+    children: z.number().int().min(0).max(50).default(0),
+    contactEmail: z.string().email(),
+    contactPhone: z.string().min(7).max(20).optional(),
+    guests: z.array(bookingGuestSchema).min(1),
+  })
+  .superRefine((value, ctx) => {
+    const productCount = [
+      value.tourDateId,
+      value.roomId,
+      value.activityDateId,
+    ].filter(Boolean).length;
+    if (productCount !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'Exactly one of tourDateId, roomId, or activityDateId is required',
+      });
+    }
+    if (value.roomId && (!value.startDate || !value.endDate)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Hotel bookings require startDate and endDate',
+        path: ['startDate'],
+      });
+    }
+  });
 
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;
 
@@ -59,3 +92,42 @@ export const updateReviewSchema = z.object({
 });
 
 export type UpdateReviewInput = z.infer<typeof updateReviewSchema>;
+
+export const createAgencySchema = z.object({
+  name: z.string().min(2).max(200),
+  description: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional(),
+  website: z.string().url().optional(),
+  logo: z.string().optional(),
+  license: z.string().optional(),
+});
+
+export type CreateAgencyInput = z.infer<typeof createAgencySchema>;
+
+export const createPostSchema = z.object({
+  title: z.string().min(3).max(300),
+  content: z.string().min(10),
+  excerpt: z.string().optional(),
+  coverImage: z.string().optional(),
+  published: z.boolean().optional(),
+  categoryIds: z.array(z.string().min(1)).max(10).optional(),
+});
+
+export type CreatePostInput = z.infer<typeof createPostSchema>;
+
+export const createCategorySchema = z.object({
+  name: z.string().min(2).max(120),
+  description: z.string().optional(),
+});
+
+export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
+
+export const createCommentSchema = z.object({
+  content: z.string().min(2).max(2000),
+});
+
+export type CreateCommentInput = z.infer<typeof createCommentSchema>;

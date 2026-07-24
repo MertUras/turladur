@@ -1,15 +1,25 @@
 @import 'tailwindcss';
 
 :root {
-  /* Legacy-aligned sky brand (preserve existing product look) */
+  /*
+   * turta brand tokens (frontend-only)
+   * Identity: high-contrast monochrome mark on ink/paper.
+   * UI stays light for travel readability; primary CTAs use ink.
+   */
+  --brand-ink: #0a0a0a;
+  --brand-paper: #ffffff;
+  --brand-muted: #737373;
+  --brand-surface: #f5f5f5;
+  --brand-border: #e5e5e5;
+
   --background: 0 0% 100%;
-  --foreground: 0 0% 9%;
-  --primary: 199 89% 48%;
+  --foreground: 0 0% 4%;
+  --primary: 0 0% 4%;
   --primary-foreground: 0 0% 100%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --border: 214 32% 91%;
-  --ring: 199 89% 48%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --border: 0 0% 90%;
+  --ring: 0 0% 4%;
   --radius: 0.5rem;
 }
 
@@ -22,6 +32,10 @@
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-border: hsl(var(--border));
   --color-ring: hsl(var(--ring));
+  --color-brand: var(--brand-ink);
+  --color-brand-foreground: var(--brand-paper);
+  --color-brand-muted: var(--brand-muted);
+  --color-brand-surface: var(--brand-surface);
   --radius-lg: var(--radius);
   --font-sans: var(--font-poppins);
 }

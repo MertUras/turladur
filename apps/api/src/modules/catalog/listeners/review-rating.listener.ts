@@ -26,12 +26,16 @@ export class ReviewRatingListener {
     event: ReviewCreatedEvent | ReviewUpdatedEvent | ReviewDeletedEvent,
   ) {
     await this.recalcTour(event.tourId);
+    await this.recalcExperience(event.experienceId);
     await this.recalcPartner(event.partnerId);
-    await this.cache.del(`catalog:tour:${event.tourId}`);
+    if (event.tourId) {
+      await this.cache.del(`catalog:tour:${event.tourId}`);
+    }
     await this.cache.invalidatePattern('catalog:tours:search:*');
   }
 
-  private async recalcTour(tourId: string) {
+  private async recalcTour(tourId: string | null) {
+    if (!tourId) return;
     const agg = await this.prisma.review.aggregate({
       where: { tourId, deletedAt: null },
       _avg: { rating: true },
@@ -40,6 +44,25 @@ export class ReviewRatingListener {
 
     await this.prisma.tour.update({
       where: { id: tourId },
+      data: {
+        averageRating: new Prisma.Decimal(
+          Number(agg._avg.rating ?? 0).toFixed(2),
+        ),
+        reviewCount: agg._count._all,
+      },
+    });
+  }
+
+  private async recalcExperience(experienceId: string | null | undefined) {
+    if (!experienceId) return;
+    const agg = await this.prisma.review.aggregate({
+      where: { experienceId, deletedAt: null },
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
+
+    await this.prisma.experience.update({
+      where: { id: experienceId },
       data: {
         averageRating: new Prisma.Decimal(
           Number(agg._avg.rating ?? 0).toFixed(2),

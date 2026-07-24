@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
     formats: ['image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'randomuser.me' },
+      { protocol: 'https', hostname: 'placehold.co' },
+      { protocol: 'https', hostname: 'ui-avatars.com' },
+      { protocol: 'https', hostname: 'picsum.photos' },
+      { protocol: 'https', hostname: 'images.pexels.com' },
       {
         protocol: 'http',
         hostname: 'localhost',

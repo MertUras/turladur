@@ -20,6 +20,7 @@ import { Role } from '@turladur/shared-constants';
 
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
+import { RequireStaffPermissions } from '../../../core/auth/decorators/require-staff-permissions.decorator';
 import { Roles } from '../../../core/auth/decorators/roles.decorator';
 import { UserPayload } from '../../../core/auth/types/auth.types';
 import { CreateTourDateCommand } from '../commands/create-tour-date/create-tour-date.command';
@@ -66,7 +67,8 @@ export class TourController {
 
   @Post()
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Create a tour (verified partner)' })
   @ApiResponse({ status: 201 })
   create(@Body() dto: CreateTourDto, @CurrentUser() user: UserPayload) {
@@ -75,7 +77,8 @@ export class TourController {
 
   @Patch(':id')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Update owned tour' })
   update(
     @Param('id') id: string,
@@ -89,7 +92,8 @@ export class TourController {
 
   @Delete(':id')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Soft-delete owned tour' })
   remove(@Param('id') id: string, @CurrentUser() user: UserPayload) {
     return this.commandBus.execute(
@@ -99,7 +103,8 @@ export class TourController {
 
   @Post(':id/dates')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Add a date/capacity window to a tour' })
   createDate(
     @Param('id') id: string,

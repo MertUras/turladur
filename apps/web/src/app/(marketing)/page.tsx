@@ -1,93 +1,86 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
+import { CTA } from '@/components/features/home/cta';
+import { Destinations } from '@/components/features/home/destinations';
 import { Hero } from '@/components/features/home/hero';
+import { HotDeals } from '@/components/features/home/hot-deals';
+import { MobileOfferPopup } from '@/components/features/home/mobile-offer-popup';
+import { Newsletter } from '@/components/features/home/newsletter';
+import { Stats } from '@/components/features/home/stats';
+import { Testimonials } from '@/components/features/home/testimonials';
 import { TourCard } from '@/components/features/tour/tour-card';
 import { searchTours } from '@/services/catalog';
 
 export const metadata: Metadata = {
-  title: 'TurlaDur — Hayalindeki turu keşfet',
+  title: 'turta — Keşfet. Deneyimle. Hatırla.',
   description:
     'Türkiye turizm ekosistemi: turlar, güvenli rezervasyon ve şeffaf fiyatlar.',
   openGraph: {
-    title: 'TurlaDur',
-    description: 'Hayalindeki turu keşfet',
+    title: 'turta',
+    description: 'Keşfet. Deneyimle. Hatırla.',
     locale: 'tr_TR',
     type: 'website',
   },
 };
 
 /**
- * Marketing home: legacy section order (Hero → popular tours) but data from Nest.
- * Why not copy HotDeals/Stats yet: those still need Nest endpoints; keep home stable.
+ * Marketing home — legacy section order (Hero → Destinations → CTA → HotDeals →
+ * Popüler Turlar → Stats → Testimonials → Newsletter). Data from Nest where available.
  */
 export default async function HomePage() {
   let tours: Awaited<ReturnType<typeof searchTours>>['data'] = [];
   try {
-    const result = await searchTours({ limit: 6 });
+    const result = await searchTours({ limit: 6, featured: true });
     tours = result.data ?? [];
+    if (tours.length === 0) {
+      const fallback = await searchTours({ limit: 6 });
+      tours = fallback.data ?? [];
+    }
   } catch {
     tours = [];
   }
 
   return (
     <>
-      <Hero />
+      <Suspense fallback={null}>
+        <Hero />
+      </Suspense>
+      <Destinations />
+      <CTA />
+      <HotDeals />
 
-      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 className="font-[family-name:var(--font-montserrat)] text-2xl font-bold text-neutral-900 sm:text-3xl">
+      <section className="py-8 md:py-12">
+        <div className="container mx-auto px-4">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-neutral-800 md:text-3xl">
               Popüler Turlar
             </h2>
-            <p className="mt-2 text-neutral-600">
-              Nest catalog API&apos;den güncel yayınlanmış turlar
-            </p>
+            <Link
+              href="/tours"
+              className="group flex items-center text-sm font-medium text-neutral-950 hover:text-neutral-700"
+            >
+              Tümünü Gör
+              <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
           </div>
-          <Link
-            href="/tours"
-            className="shrink-0 text-sm font-semibold text-sky-700 hover:text-sky-800"
-          >
-            Tümünü gör →
-          </Link>
-        </div>
 
-        {tours.length === 0 ? (
-          <p className="mt-10 rounded-xl border border-dashed border-neutral-300 bg-neutral-50 p-8 text-center text-neutral-600">
-            Henüz yayınlanmış tur yok. Partner paneli veya API ile tur ekleyin.
-            <br />
-            <span className="mt-2 inline-block text-sm">
-              Legacy site <code className="text-sky-700">pnpm dev</code> ile
-              bozulmadan çalışmaya devam eder.
-            </span>
-          </p>
-        ) : (
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {tours.map((tour) => (
-              <TourCard key={tour.id} tour={tour} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="border-t border-neutral-200 bg-sky-50">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-14 sm:flex-row sm:items-center sm:px-6">
-          <div>
-            <h2 className="text-2xl font-bold text-neutral-900">
-              Rezervasyona hazır mısın?
-            </h2>
-            <p className="mt-2 text-neutral-600">
-              Giriş yap, tarih seç, güvenli ödeme ile tamamla.
-            </p>
-          </div>
-          <Link
-            href="/register"
-            className="rounded-lg bg-sky-600 px-6 py-3 text-sm font-semibold text-white hover:bg-sky-700"
-          >
-            Ücretsiz kayıt ol
-          </Link>
+          {tours.length > 0 ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {tours.map((tour) => (
+                <TourCard key={tour.id} tour={tour} />
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
+
+      <Stats />
+      <Testimonials />
+      <Newsletter />
+      <MobileOfferPopup />
     </>
   );
 }

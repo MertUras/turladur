@@ -1,15 +1,18 @@
 'use client';
 
-import Image from "next/image";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { dummyTours, dummyTourOperators } from "@/app/lib/dummy-data";
-import { parseJsonString } from "@/app/utils/format";
-import BottomBookingBar from "@/app/components/BottomBookingBar";
-import TourItineraryMobile from "@/app/components/tour/TourItineraryMobile";
-import MembershipBadge from "@/app/components/partner-dashboard/MembershipBadge";
-import OperatorReviewsSection, { OperatorReview } from "@/app/(dashboard)/tour-operator/[id]/components/OperatorReviewsSection";
-import { useEffect, useMemo, useRef, useState } from "react";
+import Image from 'next/image';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { dummyTours, dummyTourOperators } from '@/app/lib/dummy-data';
+import { parseJsonString } from '@/app/utils/format';
+import BottomBookingBar from '@/app/components/BottomBookingBar';
+import TourItineraryMobile from '@/app/components/tour/TourItineraryMobile';
+import { stripDayPrefixFromTitle } from '@/app/components/tour/normalizeItinerary';
+import MembershipBadge from '@/app/components/partner-dashboard/MembershipBadge';
+import OperatorReviewsSection, {
+  OperatorReview,
+} from '@/app/(dashboard)/tour-operator/[id]/components/OperatorReviewsSection';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 
 // Heroicons bileşenlerini içe aktarıyoruz
@@ -39,11 +42,11 @@ import {
   MoonIcon,
   ShieldCheckIcon,
   PhoneIcon,
-  ExclamationCircleIcon
-} from "@heroicons/react/24/outline";
+  ExclamationCircleIcon,
+} from '@heroicons/react/24/outline';
 
 // Solid ikonları
-import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
+import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 
 interface TourOperator {
   id: string;
@@ -96,6 +99,7 @@ interface Tour {
   destinations: TourDestination[];
   inclusions: string[];
   exclusions: string[];
+  healthPrivileges?: string[];
   itinerary: any;
   images: string[];
   featured: boolean;
@@ -154,7 +158,11 @@ function formatAgeRange(minAge: number, maxAge: number | null): string {
   return `${minAge}-${maxAge}`;
 }
 
-function formatPricing(pricingType: string, value: number, basePrice: number): string {
+function formatPricing(
+  pricingType: string,
+  value: number,
+  basePrice: number,
+): string {
   switch (pricingType) {
     case 'free':
       return 'Ücretsiz';
@@ -172,10 +180,14 @@ export default function TourPage() {
   const [tour, setTour] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTourDate, setSelectedTourDate] = useState<TourDate | null>(null);
+  const [selectedTourDate, setSelectedTourDate] = useState<TourDate | null>(
+    null,
+  );
   const [showDateSelectionHint, setShowDateSelectionHint] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [participants, setParticipants] = useState<{ [key: string]: number }>({});
+  const [participants, setParticipants] = useState<{ [key: string]: number }>(
+    {},
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(true);
   const [tourCount, setTourCount] = useState(0);
@@ -187,7 +199,7 @@ export default function TourPage() {
       try {
         const response = await fetch(`/api/tours/${params.id}`);
         const data = await response.json();
-        
+
         if (!response.ok) {
           throw new Error(data.error || 'Tur detayları alınamadı');
         }
@@ -199,9 +211,13 @@ export default function TourPage() {
             ...date,
             startDate: new Date(date.startDate),
             endDate: new Date(date.endDate),
-            earlyBirdDeadline: date.earlyBirdDeadline ? new Date(date.earlyBirdDeadline) : null,
-            lastMinuteStart: date.lastMinuteStart ? new Date(date.lastMinuteStart) : null
-          }))
+            earlyBirdDeadline: date.earlyBirdDeadline
+              ? new Date(date.earlyBirdDeadline)
+              : null,
+            lastMinuteStart: date.lastMinuteStart
+              ? new Date(date.lastMinuteStart)
+              : null,
+          })),
         };
 
         setTour(transformedTour);
@@ -221,7 +237,7 @@ export default function TourPage() {
       const scrollPosition = window.scrollY;
       const windowHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
-      
+
       if (scrollPosition + windowHeight > documentHeight - 600) {
         setShowScrollIndicator(false);
       } else {
@@ -278,11 +294,14 @@ export default function TourPage() {
 
     const fetchOtherTours = async () => {
       try {
-        const response = await fetch(`/api/tour-operators/${operatorId}/tours`, {
-          headers: {
-            'x-current-tour-id': tour?.id || ''
-          }
-        });
+        const response = await fetch(
+          `/api/tour-operators/${operatorId}/tours`,
+          {
+            headers: {
+              'x-current-tour-id': tour?.id || '',
+            },
+          },
+        );
         if (!response.ok) {
           console.warn('Operatör turları yüklenemedi:', response.status);
           return;
@@ -308,7 +327,10 @@ export default function TourPage() {
     if (!tour?.tourDates) return [];
     return tour.tourDates
       .filter((date) => new Date(date.startDate) >= today)
-      .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+      .sort(
+        (a, b) =>
+          new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+      );
   }, [tour?.tourDates, today]);
 
   const handleDateSelect = (date: TourDate | null) => {
@@ -340,7 +362,9 @@ export default function TourPage() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, [selectedTourDate]);
 
-  const handleParticipantsChange = (newParticipants: { [key: string]: number }) => {
+  const handleParticipantsChange = (newParticipants: {
+    [key: string]: number;
+  }) => {
     setParticipants(newParticipants);
   };
 
@@ -351,11 +375,16 @@ export default function TourPage() {
   if (error || !tour) {
     return notFound();
   }
-  
+
   // Tur dahil olanlar ve olmayanlar
   const inclusions = parseJsonString<string[]>(tour.inclusions, []);
   const exclusions = parseJsonString<string[]>(tour.exclusions, []);
-  
+  const healthPrivileges = Array.isArray(tour.healthPrivileges)
+    ? tour.healthPrivileges.filter(
+        (item) => typeof item === 'string' && item.trim().length > 0,
+      )
+    : [];
+
   // Tur destinasyonları
   const getDestinationName = (d: TourDestination): string => {
     if (typeof d === 'string') return d;
@@ -363,29 +392,31 @@ export default function TourPage() {
   };
 
   const tourReviews: OperatorReview[] = (tourOperator?.reviews || []).filter(
-    (review) => review.booking.tour?.id === tour.id
+    (review) => review.booking.tour?.id === tour.id,
   );
   const tourReviewCount = tourReviews.length;
   const tourAverageRating =
     tourReviewCount > 0
-      ? tourReviews.reduce((sum, review) => sum + review.rating, 0) / tourReviewCount
+      ? tourReviews.reduce((sum, review) => sum + review.rating, 0) /
+        tourReviewCount
       : 0;
 
-  const destinations = Array.isArray(tour.destinations) 
+  const destinations = Array.isArray(tour.destinations)
     ? tour.destinations.map(getDestinationName)
-    : parseJsonString<Destination[]>(tour.destinations, []).map(d => d.city);
-  
+    : parseJsonString<Destination[]>(tour.destinations, []).map((d) => d.city);
+
   // Tur programını parse et
-  const itinerary = parseJsonString<Record<string, ItineraryItem>>(tour.itinerary || '{}', {});
+  const itinerary = parseJsonString<Record<string, ItineraryItem>>(
+    tour.itinerary || '{}',
+    {},
+  );
 
   const displayRating =
     tourReviewCount > 0
       ? tourAverageRating
       : (tour.rating ?? tourOperator?.rating ?? 0);
   const displayReviewCount =
-    tourReviewCount > 0
-      ? tourReviewCount
-      : (tourOperator?.reviewCount ?? 0);
+    tourReviewCount > 0 ? tourReviewCount : (tourOperator?.reviewCount ?? 0);
   const nights = Math.max(tour.duration - 1, 0);
 
   // Yıldızları render et
@@ -395,11 +426,17 @@ export default function TourPage() {
       <div className="flex items-center">
         {[1, 2, 3, 4, 5].map((star) => {
           return star <= Math.floor(rating) ? (
-            <StarIconSolid key={star} className={`${starSize} text-yellow-400`} />
+            <StarIconSolid
+              key={star}
+              className={`${starSize} text-yellow-400`}
+            />
           ) : star <= rating ? (
             <div key={star} className="relative">
               <StarIcon className={`${starSize} text-gray-300`} />
-              <div className="absolute inset-0 overflow-hidden" style={{ width: `${(rating % 1) * 100}%` }}>
+              <div
+                className="absolute inset-0 overflow-hidden"
+                style={{ width: `${(rating % 1) * 100}%` }}
+              >
                 <StarIconSolid className={`${starSize} text-yellow-400`} />
               </div>
             </div>
@@ -411,17 +448,20 @@ export default function TourPage() {
     );
   };
 
-  // --- Button Styles (Consistent with ikas style, SKY theme) ---
-  const primaryButtonClasses = "inline-flex items-center justify-center px-7 py-3 bg-sky-600 hover:bg-sky-700 text-white text-base font-semibold rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out";
-  const secondaryButtonClasses = "inline-flex items-center justify-center px-7 py-3 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 text-base font-semibold rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-sky-500 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out";
-  // Icon button style adapted for dark backgrounds (SKY theme)
-  const iconButtonDarkBgClasses = "p-2.5 rounded-lg text-white bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/50 focus:ring-white/50";
-  // Secondary button adapted for dark backgrounds (SKY theme)
-  const secondaryButtonDarkBgClasses = `inline-flex items-center justify-center px-7 py-3 bg-white/10 backdrop-blur-lg text-sky-300 hover:bg-sky-400/10 border border-sky-400/40 hover:border-sky-300/60 text-base font-semibold rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/50 focus:ring-sky-400 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out`;
+  // --- Button Styles (turta ink theme) ---
+  const primaryButtonClasses =
+    'inline-flex items-center justify-center px-7 py-3 bg-neutral-950 hover:bg-neutral-800 text-white text-base font-semibold rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-950 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out';
+  const secondaryButtonClasses =
+    'inline-flex items-center justify-center px-7 py-3 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 text-base font-semibold rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-neutral-950 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out';
+  // Icon button style for dark hero backgrounds
+  const iconButtonDarkBgClasses =
+    'p-2.5 rounded-lg text-white bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/50 focus:ring-white/50';
+  // Secondary button for dark hero backgrounds
+  const secondaryButtonDarkBgClasses = `inline-flex items-center justify-center px-7 py-3 bg-white/10 backdrop-blur-lg text-neutral-200 hover:bg-white/10 border border-white/40 hover:border-white/50 text-base font-semibold rounded-lg transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/50 focus:ring-neutral-400 disabled:opacity-60 disabled:cursor-not-allowed transform active:scale-[0.98] duration-150 ease-out`;
 
   return (
     <div className="bg-gray-50">
-      {/* Hero Section - Mobile refined / Desktop original (SKY Theme) */}
+      {/* Hero Section - Mobile / Desktop */}
       <div className="relative">
         {/* ── MOBILE HERO (< md) ── */}
         <div className="md:hidden">
@@ -445,15 +485,20 @@ export default function TourPage() {
             {/* Top row: badge + actions */}
             <div className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between px-4 pt-14">
               {(tour.isPopular || tour.featured) && (
-                <div className="inline-flex items-center bg-sky-600/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
+                <div className="inline-flex items-center bg-neutral-950/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
                   <StarIconSolid className="h-3.5 w-3.5 text-yellow-300 mr-1.5" />
                   <span className="text-white font-semibold uppercase tracking-wider text-[10px]">
                     Popüler Seçim
                   </span>
                 </div>
               )}
-              <div className={`flex items-center gap-2 ${!(tour.isPopular || tour.featured) ? 'ml-auto' : ''}`}>
-                <button className={iconButtonDarkBgClasses} aria-label="Favorilere Ekle">
+              <div
+                className={`flex items-center gap-2 ${!(tour.isPopular || tour.featured) ? 'ml-auto' : ''}`}
+              >
+                <button
+                  className={iconButtonDarkBgClasses}
+                  aria-label="Favorilere Ekle"
+                >
                   <HeartIcon className="h-5 w-5" />
                 </button>
                 <button className={iconButtonDarkBgClasses} aria-label="Paylaş">
@@ -471,7 +516,9 @@ export default function TourPage() {
                   </h1>
                   <div className="flex items-start gap-1.5 text-white/90 mb-2.5">
                     <MapPinIcon className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 opacity-90" />
-                    <span className="text-sm leading-snug">{destinations.join(', ')}</span>
+                    <span className="text-sm leading-snug">
+                      {destinations.join(', ')}
+                    </span>
                   </div>
                   <div className="flex items-center gap-4 text-white/90 text-sm">
                     <div className="flex items-center gap-1.5">
@@ -509,48 +556,64 @@ export default function TourPage() {
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100/80 overflow-hidden">
               <div className="grid grid-cols-4 divide-x divide-gray-100 px-1 py-4">
                 <div className="flex flex-col items-center text-center px-1">
-                  <div className="p-2 bg-sky-50 rounded-xl mb-1.5">
-                    <CalendarDaysIcon className="h-4 w-4 text-sky-600" />
+                  <div className="p-2 bg-neutral-100 rounded-xl mb-1.5">
+                    <CalendarDaysIcon className="h-4 w-4 text-neutral-950" />
                   </div>
-                  <p className="text-[9px] text-gray-500 font-medium leading-tight mb-0.5">Tur Süresi</p>
+                  <p className="text-[9px] text-gray-500 font-medium leading-tight mb-0.5">
+                    Tur Süresi
+                  </p>
                   <p className="text-[10px] font-semibold text-gray-900 leading-tight">
                     {tour.duration} Gün
                   </p>
                   {nights > 0 && (
-                    <p className="text-[9px] text-gray-500 leading-tight">{nights} Gece</p>
+                    <p className="text-[9px] text-gray-500 leading-tight">
+                      {nights} Gece
+                    </p>
                   )}
                 </div>
                 <div className="flex flex-col items-center text-center px-1">
-                  <div className="p-2 bg-sky-50 rounded-xl mb-1.5">
-                    <UserGroupIcon className="h-4 w-4 text-sky-600" />
+                  <div className="p-2 bg-neutral-100 rounded-xl mb-1.5">
+                    <UserGroupIcon className="h-4 w-4 text-neutral-950" />
                   </div>
-                  <p className="text-[9px] text-gray-500 font-medium leading-tight mb-0.5">Grup Büyüklüğü</p>
+                  <p className="text-[9px] text-gray-500 font-medium leading-tight mb-0.5">
+                    Grup Büyüklüğü
+                  </p>
                   <p className="text-[10px] font-semibold text-gray-900 leading-tight">
                     Maks. {tour.maxParticipants || 10}
                   </p>
                   <p className="text-[9px] text-gray-500 leading-tight">Kişi</p>
                 </div>
                 <div className="flex flex-col items-center text-center px-1">
-                  <div className="p-2 bg-sky-50 rounded-xl mb-1.5">
-                    <ChatBubbleLeftRightIcon className="h-4 w-4 text-sky-600" />
+                  <div className="p-2 bg-neutral-100 rounded-xl mb-1.5">
+                    <ChatBubbleLeftRightIcon className="h-4 w-4 text-neutral-950" />
                   </div>
-                  <p className="text-[9px] text-gray-500 font-medium leading-tight mb-0.5">Rehber</p>
-                  <p className="text-[10px] font-semibold text-gray-900 leading-tight">Profesyonel</p>
+                  <p className="text-[9px] text-gray-500 font-medium leading-tight mb-0.5">
+                    Rehber
+                  </p>
+                  <p className="text-[10px] font-semibold text-gray-900 leading-tight">
+                    Profesyonel
+                  </p>
                 </div>
                 <div className="flex flex-col items-center text-center px-1">
                   <div className="p-2 bg-emerald-50 rounded-xl mb-1.5">
                     <ShieldCheckIcon className="h-4 w-4 text-emerald-600" />
                   </div>
-                  <p className="text-[9px] text-gray-500 font-medium leading-tight mb-0.5">İptal Güvencesi</p>
-                  <p className="text-[10px] font-semibold text-gray-900 leading-tight">Ücretsiz</p>
-                  <p className="text-[9px] text-gray-500 leading-tight">İptal</p>
+                  <p className="text-[9px] text-gray-500 font-medium leading-tight mb-0.5">
+                    İptal Güvencesi
+                  </p>
+                  <p className="text-[10px] font-semibold text-gray-900 leading-tight">
+                    Ücretsiz
+                  </p>
+                  <p className="text-[9px] text-gray-500 leading-tight">
+                    İptal
+                  </p>
                 </div>
               </div>
 
               <div className="flex gap-3 px-4 pb-4 pt-1">
                 <Link
                   href="#itinerary"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white border-2 border-sky-600 text-sky-600 text-sm font-semibold rounded-xl transition-colors hover:bg-sky-50 active:scale-[0.98]"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white border-2 border-neutral-950 text-neutral-950 text-sm font-semibold rounded-xl transition-colors hover:bg-neutral-100 active:scale-[0.98]"
                 >
                   <MapIcon className="h-4 w-4 flex-shrink-0" />
                   <span>Tur Programı</span>
@@ -558,7 +621,7 @@ export default function TourPage() {
                 <Link
                   href="#booking"
                   onClick={promptDateSelection}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm active:scale-[0.98]"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-neutral-950 hover:bg-neutral-800 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm active:scale-[0.98]"
                 >
                   <CalendarDaysIcon className="h-4 w-4 flex-shrink-0" />
                   <span>Rezervasyon Yap</span>
@@ -590,9 +653,11 @@ export default function TourPage() {
 
           <div className="absolute inset-0 z-10 flex items-center justify-center pb-36 pt-20">
             <div className="container px-4 text-center max-w-4xl mx-auto w-full">
-              <div className="inline-flex items-center mb-5 bg-sky-900/30 backdrop-blur-sm px-4 py-1.5 rounded-full border border-sky-400/30">
+              <div className="inline-flex items-center mb-5 bg-neutral-950/30 backdrop-blur-sm px-4 py-1.5 rounded-full border border-neutral-400/30">
                 <StarIconSolid className="h-4 w-4 text-yellow-300 mr-2" />
-                <span className="text-sky-100 font-medium uppercase tracking-wider text-[11px]">Popüler Seçim</span>
+                <span className="text-neutral-200 font-medium uppercase tracking-wider text-[11px]">
+                  Popüler Seçim
+                </span>
               </div>
               <h1 className="text-[3.5rem] lg:text-[4rem] font-bold text-white mb-4 leading-tight animate-fade-in-up drop-shadow-md">
                 {tour.name}
@@ -610,11 +675,13 @@ export default function TourPage() {
                 <span className="text-white/50 hidden sm:inline">•</span>
                 <div className="flex items-center text-base">
                   <UserGroupIcon className="w-4 h-4 mr-1.5 opacity-80" />
-                  <span className="font-normal">Maks. {tour.maxParticipants || 10} kişi</span>
+                  <span className="font-normal">
+                    Maks. {tour.maxParticipants || 10} kişi
+                  </span>
                 </div>
                 {tour.accommodation?.name && (
-                  <span className="inline-flex items-center gap-2 bg-sky-100 text-sky-800 px-3 py-1 rounded-full text-xs font-semibold ml-2">
-                    <BuildingOfficeIcon className="w-4 h-4 text-sky-600" />
+                  <span className="inline-flex items-center gap-2 bg-neutral-100 text-neutral-800 px-3 py-1 rounded-full text-xs font-semibold ml-2">
+                    <BuildingOfficeIcon className="w-4 h-4 text-neutral-950" />
                     Otel: {tour.accommodation.name}
                   </span>
                 )}
@@ -644,7 +711,9 @@ export default function TourPage() {
                     <CalendarDaysIcon className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Süre</p>
+                    <p className="text-xs text-white/70 font-medium uppercase tracking-wider">
+                      Süre
+                    </p>
                     <p className="text-sm font-semibold">{tour.duration} Gün</p>
                   </div>
                 </div>
@@ -654,8 +723,12 @@ export default function TourPage() {
                     <UserGroupIcon className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Grup</p>
-                    <p className="text-sm font-semibold">Maks. {tour.maxParticipants || 10} kişi</p>
+                    <p className="text-xs text-white/70 font-medium uppercase tracking-wider">
+                      Grup
+                    </p>
+                    <p className="text-sm font-semibold">
+                      Maks. {tour.maxParticipants || 10} kişi
+                    </p>
                   </div>
                 </div>
 
@@ -664,9 +737,14 @@ export default function TourPage() {
                     <MapPinIcon className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Destinasyon</p>
+                    <p className="text-xs text-white/70 font-medium uppercase tracking-wider">
+                      Destinasyon
+                    </p>
                     <p className="text-sm font-semibold truncate max-w-[150px]">
-                      {destinations[0]}{destinations.length > 1 ? ` +${destinations.length - 1}` : ''}
+                      {destinations[0]}
+                      {destinations.length > 1
+                        ? ` +${destinations.length - 1}`
+                        : ''}
                     </p>
                   </div>
                 </div>
@@ -676,18 +754,28 @@ export default function TourPage() {
                     <StarIcon className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <p className="text-xs text-white/70 font-medium uppercase tracking-wider">Puan</p>
+                    <p className="text-xs text-white/70 font-medium uppercase tracking-wider">
+                      Puan
+                    </p>
                     <p className="text-sm font-semibold">
-                      {displayRating > 0 ? `${displayRating.toFixed(1)}/5` : '—'}
+                      {displayRating > 0
+                        ? `${displayRating.toFixed(1)}/5`
+                        : '—'}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2 ml-auto">
-                  <button className={iconButtonDarkBgClasses} aria-label="Favorilere Ekle">
+                  <button
+                    className={iconButtonDarkBgClasses}
+                    aria-label="Favorilere Ekle"
+                  >
                     <HeartIcon className="h-5 w-5" />
                   </button>
-                  <button className={iconButtonDarkBgClasses} aria-label="Paylaş">
+                  <button
+                    className={iconButtonDarkBgClasses}
+                    aria-label="Paylaş"
+                  >
                     <ShareIcon className="h-5 w-5" />
                   </button>
                 </div>
@@ -704,8 +792,19 @@ export default function TourPage() {
           <div className="bg-emerald-50/60 rounded-xl p-6 md:p-8 border border-emerald-200/70 mb-10">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-semibold text-emerald-800 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7 mr-3 text-emerald-600">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-7 h-7 mr-3 text-emerald-600"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"
+                  />
                 </svg>
                 <span>Kalkış Noktaları ve Buluşma Bilgileri</span>
               </h3>
@@ -716,17 +815,23 @@ export default function TourPage() {
               {tour.meetingPoint && (
                 <div className="bg-white rounded-lg p-5 border border-emerald-100 relative overflow-hidden group">
                   <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-100 rounded-bl-[100px] -z-0 group-hover:bg-emerald-200 transition-colors"></div>
-                  
+
                   <div className="relative z-10">
                     <div className="flex items-start gap-4">
                       <div className="p-2.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
                         <MapPinIcon className="w-6 h-6 text-emerald-600" />
                       </div>
                       <div>
-                        <div className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">Ana Buluşma Noktası</div>
-                        <h5 className="font-medium text-gray-900 mb-1">{tour.meetingPoint}</h5>
+                        <div className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">
+                          Ana Buluşma Noktası
+                        </div>
+                        <h5 className="font-medium text-gray-900 mb-1">
+                          {tour.meetingPoint}
+                        </h5>
                         {tour.meetingPointAddress && (
-                          <p className="text-sm text-gray-600 mb-3">{tour.meetingPointAddress}</p>
+                          <p className="text-sm text-gray-600 mb-3">
+                            {tour.meetingPointAddress}
+                          </p>
                         )}
                         <div className="flex flex-col gap-2">
                           {tour.meetingTime && (
@@ -737,7 +842,12 @@ export default function TourPage() {
                           )}
                           <div className="flex items-center gap-2 text-sm text-gray-700">
                             <UserGroupIcon className="w-4 h-4 text-emerald-600" />
-                            <span>Rehber: {tour.tourOperator?.companyName || 'Tur Operatörü'} Rehberi</span>
+                            <span>
+                              Rehber:{' '}
+                              {tour.tourOperator?.companyName ||
+                                'Tur Operatörü'}{' '}
+                              Rehberi
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -749,12 +859,15 @@ export default function TourPage() {
               {/* Kalkış Noktaları */}
               {tour.pickupPoints && tour.pickupPoints.length > 0 ? (
                 tour.pickupPoints
-                  .filter(point => point.isActive)
+                  .filter((point) => point.isActive)
                   .sort((a, b) => a.order - b.order)
                   .map((point, index) => (
-                    <div key={point.id} className="bg-white rounded-lg p-5 border border-emerald-100 relative overflow-hidden group">
+                    <div
+                      key={point.id}
+                      className="bg-white rounded-lg p-5 border border-emerald-100 relative overflow-hidden group"
+                    >
                       <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-100 rounded-bl-[100px] -z-0 group-hover:bg-emerald-200 transition-colors"></div>
-                      
+
                       <div className="relative z-10">
                         <div className="flex items-start gap-4">
                           <div className="p-2.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
@@ -764,9 +877,13 @@ export default function TourPage() {
                             <div className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">
                               {index + 1}. Kalkış Noktası
                             </div>
-                            <h5 className="font-medium text-gray-900 mb-1">{point.city} - {point.location}</h5>
+                            <h5 className="font-medium text-gray-900 mb-1">
+                              {point.city} - {point.location}
+                            </h5>
                             {point.description && (
-                              <p className="text-sm text-gray-600 mb-3">{point.description}</p>
+                              <p className="text-sm text-gray-600 mb-3">
+                                {point.description}
+                              </p>
                             )}
                             <div className="flex flex-col gap-2">
                               <div className="flex items-center gap-2 text-sm text-gray-700">
@@ -775,7 +892,12 @@ export default function TourPage() {
                               </div>
                               <div className="flex items-center gap-2 text-sm text-gray-700">
                                 <UserGroupIcon className="w-4 h-4 text-emerald-600" />
-                                <span>Rehber: {tour.tourOperator?.companyName || 'Tur Operatörü'} Rehberi</span>
+                                <span>
+                                  Rehber:{' '}
+                                  {tour.tourOperator?.companyName ||
+                                    'Tur Operatörü'}{' '}
+                                  Rehberi
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -787,16 +909,22 @@ export default function TourPage() {
                 // Varsayılan kalkış noktası (veritabanında veri yoksa)
                 <div className="bg-white rounded-lg p-5 border border-emerald-100 relative overflow-hidden group">
                   <div className="absolute right-0 top-0 w-24 h-24 bg-emerald-100 rounded-bl-[100px] -z-0 group-hover:bg-emerald-200 transition-colors"></div>
-                  
+
                   <div className="relative z-10">
                     <div className="flex items-start gap-4">
                       <div className="p-2.5 bg-emerald-100 rounded-lg group-hover:bg-emerald-200 transition-colors">
                         <MapPinIcon className="w-6 h-6 text-emerald-600" />
                       </div>
                       <div>
-                        <div className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">Kalkış Noktası</div>
-                        <h5 className="font-medium text-gray-900 mb-1">{tour.departureCity || 'İstanbul'} - Merkez</h5>
-                        <p className="text-sm text-gray-600 mb-3">Tur operatörü tarafından belirlenecek</p>
+                        <div className="bg-emerald-100 text-emerald-700 text-xs font-medium px-2 py-1 rounded-full inline-block mb-2">
+                          Kalkış Noktası
+                        </div>
+                        <h5 className="font-medium text-gray-900 mb-1">
+                          {tour.departureCity || 'İstanbul'} - Merkez
+                        </h5>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Tur operatörü tarafından belirlenecek
+                        </p>
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center gap-2 text-sm text-gray-700">
                             <ClockIcon className="w-4 h-4 text-emerald-600" />
@@ -804,7 +932,12 @@ export default function TourPage() {
                           </div>
                           <div className="flex items-center gap-2 text-sm text-gray-700">
                             <UserGroupIcon className="w-4 h-4 text-emerald-600" />
-                            <span>Rehber: {tour.tourOperator?.companyName || 'Tur Operatörü'} Rehberi</span>
+                            <span>
+                              Rehber:{' '}
+                              {tour.tourOperator?.companyName ||
+                                'Tur Operatörü'}{' '}
+                              Rehberi
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -824,11 +957,13 @@ export default function TourPage() {
                 <div className="space-y-2">
                   <p className="flex items-start gap-2">
                     <span className="text-emerald-600 mt-1">•</span>
-                    Tüm kalkış noktalarında profesyonel rehber eşliğinde karşılama yapılacaktır.
+                    Tüm kalkış noktalarında profesyonel rehber eşliğinde
+                    karşılama yapılacaktır.
                   </p>
                   <p className="flex items-start gap-2">
                     <span className="text-emerald-600 mt-1">•</span>
-                    Lütfen belirtilen saatlerden en az 15 dakika önce kalkış noktasında hazır bulununuz.
+                    Lütfen belirtilen saatlerden en az 15 dakika önce kalkış
+                    noktasında hazır bulununuz.
                   </p>
                   <p className="flex items-start gap-2">
                     <span className="text-emerald-600 mt-1">•</span>
@@ -838,11 +973,13 @@ export default function TourPage() {
                 <div className="space-y-2">
                   <p className="flex items-start gap-2">
                     <span className="text-emerald-600 mt-1">•</span>
-                    Rehberlerimiz renkli şapkaları ile kolayca tanınabilir olacaktır.
+                    Rehberlerimiz renkli şapkaları ile kolayca tanınabilir
+                    olacaktır.
                   </p>
                   <p className="flex items-start gap-2">
                     <span className="text-emerald-600 mt-1">•</span>
-                    Acil durumlar için rehber iletişim numarası tur başlangıç tarihinden 1 gün önce SMS ile paylaşılacaktır.
+                    Acil durumlar için rehber iletişim numarası tur başlangıç
+                    tarihinden 1 gün önce SMS ile paylaşılacaktır.
                   </p>
                   <p className="flex items-start gap-2">
                     <span className="text-emerald-600 mt-1">•</span>
@@ -856,12 +993,16 @@ export default function TourPage() {
           {/* Konaklama Bilgisi - Kısa */}
           {tour.accommodation?.name && (
             <div className="mb-10">
-              <div className="bg-sky-50 border border-sky-200 rounded-lg p-4">
+              <div className="bg-neutral-100 border border-neutral-200 rounded-lg p-4">
                 <div className="flex items-center gap-3">
-                  <BuildingOfficeIcon className="w-5 h-5 text-sky-600 flex-shrink-0" />
+                  <BuildingOfficeIcon className="w-5 h-5 text-neutral-950 flex-shrink-0" />
                   <div>
-                    <span className="text-sm font-medium text-gray-600">Konaklama:</span>
-                    <span className="text-base font-semibold text-gray-900 ml-2">{tour.accommodation.name}</span>
+                    <span className="text-sm font-medium text-gray-600">
+                      Konaklama:
+                    </span>
+                    <span className="text-base font-semibold text-gray-900 ml-2">
+                      {tour.accommodation.name}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -872,18 +1013,18 @@ export default function TourPage() {
           <div className="mb-16">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
-                <PhotoIcon className="h-7 w-7 text-sky-600 mr-3" />
+                <PhotoIcon className="h-7 w-7 text-neutral-950 mr-3" />
                 <span>Fotoğraf Galerisi</span>
               </h2>
-              <button className="text-sm text-sky-600 hover:text-sky-700 font-medium flex items-center">
+              <button className="text-sm text-neutral-950 hover:text-neutral-800 font-medium flex items-center">
                 Tüm Fotoğraflar
                 <ChevronRightIcon className="w-4 h-4 ml-1" />
               </button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {tour.images.slice(0, 4).map((image, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className="group relative aspect-[4/3] rounded-xl overflow-hidden shadow-md hover:shadow-lg transition-shadow"
                 >
                   <Image
@@ -896,7 +1037,8 @@ export default function TourPage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="absolute bottom-3 left-3 right-3">
                       <p className="text-white text-sm font-medium truncate">
-                        {destinations[index % destinations.length] || 'Tur Lokasyonu'}
+                        {destinations[index % destinations.length] ||
+                          'Tur Lokasyonu'}
                       </p>
                     </div>
                   </div>
@@ -907,9 +1049,9 @@ export default function TourPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 lg:gap-16 min-h-[calc(100vh-200px)]">
             {/* Sol Kolon - Tur Bilgileri */}
-            <div className="lg:col-span-2 space-y-16 sm:space-y-20 h-full">
+            <div className="lg:col-span-2 space-y-16 sm:space-y-20 h-full min-w-0">
               {/* Tur Programı ve Rotası */}
-              <div id="itinerary" className="scroll-mt-24">
+              <div id="itinerary" className="scroll-mt-24 min-w-0">
                 <div className="md:hidden">
                   <TourItineraryMobile
                     itinerary={tour.itinerary}
@@ -919,283 +1061,394 @@ export default function TourPage() {
                   />
                 </div>
 
-                <div className="hidden md:block bg-white rounded-xl overflow-hidden shadow-md border border-neutral-200/70">
-                <div className="p-6 md:p-8">
-                  <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-2xl font-semibold text-gray-900 flex items-center">
-                      <MapIcon className="h-7 w-7 text-sky-600 mr-3" />
-                      <span>Tur Programı ve Rotası</span>
-                    </h3>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <div className="w-3 h-3 rounded-full bg-sky-500"></div>
-                        <span>Günlük Program</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-                        <span>Önemli Noktalar</span>
+                <div className="hidden md:block bg-white rounded-xl overflow-hidden shadow-md border border-neutral-200/70 min-w-0">
+                  <div className="p-6 md:p-8">
+                    <div className="flex items-center justify-between mb-8">
+                      <h3 className="text-2xl font-semibold text-gray-900 flex items-center">
+                        <MapIcon className="h-7 w-7 text-neutral-950 mr-3" />
+                        <span>Tur Programı ve Rotası</span>
+                      </h3>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <div className="w-3 h-3 rounded-full bg-neutral-950"></div>
+                          <span>Günlük Program</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                          <span>Önemli Noktalar</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {tour.itinerary ? (
-                    <div className="relative">
-                      {/* Rota Çizgisi */}
-                      <div className="absolute left-[26px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-sky-200 via-sky-300 to-sky-200"></div>
+                    {tour.itinerary ? (
+                      <div className="relative">
+                        {/* Rota Çizgisi */}
+                        <div className="absolute left-[26px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-neutral-200 via-neutral-300 to-neutral-200"></div>
 
-                      {/* Günlük Program */}
-                      <div className="space-y-12">
-                        {Object.entries(tour.itinerary).map(([day, content]: [string, any], index: number) => {
-                          const dayNumber = (parseInt(day.replace('day', '')) + 1).toString();
-                          const tourStartDate = tour.tourDates?.[0]?.startDate;
-                          const currentDate = tourStartDate 
-                            ? new Date(new Date(tourStartDate).setDate(new Date(tourStartDate).getDate() + index))
-                            : null;
-                          const formattedDate = currentDate 
-                            ? currentDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })
-                            : `${dayNumber}. Gün`;
+                        {/* Günlük Program */}
+                        <div className="space-y-12">
+                          {Object.entries(tour.itinerary).map(
+                            ([day, content]: [string, any], index: number) => {
+                              const dayNumberNum =
+                                parseInt(day.replace('day', ''), 10) + 1;
+                              const dayNumber = String(dayNumberNum);
+                              const tourStartDate =
+                                tour.tourDates?.[0]?.startDate;
+                              const currentDate = tourStartDate
+                                ? new Date(
+                                    new Date(tourStartDate).setDate(
+                                      new Date(tourStartDate).getDate() + index,
+                                    ),
+                                  )
+                                : null;
+                              const formattedDate = currentDate
+                                ? currentDate.toLocaleDateString('tr-TR', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric',
+                                  })
+                                : null;
 
-                          // Destinasyon bilgisini al
-                          const destination = tour.destinations[index] || tour.destinations[0];
-                          const destinationName = getDestinationName(destination);
+                              const destination =
+                                tour.destinations[index] ||
+                                tour.destinations[0];
+                              const destinationName =
+                                getDestinationName(destination);
 
-                          // Gün için örnek fotoğraflar
-                          const dayImages = tour.images ? tour.images.slice(index * 2, (index * 2) + 2) : [];
+                              const rawTitle =
+                                content.title ||
+                                destinationName ||
+                                `${dayNumber}. Gün programı`;
+                              const displayTitle =
+                                stripDayPrefixFromTitle(
+                                  rawTitle,
+                                  dayNumberNum,
+                                ) ||
+                                destinationName ||
+                                'Gün programı';
 
-                          return (
-                            <div key={index} className="relative flex gap-6">
-                              {/* Gün İşareti */}
-                              <div className="flex-shrink-0 w-13">
-                                <div className="w-13 h-13 rounded-full flex items-center justify-center bg-sky-100 text-sky-600 relative">
-                                  <div className="w-10 h-10 rounded-full flex items-center justify-center bg-sky-50">
-                                    <span className="text-lg font-semibold">{dayNumber}</span>
-                                  </div>
-                                  {/* Zaman Çizelgesi Göstergesi */}
-                                  <div className="absolute -right-1 -top-1 w-5 h-5 rounded-full bg-sky-500 text-white flex items-center justify-center text-xs font-medium">
-                                    {index + 1}
-                                  </div>
-                                </div>
-                              </div>
+                              const dayImages = tour.images
+                                ? tour.images.slice(index * 2, index * 2 + 2)
+                                : [];
 
-                              {/* Gün Detayları */}
-                              <div className="flex-grow">
-                                <div className="bg-white rounded-xl border border-neutral-200/70 shadow-sm hover:shadow-md transition-shadow">
-                                  {/* Üst Bilgi Çubuğu */}
-                                  <div className="px-5 py-4 border-b border-neutral-100 bg-sky-50/50">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-3">
-                                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-700">
-                                          {formattedDate}
-                                        </span>
-                                        <h4 className="text-lg font-semibold text-gray-900">
-                                          {content.title || destinationName || `${dayNumber}. Gün Programı`}
-                                        </h4>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <button 
-                                          className="p-2 hover:bg-white rounded-lg transition-colors" 
-                                          title="Haritada Göster"
-                                        >
-                                          <MapPinIcon className="w-5 h-5 text-gray-500" />
-                                        </button>
-                                        {dayImages.length > 0 && (
-                                          <button 
-                                            className="p-2 hover:bg-white rounded-lg transition-colors"
-                                            title="Fotoğrafları Görüntüle"
-                                          >
-                                            <PhotoIcon className="w-5 h-5 text-gray-500" />
-                                          </button>
-                                        )}
-                                      </div>
+                              return (
+                                <div
+                                  key={index}
+                                  className="relative flex gap-6 min-w-0"
+                                >
+                                  <div className="flex-shrink-0 w-14 flex justify-center">
+                                    <div
+                                      className="relative z-10 w-12 h-12 rounded-full flex items-center justify-center bg-neutral-100 text-neutral-950 ring-4 ring-white font-semibold text-lg"
+                                      aria-label={`${dayNumber}. gün`}
+                                    >
+                                      {dayNumber}
                                     </div>
                                   </div>
 
-                                  {/* Ana İçerik */}
-                                  <div className="p-5">
-                                    {/* Açıklama */}
-                                    <p className="text-gray-600 text-sm mb-6">{content.description || 'Bu gün için detaylı program bilgisi yakında eklenecektir.'}</p>
+                                  <div className="flex-grow min-w-0">
+                                    <div className="bg-white rounded-xl border border-neutral-200/70 shadow-sm hover:shadow-md transition-shadow overflow-hidden min-w-0">
+                                      <div className="px-5 py-4 border-b border-neutral-100 bg-neutral-100/50">
+                                        <div className="flex flex-wrap items-start justify-between gap-3">
+                                          <div className="flex flex-wrap items-center gap-3 min-w-0 flex-1">
+                                            {formattedDate && (
+                                              <span className="px-3 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800 shrink-0">
+                                                {formattedDate}
+                                              </span>
+                                            )}
+                                            <h4 className="text-lg font-semibold text-gray-900 break-words min-w-0">
+                                              {displayTitle}
+                                            </h4>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              className="p-2 hover:bg-white rounded-lg transition-colors"
+                                              title="Haritada Göster"
+                                            >
+                                              <MapPinIcon className="w-5 h-5 text-gray-500" />
+                                            </button>
+                                            {dayImages.length > 0 && (
+                                              <button
+                                                className="p-2 hover:bg-white rounded-lg transition-colors"
+                                                title="Fotoğrafları Görüntüle"
+                                              >
+                                                <PhotoIcon className="w-5 h-5 text-gray-500" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
 
-                                    {/* Fotoğraflar */}
-                                    {dayImages.length > 0 && (
-                                      <div className="mb-6">
-                                        <div className="grid grid-cols-2 gap-4">
-                                          {dayImages.map((image: string, imgIndex: number) => (
-                                            <div key={imgIndex} className="relative aspect-[4/3] rounded-lg overflow-hidden group">
-                                              <Image
-                                                src={image}
-                                                alt={`${content.title || destinationName} - ${imgIndex + 1}`}
-                                                fill
-                                                className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                              />
-                                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <div className="absolute bottom-3 left-3 right-3">
-                                                  <p className="text-white text-sm font-medium truncate">
-                                                    {content.title || destinationName}
+                                      {/* Ana İçerik */}
+                                      <div className="p-5 min-w-0">
+                                        <p className="text-gray-600 text-sm mb-6 break-words [overflow-wrap:anywhere]">
+                                          {content.description ||
+                                            'Bu gün için detaylı program bilgisi yakında eklenecektir.'}
+                                        </p>
+
+                                        {/* Fotoğraflar */}
+                                        {dayImages.length > 0 && (
+                                          <div className="mb-6">
+                                            <div className="grid grid-cols-2 gap-4">
+                                              {dayImages.map(
+                                                (
+                                                  image: string,
+                                                  imgIndex: number,
+                                                ) => (
+                                                  <div
+                                                    key={imgIndex}
+                                                    className="relative aspect-[4/3] rounded-lg overflow-hidden group"
+                                                  >
+                                                    <Image
+                                                      src={image}
+                                                      alt={`${content.title || destinationName} - ${imgIndex + 1}`}
+                                                      fill
+                                                      className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                                      <div className="absolute bottom-3 left-3 right-3">
+                                                        <p className="text-white text-sm font-medium truncate">
+                                                          {content.title ||
+                                                            destinationName}
+                                                        </p>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                ),
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Öne Çıkan Özellikler */}
+                                        {content.highlights &&
+                                          content.highlights.length > 0 && (
+                                            <div className="mb-6">
+                                              <h5 className="text-sm font-medium text-gray-700 mb-3">
+                                                Günün Öne Çıkanları
+                                              </h5>
+                                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                {content.highlights.map(
+                                                  (
+                                                    highlight: string,
+                                                    i: number,
+                                                  ) => (
+                                                    <div
+                                                      key={i}
+                                                      className="flex items-center gap-2 p-2.5 rounded-lg border border-neutral-200 bg-neutral-100/30 min-w-0"
+                                                    >
+                                                      <span className="text-lg shrink-0">
+                                                        ✨
+                                                      </span>
+                                                      <span className="text-sm text-gray-700 break-words [overflow-wrap:anywhere]">
+                                                        {highlight}
+                                                      </span>
+                                                    </div>
+                                                  ),
+                                                )}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                        {/* Zaman Çizelgesi */}
+                                        {content.schedule &&
+                                          content.schedule.length > 0 && (
+                                            <div className="mb-6">
+                                              <h5 className="text-sm font-medium text-gray-700 mb-3">
+                                                Günün Programı
+                                              </h5>
+                                              <div className="space-y-3">
+                                                {content.schedule.map(
+                                                  (
+                                                    scheduleItem: any,
+                                                    i: number,
+                                                  ) => (
+                                                    <div
+                                                      key={i}
+                                                      className="flex items-start gap-3 p-2.5 bg-neutral-100 rounded-lg border border-neutral-200 min-w-0"
+                                                    >
+                                                      <div className="p-2 bg-neutral-100 rounded-lg shrink-0">
+                                                        <ClockIcon className="w-4 h-4 text-neutral-950" />
+                                                      </div>
+                                                      <div className="min-w-0 flex-1">
+                                                        <p className="text-sm font-medium text-gray-900 break-words">
+                                                          {scheduleItem.time ||
+                                                            `${i + 1}. Aktivite`}
+                                                        </p>
+                                                        <p className="text-xs text-gray-600 break-words [overflow-wrap:anywhere]">
+                                                          {scheduleItem.activity ||
+                                                            'Aktivite'}
+                                                        </p>
+                                                      </div>
+                                                    </div>
+                                                  ),
+                                                )}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                        {/* Alt Bilgiler */}
+                                        <div className="pt-4 border-t border-gray-100">
+                                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                            {/* Konum */}
+                                            {destinationName && (
+                                              <div className="flex items-center gap-2">
+                                                <div className="p-2 bg-gray-100 rounded-lg">
+                                                  <MapPinIcon className="w-4 h-4 text-gray-600" />
+                                                </div>
+                                                <div>
+                                                  <p className="text-xs text-gray-500">
+                                                    Konum
+                                                  </p>
+                                                  <p className="text-sm font-medium text-gray-700 break-words">
+                                                    {destinationName}
                                                   </p>
                                                 </div>
                                               </div>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
+                                            )}
 
-                                    {/* Öne Çıkan Özellikler */}
-                                    {content.highlights && content.highlights.length > 0 && (
-                                      <div className="mb-6">
-                                        <h5 className="text-sm font-medium text-gray-700 mb-3">Günün Öne Çıkanları</h5>
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                          {content.highlights.map((highlight: string, i: number) => (
-                                            <div 
-                                              key={i} 
-                                              className="flex items-center gap-2 p-2.5 rounded-lg border border-sky-100 bg-sky-50/30"
-                                            >
-                                              <span className="text-lg">✨</span>
-                                              <span className="text-sm text-gray-700">{highlight}</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Zaman Çizelgesi */}
-                                    {content.schedule && content.schedule.length > 0 && (
-                                      <div className="mb-6">
-                                        <h5 className="text-sm font-medium text-gray-700 mb-3">Günün Programı</h5>
-                                        <div className="space-y-3">
-                                          {content.schedule.map((scheduleItem: any, i: number) => (
-                                            <div key={i} className="flex items-center gap-3 p-2.5 bg-sky-50 rounded-lg border border-sky-100">
-                                              <div className="p-2 bg-sky-100 rounded-lg">
-                                                <ClockIcon className="w-4 h-4 text-sky-600" />
+                                            {/* Mesafe */}
+                                            {content.distance && (
+                                              <div className="flex items-center gap-2">
+                                                <div className="p-2 bg-gray-100 rounded-lg">
+                                                  <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    strokeWidth={1.5}
+                                                    stroke="currentColor"
+                                                    className="w-4 h-4 text-gray-600"
+                                                  >
+                                                    <path
+                                                      strokeLinecap="round"
+                                                      strokeLinejoin="round"
+                                                      d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                                                    />
+                                                  </svg>
+                                                </div>
+                                                <div>
+                                                  <p className="text-xs text-gray-500">
+                                                    Mesafe
+                                                  </p>
+                                                  <p className="text-sm font-medium text-gray-700">
+                                                    {content.distance}
+                                                  </p>
+                                                </div>
                                               </div>
-                                              <div>
-                                                <p className="text-sm font-medium text-gray-900">
-                                                  {scheduleItem.time || `${i + 1}. Aktivite`}
-                                                </p>
-                                                <p className="text-xs text-gray-600">{scheduleItem.activity || 'Aktivite'}</p>
+                                            )}
+
+                                            {/* Aktivite Sayısı */}
+                                            {content.highlights &&
+                                              content.highlights.length > 0 && (
+                                                <div className="flex items-center gap-2">
+                                                  <div className="p-2 bg-gray-100 rounded-lg">
+                                                    <CalendarDaysIcon className="w-4 h-4 text-gray-600" />
+                                                  </div>
+                                                  <div>
+                                                    <p className="text-xs text-gray-500">
+                                                      Aktiviteler
+                                                    </p>
+                                                    <p className="text-sm font-medium text-gray-700">
+                                                      {
+                                                        content.highlights
+                                                          .length
+                                                      }{' '}
+                                                      Aktivite
+                                                    </p>
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                            {/* Tahmini Süre */}
+                                            {content.duration && (
+                                              <div className="flex items-center gap-2">
+                                                <div className="p-2 bg-gray-100 rounded-lg">
+                                                  <ClockIcon className="w-4 h-4 text-gray-600" />
+                                                </div>
+                                                <div>
+                                                  <p className="text-xs text-gray-500">
+                                                    Süre
+                                                  </p>
+                                                  <p className="text-sm font-medium text-gray-700">
+                                                    {content.duration}
+                                                  </p>
+                                                </div>
                                               </div>
-                                            </div>
-                                          ))}
+                                            )}
+                                          </div>
                                         </div>
-                                      </div>
-                                    )}
-
-                                    {/* Alt Bilgiler */}
-                                    <div className="pt-4 border-t border-gray-100">
-                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                        {/* Konum */}
-                                        {destinationName && (
-                                          <div className="flex items-center gap-2">
-                                            <div className="p-2 bg-gray-100 rounded-lg">
-                                              <MapPinIcon className="w-4 h-4 text-gray-600" />
-                                            </div>
-                                            <div>
-                                              <p className="text-xs text-gray-500">Konum</p>
-                                              <p className="text-sm font-medium text-gray-700">
-                                                {destinationName}
-                                              </p>
-                                            </div>
-                                          </div>
-                                        )}
-
-                                        {/* Mesafe */}
-                                        {content.distance && (
-                                          <div className="flex items-center gap-2">
-                                            <div className="p-2 bg-gray-100 rounded-lg">
-                                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-gray-600">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                              </svg>
-                                            </div>
-                                            <div>
-                                              <p className="text-xs text-gray-500">Mesafe</p>
-                                              <p className="text-sm font-medium text-gray-700">
-                                                {content.distance}
-                                              </p>
-                                            </div>
-                                          </div>
-                                        )}
-
-                                        {/* Aktivite Sayısı */}
-                                        {content.highlights && content.highlights.length > 0 && (
-                                          <div className="flex items-center gap-2">
-                                            <div className="p-2 bg-gray-100 rounded-lg">
-                                              <CalendarDaysIcon className="w-4 h-4 text-gray-600" />
-                                            </div>
-                                            <div>
-                                              <p className="text-xs text-gray-500">Aktiviteler</p>
-                                              <p className="text-sm font-medium text-gray-700">
-                                                {content.highlights.length} Aktivite
-                                              </p>
-                                            </div>
-                                          </div>
-                                        )}
-
-                                        {/* Tahmini Süre */}
-                                        {content.duration && (
-                                          <div className="flex items-center gap-2">
-                                            <div className="p-2 bg-gray-100 rounded-lg">
-                                              <ClockIcon className="w-4 h-4 text-gray-600" />
-                                            </div>
-                                            <div>
-                                              <p className="text-xs text-gray-500">Süre</p>
-                                              <p className="text-sm font-medium text-gray-700">
-                                                {content.duration}
-                                              </p>
-                                            </div>
-                                          </div>
-                                        )}
                                       </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
+                              );
+                            },
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      // Itinerary verisi yoksa varsayılan görünüm
+                      <div className="text-center py-12">
+                        <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <MapIcon className="w-8 h-8 text-neutral-950" />
+                        </div>
+                        <h4 className="text-lg font-medium text-gray-900 mb-2">
+                          Tur Programı Hazırlanıyor
+                        </h4>
+                        <p className="text-gray-600 mb-6">
+                          Bu tur için detaylı günlük program yakında
+                          eklenecektir.
+                        </p>
+                        <div className="bg-neutral-100 rounded-lg p-4 border border-neutral-200">
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center">
+                              <span className="text-sm font-semibold text-neutral-950">
+                                1
+                              </span>
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : (
-                    // Itinerary verisi yoksa varsayılan görünüm
-                    <div className="text-center py-12">
-                      <div className="w-16 h-16 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <MapIcon className="w-8 h-8 text-sky-600" />
-                      </div>
-                      <h4 className="text-lg font-medium text-gray-900 mb-2">Tur Programı Hazırlanıyor</h4>
-                      <p className="text-gray-600 mb-6">
-                        Bu tur için detaylı günlük program yakında eklenecektir.
-                      </p>
-                      <div className="bg-sky-50 rounded-lg p-4 border border-sky-100">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center">
-                            <span className="text-sm font-semibold text-sky-600">1</span>
+                            <div>
+                              <h5 className="font-medium text-gray-900">
+                                Tur Başlangıcı
+                              </h5>
+                              <p className="text-sm text-gray-600">
+                                Buluşma noktasında toplanma ve tur başlangıcı
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h5 className="font-medium text-gray-900">Tur Başlangıcı</h5>
-                            <p className="text-sm text-gray-600">Buluşma noktasında toplanma ve tur başlangıcı</p>
+                          <div className="flex items-center gap-3 mb-3">
+                            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center">
+                              <span className="text-sm font-semibold text-neutral-950">
+                                2
+                              </span>
+                            </div>
+                            <div>
+                              <h5 className="font-medium text-gray-900">
+                                Destinasyon Ziyaretleri
+                              </h5>
+                              <p className="text-sm text-gray-600">
+                                Planlanan destinasyonlarda rehber eşliğinde
+                                geziler
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center">
+                              <span className="text-sm font-semibold text-neutral-950">
+                                3
+                              </span>
+                            </div>
+                            <div>
+                              <h5 className="font-medium text-gray-900">
+                                Tur Sonu
+                              </h5>
+                              <p className="text-sm text-gray-600">
+                                Tur sonunda ayrılış ve dönüş
+                              </p>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center">
-                            <span className="text-sm font-semibold text-sky-600">2</span>
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-gray-900">Destinasyon Ziyaretleri</h5>
-                            <p className="text-sm text-gray-600">Planlanan destinasyonlarda rehber eşliğinde geziler</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center">
-                            <span className="text-sm font-semibold text-sky-600">3</span>
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-gray-900">Tur Sonu</h5>
-                            <p className="text-sm text-gray-600">Tur sonunda ayrılış ve dönüş</p>
-                          </div>
-                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1213,13 +1466,13 @@ export default function TourPage() {
             {/* Sağ Kolon - Rezervasyon ve Bilgiler */}
             <div className="flex flex-col space-y-8 w-full max-w-[400px] mx-auto">
               {/* Rezervasyon Kartı */}
-              <div 
-                id="booking" 
+              <div
+                id="booking"
                 className="bg-white rounded-xl p-6 border border-neutral-200/70 shadow-md w-full top-24"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
                   <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
-                    <CalendarDaysIcon className="h-6 w-6 mr-2.5 text-sky-600 flex-shrink-0" />
+                    <CalendarDaysIcon className="h-6 w-6 mr-2.5 text-neutral-950 flex-shrink-0" />
                     <span>Rezervasyon</span>
                   </h2>
                   {/* Badges */}
@@ -1227,7 +1480,7 @@ export default function TourPage() {
                     <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200/70">
                       Ücretsiz İptal
                     </div>
-                    <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-800 border border-sky-200/70">
+                    <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800 border border-neutral-200/70">
                       Anında Onay
                     </div>
                   </div>
@@ -1252,107 +1505,128 @@ export default function TourPage() {
                         ? 'border-2 border-red-500 ring-2 ring-red-100 animate-pulse'
                         : 'border border-neutral-200/70'
                     }`}
-                    title={showDateSelectionHint ? 'Rezervasyon için bir tur tarihi seçin' : undefined}
+                    title={
+                      showDateSelectionHint
+                        ? 'Rezervasyon için bir tur tarihi seçin'
+                        : undefined
+                    }
                   >
-                  {showDateSelectionHint && (
-                    <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm font-medium">
-                      <ExclamationCircleIcon className="w-5 h-5 flex-shrink-0" />
-                      <span>Önce tarih seçiniz</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-neutral-800">Tur Tarihleri</h3>
-                    <div className="text-sm text-neutral-600">
-                      {availableTourDates.length} tarih mevcut
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-4">
-                    {availableTourDates.length === 0 ? (
-                      <div className="text-center py-8">
-                        <CalendarDaysIcon className="h-12 w-12 text-neutral-400 mx-auto mb-3" />
-                        <p className="text-neutral-600">Şu anda mevcut tur tarihi bulunmamaktadır.</p>
+                    {showDateSelectionHint && (
+                      <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm font-medium">
+                        <ExclamationCircleIcon className="w-5 h-5 flex-shrink-0" />
+                        <span>Önce tarih seçiniz</span>
                       </div>
-                    ) : (
-                      availableTourDates.map((date) => {
-                        const isLimited = date.availableSeats <= 5;
-                        const startDate = new Date(date.startDate);
-                        const endDate = new Date(date.endDate);
-                        const hasEarlyBirdDiscount = date.earlyBirdDiscount && date.earlyBirdDeadline && new Date() <= new Date(date.earlyBirdDeadline);
-                        const hasLastMinuteDiscount = date.lastMinuteDiscount && date.lastMinuteStart && new Date() >= new Date(date.lastMinuteStart);
-                        
-                        return (
-                          <button
-                            key={date.id}
-                            onClick={() => {
-                              handleDateSelect(date);
-                            }}
-                            className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-lg border transition-colors text-left w-full ${
-                              selectedTourDate?.id === date.id
-                                ? 'border-sky-500 ring-2 ring-sky-200'
-                                : showDateSelectionHint
-                                  ? 'border-red-200 hover:border-red-400 hover:bg-red-50/30'
-                                  : 'border-neutral-200/70 hover:border-sky-200'
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <CalendarDaysIcon className="h-5 w-5 text-sky-600 flex-shrink-0 mt-1" />
-                              <div>
-                                <div className="text-sm font-medium text-neutral-900">
-                                  {startDate.toLocaleDateString('tr-TR', { 
-                                    day: 'numeric',
-                                    month: 'long',
-                                    year: 'numeric'
-                                  })} - {endDate.toLocaleDateString('tr-TR', {
-                                    day: 'numeric',
-                                    month: 'long',
-                                    year: 'numeric'
-                                  })}
-                                </div>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${isLimited ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                    {isLimited ? `Son ${date.availableSeats} kontenjan!` : `${date.availableSeats} kişilik kontenjan`}
-                                  </span>
-                                  {hasEarlyBirdDiscount && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-700">
-                                      %{date.earlyBirdDiscount} Erken Rezervasyon
-                                    </span>
-                                  )}
-                                  {hasLastMinuteDiscount && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700">
-                                      %{date.lastMinuteDiscount} Son Dakika
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex flex-col items-end gap-1">
-                              <div className="text-lg font-semibold text-sky-700">
-                                {date.price.toLocaleString('tr-TR')} ₺
-                              </div>
-                              {date.minParticipants && (
-                                <div className="text-xs text-neutral-500">
-                                  Minimum {date.minParticipants} kişi
-                                </div>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })
                     )}
-                  </div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-neutral-800">
+                        Tur Tarihleri
+                      </h3>
+                      <div className="text-sm text-neutral-600">
+                        {availableTourDates.length} tarih mevcut
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      {availableTourDates.length === 0 ? (
+                        <div className="text-center py-8">
+                          <CalendarDaysIcon className="h-12 w-12 text-neutral-400 mx-auto mb-3" />
+                          <p className="text-neutral-600">
+                            Şu anda mevcut tur tarihi bulunmamaktadır.
+                          </p>
+                        </div>
+                      ) : (
+                        availableTourDates.map((date) => {
+                          const isLimited = date.availableSeats <= 5;
+                          const startDate = new Date(date.startDate);
+                          const endDate = new Date(date.endDate);
+                          const hasEarlyBirdDiscount =
+                            date.earlyBirdDiscount &&
+                            date.earlyBirdDeadline &&
+                            new Date() <= new Date(date.earlyBirdDeadline);
+                          const hasLastMinuteDiscount =
+                            date.lastMinuteDiscount &&
+                            date.lastMinuteStart &&
+                            new Date() >= new Date(date.lastMinuteStart);
+
+                          return (
+                            <button
+                              key={date.id}
+                              onClick={() => {
+                                handleDateSelect(date);
+                              }}
+                              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white rounded-lg border transition-colors text-left w-full ${
+                                selectedTourDate?.id === date.id
+                                  ? 'border-neutral-950 ring-2 ring-neutral-200'
+                                  : showDateSelectionHint
+                                    ? 'border-red-200 hover:border-red-400 hover:bg-red-50/30'
+                                    : 'border-neutral-200/70 hover:border-neutral-200'
+                              }`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <CalendarDaysIcon className="h-5 w-5 text-neutral-950 flex-shrink-0 mt-1" />
+                                <div>
+                                  <div className="text-sm font-medium text-neutral-900">
+                                    {startDate.toLocaleDateString('tr-TR', {
+                                      day: 'numeric',
+                                      month: 'long',
+                                      year: 'numeric',
+                                    })}{' '}
+                                    -{' '}
+                                    {endDate.toLocaleDateString('tr-TR', {
+                                      day: 'numeric',
+                                      month: 'long',
+                                      year: 'numeric',
+                                    })}
+                                  </div>
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                    <span
+                                      className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${isLimited ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}
+                                    >
+                                      {isLimited
+                                        ? `Son ${date.availableSeats} kontenjan!`
+                                        : `${date.availableSeats} kişilik kontenjan`}
+                                    </span>
+                                    {hasEarlyBirdDiscount && (
+                                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-neutral-100 text-neutral-800">
+                                        %{date.earlyBirdDiscount} Erken
+                                        Rezervasyon
+                                      </span>
+                                    )}
+                                    {hasLastMinuteDiscount && (
+                                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700">
+                                        %{date.lastMinuteDiscount} Son Dakika
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-1">
+                                <div className="text-lg font-semibold text-neutral-800">
+                                  {date.price.toLocaleString('tr-TR')} ₺
+                                </div>
+                                {date.minParticipants && (
+                                  <div className="text-xs text-neutral-500">
+                                    Minimum {date.minParticipants} kişi
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Tur Operatörü Bilgileri - ikas Style */}
               {tourOperator && (
-                <div 
+                <div
                   className="bg-white rounded-xl p-6 border border-neutral-200/70 shadow-md w-full"
                   /* Simplified card style */
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
                     <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
-                      <ChatBubbleLeftRightIcon className="h-6 w-6 mr-2.5 text-sky-600 flex-shrink-0" />
+                      <ChatBubbleLeftRightIcon className="h-6 w-6 mr-2.5 text-neutral-950 flex-shrink-0" />
                       <span>Tur Operatörü</span>
                     </h2>
                     {(tourOperator.reviewCount ?? 0) > 0 && (
@@ -1360,7 +1634,9 @@ export default function TourPage() {
                         <div className="flex items-center text-yellow-400 mr-1.5">
                           {renderStars(tourOperator.rating ?? 0)}
                         </div>
-                        <span className="font-medium">({(tourOperator.rating ?? 0).toFixed(1)}/5)</span>
+                        <span className="font-medium">
+                          ({(tourOperator.rating ?? 0).toFixed(1)}/5)
+                        </span>
                         <span className="mx-1">•</span>
                         <span>{tourOperator.reviewCount} değerlendirme</span>
                       </div>
@@ -1371,40 +1647,50 @@ export default function TourPage() {
                   <div className="bg-neutral-50/60 p-5 rounded-lg border border-neutral-200/70 mb-6">
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md">
-                          <Image
-                          src={tourOperator.logo || `https://ui-avatars.com/api/?name=${encodeURIComponent(tourOperator.companyName || 'Operator')}&background=0EA5E9&color=fff`}
+                        <Image
+                          src={
+                            tourOperator.logo ||
+                            `https://ui-avatars.com/api/?name=${encodeURIComponent(tourOperator.companyName || 'Operator')}&background=0EA5E9&color=fff`
+                          }
                           alt={tourOperator.companyName || 'Tur Operatörü'}
                           width={48}
                           height={48}
                           className="object-cover"
-                          />
-                        </div>
+                        />
+                      </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="text-lg font-semibold text-gray-900">{tourOperator.companyName}</h4>
+                          <h4 className="text-lg font-semibold text-gray-900">
+                            {tourOperator.companyName}
+                          </h4>
                           {tourOperator.membershipTier && (
-                            <MembershipBadge tier={tourOperator.membershipTier} />
+                            <MembershipBadge
+                              tier={tourOperator.membershipTier}
+                            />
                           )}
                         </div>
-                        <Link 
+                        <Link
                           href={`/tour-operator/${tourOperator.id}#tours`}
-                          className="text-sm text-blue-600 hover:text-blue-800"
+                          className="text-sm text-neutral-950 hover:text-neutral-800"
                         >
                           Tüm turları gör
                         </Link>
-                        </div>
                       </div>
+                    </div>
                   </div>
-                  
+
                   {/* Simplified Description Area */}
                   <div className="bg-neutral-50/60 p-5 rounded-lg border border-neutral-200/70 mb-6">
-                    <p className="text-neutral-700 text-sm leading-relaxed line-clamp-3">{tourOperator.description || 'Tur operatörü hakkında bilgi bulunmamaktadır.'}</p>
+                    <p className="text-neutral-700 text-sm leading-relaxed line-clamp-3">
+                      {tourOperator.description ||
+                        'Tur operatörü hakkında bilgi bulunmamaktadır.'}
+                    </p>
                   </div>
-                  
+
                   {/* Simplified Link Button */}
-                  <Link 
-                    href={`/tour-operator/${tourOperator.id}`} 
-                    className="group text-sm font-medium text-sky-600 hover:text-sky-700 transition-colors flex items-center justify-between p-4 rounded-lg border border-neutral-200/70 hover:bg-sky-50/50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-sky-500"
+                  <Link
+                    href={`/tour-operator/${tourOperator.id}`}
+                    className="group text-sm font-medium text-neutral-950 hover:text-neutral-800 transition-colors flex items-center justify-between p-4 rounded-lg border border-neutral-200/70 hover:bg-neutral-100/50 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-neutral-950"
                   >
                     <span className="flex items-center">
                       <BuildingOfficeIcon className="w-4 h-4 mr-2" />
@@ -1416,33 +1702,38 @@ export default function TourPage() {
               )}
 
               {/* Dahil Olanlar / Olmayanlar - ikas Style */}
-              <div 
+              <div
                 className="bg-white rounded-xl p-6 border border-neutral-200/70 shadow-md w-full"
                 /* Simplified card style */
               >
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
-                    <CheckCircleIcon className="h-6 w-6 mr-2.5 text-sky-600 flex-shrink-0" />
+                    <CheckCircleIcon className="h-6 w-6 mr-2.5 text-neutral-950 flex-shrink-0" />
                     <span>Dahil Olanlar / Olmayanlar</span>
                   </h2>
                 </div>
-                
+
                 {/* Simplified Included Area */}
                 <div className="bg-emerald-50/60 p-5 rounded-lg border border-emerald-200/70 mb-6">
-                    <h3 className="text-lg font-semibold text-emerald-800 mb-4 flex items-center">
-                      <CheckCircleIcon className="w-5 h-5 mr-2 text-emerald-600 flex-shrink-0" />
-                      <span>Dahil Olanlar</span>
-                    </h3>
-                    <ul className="space-y-2.5">
-                      {inclusions.map((item, index) => (
-                        <li key={index} className="flex items-start p-3 rounded-md bg-white/70 border border-emerald-100">
-                          <CheckCircleIcon className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 flex-shrink-0" />
-                          <span className="text-neutral-700 text-sm font-medium">{item}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  <h3 className="text-lg font-semibold text-emerald-800 mb-4 flex items-center">
+                    <CheckCircleIcon className="w-5 h-5 mr-2 text-emerald-600 flex-shrink-0" />
+                    <span>Dahil Olanlar</span>
+                  </h3>
+                  <ul className="space-y-2.5">
+                    {inclusions.map((item, index) => (
+                      <li
+                        key={index}
+                        className="flex items-start p-3 rounded-md bg-white/70 border border-emerald-100"
+                      >
+                        <CheckCircleIcon className="w-4 h-4 text-emerald-500 mr-2.5 mt-0.5 flex-shrink-0" />
+                        <span className="text-neutral-700 text-sm font-medium">
+                          {item}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                
+
                 {/* Simplified Excluded Area */}
                 <div className="bg-red-50/60 p-5 rounded-lg border border-red-200/70">
                   <h3 className="text-lg font-semibold text-red-800 mb-4 flex items-center">
@@ -1451,29 +1742,64 @@ export default function TourPage() {
                   </h3>
                   <ul className="space-y-2.5">
                     {exclusions.map((item, index) => (
-                      <li key={index} className="flex items-start p-3 rounded-md bg-white/70 border border-red-100">
+                      <li
+                        key={index}
+                        className="flex items-start p-3 rounded-md bg-white/70 border border-red-100"
+                      >
                         <XCircleIcon className="w-4 h-4 text-red-500 mr-2.5 mt-0.5 flex-shrink-0" />
-                        <span className="text-neutral-700 text-sm font-medium">{item}</span>
+                        <span className="text-neutral-700 text-sm font-medium">
+                          {item}
+                        </span>
                       </li>
                     ))}
                   </ul>
                 </div>
               </div>
 
+              {healthPrivileges.length > 0 && (
+                <div className="bg-white rounded-xl p-6 border border-neutral-200/70 shadow-md w-full">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
+                      <HeartIcon className="h-6 w-6 mr-2.5 text-neutral-950 flex-shrink-0" />
+                      <span>Sağlık Ayrıcalıkları</span>
+                    </h2>
+                  </div>
+                  <p className="text-sm text-neutral-600 mb-4">
+                    Bu turda aşağıdaki sağlık durumlarına saygı duyulur ve
+                    destek sağlanır.
+                  </p>
+                  <div className="bg-sky-50/60 p-5 rounded-lg border border-sky-200/70">
+                    <ul className="space-y-2.5">
+                      {healthPrivileges.map((item, index) => (
+                        <li
+                          key={index}
+                          className="flex items-start p-3 rounded-md bg-white/70 border border-sky-100"
+                        >
+                          <ShieldCheckIcon className="w-4 h-4 text-sky-600 mr-2.5 mt-0.5 flex-shrink-0" />
+                          <span className="text-neutral-700 text-sm font-medium">
+                            {item}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
               {/* Acentenin Diğer Turları - Kompakt UI */}
-              <div 
+              <div
                 ref={containerRef}
                 className="@container bg-white rounded-xl overflow-hidden border border-neutral-200/70 shadow-md"
               >
                 {/* Header - Daha kompakt */}
                 <div className="border-b border-neutral-100 px-5 py-4 flex items-center justify-between bg-gray-50/80">
                   <h2 className="text-base font-semibold text-gray-800 flex items-center">
-                    <BuildingOfficeIcon className="h-5 w-5 mr-2 text-sky-600 flex-shrink-0" />
+                    <BuildingOfficeIcon className="h-5 w-5 mr-2 text-neutral-950 flex-shrink-0" />
                     <span>Acentenin Diğer Turları</span>
                   </h2>
-                  <Link 
+                  <Link
                     href={`/tour-operator/${tour.tourOperator.id}`}
-                    className="text-sm font-medium text-sky-600 hover:text-sky-700 transition-colors flex items-center group"
+                    className="text-sm font-medium text-neutral-950 hover:text-neutral-800 transition-colors flex items-center group"
                   >
                     <span className="mr-1">Tümünü Gör</span>
                     <ArrowRightIcon className="w-4 h-4 transform group-hover:translate-x-0.5 transition-transform flex-shrink-0" />
@@ -1483,27 +1809,30 @@ export default function TourPage() {
                 {/* Tours List - Yatay düzen */}
                 <div className="p-5 space-y-4">
                   {otherTours.map((otherTour) => (
-                    <div 
-                          key={otherTour.id} 
+                    <div
+                      key={otherTour.id}
                       className="flex flex-col @sm:flex-row @sm:items-center gap-4 p-4 rounded-lg border border-neutral-100 hover:border-neutral-200 transition-all bg-white hover:shadow-sm group"
-                        >
+                    >
                       {/* Tur Resmi */}
                       <div className="relative w-full h-40 @sm:w-32 @sm:h-24 rounded-lg overflow-hidden flex-shrink-0">
-                              <Image
+                        <Image
                           src={otherTour.images[0]}
-                                alt={otherTour.name}
-                                fill
+                          alt={otherTour.name}
+                          fill
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                         {otherTour.discount && otherTour.discount > 0 && (
                           <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-medium px-2 py-1 rounded">
                             %{otherTour.discount} İndirim
-                                  </div>
+                          </div>
                         )}
                         <div className="absolute bottom-2 left-2">
-                          <MembershipBadge tier={otherTour.tourOperator?.membershipTier} variant="onImage" />
+                          <MembershipBadge
+                            tier={otherTour.tourOperator?.membershipTier}
+                            variant="onImage"
+                          />
                         </div>
-                                </div>
+                      </div>
 
                       {/* Tur Bilgileri */}
                       <div className="flex-grow min-w-0">
@@ -1514,25 +1843,27 @@ export default function TourPage() {
                           <div className="flex items-center">
                             <MapPinIcon className="w-4 h-4 mr-1.5 text-gray-500 flex-shrink-0" />
                             <span className="truncate">
-                              {typeof otherTour.destinations[0] === 'string' 
+                              {typeof otherTour.destinations[0] === 'string'
                                 ? otherTour.destinations[0]
                                 : otherTour.destinations[0].city}
                             </span>
-                                  </div>
+                          </div>
                           <div className="flex items-center">
                             <CalendarDaysIcon className="w-4 h-4 mr-1.5 text-gray-500 flex-shrink-0" />
                             <span>{otherTour.duration} Gün</span>
-                                  </div>
+                          </div>
                           <div className="flex items-center">
                             <UserGroupIcon className="w-4 h-4 mr-1.5 text-gray-500 flex-shrink-0" />
-                            <span>Maks. {otherTour.maxParticipants || 20} kişi</span>
-                                </div>
-                                <div className="flex items-center">
+                            <span>
+                              Maks. {otherTour.maxParticipants || 20} kişi
+                            </span>
+                          </div>
+                          <div className="flex items-center">
                             <GlobeAltIcon className="w-4 h-4 mr-1.5 text-gray-500 flex-shrink-0" />
                             <span>{otherTour.tourType || 'Kültür Turu'}</span>
-                                  </div>
-                                </div>
-                              </div>
+                          </div>
+                        </div>
+                      </div>
 
                       {/* Fiyat ve Detay Butonu */}
                       <div className="flex @sm:flex-col items-center @sm:items-end justify-between @sm:justify-start gap-2 flex-shrink-0 pt-3 @sm:pt-0 @sm:pl-4 border-t @sm:border-t-0 @sm:border-l border-gray-100">
@@ -1540,19 +1871,23 @@ export default function TourPage() {
                           <div className="text-lg font-semibold text-gray-900">
                             {otherTour.price.toLocaleString('tr-TR')} ₺
                           </div>
-                              {otherTour.discount && otherTour.discount > 0 && (
+                          {otherTour.discount && otherTour.discount > 0 && (
                             <div className="text-sm text-gray-500 line-through">
-                              {(otherTour.price * (1 + otherTour.discount / 100)).toLocaleString('tr-TR')} ₺
-                                </div>
-                              )}
+                              {(
+                                otherTour.price *
+                                (1 + otherTour.discount / 100)
+                              ).toLocaleString('tr-TR')}{' '}
+                              ₺
                             </div>
-                  <Link 
+                          )}
+                        </div>
+                        <Link
                           href={`/tour/${otherTour.id}`}
-                          className="inline-flex items-center px-4 py-2 bg-sky-50 text-sky-600 hover:bg-sky-100 rounded-lg text-sm font-medium transition-colors group/link flex-shrink-0"
-                  >
+                          className="inline-flex items-center px-4 py-2 bg-neutral-100 text-neutral-950 hover:bg-neutral-100 rounded-lg text-sm font-medium transition-colors group/link flex-shrink-0"
+                        >
                           <span>Detaylar</span>
                           <ArrowRightIcon className="w-4 h-4 ml-1.5 transform group-hover/link:translate-x-0.5 transition-transform" />
-                  </Link>
+                        </Link>
                       </div>
                     </div>
                   ))}
@@ -1562,23 +1897,34 @@ export default function TourPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Animasyonlu Scroll İndikatörü - Simplified */}
       {showScrollIndicator && (
-      <div className="fixed bottom-28 right-6 hidden md:flex flex-col items-center animate-bounce-subtle z-30 pointer-events-none">
-        {/* Removed text */}
-        <div className="w-9 h-9 flex items-center justify-center bg-white rounded-full shadow-md border border-neutral-200/80">
-          <ChevronDownIcon className="w-5 h-5 text-neutral-500" />
+        <div className="fixed bottom-28 right-6 hidden md:flex flex-col items-center animate-bounce-subtle z-30 pointer-events-none">
+          {/* Removed text */}
+          <div className="w-9 h-9 flex items-center justify-center bg-white rounded-full shadow-md border border-neutral-200/80">
+            <ChevronDownIcon className="w-5 h-5 text-neutral-500" />
+          </div>
         </div>
-      </div>
       )}
-      
+
       {/* Video Tour Düğmesi - Simplified */}
       <div className="fixed top-1/2 right-6 transform -translate-y-1/2 hidden lg:block z-30">
-        <button className="group relative w-12 h-12 bg-white rounded-full shadow-md border border-neutral-200/80 flex items-center justify-center hover:bg-neutral-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
+        <button className="group relative w-12 h-12 bg-white rounded-full shadow-md border border-neutral-200/80 flex items-center justify-center hover:bg-neutral-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-950">
           {/* Removed ping animation */}
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}> 
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0013.5 5.25h-9A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75z" /> 
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6 text-neutral-950"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9A2.25 2.25 0 0013.5 5.25h-9A2.25 2.25 0 002.25 7.5v9A2.25 2.25 0 004.5 18.75z"
+            />
           </svg>
           {/* Simplified Tooltip */}
           <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-neutral-800 text-white text-xs font-medium px-2.5 py-1 rounded shadow-sm pointer-events-none">
@@ -1586,7 +1932,7 @@ export default function TourPage() {
           </span>
         </button>
       </div>
-      
+
       {/* BottomBookingBar Component */}
       <BottomBookingBar
         tour={tour ? { ...tour, tourDates: availableTourDates } : undefined}
@@ -1598,4 +1944,4 @@ export default function TourPage() {
       />
     </div>
   );
-} 
+}

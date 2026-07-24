@@ -94,16 +94,18 @@ export class NotificationService {
     });
     if (!reservation) return;
 
-    const tour = await this.prisma.tour.findFirst({
-      where: { id: reservation.tourId },
-      select: { title: true },
-    });
+    const tour = reservation.tourId
+      ? await this.prisma.tour.findFirst({
+          where: { id: reservation.tourId },
+          select: { title: true },
+        })
+      : null;
 
     await this.createInApp({
       userId: reservation.userId,
       type: 'BOOKING_CONFIRMED',
       title: 'Rezervasyon onaylandı',
-      body: `${tour?.title ?? 'Tur'} rezervasyonunuz ödeme ile onaylandı.`,
+      body: `${tour?.title ?? 'Rezervasyonunuz'} ödeme ile onaylandı.`,
       data: {
         reservationId: reservation.id,
         bookingNumber: reservation.bookingNumber,
@@ -117,10 +119,20 @@ export class NotificationService {
   }
 
   async notifyReviewReceived(event: ReviewCreatedEvent) {
-    const tour = await this.prisma.tour.findFirst({
-      where: { id: event.tourId },
-      select: { title: true },
-    });
+    const tour = event.tourId
+      ? await this.prisma.tour.findFirst({
+          where: { id: event.tourId },
+          select: { title: true },
+        })
+      : null;
+    const experience =
+      !tour && event.experienceId
+        ? await this.prisma.experience.findFirst({
+            where: { id: event.experienceId },
+            select: { title: true },
+          })
+        : null;
+    const productTitle = tour?.title ?? experience?.title ?? 'Ürün';
     const partnerUsers = await this.findPartnerUserIds(event.partnerId);
     const partner = await this.prisma.partner.findFirst({
       where: { id: event.partnerId },
@@ -132,31 +144,37 @@ export class NotificationService {
         userId,
         type: 'REVIEW_RECEIVED',
         title: 'Yeni yorum aldınız',
-        body: `${tour?.title ?? 'Tur'} için ${event.rating}/5 puanlı yeni bir yorum var.`,
-        data: { reviewId: event.reviewId, tourId: event.tourId },
+        body: `${productTitle} için ${event.rating}/5 puanlı yeni bir yorum var.`,
+        data: {
+          reviewId: event.reviewId,
+          tourId: event.tourId,
+          experienceId: event.experienceId,
+        },
       });
     }
 
     if (partner?.contactEmail) {
       await this.enqueueEmail(partner.contactEmail, 'new-review', {
         companyName: partner.companyName,
-        tourName: tour?.title ?? '',
+        tourName: productTitle,
         rating: event.rating,
       });
     }
   }
 
   async notifyBookingCompleted(event: BookingCompletedEvent) {
-    const tour = await this.prisma.tour.findFirst({
-      where: { id: event.tourId },
-      select: { title: true },
-    });
+    const tour = event.tourId
+      ? await this.prisma.tour.findFirst({
+          where: { id: event.tourId },
+          select: { title: true },
+        })
+      : null;
 
     await this.createInApp({
       userId: event.userId,
       type: 'BOOKING_COMPLETED',
-      title: 'Turunuz tamamlandı',
-      body: `${tour?.title ?? 'Tur'} tamamlandı. Deneyiminizi değerlendirin.`,
+      title: 'Rezervasyonunuz tamamlandı',
+      body: `${tour?.title ?? 'Rezervasyonunuz'} tamamlandı. Deneyiminizi değerlendirin.`,
       data: {
         reservationId: event.reservationId,
         tourId: event.tourId,

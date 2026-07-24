@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { use } from 'react';
-import { 
-  ArrowLeftIcon, 
-  CalendarIcon, 
-  MapPinIcon, 
-  ClockIcon, 
+import {
+  ArrowLeftIcon,
+  CalendarIcon,
+  MapPinIcon,
+  ClockIcon,
   UsersIcon,
   CurrencyDollarIcon,
   TagIcon,
@@ -19,7 +19,7 @@ import {
   StarIcon,
   UserGroupIcon,
   LanguageIcon,
-  HashtagIcon
+  HashtagIcon,
 } from '@heroicons/react/24/outline';
 import { useSession } from 'next-auth/react';
 
@@ -36,6 +36,7 @@ interface Tour {
   destinations: string[];
   inclusions: string[];
   exclusions: string[];
+  healthPrivileges?: string[];
   itinerary: { title: string; description: string }[];
   images: string[];
   featured: boolean;
@@ -63,13 +64,17 @@ interface Tour {
   };
 }
 
-export default function TourDetailPage({ params }: { params: Promise<{ tourId: string }> }) {
+export default function TourDetailPage({
+  params,
+}: {
+  params: Promise<{ tourId: string }>;
+}) {
   const router = useRouter();
   const { data: session } = useSession();
   const [tour, setTour] = useState<Tour | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Next.js 15'te params'ı React.use() ile aç
   const { tourId } = use(params);
 
@@ -165,14 +170,22 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
 
           {/* Tur Detayları */}
           <div className="bg-white shadow rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Tur Detayları</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Tur Detayları
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex items-start">
                 <CalendarIcon className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Tarih</h3>
                   <p className="mt-1 text-sm text-gray-900">
-                    {tour.startDate ? new Date(tour.startDate).toLocaleDateString('tr-TR') : '-'} - {tour.endDate ? new Date(tour.endDate).toLocaleDateString('tr-TR') : '-'}
+                    {tour.startDate
+                      ? new Date(tour.startDate).toLocaleDateString('tr-TR')
+                      : '-'}{' '}
+                    -{' '}
+                    {tour.endDate
+                      ? new Date(tour.endDate).toLocaleDateString('tr-TR')
+                      : '-'}
                   </p>
                 </div>
               </div>
@@ -180,8 +193,12 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
               <div className="flex items-start">
                 <MapPinIcon className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500">Kalkış Şehri</h3>
-                  <p className="mt-1 text-sm text-gray-900">{tour.departureCity || '-'}</p>
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Kalkış Şehri
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {tour.departureCity || '-'}
+                  </p>
                 </div>
               </div>
 
@@ -189,15 +206,21 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
                 <ClockIcon className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Süre</h3>
-                  <p className="mt-1 text-sm text-gray-900">{tour.duration} gün</p>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {tour.duration} gün
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-start">
                 <UsersIcon className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500">Maksimum Katılımcı</h3>
-                  <p className="mt-1 text-sm text-gray-900">{tour.maxParticipants || '-'} kişi</p>
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Maksimum Katılımcı
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {tour.maxParticipants || '-'} kişi
+                  </p>
                 </div>
               </div>
 
@@ -208,7 +231,9 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
                   <p className="mt-1 text-sm text-gray-900">
                     {tour.discount ? (
                       <>
-                        <span className="line-through text-gray-500 mr-2">{tour.price} ₺</span>
+                        <span className="line-through text-gray-500 mr-2">
+                          {tour.price} ₺
+                        </span>
                         <span className="text-red-600">
                           {Math.round(tour.price * (1 - tour.discount / 100))} ₺
                         </span>
@@ -223,16 +248,24 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
               <div className="flex items-start">
                 <TagIcon className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500">Tur Tipi</h3>
-                  <p className="mt-1 text-sm text-gray-900">{tour.tourType || '-'}</p>
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Tur Tipi
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {tour.tourType || '-'}
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-start">
                 <BuildingOfficeIcon className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500">Konaklama Tipi</h3>
-                  <p className="mt-1 text-sm text-gray-900">{tour.accommodationType || '-'}</p>
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Konaklama Tipi
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {tour.accommodationType || '-'}
+                  </p>
                 </div>
               </div>
 
@@ -240,7 +273,9 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
                 <TruckIcon className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Ulaşım</h3>
-                  <p className="mt-1 text-sm text-gray-900">{tour.transportation || '-'}</p>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {tour.transportation || '-'}
+                  </p>
                 </div>
               </div>
 
@@ -248,23 +283,33 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
                 <GlobeAltIcon className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Bölge</h3>
-                  <p className="mt-1 text-sm text-gray-900">{tour.region || '-'}</p>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {tour.region || '-'}
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-start">
                 <StarIcon className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500">Zorluk Seviyesi</h3>
-                  <p className="mt-1 text-sm text-gray-900">{tour.difficultyLevel || '-'}</p>
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Zorluk Seviyesi
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {tour.difficultyLevel || '-'}
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-start">
                 <UserGroupIcon className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500">Yaş Sınırı</h3>
-                  <p className="mt-1 text-sm text-gray-900">{tour.ageRestriction ? `${tour.ageRestriction}+` : '-'}</p>
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Yaş Sınırı
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-900">
+                    {tour.ageRestriction ? `${tour.ageRestriction}+` : '-'}
+                  </p>
                 </div>
               </div>
 
@@ -273,7 +318,9 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Diller</h3>
                   <p className="mt-1 text-sm text-gray-900">
-                    {tour.languages && tour.languages.length > 0 ? tour.languages.join(', ') : '-'}
+                    {tour.languages && tour.languages.length > 0
+                      ? tour.languages.join(', ')
+                      : '-'}
                   </p>
                 </div>
               </div>
@@ -281,9 +328,13 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
               <div className="flex items-start">
                 <HashtagIcon className="h-6 w-6 text-gray-400 mr-3" />
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500">Etiketler</h3>
+                  <h3 className="text-sm font-medium text-gray-500">
+                    Etiketler
+                  </h3>
                   <p className="mt-1 text-sm text-gray-900">
-                    {tour.tags && tour.tags.length > 0 ? tour.tags.join(', ') : '-'}
+                    {tour.tags && tour.tags.length > 0
+                      ? tour.tags.join(', ')
+                      : '-'}
                   </p>
                 </div>
               </div>
@@ -292,7 +343,9 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
 
           {/* Tur Açıklaması */}
           <div className="bg-white shadow rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Tur Açıklaması</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Tur Açıklaması
+            </h2>
             <div className="prose max-w-none">
               <p className="text-gray-600">{tour.description}</p>
             </div>
@@ -300,11 +353,18 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
 
           {/* Tur Programı */}
           <div className="bg-white shadow rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Tur Programı</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Tur Programı
+            </h2>
             <div className="space-y-6">
               {tour.itinerary.map((day, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">{day.title}</h3>
+                <div
+                  key={index}
+                  className="border border-gray-200 rounded-lg p-4"
+                >
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    {day.title}
+                  </h3>
                   <p className="text-gray-600">{day.description}</p>
                 </div>
               ))}
@@ -314,7 +374,9 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
           {/* Dahil Olanlar ve Olmayanlar */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Dahil Olanlar</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Dahil Olanlar
+              </h2>
               <ul className="space-y-2">
                 {tour.inclusions.map((item, index) => (
                   <li key={index} className="flex items-start">
@@ -326,7 +388,9 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
             </div>
 
             <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Dahil Olmayanlar</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Dahil Olmayanlar
+              </h2>
               <ul className="space-y-2">
                 {tour.exclusions.map((item, index) => (
                   <li key={index} className="flex items-start">
@@ -337,13 +401,32 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
               </ul>
             </div>
           </div>
+
+          {Array.isArray(tour.healthPrivileges) &&
+            tour.healthPrivileges.length > 0 && (
+              <div className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  Sağlık Ayrıcalıkları
+                </h2>
+                <ul className="space-y-2">
+                  {tour.healthPrivileges.map((item, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="h-6 w-6 text-sky-500 mr-2">♥</span>
+                      <span className="text-gray-600">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
         </div>
 
         <div className="lg:col-span-1">
           <div className="sticky top-6">
             {/* Tur Operatörü Bilgileri */}
             <div className="bg-white shadow rounded-lg p-6 mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Tur Operatörü</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Tur Operatörü
+              </h2>
               <div className="flex items-center">
                 {tour.tourOperator.logo ? (
                   <Image
@@ -361,47 +444,69 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
                   </div>
                 )}
                 <div className="ml-4">
-                  <h3 className="text-sm font-medium text-gray-900">{tour.tourOperator.companyName}</h3>
+                  <h3 className="text-sm font-medium text-gray-900">
+                    {tour.tourOperator.companyName}
+                  </h3>
                 </div>
               </div>
             </div>
 
             {/* Tur Durumu */}
             <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Tur Durumu</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Tur Durumu
+              </h2>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Durum</span>
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    tour.featured ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      tour.featured
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
                     {tour.featured ? 'Aktif' : 'Taslak'}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Popüler</span>
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    tour.isPopular ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      tour.isPopular
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
                     {tour.isPopular ? 'Evet' : 'Hayır'}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Son Dakika</span>
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    tour.isLastMinute ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      tour.isLastMinute
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
                     {tour.isLastMinute ? 'Evet' : 'Hayır'}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Erken Rezervasyon</span>
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    tour.isEarlyBird ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span className="text-sm text-gray-500">
+                    Erken Rezervasyon
+                  </span>
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      tour.isEarlyBird
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
                     {tour.isEarlyBird ? 'Evet' : 'Hayır'}
                   </span>
                 </div>
@@ -412,4 +517,4 @@ export default function TourDetailPage({ params }: { params: Promise<{ tourId: s
       </div>
     </div>
   );
-} 
+}

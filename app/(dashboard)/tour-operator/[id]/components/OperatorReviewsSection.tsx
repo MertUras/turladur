@@ -7,7 +7,10 @@ import {
   ChevronRightIcon,
 } from '@heroicons/react/24/outline';
 import StarRating from '@/app/components/StarRating';
-import { computeReviewAggregates, sortReviewsByRatingDesc } from '@/lib/reviews/client';
+import {
+  computeReviewAggregates,
+  sortReviewsByRatingDesc,
+} from '@/lib/reviews/client';
 import ReviewCard, { OperatorReview } from './ReviewCard';
 import TourReviewsModal from './TourReviewsModal';
 
@@ -52,9 +55,15 @@ function MainReviewsSection({
 }: OperatorReviewsSectionProps) {
   const [modalOpen, setModalOpen] = useState(false);
 
-  const sortedReviews = useMemo(() => sortReviewsByRatingDesc(reviews), [reviews]);
+  const sortedReviews = useMemo(
+    () => sortReviewsByRatingDesc(reviews),
+    [reviews],
+  );
   const visibleReviews = sortedReviews.slice(0, initialVisibleCount);
-  const aggregates = useMemo(() => computeReviewAggregates(sortedReviews), [sortedReviews]);
+  const aggregates = useMemo(
+    () => computeReviewAggregates(sortedReviews),
+    [sortedReviews],
+  );
 
   return (
     <>
@@ -65,13 +74,14 @@ function MainReviewsSection({
         <div className="p-4 md:p-6 lg:p-8">
           <div className="mb-4 md:mb-6">
             <h3 className="text-xl md:text-2xl font-semibold text-gray-900 flex items-center mb-2">
-              <ChatBubbleLeftRightIcon className="h-6 w-6 md:h-7 md:w-7 text-sky-600 mr-2.5 md:mr-3 flex-shrink-0" />
+              <ChatBubbleLeftRightIcon className="h-6 w-6 md:h-7 md:w-7 text-neutral-950 mr-2.5 md:mr-3 flex-shrink-0" />
               <span>Müşteri Değerlendirmeleri</span>
             </h3>
             <div className="flex flex-wrap items-center gap-2">
               <StarRating rating={aggregates.averageRating} size="sm" />
               <p className="text-neutral-500 text-sm">
-                {aggregates.averageRating.toFixed(1)}/5 ortalama · {reviewCount} değerlendirme
+                {aggregates.averageRating.toFixed(1)}/5 ortalama · {reviewCount}{' '}
+                değerlendirme
               </p>
             </div>
           </div>
@@ -91,7 +101,7 @@ function MainReviewsSection({
             <button
               type="button"
               onClick={() => setModalOpen(true)}
-              className="mt-4 md:mt-6 w-full inline-flex items-center justify-center px-6 py-3.5 bg-sky-600 hover:bg-sky-700 text-white text-base font-semibold rounded-2xl md:rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 active:scale-[0.98] duration-150 ease-out"
+              className="mt-4 md:mt-6 w-full inline-flex items-center justify-center px-6 py-3.5 bg-neutral-950 hover:bg-neutral-800 text-white text-base font-semibold rounded-2xl md:rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-950 active:scale-[0.98] duration-150 ease-out"
             >
               Tüm Değerlendirmeler ({reviewCount})
             </button>
@@ -118,8 +128,14 @@ function SidebarReviewsSection({
   const [modalOpen, setModalOpen] = useState(false);
   const perPage = useReviewsPerPage();
 
-  const sortedReviews = useMemo(() => sortReviewsByRatingDesc(reviews), [reviews]);
-  const aggregates = useMemo(() => computeReviewAggregates(sortedReviews), [sortedReviews]);
+  const sortedReviews = useMemo(
+    () => sortReviewsByRatingDesc(reviews),
+    [reviews],
+  );
+  const aggregates = useMemo(
+    () => computeReviewAggregates(sortedReviews),
+    [sortedReviews],
+  );
 
   const pages = useMemo(() => {
     const chunks: OperatorReview[][] = [];
@@ -141,7 +157,7 @@ function SidebarReviewsSection({
       if (totalPages === 0) return;
       setCurrentPage(((page % totalPages) + totalPages) % totalPages);
     },
-    [totalPages]
+    [totalPages],
   );
 
   return (
@@ -153,11 +169,12 @@ function SidebarReviewsSection({
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4 md:mb-6">
           <div>
             <h2 className="text-3xl font-bold text-neutral-900 mb-2 flex items-center">
-              <ChatBubbleLeftRightIcon className="w-7 h-7 mr-2.5 text-sky-600" />
+              <ChatBubbleLeftRightIcon className="w-7 h-7 mr-2.5 text-neutral-950" />
               Müşteri Değerlendirmeleri
             </h2>
             <p className="text-neutral-500 text-sm">
-              {aggregates.averageRating.toFixed(1)}/5 ortalama · {reviewCount} değerlendirme
+              {aggregates.averageRating.toFixed(1)}/5 ortalama · {reviewCount}{' '}
+              değerlendirme
             </p>
           </div>
         </div>
@@ -194,7 +211,7 @@ function SidebarReviewsSection({
                 type="button"
                 onClick={() => goToPage(currentPage - 1)}
                 aria-label="Önceki değerlendirmeler"
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 sm:-translate-x-4 w-9 h-9 rounded-full bg-white border border-neutral-200 shadow-md flex items-center justify-center text-neutral-600 hover:text-sky-600 hover:border-sky-200 transition-colors"
+                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 sm:-translate-x-4 w-9 h-9 rounded-full bg-white border border-neutral-200 shadow-md flex items-center justify-center text-neutral-600 hover:text-neutral-950 hover:border-neutral-300 transition-colors"
               >
                 <ChevronLeftIcon className="w-5 h-5" />
               </button>
@@ -202,7 +219,7 @@ function SidebarReviewsSection({
                 type="button"
                 onClick={() => goToPage(currentPage + 1)}
                 aria-label="Sonraki değerlendirmeler"
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 sm:translate-x-4 w-9 h-9 rounded-full bg-white border border-neutral-200 shadow-md flex items-center justify-center text-neutral-600 hover:text-sky-600 hover:border-sky-200 transition-colors"
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 sm:translate-x-4 w-9 h-9 rounded-full bg-white border border-neutral-200 shadow-md flex items-center justify-center text-neutral-600 hover:text-neutral-950 hover:border-neutral-300 transition-colors"
               >
                 <ChevronRightIcon className="w-5 h-5" />
               </button>
@@ -219,7 +236,9 @@ function SidebarReviewsSection({
                 onClick={() => setCurrentPage(index)}
                 aria-label={`Sayfa ${index + 1}`}
                 className={`h-2 rounded-full transition-all ${
-                  index === currentPage ? 'w-6 bg-sky-600' : 'w-2 bg-neutral-300 hover:bg-neutral-400'
+                  index === currentPage
+                    ? 'w-6 bg-neutral-950'
+                    : 'w-2 bg-neutral-300 hover:bg-neutral-400'
                 }`}
               />
             ))}
@@ -230,7 +249,7 @@ function SidebarReviewsSection({
           <button
             type="button"
             onClick={() => setModalOpen(true)}
-            className="mt-4 md:mt-6 w-full inline-flex items-center justify-center px-6 py-3.5 bg-sky-600 hover:bg-sky-700 text-white text-base font-semibold rounded-2xl md:rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 active:scale-[0.98] duration-150 ease-out"
+            className="mt-4 md:mt-6 w-full inline-flex items-center justify-center px-6 py-3.5 bg-neutral-950 hover:bg-neutral-800 text-white text-base font-semibold rounded-2xl md:rounded-lg transition-colors shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-950 active:scale-[0.98] duration-150 ease-out"
           >
             Tüm Değerlendirmeler ({reviewCount})
           </button>
@@ -246,7 +265,9 @@ function SidebarReviewsSection({
   );
 }
 
-export default function OperatorReviewsSection(props: OperatorReviewsSectionProps) {
+export default function OperatorReviewsSection(
+  props: OperatorReviewsSectionProps,
+) {
   if (props.reviews.length === 0) return null;
 
   if (props.variant === 'main') {

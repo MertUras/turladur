@@ -89,7 +89,7 @@ export function NotificationBell({ solid }: Props) {
             </span>
             <button
               type="button"
-              className="text-xs text-sky-700 hover:underline"
+              className="text-xs text-neutral-950 hover:underline"
               onClick={() => {
                 if (!accessToken) return;
                 void markAllNotificationsRead(accessToken).then(() =>
@@ -112,7 +112,7 @@ export function NotificationBell({ solid }: Props) {
                   type="button"
                   className={cn(
                     'w-full px-3 py-2.5 text-left hover:bg-neutral-50',
-                    !n.readAt && 'bg-sky-50/60',
+                    !n.readAt && 'bg-neutral-50/60',
                   )}
                   onClick={() => {
                     if (!accessToken || n.readAt) return;
@@ -130,7 +130,7 @@ export function NotificationBell({ solid }: Props) {
                   {typeof n.data?.tourId === 'string' ? (
                     <Link
                       href={`/tours/${n.data.tourId}`}
-                      className="mt-1 inline-block text-xs text-sky-700 hover:underline"
+                      className="mt-1 inline-block text-xs text-neutral-950 hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
                       Tura git

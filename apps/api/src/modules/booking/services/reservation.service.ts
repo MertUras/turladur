@@ -17,6 +17,7 @@ import { CreateReservationDto } from '../dto/create-reservation.dto';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
 import { BookingCompletedEvent } from '../events/booking-completed.event';
 import { BookingCreatedEvent } from '../events/booking-created.event';
+import { isValidTckn } from '../../../shared/utils/tckn';
 
 @Injectable()
 export class ReservationService {
@@ -34,85 +35,54 @@ export class ReservationService {
       );
     }
 
-    const tourDate = await this.prisma.tourDate.findFirst({
-      where: { id: dto.tourDateId, deletedAt: null, isActive: true },
-      include: { tour: true },
-    });
-
-    if (
-      !tourDate ||
-      tourDate.tour.deletedAt ||
-      tourDate.tour.status !== 'PUBLISHED'
-    ) {
-      throw new NotFoundException({
-        code: 'TOUR_DATE_NOT_FOUND',
-        message: 'Tur tarihi bulunamadı veya yayında değil',
-      });
+    for (const [index, guest] of dto.guests.entries()) {
+      if (!isValidTckn(guest.identityNumber)) {
+        throw new BusinessException(
+          'INVALID_IDENTITY_NUMBER',
+          `${guest.firstName} ${guest.lastName}: TC kimlik no geçersiz`,
+        );
+      }
+      if (index === 0) {
+        const address = guest.address?.trim() ?? '';
+        if (address.length < 5) {
+          throw new BusinessException(
+            'ADDRESS_REQUIRED',
+            'Satın alan katılımcı için adres zorunludur',
+          );
+        }
+      }
     }
 
-    if (tourDate.remainingCapacity < partySize) {
+    if (
+      !dto.billing?.line1?.trim() ||
+      !dto.billing?.city?.trim() ||
+      !dto.billing?.country?.trim()
+    ) {
       throw new BusinessException(
-        'BOOKING_NOT_AVAILABLE',
-        'Seçilen tarihte müsaitlik bulunmamaktadır.',
+        'BILLING_REQUIRED',
+        'Fatura adresi, şehir ve ülke zorunludur',
       );
     }
 
-    const unitPrice = tourDate.priceOverride ?? tourDate.tour.price;
-    const totalAmount = new Prisma.Decimal(unitPrice).mul(partySize);
-    const bookingNumber = await this.nextBookingNumber();
+    const productCount = [
+      dto.tourDateId,
+      dto.roomId,
+      dto.activityDateId,
+    ].filter(Boolean).length;
+    if (productCount !== 1) {
+      throw new BusinessException(
+        'INVALID_BOOKING_PRODUCT',
+        'Tam olarak bir ürün seçilmeli: tourDateId, roomId veya activityDateId',
+      );
+    }
 
-    const reservation = await this.prisma.$transaction(async (tx) => {
-      const updated = await tx.tourDate.updateMany({
-        where: {
-          id: tourDate.id,
-          remainingCapacity: { gte: partySize },
-          deletedAt: null,
-        },
-        data: { remainingCapacity: { decrement: partySize } },
-      });
-
-      if (updated.count === 0) {
-        throw new BusinessException(
-          'BOOKING_NOT_AVAILABLE',
-          'Seçilen tarihte müsaitlik bulunmamaktadır.',
-        );
-      }
-
-      return tx.reservation.create({
-        data: {
-          bookingNumber,
-          userId,
-          tourId: tourDate.tourId,
-          tourDateId: tourDate.id,
-          partnerId: tourDate.tour.partnerId,
-          status: 'PENDING',
-          adults: dto.adults,
-          children: dto.children ?? 0,
-          totalAmount,
-          currency: tourDate.tour.currency,
-          contactEmail: dto.contactEmail.toLowerCase().trim(),
-          contactPhone: dto.contactPhone,
-          guests: dto.guests as unknown as Prisma.InputJsonValue,
-        },
-      });
-    });
-
-    this.eventEmitter.emit(
-      'booking.created',
-      new BookingCreatedEvent(
-        reservation.id,
-        userId,
-        reservation.tourDateId,
-        reservation.partnerId,
-        reservation.totalAmount.toString(),
-      ),
-    );
-
-    return {
-      success: true,
-      data: this.toShared(reservation),
-      error: null,
-    };
+    if (dto.tourDateId) {
+      return this.createTourReservation(dto, userId, partySize);
+    }
+    if (dto.roomId) {
+      return this.createHotelReservation(dto, userId, partySize);
+    }
+    return this.createExperienceReservation(dto, userId, partySize);
   }
 
   async getById(reservationId: string, userId: string, role: string) {
@@ -176,10 +146,7 @@ export class ReservationService {
     const partySize = reservation.adults + reservation.children;
 
     const updated = await this.prisma.$transaction(async (tx) => {
-      await tx.tourDate.update({
-        where: { id: reservation.tourDateId },
-        data: { remainingCapacity: { increment: partySize } },
-      });
+      await this.restoreCapacity(tx, reservation, partySize);
 
       return tx.reservation.update({
         where: { id: reservation.id },
@@ -279,6 +246,306 @@ export class ReservationService {
     };
   }
 
+  private async createTourReservation(
+    dto: CreateReservationDto,
+    userId: string,
+    partySize: number,
+  ) {
+    const tourDate = await this.prisma.tourDate.findFirst({
+      where: { id: dto.tourDateId, deletedAt: null, isActive: true },
+      include: { tour: true },
+    });
+
+    if (
+      !tourDate ||
+      tourDate.tour.deletedAt ||
+      tourDate.tour.status !== 'PUBLISHED'
+    ) {
+      throw new NotFoundException({
+        code: 'TOUR_DATE_NOT_FOUND',
+        message: 'Tur tarihi bulunamadı veya yayında değil',
+      });
+    }
+
+    if (tourDate.remainingCapacity < partySize) {
+      throw new BusinessException(
+        'BOOKING_NOT_AVAILABLE',
+        'Seçilen tarihte müsaitlik bulunmamaktadır.',
+      );
+    }
+
+    const unitPrice = tourDate.priceOverride ?? tourDate.tour.price;
+    const totalAmount = new Prisma.Decimal(unitPrice).mul(partySize);
+    const bookingNumber = await this.nextBookingNumber();
+
+    const reservation = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.tourDate.updateMany({
+        where: {
+          id: tourDate.id,
+          remainingCapacity: { gte: partySize },
+          deletedAt: null,
+        },
+        data: { remainingCapacity: { decrement: partySize } },
+      });
+
+      if (updated.count === 0) {
+        throw new BusinessException(
+          'BOOKING_NOT_AVAILABLE',
+          'Seçilen tarihte müsaitlik bulunmamaktadır.',
+        );
+      }
+
+      return tx.reservation.create({
+        data: {
+          bookingNumber,
+          userId,
+          tourId: tourDate.tourId,
+          tourDateId: tourDate.id,
+          partnerId: tourDate.tour.partnerId,
+          status: 'PENDING',
+          adults: dto.adults,
+          children: dto.children ?? 0,
+          totalAmount,
+          currency: tourDate.tour.currency,
+          contactEmail: dto.contactEmail.toLowerCase().trim(),
+          contactPhone: dto.contactPhone,
+          guests: dto.guests as unknown as Prisma.InputJsonValue,
+          specialRequests: dto.specialRequests ?? null,
+          metadata: dto.billing
+            ? ({ billing: dto.billing } as unknown as Prisma.InputJsonValue)
+            : undefined,
+        },
+      });
+    });
+
+    this.emitCreated(reservation);
+    return {
+      success: true,
+      data: this.toShared(reservation),
+      error: null,
+    };
+  }
+
+  private async createHotelReservation(
+    dto: CreateReservationDto,
+    userId: string,
+    partySize: number,
+  ) {
+    if (!dto.startDate || !dto.endDate) {
+      throw new BusinessException(
+        'HOTEL_DATES_REQUIRED',
+        'Otel rezervasyonu için check-in ve check-out tarihi zorunlu',
+      );
+    }
+
+    const startDate = new Date(dto.startDate);
+    const endDate = new Date(dto.endDate);
+    if (endDate <= startDate) {
+      throw new BusinessException(
+        'INVALID_DATE_RANGE',
+        'Check-out tarihi check-in sonrasında olmalı',
+      );
+    }
+
+    const room = await this.prisma.room.findFirst({
+      where: {
+        id: dto.roomId,
+        deletedAt: null,
+        available: true,
+        ...(dto.hotelId ? { hotelId: dto.hotelId } : {}),
+      },
+      include: { hotel: true },
+    });
+
+    if (!room || room.hotel.deletedAt) {
+      throw new NotFoundException({
+        code: 'ROOM_NOT_FOUND',
+        message: 'Oda bulunamadı veya müsait değil',
+      });
+    }
+
+    if (partySize > room.capacity) {
+      throw new BusinessException(
+        'ROOM_CAPACITY_EXCEEDED',
+        `Oda kapasitesi ${room.capacity} kişi`,
+      );
+    }
+
+    const nights = Math.max(
+      1,
+      Math.round(
+        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+      ),
+    );
+    const nightPrice = room.discount ?? room.price;
+    const totalAmount = new Prisma.Decimal(nightPrice).mul(nights);
+    const bookingNumber = await this.nextBookingNumber();
+
+    const reservation = await this.prisma.reservation.create({
+      data: {
+        bookingNumber,
+        userId,
+        hotelId: room.hotelId,
+        roomId: room.id,
+        partnerId: room.hotel.partnerId,
+        status: 'PENDING',
+        adults: dto.adults,
+        children: dto.children ?? 0,
+        totalAmount,
+        currency: 'TRY',
+        contactEmail: dto.contactEmail.toLowerCase().trim(),
+        contactPhone: dto.contactPhone,
+        guests: dto.guests as unknown as Prisma.InputJsonValue,
+        startDate,
+        endDate,
+        specialRequests: dto.specialRequests ?? null,
+        metadata: dto.billing
+          ? ({ billing: dto.billing } as unknown as Prisma.InputJsonValue)
+          : undefined,
+      },
+    });
+
+    this.emitCreated(reservation);
+    return {
+      success: true,
+      data: this.toShared(reservation),
+      error: null,
+    };
+  }
+
+  private async createExperienceReservation(
+    dto: CreateReservationDto,
+    userId: string,
+    partySize: number,
+  ) {
+    const activityDate = await this.prisma.activityDate.findFirst({
+      where: { id: dto.activityDateId, deletedAt: null, isActive: true },
+      include: { experience: true },
+    });
+
+    if (
+      !activityDate ||
+      activityDate.experience.deletedAt ||
+      activityDate.experience.status !== 'PUBLISHED'
+    ) {
+      throw new NotFoundException({
+        code: 'ACTIVITY_DATE_NOT_FOUND',
+        message: 'Aktivite tarihi bulunamadı veya yayında değil',
+      });
+    }
+
+    const totalAmount = new Prisma.Decimal(activityDate.price).mul(partySize);
+    const bookingNumber = await this.nextBookingNumber();
+
+    const reservation = await this.prisma.$transaction(async (tx) => {
+      const remaining =
+        activityDate.remainingCapacity ?? activityDate.availableSeats;
+      if (remaining < partySize) {
+        throw new BusinessException(
+          'BOOKING_NOT_AVAILABLE',
+          'Seçilen tarihte müsaitlik bulunmamaktadır.',
+        );
+      }
+
+      const updated = await tx.activityDate.updateMany({
+        where: {
+          id: activityDate.id,
+          deletedAt: null,
+          isActive: true,
+          OR: [
+            { remainingCapacity: { gte: partySize } },
+            {
+              remainingCapacity: null,
+              availableSeats: { gte: partySize },
+            },
+          ],
+        },
+        data: {
+          remainingCapacity: remaining - partySize,
+        },
+      });
+
+      if (updated.count === 0) {
+        throw new BusinessException(
+          'BOOKING_NOT_AVAILABLE',
+          'Seçilen tarihte müsaitlik bulunmamaktadır.',
+        );
+      }
+
+      return tx.reservation.create({
+        data: {
+          bookingNumber,
+          userId,
+          experienceId: activityDate.experienceId,
+          activityDateId: activityDate.id,
+          partnerId: activityDate.experience.partnerId,
+          status: 'PENDING',
+          adults: dto.adults,
+          children: dto.children ?? 0,
+          totalAmount,
+          currency: activityDate.experience.currency,
+          contactEmail: dto.contactEmail.toLowerCase().trim(),
+          contactPhone: dto.contactPhone,
+          guests: dto.guests as unknown as Prisma.InputJsonValue,
+          startDate: activityDate.startDate,
+          endDate: activityDate.endDate,
+          specialRequests: dto.specialRequests ?? null,
+          metadata: dto.billing
+            ? ({ billing: dto.billing } as unknown as Prisma.InputJsonValue)
+            : undefined,
+        },
+      });
+    });
+
+    this.emitCreated(reservation);
+    return {
+      success: true,
+      data: this.toShared(reservation),
+      error: null,
+    };
+  }
+
+  private emitCreated(reservation: {
+    id: string;
+    userId: string;
+    tourDateId: string | null;
+    partnerId: string;
+    totalAmount: Prisma.Decimal;
+  }) {
+    this.eventEmitter.emit(
+      'booking.created',
+      new BookingCreatedEvent(
+        reservation.id,
+        reservation.userId,
+        reservation.tourDateId,
+        reservation.partnerId,
+        reservation.totalAmount.toString(),
+      ),
+    );
+  }
+
+  private async restoreCapacity(
+    tx: Prisma.TransactionClient,
+    reservation: {
+      tourDateId: string | null;
+      activityDateId: string | null;
+    },
+    partySize: number,
+  ) {
+    if (reservation.tourDateId) {
+      await tx.tourDate.update({
+        where: { id: reservation.tourDateId },
+        data: { remainingCapacity: { increment: partySize } },
+      });
+    }
+    if (reservation.activityDateId) {
+      await tx.activityDate.update({
+        where: { id: reservation.activityDateId },
+        data: { remainingCapacity: { increment: partySize } },
+      });
+    }
+  }
+
   private async transition(
     reservationId: string,
     from: Array<'PENDING' | 'PAYMENT_FAILED' | 'CONFIRMED'>,
@@ -337,8 +604,12 @@ export class ReservationService {
     id: string;
     bookingNumber: string;
     userId: string;
-    tourId: string;
-    tourDateId: string;
+    tourId: string | null;
+    tourDateId: string | null;
+    hotelId?: string | null;
+    roomId?: string | null;
+    experienceId?: string | null;
+    activityDateId?: string | null;
     partnerId: string;
     status: string;
     adults: number;
@@ -357,6 +628,10 @@ export class ReservationService {
       userId: row.userId,
       tourId: row.tourId,
       tourDateId: row.tourDateId,
+      hotelId: row.hotelId ?? null,
+      roomId: row.roomId ?? null,
+      experienceId: row.experienceId ?? null,
+      activityDateId: row.activityDateId ?? null,
       partnerId: row.partnerId,
       status: row.status as SharedBookingStatus,
       adults: row.adults,

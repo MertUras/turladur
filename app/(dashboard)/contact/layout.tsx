@@ -1,8 +1,9 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'İletişim | Turladur - Profesyonel Seyahat Deneyimi',
-  description: 'Turladur ile iletişime geçin. Sorunlarınız, önerileriniz veya rezervasyonlarınız için bize ulaşın. 7/24 müşteri hizmetleri desteği.',
+  title: 'İletişim | turta - Profesyonel Seyahat Deneyimi',
+  description:
+    'turta ile iletişime geçin. Sorunlarınız, önerileriniz veya rezervasyonlarınız için bize ulaşın. 7/24 müşteri hizmetleri desteği.',
 };
 
 export default function ContactLayout({
@@ -11,4 +12,4 @@ export default function ContactLayout({
   children: React.ReactNode;
 }) {
   return <>{children}</>;
-} 
+}

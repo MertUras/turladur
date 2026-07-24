@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
-import { Montserrat, Poppins } from "next/font/google";
-import { getServerSession } from "next-auth";
-import "./globals.css";
-import AuthProvider from "../components/providers/AuthProvider";
-import ChatWidgetWrapper from "./components/ChatWidgetWrapper";
-import { ThemeProvider } from "./providers/theme-provider";
-import { Toaster } from "react-hot-toast";
-import { authOptions } from "@/lib/auth/options";
-import { ensureAuthEnv, getMissingAuthEnv } from "@/lib/auth/ensure-auth-env";
+import type { Metadata } from 'next';
+import { Montserrat, Poppins } from 'next/font/google';
+import { getServerSession } from 'next-auth';
+import './globals.css';
+import AuthProvider from '../components/providers/AuthProvider';
+import ChatWidgetWrapper from './components/ChatWidgetWrapper';
+import { ThemeProvider } from './providers/theme-provider';
+import { Toaster } from 'react-hot-toast';
+import { authOptions } from '@/lib/auth/options';
+import { ensureAuthEnv, getMissingAuthEnv } from '@/lib/auth/ensure-auth-env';
 
 ensureAuthEnv();
 
@@ -22,10 +22,10 @@ function isDynamicServerUsageError(error: unknown): boolean {
 
 async function getSafeServerSession() {
   const missing = getMissingAuthEnv();
-  if (missing.includes("NEXTAUTH_SECRET")) {
+  if (missing.includes('NEXTAUTH_SECRET')) {
     console.error(
-      "[RootLayout] Oturum devre dışı — Vercel Preview env eksik:",
-      missing.join(", ")
+      '[RootLayout] Oturum devre dışı — Vercel Preview env eksik:',
+      missing.join(', '),
     );
     return null;
   }
@@ -36,27 +36,28 @@ async function getSafeServerSession() {
     if (isDynamicServerUsageError(error)) {
       throw error;
     }
-    console.error("[RootLayout] getServerSession başarısız:", error);
+    console.error('[RootLayout] getServerSession başarısız:', error);
     return null;
   }
 }
 
 const montserrat = Montserrat({
-  subsets: ["latin"],
-  variable: "--font-montserrat",
-  display: "swap",
+  subsets: ['latin'],
+  variable: '--font-montserrat',
+  display: 'swap',
 });
 
 const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-poppins",
-  display: "swap",
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-poppins',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "Turladur - Türkiye'nin En İyi Seyahat Platformu",
-  description: "En iyi oteller, turlar ve seyahat deneyimleri için TourTech'i tercih edin.",
+  title: "turta - Türkiye'nin En İyi Seyahat Platformu",
+  description:
+    "En iyi oteller, turlar ve seyahat deneyimleri için turta'yı tercih edin.",
 };
 
 export default async function RootLayout({
@@ -68,7 +69,10 @@ export default async function RootLayout({
 
   return (
     <html lang="tr" suppressHydrationWarning>
-      <body className={`${montserrat.variable} ${poppins.variable} font-poppins antialiased`} suppressHydrationWarning>
+      <body
+        className={`${montserrat.variable} ${poppins.variable} font-poppins antialiased`}
+        suppressHydrationWarning
+      >
         <AuthProvider session={session}>
           <ThemeProvider
             attribute="class"

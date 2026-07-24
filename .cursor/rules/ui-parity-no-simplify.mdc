@@ -1,0 +1,28 @@
+---
+description: Nest migration must never simplify or redesign UI — full legacy parity only
+alwaysApply: true
+---
+
+# UI Parity — Nest Migration (Hard Rule)
+
+When moving features from legacy Next (`app/`) to Nest + `apps/web`:
+
+## NEVER
+- Simplify, restyle, or invent a “cleaner” UI
+- Replace a full page with a stub (title + one paragraph)
+- Remove sections, filters, cards, hero interactions, or empty-state UX
+- Change layout structure (sidebar filters → top bar, etc.) without explicit product approval
+
+## ALWAYS
+- Port the **existing** legacy JSX/layout first
+- Wire **data only** to Nest (`catalog`, `booking`, …)
+- Keep palette/brand tokens as already used in the source page (do not “improve”)
+- If a Nest endpoint is missing: keep UI + loading/empty states; do not delete the UI
+
+## Source of truth
+Legacy screens under `app/(dashboard)/*`, `app/(auth)/*`, `app/components/*`.
+
+## Checklist before finishing a migration task
+- [ ] Side-by-side: legacy page vs `apps/web` — same sections and hierarchy
+- [ ] No developer-only empty copy (“Legacy site pnpm dev…”)
+- [ ] Filters / cards / CTAs present if they existed in legacy

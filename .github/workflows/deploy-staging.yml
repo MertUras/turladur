@@ -1,0 +1,70 @@
+# Staging branch → Neon `staging` migrate + API build
+#
+# Gerekli GitHub Secrets:
+#   STAGING_DATABASE_URL — Neon staging branch Direct connection URL
+#
+# Host deploy (Railway/Fly) staging servisine ayrı bağlanır.
+
+name: Deploy Staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+  # Opsiyonel: her 2 günde bir sabah 09:00 (UTC) — planlı staging sync
+  # schedule:
+  #   - cron: '0 9 */2 * *'
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  migrate-and-build:
+    name: Migrate (Neon staging) + Build API
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      HUSKY: 0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Require STAGING_DATABASE_URL
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::STAGING_DATABASE_URL secret eksik. Neon → staging → Direct connection URL."
+            exit 1
+          fi
+
+      - name: Prisma migrate deploy (apps/api → Neon staging)
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: pnpm exec prisma migrate deploy
+
+      - name: Build shared packages
+        run: |
+          pnpm --filter @turladur/shared-types build
+          pnpm --filter @turladur/shared-validators build
+          pnpm --filter @turladur/shared-constants build
+
+      - name: Build API
+        run: pnpm --filter api build

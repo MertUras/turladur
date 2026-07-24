@@ -1,49 +1,53 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import Image from "next/image";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+import BrandLogo from '@/app/components/BrandLogo';
 
 export default function PartnerNavbar() {
-    return (
-        <header className="fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md shadow-sm py-2">
-            <div className="container mx-auto px-6">
-                <div className="flex items-center justify-between h-14">
-                    {/* Logo */}
-                    <div className="flex items-center space-x-4">
-                        {/* Ana Logo */}
-                        <Link href="/" className="flex items-center group flex-shrink-0">
-                            <div className="relative h-8 w-8 mr-2">
-                                <Image
-                                    src="/images/logo.png"
-                                    alt="Turladur Logo"
-                                    width={32}
-                                    height={32}
-                                    className="transition-transform duration-300 group-hover:scale-105"
-                                />
-                            </div>
-                            <span className="text-xl font-semibold text-sky-700 transition-colors duration-300 tracking-tight">
-                                Turladur
-                            </span>
-                        </Link>
-                    </div>
+  const pathname = usePathname();
 
-                    {/* Auth Buttons */}
-                    <div className="flex items-center space-x-2">
-                        <Link
-                            href="/partner-login"
-                            className="px-3.5 py-1 rounded-md text-sm font-medium border border-sky-600 text-sky-600 hover:bg-sky-50/70 transition-colors duration-200"
-                        >
-                            Giriş Yap
-                        </Link>
-                        <Link
-                            href="/partner-register"
-                            className="px-3.5 py-1 rounded-md text-sm font-medium bg-sky-600 text-white hover:bg-sky-700 transition-all duration-300 transform hover:scale-[1.03] shadow-sm"
-                        >
-                            Kayıt Ol
-                        </Link>
-                    </div>
-                </div>
-            </div>
-        </header>
-    );
-} 
+  return (
+    <header className="fixed top-0 left-0 right-0 z-40 border-b border-neutral-100 bg-white/95 py-2 shadow-sm backdrop-blur-md">
+      <div className="container mx-auto px-6">
+        <div className="flex h-14 items-center justify-between">
+          <Link href="/" className="group inline-flex items-center gap-2">
+            <BrandLogo
+              variant="wordmark"
+              surface="light"
+              href={null}
+              priority
+            />
+            <span className="text-sm font-semibold text-neutral-600">
+              Partner
+            </span>
+          </Link>
+
+          <div className="flex items-center space-x-2">
+            <Link
+              href="/partner-login"
+              className={`rounded-md border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 ${
+                pathname === '/partner-login'
+                  ? 'border-neutral-950 bg-neutral-100 text-neutral-950'
+                  : 'border-neutral-950 text-neutral-950 hover:bg-neutral-100'
+              }`}
+            >
+              Giriş Yap
+            </Link>
+            <Link
+              href="/partner-register"
+              className={`rounded-md px-3.5 py-1.5 text-sm font-medium shadow-sm transition-all duration-300 ${
+                pathname === '/partner-register'
+                  ? 'bg-neutral-950 text-white'
+                  : 'bg-neutral-950 text-white hover:bg-neutral-800'
+              }`}
+            >
+              Kayıt Ol
+            </Link>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}

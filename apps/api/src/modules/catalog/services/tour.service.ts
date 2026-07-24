@@ -59,6 +59,8 @@ export class TourService {
         category: dto.category,
         durationDays: dto.durationDays ?? 1,
         coverUrl: dto.coverUrl,
+        galleryUrls: dto.galleryUrls ?? [],
+        extras: (dto.extras ?? {}) as Prisma.InputJsonValue,
         partnerId,
         // Partner tours await admin review (Sprint 16); keeps public catalog clean
         status: 'PENDING_REVIEW',
@@ -100,6 +102,10 @@ export class TourService {
     if (dto.status !== undefined) data.status = dto.status;
     if (dto.durationDays !== undefined) data.durationDays = dto.durationDays;
     if (dto.coverUrl !== undefined) data.coverUrl = dto.coverUrl;
+    if (dto.galleryUrls !== undefined) data.galleryUrls = dto.galleryUrls;
+    if (dto.extras !== undefined) {
+      data.extras = dto.extras as Prisma.InputJsonValue;
+    }
 
     const updated = await this.prisma.tour.update({
       where: { id: tour.id },
@@ -151,6 +157,18 @@ export class TourService {
         deletedAt: null,
         status: 'PUBLISHED',
       },
+      include: {
+        partner: {
+          select: {
+            id: true,
+            companyName: true,
+            logo: true,
+            membershipTier: true,
+            averageRating: true,
+            reviewCount: true,
+          },
+        },
+      },
     });
 
     if (!tour) {
@@ -170,7 +188,25 @@ export class TourService {
     const page = dto.page ?? DEFAULT_PAGE;
     const limit = dto.limit ?? DEFAULT_PAGE_LIMIT;
     const q = dto.q?.trim().toLowerCase() ?? '';
-    const cacheKey = `catalog:tours:search:${q}|${dto.category ?? ''}|${page}|${limit}`;
+    const sortBy = dto.sortBy ?? 'createdAt';
+    const sortOrder = dto.sortOrder ?? 'desc';
+    const durationRange = this.resolveDurationFilter(dto);
+
+    const cacheKey = [
+      'catalog:tours:search:v2',
+      q,
+      dto.category ?? '',
+      dto.featured === true ? '1' : '0',
+      durationRange?.min ?? '',
+      durationRange?.max ?? '',
+      dto.minPrice ?? '',
+      dto.maxPrice ?? '',
+      dto.minRating ?? '',
+      sortBy,
+      sortOrder,
+      page,
+      limit,
+    ].join('|');
 
     const cached = await this.cache.get<{
       items: SharedTour[];
@@ -194,6 +230,30 @@ export class TourService {
       deletedAt: null,
       status: 'PUBLISHED',
       ...(dto.category ? { category: dto.category } : {}),
+      ...(dto.featured === true ? { featured: true } : {}),
+      ...(durationRange
+        ? {
+            durationDays: {
+              ...(durationRange.min !== undefined
+                ? { gte: durationRange.min }
+                : {}),
+              ...(durationRange.max !== undefined
+                ? { lte: durationRange.max }
+                : {}),
+            },
+          }
+        : {}),
+      ...(dto.minPrice !== undefined || dto.maxPrice !== undefined
+        ? {
+            price: {
+              ...(dto.minPrice !== undefined ? { gte: dto.minPrice } : {}),
+              ...(dto.maxPrice !== undefined ? { lte: dto.maxPrice } : {}),
+            },
+          }
+        : {}),
+      ...(dto.minRating !== undefined
+        ? { averageRating: { gte: dto.minRating } }
+        : {}),
       ...(q
         ? {
             OR: [
@@ -205,13 +265,34 @@ export class TourService {
         : {}),
     };
 
+    const orderByField =
+      sortBy === 'price'
+        ? 'price'
+        : sortBy === 'rating'
+          ? 'averageRating'
+          : sortBy === 'durationDays'
+            ? 'durationDays'
+            : 'createdAt';
+
     const [total, rows] = await this.prisma.$transaction([
       this.prisma.tour.count({ where }),
       this.prisma.tour.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { [orderByField]: sortOrder },
         skip: (page - 1) * limit,
         take: limit,
+        include: {
+          partner: {
+            select: {
+              id: true,
+              companyName: true,
+              logo: true,
+              membershipTier: true,
+              averageRating: true,
+              reviewCount: true,
+            },
+          },
+        },
       }),
     ]);
 
@@ -365,22 +446,54 @@ export class TourService {
     }
   }
 
+  private resolveDurationFilter(dto: SearchToursDto): {
+    min?: number;
+    max?: number;
+  } | null {
+    if (dto.durationDays !== undefined) {
+      return { min: dto.durationDays, max: dto.durationDays };
+    }
+    switch (dto.duration) {
+      case '1':
+        return { min: 1, max: 1 };
+      case '2-3':
+        return { min: 2, max: 3 };
+      case '4-6':
+        return { min: 4, max: 6 };
+      case '7+':
+        return { min: 7 };
+      default:
+        return null;
+    }
+  }
+
   private toSharedTour(tour: {
     id: string;
     title: string;
     slug: string;
     description: string;
     coverUrl: string | null;
+    galleryUrls?: string[];
+    extras?: Prisma.JsonValue;
     price: Prisma.Decimal;
     currency: string;
     category: SharedTour['category'];
     status: SharedTour['status'];
     durationDays: number;
+    featured?: boolean;
     averageRating?: Prisma.Decimal;
     reviewCount?: number;
     partnerId: string;
     createdAt: Date;
     updatedAt: Date;
+    partner?: {
+      id: string;
+      companyName: string;
+      logo: string | null;
+      membershipTier: 'BRONZE' | 'SILVER' | 'GOLD';
+      averageRating: Prisma.Decimal;
+      reviewCount: number;
+    } | null;
   }): SharedTour {
     return {
       id: tour.id,
@@ -388,14 +501,32 @@ export class TourService {
       slug: tour.slug,
       description: tour.description,
       coverUrl: tour.coverUrl,
+      galleryUrls: tour.galleryUrls ?? [],
+      extras:
+        tour.extras &&
+        typeof tour.extras === 'object' &&
+        !Array.isArray(tour.extras)
+          ? (tour.extras as Record<string, unknown>)
+          : {},
       price: tour.price.toString(),
       currency: tour.currency,
       category: tour.category,
       status: tour.status,
       durationDays: tour.durationDays,
+      featured: tour.featured ?? false,
       averageRating: (tour.averageRating ?? new Prisma.Decimal(0)).toString(),
       reviewCount: tour.reviewCount ?? 0,
       partnerId: tour.partnerId,
+      partner: tour.partner
+        ? {
+            id: tour.partner.id,
+            companyName: tour.partner.companyName,
+            logo: tour.partner.logo,
+            membershipTier: tour.partner.membershipTier,
+            averageRating: tour.partner.averageRating.toString(),
+            reviewCount: tour.partner.reviewCount,
+          }
+        : undefined,
       createdAt: tour.createdAt.toISOString(),
       updatedAt: tour.updatedAt.toISOString(),
     };

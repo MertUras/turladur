@@ -40,6 +40,11 @@ export default function AdminDashboardPage() {
             hint={`${stats.tours.pendingReview} incelemede`}
           />
           <Stat
+            label="Deneyim"
+            value={String(stats.experiences?.total ?? 0)}
+            hint={`${stats.experiences?.pendingReview ?? 0} incelemede`}
+          />
+          <Stat
             label="Rezervasyon"
             value={String(stats.reservations)}
             hint={`${stats.paymentsSuccess} başarılı ödeme`}

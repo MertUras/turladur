@@ -4,10 +4,13 @@ import {
   DEFAULT_PAGE,
   DEFAULT_PAGE_LIMIT,
 } from '@turladur/shared-constants';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   Max,
@@ -26,6 +29,65 @@ export class SearchToursDto {
   @IsOptional()
   @IsEnum(TourCategory)
   category?: TourCategory;
+
+  /** Exact duration in days (legacy `duration=1`). */
+  @ApiPropertyOptional({ example: 3 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(365)
+  durationDays?: number;
+
+  /**
+   * Duration bucket for UI parity: `1` | `2-3` | `4-6` | `7+`
+   * Ignored when `durationDays` is set.
+   */
+  @ApiPropertyOptional({ example: '2-3' })
+  @IsOptional()
+  @IsString()
+  @IsIn(['1', '2-3', '4-6', '7+'])
+  duration?: string;
+
+  @ApiPropertyOptional({ description: 'Only featured tours' })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === '1')
+  @IsBoolean()
+  featured?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  minPrice?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  maxPrice?: number;
+
+  @ApiPropertyOptional({ description: 'Minimum average rating 1–5' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  minRating?: number;
+
+  @ApiPropertyOptional({
+    enum: ['createdAt', 'price', 'rating', 'durationDays'],
+  })
+  @IsOptional()
+  @IsIn(['createdAt', 'price', 'rating', 'durationDays'])
+  sortBy?: 'createdAt' | 'price' | 'rating' | 'durationDays';
+
+  @ApiPropertyOptional({ enum: ['asc', 'desc'] })
+  @IsOptional()
+  @IsIn(['asc', 'desc'])
+  sortOrder?: 'asc' | 'desc';
 
   @ApiPropertyOptional({ default: DEFAULT_PAGE })
   @IsOptional()

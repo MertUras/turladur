@@ -31,3 +31,7 @@ export async function createReview(
 ) {
   return apiRequest<Review>('/review', { method: 'POST', body, token });
 }
+
+export async function listMyReviews(token: string) {
+  return apiRequest<Review[]>('/review/me', { token });
+}

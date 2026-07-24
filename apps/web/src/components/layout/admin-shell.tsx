@@ -2,23 +2,28 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Menu, X } from 'lucide-react';
 
+import { NotificationBell } from '@/components/layout/notification-bell';
 import { useAuth } from '@/providers/auth-provider';
 import { cn } from '@/lib/utils';
 
 const NAV = [
   { href: '/admin/dashboard', label: 'Özet' },
+  { href: '/admin/statistics', label: 'İstatistik' },
   { href: '/admin/users', label: 'Kullanıcılar' },
-  { href: '/admin/agencies', label: 'Partnerler' },
-  { href: '/admin/tours', label: 'Tur onay' },
+  { href: '/admin/agencies', label: 'Partner / Acente' },
+  { href: '/admin/tours', label: 'Onay' },
+  { href: '/admin/content', label: 'Blog' },
 ];
 
-/** Admin shell — separate from marketing; sky brand preserved. */
+/** Admin shell — separate from marketing. */
 export function AdminShell({ children }: { children: ReactNode }) {
   const { isAuthenticated, user, logout, accessToken } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
     if (!accessToken) {
@@ -30,6 +35,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
     }
   }, [accessToken, user, router]);
 
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
+
   if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center text-neutral-600">
@@ -40,44 +49,71 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-neutral-50">
-      <header className="border-b border-neutral-200 bg-neutral-900 text-white">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <Link href="/admin/dashboard" className="font-semibold text-sky-400">
-            TurlaDur Admin
-          </Link>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-neutral-300">{user?.email}</span>
-            <Link href="/" className="text-neutral-400 hover:text-white">
+      <header className="sticky top-0 z-30 border-b border-neutral-200 bg-neutral-900 text-white">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="rounded-lg p-2 text-neutral-200 hover:bg-white/10 md:hidden"
+              aria-label={navOpen ? 'Menüyü kapat' : 'Menüyü aç'}
+              onClick={() => setNavOpen((v) => !v)}
+            >
+              {navOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </button>
+            <Link href="/admin/dashboard" className="font-semibold text-white">
+              turta Admin
+            </Link>
+          </div>
+          <div className="flex items-center gap-2 text-sm sm:gap-3">
+            <NotificationBell solid={false} />
+            <span className="hidden text-neutral-300 sm:inline">
+              {user?.email}
+            </span>
+            <Link
+              href="/"
+              className="hidden text-neutral-400 hover:text-white sm:inline"
+            >
               Site
             </Link>
             <button
               type="button"
               onClick={logout}
-              className="rounded-lg bg-sky-600 px-3 py-1.5 text-white hover:bg-sky-700"
+              className="rounded-lg bg-neutral-950 px-3 py-1.5 text-white hover:bg-neutral-800"
             >
               Çıkış
             </button>
           </div>
         </div>
       </header>
-      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 md:grid-cols-[200px_1fr]">
-        <nav className="flex flex-row gap-2 md:flex-col">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'rounded-lg px-3 py-2 text-sm font-medium',
-                pathname.startsWith(item.href)
-                  ? 'bg-sky-100 text-sky-800'
-                  : 'text-neutral-700 hover:bg-neutral-100',
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
+      <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 md:grid-cols-[200px_1fr] md:py-8">
+        <nav
+          className={cn(
+            'flex-col gap-1 md:flex',
+            navOpen ? 'flex' : 'hidden md:flex',
+          )}
+        >
+          <div className="flex gap-1 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0">
+            {NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'shrink-0 rounded-lg px-3 py-2 text-sm font-medium',
+                  pathname.startsWith(item.href)
+                    ? 'bg-neutral-900 text-white'
+                    : 'text-neutral-700 hover:bg-neutral-100',
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </nav>
-        <div>{children}</div>
+        <div className="min-w-0">{children}</div>
       </div>
     </div>
   );

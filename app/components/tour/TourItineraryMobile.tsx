@@ -10,7 +10,11 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
 } from '@heroicons/react/24/outline';
-import { normalizeItinerary, NormalizedItineraryDay } from './normalizeItinerary';
+import {
+  normalizeItinerary,
+  NormalizedItineraryDay,
+  stripDayPrefixFromTitle,
+} from './normalizeItinerary';
 
 interface TourItineraryMobileProps {
   itinerary: unknown;
@@ -21,11 +25,19 @@ interface TourItineraryMobileProps {
 
 const PREVIEW_DAY_COUNT = 2;
 
-function formatDayDate(tourStartDate: Date | null, dayIndex: number, dayNumber: number): string {
+function formatDayDate(
+  tourStartDate: Date | null,
+  dayIndex: number,
+  dayNumber: number,
+): string {
   if (tourStartDate) {
     const currentDate = new Date(tourStartDate);
     currentDate.setDate(currentDate.getDate() + dayIndex);
-    return currentDate.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+    return currentDate.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
   }
   return `${dayNumber}. Gün`;
 }
@@ -40,7 +52,7 @@ function getDayImages(images: string[], dayIndex: number): string[] {
 
 function collectImportantPoints(
   days: NormalizedItineraryDay[],
-  destinations: string[]
+  destinations: string[],
 ): { label: string; dayNumber?: number }[] {
   const points: { label: string; dayNumber?: number }[] = [];
 
@@ -65,10 +77,12 @@ function MobileItineraryEmptyState() {
   return (
     <div className="bg-white rounded-xl overflow-hidden shadow-md border border-neutral-200/70 p-5">
       <div className="text-center py-8">
-        <div className="w-14 h-14 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <MapIcon className="w-7 h-7 text-sky-600" />
+        <div className="w-14 h-14 bg-neutral-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <MapIcon className="w-7 h-7 text-neutral-950" />
         </div>
-        <h4 className="text-base font-medium text-gray-900 mb-2">Tur Programı Hazırlanıyor</h4>
+        <h4 className="text-base font-medium text-gray-900 mb-2">
+          Tur Programı Hazırlanıyor
+        </h4>
         <p className="text-sm text-gray-600">
           Bu tur için detaylı günlük program yakında eklenecektir.
         </p>
@@ -87,20 +101,22 @@ function CompactDayRow({
   isLast: boolean;
 }) {
   const titleSuffix = day.title
-    ? day.title.replace(/^\d+\.?\s*Gün\s*:?\s*/i, '')
+    ? stripDayPrefixFromTitle(day.title, day.dayNumber)
     : destinationName;
-  const rowTitle = `${day.dayNumber}. Gün ${titleSuffix}`.trim();
+  const rowTitle = titleSuffix
+    ? `${day.dayNumber}. Gün — ${titleSuffix}`
+    : `${day.dayNumber}. Gün`;
 
   return (
     <div className="relative flex gap-3 pb-5 last:pb-0">
       {!isLast && (
         <div
-          className="absolute left-[9px] top-[11px] -bottom-[11px] w-0.5 bg-sky-200 z-0"
+          className="absolute left-[9px] top-[11px] -bottom-[11px] w-0.5 bg-neutral-200 z-0"
           aria-hidden
         />
       )}
       <div className="relative z-10 flex-shrink-0 w-5 pt-1.5">
-        <div className="mx-auto w-2.5 h-2.5 rounded-full bg-sky-500 ring-4 ring-sky-100" />
+        <div className="mx-auto w-2.5 h-2.5 rounded-full bg-neutral-950 ring-4 ring-neutral-100" />
       </div>
 
       <button
@@ -135,36 +151,48 @@ function DetailedDayCard({
   formattedDate: string;
   dayImages: string[];
 }) {
-  const routeTitle = day.title || destinationName || `${day.dayNumber}. Gün Programı`;
+  const rawTitle = day.title || destinationName || '';
+  const routeTitle =
+    stripDayPrefixFromTitle(rawTitle, day.dayNumber) ||
+    destinationName ||
+    'Gün programı';
 
   return (
-    <div className="relative flex gap-4">
+    <div className="relative flex gap-4 min-w-0">
       <div className="flex-shrink-0">
-        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-sky-100 text-sky-600 ring-4 ring-white">
+        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-neutral-100 text-neutral-950 ring-4 ring-white">
           <span className="text-sm font-semibold">{day.dayNumber}</span>
         </div>
       </div>
 
       <div className="flex-1 min-w-0 pb-8">
-        <div className="bg-white rounded-xl border border-neutral-200/70 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-neutral-100 bg-sky-50/40">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-700">
-                {formattedDate}
-              </span>
-              <h4 className="text-sm font-semibold text-gray-900">{routeTitle}</h4>
+        <div className="bg-white rounded-xl border border-neutral-200/70 shadow-sm overflow-hidden min-w-0">
+          <div className="px-4 py-3 border-b border-neutral-100 bg-neutral-100/40">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              {formattedDate && !formattedDate.endsWith('. Gün') && (
+                <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800 shrink-0">
+                  {formattedDate}
+                </span>
+              )}
+              <h4 className="text-sm font-semibold text-gray-900 break-words min-w-0 flex-1">
+                {routeTitle}
+              </h4>
             </div>
           </div>
 
-          <div className="p-4">
-            <p className="text-sm text-gray-600 leading-relaxed mb-4">
-              {day.description || 'Bu gün için detaylı program bilgisi yakında eklenecektir.'}
+          <div className="p-4 min-w-0">
+            <p className="text-sm text-gray-600 leading-relaxed mb-4 break-words [overflow-wrap:anywhere]">
+              {day.description ||
+                'Bu gün için detaylı program bilgisi yakında eklenecektir.'}
             </p>
 
             {dayImages.length > 0 && (
               <div className="grid grid-cols-2 gap-2.5 mb-4">
                 {dayImages.map((image, imgIndex) => (
-                  <div key={imgIndex} className="relative aspect-[4/3] rounded-lg overflow-hidden">
+                  <div
+                    key={imgIndex}
+                    className="relative aspect-[4/3] rounded-lg overflow-hidden"
+                  >
                     <Image
                       src={image}
                       alt={`${routeTitle} - ${imgIndex + 1}`}
@@ -181,7 +209,9 @@ function DetailedDayCard({
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-50 border border-gray-100">
                 <MapPinIcon className="w-3.5 h-3.5 text-gray-500" />
                 <span className="text-xs text-gray-500">Konum</span>
-                <span className="text-xs font-medium text-gray-700">{destinationName}</span>
+                <span className="text-xs font-medium text-gray-700">
+                  {destinationName}
+                </span>
               </div>
             )}
           </div>
@@ -203,7 +233,7 @@ export default function TourItineraryMobile({
   const days = useMemo(() => normalizeItinerary(itinerary), [itinerary]);
   const importantPoints = useMemo(
     () => collectImportantPoints(days, destinations),
-    [days, destinations]
+    [days, destinations],
   );
 
   if (days.length === 0) {
@@ -235,7 +265,7 @@ export default function TourItineraryMobile({
           <button
             type="button"
             onClick={() => setIsExpanded(true)}
-            className="w-full flex items-center justify-center gap-1.5 px-4 py-3.5 border-t border-neutral-100 text-sm font-medium text-sky-600 hover:bg-sky-50/50 transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 px-4 py-3.5 border-t border-neutral-100 text-sm font-medium text-neutral-950 hover:bg-neutral-100/50 transition-colors"
           >
             <span>Tüm programı gör</span>
             <ChevronDownIcon className="w-4 h-4" />
@@ -249,7 +279,7 @@ export default function TourItineraryMobile({
     <div className="bg-white rounded-xl overflow-hidden shadow-md border border-neutral-200/70">
       <div className="px-4 pt-5 pb-4">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-          <MapIcon className="h-6 w-6 text-sky-600 mr-2.5 flex-shrink-0" />
+          <MapIcon className="h-6 w-6 text-neutral-950 mr-2.5 flex-shrink-0" />
           <span>Tur Programı ve Rotası</span>
         </h3>
 
@@ -282,14 +312,18 @@ export default function TourItineraryMobile({
       <div className="px-4 pb-4">
         {activeTab === 'program' ? (
           <div className="relative">
-            <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-gradient-to-b from-sky-200 via-sky-300 to-sky-200" />
+            <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-gradient-to-b from-neutral-200 via-neutral-300 to-neutral-200" />
 
             {days.map((day, index) => (
               <DetailedDayCard
                 key={`${day.dayNumber}-${index}`}
                 day={day}
                 destinationName={getDayDestination(destinations, index)}
-                formattedDate={formatDayDate(tourStartDate, index, day.dayNumber)}
+                formattedDate={formatDayDate(
+                  tourStartDate,
+                  index,
+                  day.dayNumber,
+                )}
                 dayImages={getDayImages(images, index)}
               />
             ))}
@@ -304,9 +338,13 @@ export default function TourItineraryMobile({
                 >
                   <div className="w-2.5 h-2.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{point.label}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {point.label}
+                    </p>
                     {point.dayNumber && (
-                      <p className="text-xs text-gray-500 mt-0.5">{point.dayNumber}. gün</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {point.dayNumber}. gün
+                      </p>
                     )}
                   </div>
                 </div>
@@ -314,7 +352,9 @@ export default function TourItineraryMobile({
             ) : (
               <div className="text-center py-8">
                 <PhotoIcon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">Önemli nokta bilgisi bulunmuyor.</p>
+                <p className="text-sm text-gray-500">
+                  Önemli nokta bilgisi bulunmuyor.
+                </p>
               </div>
             )}
           </div>

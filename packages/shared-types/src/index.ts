@@ -22,17 +22,81 @@ export interface ApiResponse<T> {
 export type UserRole =
   'CUSTOMER' | 'PARTNER' | 'PARTNER_STAFF' | 'ADMIN' | 'SUPER_ADMIN';
 
+/** Partner staff (PARTNER_STAFF) permission keys set in /partner/users. */
+export type StaffPermissionKey =
+  'tours' | 'reservations' | 'customers' | 'reports';
+
+/**
+ * Stored as `{ tours: ['read','write'] }` or legacy `{ tours: true }`.
+ * Empty array / false / missing = no access.
+ */
+export type StaffPermissions = Partial<
+  Record<StaffPermissionKey, boolean | string[]>
+>;
+
+export type PartnerCapability = 'TOURS' | 'EXPERIENCES' | 'HOTELS';
+
+export type MembershipTier = 'BRONZE' | 'SILVER' | 'GOLD';
+
+export type PartnerStatus = 'PENDING' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED';
+
+export type AgencyStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+
 export interface User {
   id: string;
   email: string;
   firstName: string | null;
   lastName: string | null;
   phone: string | null;
+  /** TC Kimlik No (11 digits). */
+  identityNumber: string | null;
+  birthDate: string | null;
+  address: string | null;
+  billingLine1: string | null;
+  billingLine2: string | null;
+  billingCity: string | null;
+  billingState: string | null;
+  billingPostalCode: string | null;
+  billingCountry: string | null;
   role: UserRole;
   partnerId: string | null;
+  /**
+   * PARTNER_STAFF only. Partner owners (PARTNER) ignore this — full access.
+   */
+  permissions: StaffPermissions | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Partner {
+  id: string;
+  companyName: string;
+  contactEmail: string;
+  status: PartnerStatus;
+  capabilities: PartnerCapability[];
+  membershipTier: MembershipTier;
+  averageRating: string;
+  reviewCount: number;
+}
+
+export interface Agency {
+  id: string;
+  name: string;
+  status: AgencyStatus;
+  userId: string;
+  email: string | null;
+  city: string | null;
+}
+
+export interface SubUser {
+  id: string;
+  partnerId: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  permissions: Record<string, unknown>;
 }
 
 export type TourCategory =
@@ -40,20 +104,47 @@ export type TourCategory =
 
 export type TourStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
 
+export type ExperienceStatus =
+  'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
+
+export type HotelType =
+  | 'HOTEL'
+  | 'BOUTIQUE_HOTEL'
+  | 'RESORT'
+  | 'HOSTEL'
+  | 'APARTMENT'
+  | 'VILLA'
+  | 'GUESTHOUSE';
+
+export type AgePricingType = 'FREE' | 'HALF' | 'PERCENTAGE' | 'FIXED';
+
+export interface TourPartnerSummary {
+  id: string;
+  companyName: string;
+  logo: string | null;
+  membershipTier: 'BRONZE' | 'SILVER' | 'GOLD';
+  averageRating: string;
+  reviewCount: number;
+}
+
 export interface Tour {
   id: string;
   title: string;
   slug: string;
   description: string;
   coverUrl: string | null;
+  galleryUrls?: string[];
+  extras?: Record<string, unknown>;
   price: string;
   currency: string;
   category: TourCategory;
   status: TourStatus;
   durationDays: number;
+  featured: boolean;
   averageRating: string;
   reviewCount: number;
   partnerId: string;
+  partner?: TourPartnerSummary;
   createdAt: string;
   updatedAt: string;
 }
@@ -69,27 +160,86 @@ export interface TourDate {
   isActive: boolean;
 }
 
+export interface Hotel {
+  id: string;
+  name: string;
+  slug: string;
+  city: string;
+  country: string;
+  type: HotelType;
+  partnerId: string;
+  stars: number | null;
+}
+
+export interface Room {
+  id: string;
+  hotelId: string;
+  name: string;
+  capacity: number;
+  price: string;
+  available: boolean;
+}
+
+export interface Experience {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  category: string;
+  location: string;
+  duration: string;
+  price: string;
+  status: ExperienceStatus;
+  partnerId: string;
+  averageRating: string;
+  reviewCount: number;
+}
+
+export interface ActivityDate {
+  id: string;
+  experienceId: string;
+  startDate: string;
+  endDate: string;
+  price: string;
+  availableSeats: number;
+  isActive: boolean;
+}
+
 export interface TourSearchResponse {
   items: Tour[];
   meta: ApiMeta;
 }
 
 export type BookingStatus =
-  'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'PAYMENT_FAILED';
+  | 'PENDING'
+  | 'PENDING_PAYMENT'
+  | 'CONFIRMED'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'SUSPENDED'
+  | 'PAYMENT_FAILED';
 
 export interface BookingGuest {
   firstName: string;
   lastName: string;
   birthDate?: string;
-  identityNumber?: string;
+  identityNumber: string;
+  phone: string;
+  email: string;
+  /** Required for primary buyer; optional for other party members. */
+  address?: string;
 }
 
 export interface Reservation {
   id: string;
   bookingNumber: string;
   userId: string;
-  tourId: string;
-  tourDateId: string;
+  tourId: string | null;
+  tourDateId: string | null;
+  hotelId: string | null;
+  roomId: string | null;
+  experienceId: string | null;
+  activityDateId: string | null;
   partnerId: string;
   status: BookingStatus;
   adults: number;
@@ -118,9 +268,13 @@ export interface PaymentTransaction {
   paidAt: string | null;
 }
 
+export type ReviewTargetType = 'TOUR' | 'EXPERIENCE' | 'HOTEL' | 'PARTNER';
+
 export interface Review {
   id: string;
-  tourId: string;
+  tourId: string | null;
+  experienceId: string | null;
+  hotelId: string | null;
   reservationId: string;
   userId: string;
   partnerId: string;
@@ -129,8 +283,31 @@ export interface Review {
   photoUrls: string[];
   partnerReply: string | null;
   partnerRepliedAt: string | null;
+  /** Denormalized / enriched title for profile lists. */
+  targetTitle?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Post {
+  id: string;
+  title: string;
+  slug: string;
+  content?: string;
+  excerpt: string | null;
+  coverImage?: string | null;
+  published: boolean;
+  authorId: string;
+  publishedAt: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  categories?: Category[];
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 export type NotificationType =

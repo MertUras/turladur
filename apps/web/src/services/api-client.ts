@@ -1,7 +1,14 @@
 import type { ApiResponse } from '@turladur/shared-types';
 
-const API_BASE =
+export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+
+export function getPublicApiBaseUrl() {
+  return API_BASE;
+}
+
+/** Avoid infinite "Giriş yapılıyor…" when Nest API is down. */
+const REQUEST_TIMEOUT_MS = 12_000;
 
 export class ApiError extends Error {
   constructor(
@@ -15,12 +22,55 @@ export class ApiError extends Error {
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
   token?: string | null;
   cache?: RequestCache;
   next?: NextFetchRequestConfig;
 };
+
+async function parseJsonResponse<T>(
+  response: Response,
+): Promise<ApiResponse<T>> {
+  try {
+    return (await response.json()) as ApiResponse<T>;
+  } catch {
+    throw new ApiError(
+      'INVALID_RESPONSE',
+      'API yanıtı okunamadı. Nest API çalışıyor mu? (pnpm dev:api)',
+      response.status || 0,
+    );
+  }
+}
+
+function withTimeoutSignal(timeoutMs: number): AbortSignal {
+  if (typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal) {
+    return AbortSignal.timeout(timeoutMs);
+  }
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeoutMs);
+  return controller.signal;
+}
+
+async function fetchApi(path: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(`${API_BASE}${path}`, {
+      ...init,
+      signal: withTimeoutSignal(REQUEST_TIMEOUT_MS),
+    });
+  } catch (err) {
+    const aborted =
+      err instanceof Error &&
+      (err.name === 'AbortError' || err.name === 'TimeoutError');
+    throw new ApiError(
+      aborted ? 'TIMEOUT' : 'NETWORK_ERROR',
+      aborted
+        ? 'API zaman aşımı. Nest kapalı olabilir — pnpm dev:api'
+        : 'API’ye bağlanılamadı. Nest çalışıyor mu? (localhost:4000)',
+      0,
+    );
+  }
+}
 
 /**
  * HTTP client for Nest API only.
@@ -39,7 +89,7 @@ export async function apiRequest<T>(
     headers.Authorization = `Bearer ${options.token}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetchApi(path, {
     method: options.method ?? 'GET',
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
@@ -47,7 +97,7 @@ export async function apiRequest<T>(
     next: options.next,
   });
 
-  const payload = (await response.json()) as ApiResponse<T>;
+  const payload = await parseJsonResponse<T>(response);
 
   if (!response.ok || !payload.success) {
     throw new ApiError(
@@ -71,7 +121,7 @@ export async function apiRequestWithMeta<T>(
     headers.Authorization = `Bearer ${options.token}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetchApi(path, {
     method: options.method ?? 'GET',
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
@@ -79,7 +129,7 @@ export async function apiRequestWithMeta<T>(
     next: options.next,
   });
 
-  const payload = (await response.json()) as ApiResponse<T>;
+  const payload = await parseJsonResponse<T>(response);
 
   if (!response.ok || !payload.success) {
     throw new ApiError(
@@ -91,5 +141,3 @@ export async function apiRequestWithMeta<T>(
 
   return { data: payload.data as T, meta: payload.meta };
 }
-
-export { API_BASE };

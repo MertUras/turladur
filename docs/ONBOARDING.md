@@ -63,4 +63,6 @@ Ekip kuralı: local Docker DB, staging Neon branch, prod ayrı — bkz. `.cursor
 ## 7. Deploy
 
 Production checklist: `docs/DEPLOYMENT.md`  
-Güvenlik: `docs/SECURITY_CHECKLIST.md`
+Güvenlik: `docs/SECURITY_CHECKLIST.md`  
+Mobil ekip: `docs/MOBILE_ONBOARDING.md`  
+Schema taşıma: `docs/LEGACY_TO_NEST_SCHEMA_MAPPING.md`

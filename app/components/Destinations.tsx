@@ -1,7 +1,7 @@
-import Link from "next/link";
-import { ChevronRightIcon, MapPinIcon } from "@heroicons/react/20/solid";
-import { getRoutesWithStats } from "@/lib/routes";
-import DestinationsRouteImage from "./DestinationsRouteImage";
+import Link from 'next/link';
+import { ChevronRightIcon, MapPinIcon } from '@heroicons/react/20/solid';
+import { getRoutesWithStats } from '@/lib/routes';
+import DestinationsRouteImage from './DestinationsRouteImage';
 
 const HOMEPAGE_ROUTE_LIMIT = 4;
 
@@ -11,7 +11,7 @@ export default async function Destinations() {
     ({ routes } = await getRoutesWithStats());
   } catch (error) {
     // Preview/local: DATABASE_URL yok veya DB erişilemezse ana sayfa çökmesin
-    console.error("[Destinations] routes unavailable:", error);
+    console.error('[Destinations] routes unavailable:', error);
     return null;
   }
 
@@ -31,7 +31,7 @@ export default async function Destinations() {
     <section className="py-12 md:py-16 bg-neutral-50 border-t border-neutral-200/60">
       <div className="container mx-auto px-6 max-w-7xl">
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <div className="inline-flex items-center justify-center px-3 py-1 bg-sky-100 rounded-full text-sky-700 font-medium text-xs mb-6">
+          <div className="inline-flex items-center justify-center px-3 py-1 bg-neutral-100 rounded-full text-neutral-800 font-medium text-xs mb-6">
             Popüler Turlar
           </div>
           <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
@@ -63,7 +63,7 @@ export default async function Destinations() {
               </div>
               <div className="p-5">
                 <h3
-                  className="text-base font-semibold text-neutral-800 mb-1.5 group-hover:text-sky-700 transition-colors duration-200 line-clamp-1"
+                  className="text-base font-semibold text-neutral-800 mb-1.5 group-hover:text-neutral-800 transition-colors duration-200 line-clamp-1"
                   title={route.name}
                 >
                   {route.name}
@@ -73,7 +73,7 @@ export default async function Destinations() {
                 </p>
                 <div className="flex items-center justify-between text-xs text-neutral-500 border-t border-neutral-100 pt-3 mt-3">
                   <span>{route.tourCount} Tur Seçeneği</span>
-                  <span className="flex items-center text-sky-600 font-medium group-hover:translate-x-0.5 transition-transform duration-200">
+                  <span className="flex items-center text-neutral-950 font-medium group-hover:translate-x-0.5 transition-transform duration-200">
                     Keşfet
                     <ChevronRightIcon className="w-4 h-4 ml-0.5" />
                   </span>
@@ -86,7 +86,7 @@ export default async function Destinations() {
         <div className="mt-16 md:mt-20 text-center">
           <Link
             href="/routes"
-            className="inline-flex items-center justify-center px-7 py-3 bg-white text-sky-700 border border-neutral-300 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-colors font-medium rounded-lg shadow-sm text-sm"
+            className="inline-flex items-center justify-center px-7 py-3 bg-white text-neutral-800 border border-neutral-300 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-950 transition-colors font-medium rounded-lg shadow-sm text-sm"
           >
             Tüm Turları Gör
             <ChevronRightIcon className="w-5 h-5 ml-1.5" />

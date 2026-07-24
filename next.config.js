@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const path = require('path');
 
+const NEW_WEB_URL =
+  process.env.NEXT_PUBLIC_APPS_WEB_URL || 'http://localhost:3001';
+
 const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
@@ -10,6 +13,31 @@ const nextConfig = {
   },
   // Üst dizindeki (/Users/merturas) package-lock.json yanlış workspace root seçimini önler
   outputFileTracingRoot: path.join(__dirname),
+  async redirects() {
+    // Migration: legacy partner auth → Nest apps/web (tek giriş noktası)
+    return [
+      {
+        source: '/partner-login',
+        destination: `${NEW_WEB_URL}/login`,
+        permanent: false,
+      },
+      {
+        source: '/partner-register',
+        destination: `${NEW_WEB_URL}/register`,
+        permanent: false,
+      },
+      {
+        source: '/partner-dashboard',
+        destination: `${NEW_WEB_URL}/partner/dashboard`,
+        permanent: false,
+      },
+      {
+        source: '/partner-dashboard/:path*',
+        destination: `${NEW_WEB_URL}/partner/:path*`,
+        permanent: false,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
@@ -82,7 +110,7 @@ const nextConfig = {
       'images.unsplash.com',
       'plus.unsplash.com',
       'example.com',
-      'avatar.vercel.sh'
+      'avatar.vercel.sh',
     ],
   },
   webpack: (config, { isServer }) => {
@@ -96,15 +124,15 @@ const nextConfig = {
         crypto: require.resolve('crypto-browserify'),
       };
     }
-    
+
     // node: protokolü ile başlayan modüllerin yüklemesini es geç
     config.module.rules.push({
       test: /node:/,
       loader: 'ignore-loader',
     });
-    
-    return config;
-  }
-}
 
-module.exports = nextConfig; 
+    return config;
+  },
+};
+
+module.exports = nextConfig;
