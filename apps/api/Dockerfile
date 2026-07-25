@@ -23,14 +23,14 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup --system app && adduser --system --ingroup app app
-# Workspace symlinks in node_modules → ../../packages/...
+# pnpm: deps live under root .pnpm; apps/api/node_modules has relative symlinks
+COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/packages ./packages
-COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/package.json ./apps/api/
+COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma
-COPY --from=build /app/package.json ./
-COPY --from=build /app/pnpm-workspace.yaml ./
+COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
 USER app
 WORKDIR /app/apps/api
 EXPOSE 4000
