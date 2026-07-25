@@ -69,11 +69,12 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = Number(process.env.PORT ?? 4000);
-  await app.listen(port);
+  // Railway/public proxies need 0.0.0.0 — default bind can yield 502
+  await app.listen(port, '0.0.0.0');
 
   const logger = app.get(Logger);
-  logger.log(`API running on http://localhost:${port}`);
-  logger.log(`Swagger UI: http://localhost:${port}/api/docs`);
+  logger.log(`API running on http://0.0.0.0:${port}`);
+  logger.log(`Swagger UI: http://0.0.0.0:${port}/api/docs`);
 }
 
 void bootstrap();
