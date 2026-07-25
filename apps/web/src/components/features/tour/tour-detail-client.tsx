@@ -1,6 +1,7 @@
 'use client';
 
 import { getPublicApiBaseUrl } from '@/services/api-client';
+import { resolveMediaUrl, shouldUnoptimizeMedia } from '@/lib/media';
 
 import Image from 'next/image';
 import Link from 'next/link';
@@ -414,12 +415,13 @@ export default function TourDetailClient() {
             ? (data.extras as Record<string, unknown>)
             : {};
 
-        const coverUrl =
-          typeof data.coverUrl === 'string' && data.coverUrl
-            ? data.coverUrl
-            : null;
+        const coverUrl = resolveMediaUrl(
+          typeof data.coverUrl === 'string' ? data.coverUrl : null,
+        );
         const galleryUrls = Array.isArray(data.galleryUrls)
-          ? (data.galleryUrls as string[]).filter(Boolean)
+          ? (data.galleryUrls as string[])
+              .map((url) => resolveMediaUrl(url))
+              .filter((url): url is string => Boolean(url))
           : [];
         const images = [
           ...(coverUrl ? [coverUrl] : []),
@@ -766,7 +768,7 @@ export default function TourDetailClient() {
           .map((row: Record<string, unknown>) => {
             const cover =
               typeof row.coverUrl === 'string' && row.coverUrl
-                ? row.coverUrl
+                ? resolveMediaUrl(row.coverUrl)
                 : '/brand/mark-on-light.png';
             return {
               id: String(row.id),
@@ -1005,6 +1007,7 @@ export default function TourDetailClient() {
                 alt={tour.name}
                 fill
                 priority
+                unoptimized={shouldUnoptimizeMedia(tour.images[0])}
                 style={{ objectFit: 'cover' }}
                 className="brightness-[0.85]"
               />
@@ -1173,6 +1176,7 @@ export default function TourDetailClient() {
                 alt={tour.name}
                 fill
                 priority
+                unoptimized={shouldUnoptimizeMedia(tour.images[0])}
                 style={{ objectFit: 'cover' }}
                 className="brightness-70 transform scale-100 animate-ken-burns-slow"
               />

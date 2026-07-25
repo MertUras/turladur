@@ -56,11 +56,21 @@ export class StorageService implements OnModuleInit {
     const proxyFallback = apiPublic
       ? `${stripTrailingSlash(apiPublic)}/api/v1/storage/media`
       : null;
-    this.cdnUrl = stripTrailingSlash(
-      explicitCdn ||
-        proxyFallback ||
-        `${stripTrailingSlash(endpoint)}/${this.bucket}`,
-    );
+    const endpointFallback = `${stripTrailingSlash(endpoint)}/${this.bucket}`;
+    const isLoopback = (url: string) =>
+      /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?/i.test(url);
+
+    // Never publish localhost MinIO URLs when a public API host exists.
+    let resolved = explicitCdn || proxyFallback || endpointFallback;
+    if (isLoopback(resolved) && proxyFallback) {
+      resolved = proxyFallback;
+    }
+    if (isLoopback(resolved) && process.env.NODE_ENV === 'production') {
+      this.logger.error(
+        'CDN resolves to localhost in production — set CDN_URL or API_PUBLIC_URL (R2 media proxy)',
+      );
+    }
+    this.cdnUrl = stripTrailingSlash(resolved);
   }
 
   onModuleInit(): void {
