@@ -8,14 +8,29 @@ function stripTrailingSlash(url: string): string {
   return url.replace(/\/+$/, '');
 }
 
+/** Fix CDN_URL pasted without scheme (breaks next/image optimizer). */
+function ensureAbsoluteHttpUrl(url: string): string {
+  const trimmed = url.trim();
+  if (
+    !trimmed ||
+    /^https?:\/\//i.test(trimmed) ||
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('blob:') ||
+    trimmed.startsWith('data:')
+  ) {
+    return trimmed;
+  }
+  return `https://${trimmed.replace(/^\/+/, '')}`;
+}
+
 /** Prefer explicit env; without custom domain use Nest media proxy (API). */
 export function getCdnBaseUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_CDN_URL?.trim();
-  if (fromEnv) return stripTrailingSlash(fromEnv);
+  if (fromEnv) return stripTrailingSlash(ensureAbsoluteHttpUrl(fromEnv));
   const api = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (api) {
     // https://api…/api/v1 → https://api…/api/v1/storage/media
-    return `${stripTrailingSlash(api)}/storage/media`;
+    return `${stripTrailingSlash(ensureAbsoluteHttpUrl(api))}/storage/media`;
   }
   if (process.env.NODE_ENV !== 'production') {
     return 'http://localhost:4000/api/v1/storage/media';
@@ -47,7 +62,7 @@ export function resolveMediaUrl(
   pathOrUrl: string | null | undefined,
 ): string | null {
   if (!pathOrUrl?.trim()) return null;
-  const value = pathOrUrl.trim();
+  const value = ensureAbsoluteHttpUrl(pathOrUrl.trim());
   if (value.startsWith('blob:') || value.startsWith('data:')) {
     return value;
   }

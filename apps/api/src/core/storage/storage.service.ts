@@ -25,6 +25,12 @@ function stripTrailingSlash(url: string): string {
   return url.replace(/\/+$/, '');
 }
 
+function ensureAbsoluteHttpUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed || /^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed.replace(/^\/+/, '')}`;
+}
+
 @Injectable()
 export class StorageService implements OnModuleInit {
   private readonly logger = new Logger(StorageService.name);
@@ -70,7 +76,7 @@ export class StorageService implements OnModuleInit {
         'CDN resolves to localhost in production — set CDN_URL or API_PUBLIC_URL (R2 media proxy)',
       );
     }
-    this.cdnUrl = stripTrailingSlash(resolved);
+    this.cdnUrl = stripTrailingSlash(ensureAbsoluteHttpUrl(resolved));
   }
 
   onModuleInit(): void {

@@ -12,6 +12,8 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { resolveMediaUrl, shouldUnoptimizeMedia } from '@/lib/media';
+
 export interface TourCardProps {
   id: string;
   title: string;
@@ -43,6 +45,9 @@ export function TourCard({
   onDelete,
   listView = false,
 }: TourCardProps) {
+  const resolvedImage = resolveMediaUrl(imageUrl) || '/brand/mark-on-light.png';
+  const unoptimized = shouldUnoptimizeMedia(resolvedImage);
+
   const statusConfig = {
     active: {
       bg: 'bg-emerald-50',
@@ -70,9 +75,10 @@ export function TourCard({
         <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
           <div className="relative sm:w-48 sm:h-32 mb-4 sm:mb-0 overflow-hidden rounded-lg">
             <Image
-              src={imageUrl}
+              src={resolvedImage}
               alt={title}
               fill
+              unoptimized={unoptimized}
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               sizes="(max-width: 768px) 100%, 192px"
             />
@@ -200,9 +206,10 @@ export function TourCard({
       <div className="relative">
         <div className="aspect-[16/9] relative overflow-hidden">
           <Image
-            src={imageUrl}
+            src={resolvedImage}
             alt={title}
             fill
+            unoptimized={unoptimized}
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
