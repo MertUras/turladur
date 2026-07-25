@@ -156,6 +156,12 @@ pnpm --filter api prisma db seed         # seed veri
 - [x] `prisma generate` hatasız
 - [x] Shared types güncellendi
 - [x] Seed script eklendi (`apps/api/prisma/seed.ts`)
+- [ ] **DEVAM NOKTASI** Local prisma deploy + seed
+- [ ] Neon develop migrate
+
+> **Durum (2026-07-24):** Sprint 23 Faz A tamamlandi. Sira: UI onarim (23.R1-R12) sonra DB deploy.
+>
+> (eski satirlar asagida — ignore edin)
 - [ ] Local `prisma:deploy` + `prisma:seed` (geliştirici ortamında çalıştırılacak)
 - [ ] Neon develop’a migrate (bilinçli, ayrı adım)
 
@@ -317,18 +323,56 @@ Kaynak: `.cursor/rules/ui-parity-no-simplify.mdc`
 - Parity tamamlanmadan `app/` veya kök legacy ağaçlarını silme
 - Eksik Nest endpoint yüzünden UI’ı silme — UI kalır, data bağlanır / loading-empty korunur
 
-### Faz A — Parity kapısı (silmeden önce, P0)
+### Faz A — Parity kapısı ✅ TAMAMLANDI (2026-07-24)
 
-| #     | Görev                                                                                                                                 | Öncelik | Çıktı                                                                                                |
-| ----- | ------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------- |
-| 23.0a | Marketing + customer parity checklist — ana sayfa, tur listesi/detay, aktivite, rota, blog, checkout, profil, bookings                | P0      | ✅ audit; campaigns/careers port; checkout/profile PARTIAL — bkz. `docs/SPRINT_23_PHASE_A_PARITY.md` |
-| 23.0b | Auth parity — login/register/forgot + partner login/register/verification                                                             | P0      | ✅ forgot + partner auth UI port + Nest wire                                                         |
-| 23.0c | Partner panel parity — dashboard, tours CRUD, dates/pickup/age-range, experiences, reservations, financials, users, settings, reviews | P0      | 🟡 audit: core güçlü, bazı sayfalar ince                                                             |
-| 23.0d | Admin panel parity — users, tours/approvals, agencies, content, statistics, settings                                                  | P0      | 🔴 STUB/MISSING — Faz B bloker                                                                       |
-| 23.0e | Ortak bileşen parity — Header/Footer, booking bar, kartlar, filtreler, empty states                                                   | P0      | ✅ Footer restore; Header hotel temizliği kalan                                                      |
-| 23.0f | Parity sign-off dokümanı — eksik ekran listesi kapatılmış veya bilinen istisna ürün onayıyla işaretlenmiş                             | P0      | 🔴 BLOKE — `docs/SPRINT_23_PHASE_A_PARITY.md`                                                        |
+| #     | Görev                                                                                                                                 | Öncelik | Çıktı                                                         |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------- |
+| 23.0a | Marketing + customer parity checklist                                                                                                 | P0      | ✅ Tamamlandı — checkout/profile dahil                        |
+| 23.0b | Auth parity — login/register/forgot + partner auth                                                                                    | P0      | ✅ Tamamlandı — forgot + partner auth UI port + Nest wire     |
+| 23.0c | Partner panel parity — dashboard, tours CRUD, experiences, reservations, financials, users, settings                                  | P0      | ✅ Tamamlandı — core + ince sayfalar                          |
+| 23.0d | Admin panel parity — users, tours/approvals, agencies, content, statistics, settings                                                  | P0      | ✅ Tamamlandı                                                  |
+| 23.0e | Ortak bileşen parity — Header/Footer, booking bar, kartlar, filtreler                                                                 | P0      | ✅ Tamamlandı                                                  |
+| 23.0f | Parity sign-off dokümanı                                                                                                              | P0      | ✅ `docs/SPRINT_23_PHASE_A_PARITY.md`                         |
 
-### Faz B — Legacy kaldırma (parity sign-off sonrası)
+### ⚠️ Faz A Sonrası — UI Onarım (KRİTİK — DB'den önce)
+
+> **Sorun:** Faz A sırasında UI'da istenmeyen değişiklikler/bozulmalar oluştu.  
+> **Kural:** UI değişMEMELİ — sadece veri bağlantısı (Nest API wire) değişmeli, görsel/layout aynı kalmalı.
+
+**Onarım ilkeleri:**
+1. Legacy UI dosyalarını referans al — birebir aynı görünüm hedefle
+2. Sadece `data fetching` ve `API URL` değişmeli, JSX/CSS/layout DEĞİŞMEMELİ
+3. Bileşen ekleme/çıkarma YASAK — legacye UI na göre ilerlenecek
+4. Renk, spacing, font, border, shadow → legacy ile aynı
+5. Responsive davranış korunmalı
+
+| #      | Onarım Görevi                                                                                       | Öncelik | Kontrol                                      |
+| ------ | --------------------------------------------------------------------------------------------------- | ------- | -------------------------------------------- |
+| 23.R1  | Ana sayfa — Hero, featured turlar, CTA butonları legacy ile birebir mi?                             | P0      | Side-by-side screenshot karşılaştır          |
+| 23.R2  | Tur listesi/detay — kart tasarımı, filtreler, sıralama, fiyat gösterimi bozulmuş mu?               | P0      | Kart boyutu, gölge, hover efekti kontrol     |
+| 23.R3  | Aktivite listesi/detay — kategori tabları, tarih seçici, fiyat alanı                                | P0      | Legacy aktivite sayfası ile karşılaştır      |
+| 23.R4  | Rota listesi/detay — istatistik kartları, eşleşen turlar                                            | P0      | Layout ve kart düzeni                        |
+| 23.R5  | Header/Footer — link sırası, logo, menü yapısı, mobil hamburger                                     | P0      | Nav linkler, footer kolonlar                 |
+| 23.R6  | Checkout — form alanları, fiyat özeti, buton yerleşimi                                              | P0      | Multi-step akış bozulmuş mu?                 |
+| 23.R7  | Profil — tab yapısı, bilgi kartları, form layout                                                    | P0      | Tab sayısı ve içerik eşleşmesi              |
+| 23.R8  | Partner panel — dashboard kartları, form alanları, tablo genişlikleri                                | P0      | Partner CRUD formları legacy ile aynı mı?    |
+| 23.R9  | Admin panel — tablo stilleri, onay butonları, filtre alanları                                        | P0      | Tablo header, row height, badge renkleri     |
+| 23.R10 | Login/Register — form genişliği, input stilleri, hata mesajları                                     | P0      | Chrome (border, padding, focus ring)         |
+| 23.R11 | Responsive (375px) — stack düzeni, hamburger menü, kart grid                                        | P0      | Mobilde kırılma var mı?                      |
+| 23.R12 | Genel — buton renkleri, spacing, Typography tutarlılığı                                             | P0      | Tailwind class'ları legacy ile eşleşiyor mu? |
+
+**Nasıl çalışılacak:**
+```
+1. Legacy sayfayı aç (localhost:3000 veya app/ klasöründen referans)
+2. Yeni sayfayı aç (localhost:3001 / apps/web)
+3. Pixel-level karşılaştır — farklılık varsa legacy'yi baz al
+4. Sadece JSX/CSS düzelt — veri katmanına dokunma
+5. Her düzeltme sonrası browser'da kontrol et
+```
+
+### Faz B — Legacy kaldırma (UI onarım + parity sign-off sonrası)
+
+> ⚠️ **BLOKE:** Faz B, yukarıdaki UI Onarım (23.R1–R12) tamamlanmadan başlamaz.
 
 | #     | Görev                                                                                | Öncelik | Çıktı                                    |
 | ----- | ------------------------------------------------------------------------------------ | ------- | ---------------------------------------- |
@@ -351,10 +395,13 @@ Kaynak: `.cursor/rules/ui-parity-no-simplify.mdc`
 | #     | Görev                                                        | Öncelik | Çıktı                                           |
 | ----- | ------------------------------------------------------------ | ------- | ----------------------------------------------- |
 | 23.14 | İyzico 3D Secure (mock → sandbox/production path)            | P0      | Test kartı ile ödeme; checkout UI legacy parity |
-| 23.15 | WebSocket gateway — realtime bildirim (Socket.io)            | P1      | Anlık notification; bell UI parity              |
-| 23.16 | CDN — Cloudflare (statik + görseller)                        | P1      | `media.turladur.com`                            |
-| 23.17 | E2E genişlet — kayıt → booking → ödeme + kritik parity smoke | P0      | Playwright suite geçiyor                        |
-| 23.18 | Lint + build — `pnpm build:apps` hatasız                     | P0      | CI-ready                                        |
+| 23.15 | OTP doğrulama — checkout sırasında telefon/email onayı       | P0      | 6 haneli kod, süre limiti, tekrar gönder        |
+| 23.16 | Voucher/bilet oluşturma — ödeme sonrası PDF + email          | P0      | PDF voucher (tur bilgisi, QR, misafirler)       |
+| 23.17 | Ödeme sonrası bildirim — email + SMS + push (partner'a da)   | P0      | Mailhog'da email, SMS log, partner notification |
+| 23.18 | WebSocket gateway — realtime bildirim (Socket.io)            | P1      | Anlık notification; bell UI parity              |
+| 23.19 | CDN — Cloudflare (statik + görseller)                        | P1      | `media.turladur.com`                            |
+| 23.20 | E2E genişlet — kayıt → booking → ödeme → voucher smoke      | P0      | Playwright suite geçiyor                        |
+| 23.21 | Lint + build — `pnpm build:apps` hatasız                     | P0      | CI-ready                                        |
 
 ### Definition of Done
 
@@ -363,9 +410,13 @@ Kaynak: `.cursor/rules/ui-parity-no-simplify.mdc`
 - [ ] `app/` klasöründe legacy kod kalmamış (çalışan UI yalnızca `apps/web/`)
 - [ ] Root `prisma/`, `lib/`, `middleware.ts` yok
 - [ ] `pnpm dev:apps` tek komutla sistem ayağa kalkıyor
-- [ ] İyzico test kartıyla ödeme yapılabiliyor
-- [ ] E2E testler geçiyor
-- [ ] `pnpm build:apps` hatasız
+- [ ] Iyzico test kartiyla odeme yapilabiliyor (3D Secure)
+- [ ] OTP dogrulama calisiyor (kod gonder, dogrula, sure limiti)
+- [ ] Voucher PDF olusturuluyor (tur bilgisi, misafirler, rezervasyon no)
+- [ ] Odeme sonrasi email + SMS gonderiliyor
+- [ ] Partner'a yeni rezervasyon bildirimi gidiyor
+- [ ] E2E testler geciyor (register - checkout - odeme - voucher)
+- [ ] `pnpm build:apps` hatasiz
 
 ---
 
@@ -475,10 +526,14 @@ Her sprint tamamlandığında Cursor browser ile şu kontrolleri otomatik yapaca
 | T23.2 | Yeni sistem        | `http://localhost:3001`               | Ana sayfa + tur/aktivite/rota legacy seviyesinde |
 | T23.3 | API                | `http://localhost:4000/api/v1/health` | `{ status: 'ok' }`                               |
 | T23.4 | Partner/admin      | `/partner/*`, `/admin/*`              | Form/alan kaybı yok; Nest data                   |
-| T23.5 | Booking akışı      | Tur seç → checkout → ödeme            | İyzico açılır; UI parity                         |
-| T23.6 | Email              | Booking sonrası                       | Mailhog'da email                                 |
-| T23.7 | Build              | `pnpm build:apps`                     | Exit code 0                                      |
-| T23.8 | E2E                | `pnpm test:e2e`                       | Suite geçiyor                                    |
+| T23.5 | OTP dogrulama      | Checkout → telefon/email OTP          | Kod gonderiliyor, dogrulama calisiyor            |
+| T23.6 | Booking akisi      | Tur sec → checkout → OTP → odeme      | Iyzico 3D Secure acilir; odeme basarili          |
+| T23.7 | Voucher            | Odeme sonrasi                         | PDF voucher indirilebilir; tur+misafir bilgisi   |
+| T23.8 | Email bildirimi    | Booking sonrasi                       | Mailhog'da onay email + voucher eki              |
+| T23.9 | SMS bildirimi      | Booking sonrasi                       | SMS log'da "Rezervasyonunuz onaylandi"           |
+| T23.10 | Partner bildirim  | Partner login → bell icon             | "Yeni rezervasyon" bildirimi gorunuyor           |
+| T23.11 | Build             | `pnpm build:apps`                     | Exit code 0                                      |
+| T23.12 | E2E               | `pnpm test:e2e`                       | Suite geciyor (register→checkout→odeme→voucher)  |
 
 ### Sprint 24 Sonrası (Production)
 
@@ -492,6 +547,13 @@ Her sprint tamamlandığında Cursor browser ile şu kontrolleri otomatik yapaca
 | T24.6 | Lighthouse audit    | Chrome DevTools → Lighthouse             | P > 85, SEO > 90, A11y > 85          |
 | T24.7 | Mobil test          | iPhone viewport                          | Tüm akışlar çalışıyor                |
 | T24.8 | Error tracking      | Sentry dashboard                         | Entegrasyon aktif, event'ler geliyor |
+
+---
+
+## Cursor Onay Kuralı
+
+Her gorev/adim icin Cursor once ne yapacagini aciklar, kullanicidan onay alir, sonra uygular.
+Detay: `.cursor/rules/workflow-checklist.mdc` → "Once Anlat, Onay Al, Sonra Yap"
 
 ---
 
@@ -509,17 +571,27 @@ Her sprint'in son görevi tamamlandığında:
 ## Genel Bağımlılık Sırası
 
 ```
-Sprint 19: DB Birleştirme (herşeyin temeli)
+Sprint 19: DB Birleştirme ✅ (schema tamam, local deploy bekliyor)
     ↓
-Sprint 20: API Modülleri (DB hazır → endpoint'leri yaz)
+Sprint 20: API Modülleri ✅ (tum endpoint'ler yazildi)
     ↓
-Sprint 21: Frontend Marketing + Customer (API hazır → sayfaları bağla)
+Sprint 21: Frontend Marketing + Customer ✅
     ↓
-Sprint 22: Frontend Partner + Admin (API hazır → panel sayfaları)
+Sprint 22: Frontend Partner + Admin ✅
     ↓
-Sprint 23: UI Parity kapısı → Legacy kaldırma + Entegrasyonlar (parity yoksa silme yok)
+Sprint 23 Faz A: UI Parity Kapisi ✅ (2026-07-24)
     ↓
-Sprint 24: Production Deploy + Soft Launch (her şey hazır → canlıya al)
+>>> SIMDI BURADASINIZ <<<
+    ↓
+Sprint 23 UI Onarim (23.R1-R12): Bozulan UI'lari legacy'ye geri getir
+    ↓
+Sprint 19 devam: Local prisma deploy + seed + Neon develop migrate
+    ↓
+Sprint 23 Faz B: Legacy kaldirma (UI onarim tamam olduktan sonra)
+    ↓
+Sprint 23 Faz C: Entegrasyonlar (Iyzico, WebSocket, CDN, E2E)
+    ↓
+Sprint 24: Production Deploy + Soft Launch
 ```
 
 ---
