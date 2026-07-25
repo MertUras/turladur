@@ -201,7 +201,6 @@ export function Header() {
     '/adventure-activities/',
     '/tour-operator',
     '/agency/',
-    '/hotel',
   ];
   const forceScrolledAppearance =
     lightBackgroundRoutes.includes(pathname) ||
