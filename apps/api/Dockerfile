@@ -15,17 +15,22 @@ RUN pnpm install --frozen-lockfile --filter api...
 FROM deps AS build
 COPY apps/api apps/api
 COPY packages packages
-RUN pnpm --filter api build
+# Workspace packages export ./dist — build them before nest
+RUN pnpm --filter @turta/shared-constants --filter @turta/shared-types build \
+  && pnpm --filter api build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup --system app && adduser --system --ingroup app app
+# Workspace symlinks in node_modules → ../../packages/...
 COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/packages ./packages
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/package.json ./apps/api/
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma
 COPY --from=build /app/package.json ./
+COPY --from=build /app/pnpm-workspace.yaml ./
 USER app
 WORKDIR /app/apps/api
 EXPOSE 4000
