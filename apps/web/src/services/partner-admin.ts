@@ -1,0 +1,839 @@
+import { apiRequest } from './api-client';
+
+export type PartnerStats = {
+  tours: { total: number; published: number; pendingReview: number };
+  reservations: { total: number };
+  revenue: { confirmedTotal: string; currency: string } | null;
+};
+
+export type PartnerTour = {
+  id: string;
+  title: string;
+  slug: string;
+  price: string;
+  currency: string;
+  category: string;
+  status: string;
+  coverUrl: string | null;
+  durationDays: number;
+};
+
+export type PartnerReservation = {
+  id: string;
+  bookingNumber: string;
+  tourId: string;
+  status: string;
+  totalAmount: string;
+  currency: string;
+  contactEmail: string;
+  adults: number;
+  children: number;
+  createdAt: string;
+};
+
+export async function getPartnerStats(token: string) {
+  return apiRequest<PartnerStats>('/partner/dashboard/stats', { token });
+}
+
+export async function listPartnerTours(token: string) {
+  return apiRequest<PartnerTour[]>('/partner/tours', { token });
+}
+
+export async function getPartnerTourById(id: string, token: string) {
+  return apiRequest<
+    PartnerTour & {
+      description: string;
+      galleryUrls: string[];
+      extras: Record<string, unknown>;
+      partner?: {
+        id: string;
+        companyName: string;
+        logo: string | null;
+      };
+      createdAt?: string;
+      updatedAt?: string;
+    }
+  >(`/partner/tours/${id}`, { token });
+}
+
+export async function listPartnerReservations(token: string) {
+  return apiRequest<PartnerReservation[]>('/partner/reservations', { token });
+}
+
+export async function updatePartnerReservation(
+  id: string,
+  status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED',
+  token: string,
+) {
+  return apiRequest<PartnerReservation>(`/partner/reservations/${id}`, {
+    method: 'PATCH',
+    body: { status },
+    token,
+  });
+}
+
+export type AdminStats = {
+  users: number;
+  partners: { total: number; pending: number };
+  tours: { total: number; pendingReview: number };
+  experiences: { total: number; pendingReview: number };
+  reservations: number;
+  paymentsSuccess: number;
+};
+
+export async function getAdminStats(token: string) {
+  return apiRequest<AdminStats>('/admin/dashboard/stats', { token });
+}
+
+export async function listAdminUsers(token: string) {
+  return apiRequest<
+    Array<{
+      id: string;
+      email: string;
+      firstName: string | null;
+      lastName: string | null;
+      role: string;
+      isActive: boolean;
+      partnerId: string | null;
+    }>
+  >('/admin/users', { token });
+}
+
+export async function updateAdminUser(
+  id: string,
+  body: { isActive?: boolean; role?: string },
+  token: string,
+) {
+  return apiRequest(`/admin/users/${id}`, {
+    method: 'PATCH',
+    body,
+    token,
+  });
+}
+
+export async function listAdminPartners(token: string, status?: string) {
+  const qs = status ? `?status=${status}` : '';
+  return apiRequest<
+    Array<{
+      id: string;
+      companyName: string;
+      contactEmail: string;
+      status: string;
+      verifiedAt: string | null;
+    }>
+  >(`/admin/partners${qs}`, { token });
+}
+
+export async function setPartnerStatus(
+  id: string,
+  status: 'VERIFIED' | 'REJECTED' | 'SUSPENDED',
+  token: string,
+) {
+  return apiRequest(`/admin/partners/${id}/status`, {
+    method: 'PATCH',
+    body: { status },
+    token,
+  });
+}
+
+export async function listPendingTours(token: string) {
+  return apiRequest<
+    Array<{
+      id: string;
+      title: string;
+      partnerId: string;
+      price: string;
+      currency: string;
+      category: string;
+      status: string;
+    }>
+  >('/admin/tours/pending', { token });
+}
+
+export async function setTourStatusAdmin(
+  id: string,
+  status: 'PUBLISHED' | 'ARCHIVED' | 'DRAFT',
+  token: string,
+) {
+  return apiRequest(`/admin/tours/${id}/status`, {
+    method: 'PATCH',
+    body: { status },
+    token,
+  });
+}
+
+export async function createPartnerTour(
+  body: {
+    title: string;
+    description: string;
+    price: number;
+    category: string;
+    durationDays?: number;
+    coverUrl?: string;
+    galleryUrls?: string[];
+    extras?: Record<string, unknown>;
+  },
+  token: string,
+) {
+  return apiRequest<{ id: string; title: string; status: string }>(
+    '/catalog/tours',
+    {
+      method: 'POST',
+      body,
+      token,
+    },
+  );
+}
+
+export async function updatePartnerTour(
+  id: string,
+  body: {
+    coverUrl?: string;
+    title?: string;
+    description?: string;
+    price?: number;
+    category?: string;
+    durationDays?: number;
+    galleryUrls?: string[];
+    extras?: Record<string, unknown>;
+  },
+  token: string,
+) {
+  return apiRequest(`/catalog/tours/${id}`, {
+    method: 'PATCH',
+    body,
+    token,
+  });
+}
+
+export async function getPresignedUpload(
+  body: {
+    folder: string;
+    entityId: string;
+    filename: string;
+    contentType: string;
+  },
+  token: string,
+) {
+  return apiRequest<{
+    uploadUrl: string;
+    publicUrl: string;
+    key: string;
+  }>('/storage/presigned-url', {
+    method: 'POST',
+    body,
+    token,
+  });
+}
+
+export type PartnerExperience = {
+  id: string;
+  title: string;
+  slug: string;
+  category: string;
+  location: string;
+  price: string;
+  currency: string;
+  status: string;
+  imageUrl?: string | null;
+  duration?: string;
+  averageRating: string;
+  reviewCount: number;
+};
+
+export type CreateExperienceBody = {
+  title: string;
+  description: string;
+  longDescription: string;
+  category: string;
+  location: string;
+  duration: string;
+  price: number;
+  currency?: string;
+  ageRestriction?: string;
+  imageUrl?: string;
+  meetingPoint?: string;
+};
+
+export async function listPartnerExperiences(token: string) {
+  return apiRequest<PartnerExperience[]>('/partner/experiences', { token });
+}
+
+export async function createPartnerExperience(
+  body: CreateExperienceBody,
+  token: string,
+) {
+  return apiRequest<{ id: string; title: string; status: string }>(
+    '/catalog/experiences',
+    { method: 'POST', body, token },
+  );
+}
+
+export async function getExperienceDetail(id: string, token?: string) {
+  return apiRequest<
+    PartnerExperience & {
+      description: string;
+      longDescription: string;
+      meetingPoint: string | null;
+      ageRestriction: string | null;
+      duration: string;
+      imageUrl: string | null;
+    }
+  >(`/catalog/experiences/${id}`, token ? { token } : {});
+}
+
+export async function updatePartnerExperience(
+  id: string,
+  body: Partial<CreateExperienceBody> & { status?: string },
+  token: string,
+) {
+  return apiRequest(`/catalog/experiences/${id}`, {
+    method: 'PATCH',
+    body,
+    token,
+  });
+}
+
+export async function deletePartnerExperience(id: string, token: string) {
+  return apiRequest(`/catalog/experiences/${id}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export async function listExperienceDates(id: string, token?: string) {
+  return apiRequest<
+    Array<{
+      id: string;
+      startDate: string;
+      endDate: string;
+      price: string;
+      availableSeats: number;
+      isActive: boolean;
+    }>
+  >(`/catalog/experiences/${id}/dates`, token ? { token } : {});
+}
+
+export async function createExperienceDate(
+  experienceId: string,
+  body: {
+    startDate: string;
+    endDate: string;
+    price: number;
+    availableSeats: number;
+  },
+  token: string,
+) {
+  return apiRequest(`/catalog/experiences/${experienceId}/dates`, {
+    method: 'POST',
+    body,
+    token,
+  });
+}
+
+export async function deleteExperienceDate(
+  experienceId: string,
+  dateId: string,
+  token: string,
+) {
+  return apiRequest(`/catalog/experiences/${experienceId}/dates/${dateId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export async function getPartnerProfile(token: string) {
+  return apiRequest<{
+    id: string;
+    companyName: string;
+    taxNumber: string | null;
+    contactEmail: string;
+    contactPhone: string | null;
+    status: string;
+    capabilities?: string[];
+    membershipTier?: 'BRONZE' | 'SILVER' | 'GOLD' | null;
+    averageRating?: string;
+    reviewCount?: number;
+    address: string | null;
+    city: string | null;
+    country: string | null;
+    website: string | null;
+    logo: string | null;
+  }>('/partner/me', { token });
+}
+
+export async function updatePartnerProfile(
+  body: {
+    companyName?: string;
+    contactPhone?: string | null;
+    taxNumber?: string | null;
+    address?: string | null;
+    city?: string | null;
+    country?: string | null;
+    website?: string | null;
+    logo?: string | null;
+  },
+  token: string,
+) {
+  return apiRequest('/partner/me', { method: 'PATCH', body, token });
+}
+
+export async function getPartnerFinancials(token: string) {
+  return apiRequest<{
+    currency: string;
+    total: string;
+    months: Array<{ month: string; total: string }>;
+  }>('/partner/financials', { token });
+}
+
+export async function listPartnerSubUsers(token: string) {
+  return apiRequest<
+    Array<{
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      status: string;
+      permissions: unknown;
+    }>
+  >('/partner/users', { token });
+}
+
+export async function createPartnerSubUser(
+  partnerId: string,
+  body: {
+    name: string;
+    email: string;
+    password?: string;
+    role?: string;
+    permissions?: Record<string, unknown>;
+  },
+  token: string,
+) {
+  return apiRequest(`/identity/partners/${partnerId}/users`, {
+    method: 'POST',
+    body,
+    token,
+  });
+}
+
+export async function updatePartnerSubUser(
+  partnerId: string,
+  userId: string,
+  body: {
+    name?: string;
+    role?: string;
+    status?: string;
+    permissions?: Record<string, unknown>;
+  },
+  token: string,
+) {
+  return apiRequest(`/identity/partners/${partnerId}/users/${userId}`, {
+    method: 'PATCH',
+    body,
+    token,
+  });
+}
+
+export async function deletePartnerSubUser(
+  partnerId: string,
+  userId: string,
+  token: string,
+) {
+  return apiRequest(`/identity/partners/${partnerId}/users/${userId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export async function createTourDate(
+  tourId: string,
+  body: {
+    startDate: string;
+    endDate: string;
+    capacity: number;
+    priceOverride?: number;
+  },
+  token: string,
+) {
+  return apiRequest<{ id: string }>(`/catalog/tours/${tourId}/dates`, {
+    method: 'POST',
+    body,
+    token,
+  });
+}
+
+export async function listTourDateAgeRanges(
+  tourId: string,
+  dateId: string,
+  token: string,
+) {
+  return apiRequest<
+    Array<{
+      id: string;
+      minAge: number;
+      maxAge: number | null;
+      pricingType: string;
+      value: string;
+    }>
+  >(`/catalog/tours/${tourId}/dates/${dateId}/age-ranges`, { token });
+}
+
+export async function createTourDateAgeRange(
+  tourId: string,
+  dateId: string,
+  body: {
+    minAge: number;
+    maxAge?: number | null;
+    pricingType: 'FREE' | 'PERCENTAGE' | 'FIXED';
+    value: number;
+  },
+  token: string,
+) {
+  return apiRequest(`/catalog/tours/${tourId}/dates/${dateId}/age-ranges`, {
+    method: 'POST',
+    body,
+    token,
+  });
+}
+
+export async function upsertTourAccommodation(
+  tourId: string,
+  body: {
+    name: string;
+    image: string;
+    location: string;
+    type: string;
+    rating?: number;
+  },
+  token: string,
+) {
+  return apiRequest(`/catalog/tours/${tourId}/accommodation`, {
+    method: 'PUT',
+    body,
+    token,
+  });
+}
+
+export async function getTourAccommodation(tourId: string) {
+  return apiRequest<{
+    name: string;
+    image: string;
+    location: string;
+    type: string;
+  } | null>(`/catalog/tours/${tourId}/accommodation`, {});
+}
+
+export async function listTourPickupPoints(tourId: string, token: string) {
+  return apiRequest<
+    Array<{
+      id: string;
+      city: string;
+      location: string;
+      time: string;
+      description: string | null;
+      order: number;
+    }>
+  >(`/catalog/tours/${tourId}/pickup-points`, { token });
+}
+
+export async function createTourPickupPoint(
+  tourId: string,
+  body: {
+    city: string;
+    location: string;
+    time: string;
+    description?: string;
+    order?: number;
+  },
+  token: string,
+) {
+  return apiRequest(`/catalog/tours/${tourId}/pickup-points`, {
+    method: 'POST',
+    body: {
+      city: body.city,
+      location: body.location,
+      time: body.time,
+      description: body.description,
+      order: body.order,
+    },
+    token,
+  });
+}
+
+export async function listPendingExperiences(token: string) {
+  return apiRequest<
+    Array<{
+      id: string;
+      title: string;
+      partnerId: string;
+      price: string;
+      currency: string;
+      category: string;
+      location: string;
+      status: string;
+    }>
+  >('/admin/experiences/pending', { token });
+}
+
+export async function setExperienceStatusAdmin(
+  id: string,
+  status: 'PUBLISHED' | 'ARCHIVED' | 'DRAFT',
+  token: string,
+) {
+  return apiRequest(`/admin/experiences/${id}/status`, {
+    method: 'PATCH',
+    body: { status },
+    token,
+  });
+}
+
+export async function listAdminAgencies(token: string, status?: string) {
+  const qs = status ? `?status=${status}` : '';
+  return apiRequest<
+    Array<{
+      id: string;
+      name: string;
+      status: string;
+      email: string | null;
+      city: string | null;
+    }>
+  >(`/admin/agencies${qs}`, { token });
+}
+
+export async function setAgencyStatusAdmin(
+  id: string,
+  status: 'APPROVED' | 'REJECTED' | 'SUSPENDED' | 'PENDING',
+  token: string,
+) {
+  return apiRequest(`/admin/agencies/${id}/status`, {
+    method: 'PATCH',
+    body: { status },
+    token,
+  });
+}
+
+export async function listAdminContentPosts(token: string) {
+  return apiRequest<
+    Array<{
+      id: string;
+      title: string;
+      slug: string;
+      excerpt: string | null;
+      published: boolean;
+      publishedAt: string | null;
+    }>
+  >('/admin/content/posts?includeDrafts=true', { token });
+}
+
+export async function createAdminContentPost(
+  body: {
+    title: string;
+    content: string;
+    excerpt?: string;
+    coverImage?: string;
+    published?: boolean;
+  },
+  token: string,
+) {
+  return apiRequest('/admin/content/posts', {
+    method: 'POST',
+    body,
+    token,
+  });
+}
+
+export async function updateAdminContentPost(
+  id: string,
+  body: {
+    title?: string;
+    content?: string;
+    excerpt?: string;
+    coverImage?: string;
+    published?: boolean;
+  },
+  token: string,
+) {
+  return apiRequest(`/admin/content/posts/${id}`, {
+    method: 'PATCH',
+    body,
+    token,
+  });
+}
+
+export async function deleteAdminContentPost(id: string, token: string) {
+  return apiRequest(`/admin/content/posts/${id}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
+export type PartnerReviewItem = {
+  id: string;
+  customerName: string;
+  customerImage: string | null;
+  tourName: string;
+  tourId: string;
+  productType: 'tour' | 'experience';
+  rating: number;
+  categoryRatings?: {
+    guideRating: number | null;
+    operatorRating: number | null;
+    routeRating: number | null;
+    foodRating: number | null;
+    hotelRating: number | null;
+    transportRating: number | null;
+  };
+  categoryFeedback?: {
+    guideFeedback: string | null;
+    operatorFeedback: string | null;
+    routeFeedback: string | null;
+    foodFeedback: string | null;
+    hotelFeedback: string | null;
+    transportFeedback: string | null;
+  };
+  reviewDate: string;
+  reviewDateRaw: string;
+  reviewText: string;
+  isResponded: boolean;
+  responseText?: string;
+};
+
+export async function listPartnerReviews(token: string) {
+  return apiRequest<{
+    reviews: PartnerReviewItem[];
+    stats: {
+      total: number;
+      responded: number;
+      pending: number;
+      averageRating: number;
+    };
+  }>('/review/partner', { token });
+}
+
+export async function replyPartnerReview(
+  reviewId: string,
+  reply: string,
+  token: string,
+) {
+  return apiRequest(`/review/${reviewId}/reply`, {
+    method: 'PATCH',
+    body: { reply },
+    token,
+  });
+}
+
+export type PartnerReportsData = {
+  dateRange: { id: string; label: string };
+  sales: {
+    summary: {
+      totalSales: number;
+      totalRevenue: number;
+      averageOrderValue: number;
+      comparedToLastPeriod: number | null;
+      increase: boolean | null;
+    };
+    periodLabel: string;
+    periodRangeText: string;
+    topSelling: Array<{
+      id: string;
+      name: string;
+      sales: number;
+      revenue: number;
+      growth: number | null;
+    }>;
+    bookingSummary: {
+      totalReservations: number;
+      completedTours: number;
+      cancelledReservations: number;
+      refundedCount: number;
+      averageRating: number;
+    };
+    trend: Array<{ label: string; sales: number; revenue: number }>;
+  };
+  performance: {
+    summary: {
+      conversionRate: number | null;
+      completionRate: number;
+      avgBookingValue: number;
+      monthlyBookings: number;
+    };
+    monthlyTrend: Array<{ label: string; count: number }>;
+    tourPerformance: Array<{
+      id: string;
+      name: string;
+      bookings: number;
+      avgRating: number;
+      conversionRate: number | null;
+      revenue: number;
+    }>;
+    goals: Array<{
+      name: string;
+      current: number;
+      target: number;
+      percentage: number;
+    }>;
+  };
+  customer: {
+    summary: {
+      totalCustomers: number;
+      newCustomers: number;
+      returningCustomers: number;
+      customerLifetimeValue: number;
+      percentChange: number | null;
+      increase: boolean | null;
+    };
+    topCustomers: Array<{
+      id: string;
+      name: string;
+      bookings: number;
+      spent: number;
+      lastBooking: string;
+    }>;
+    satisfactionDistribution: Array<{ rating: number; percentage: number }>;
+  };
+  visitors: {
+    disclaimer?: string;
+    summary: {
+      uniqueVisitors: number;
+      totalInteractions: number;
+      conversionRate: number;
+      comparedToLastPeriod: number | null;
+      increase: boolean | null;
+    };
+    trend?: Array<{
+      label: string;
+      interactions: number;
+      uniqueVisitors: number;
+    }>;
+    tourBreakdown?: Array<{
+      id: string;
+      name: string;
+      interactions: number;
+      uniqueVisitors: number;
+      conversions: number;
+      conversionRate: number;
+    }>;
+  };
+};
+
+export type ReportDateRangeId =
+  | 'today'
+  | 'yesterday'
+  | 'thisWeek'
+  | 'lastWeek'
+  | 'thisMonth'
+  | 'lastMonth'
+  | 'last3Months'
+  | 'lastYear'
+  | 'custom';
+
+export async function getPartnerReports(
+  token: string,
+  dateRange = 'thisMonth',
+) {
+  return apiRequest<PartnerReportsData>(
+    `/partner/reports?dateRange=${encodeURIComponent(dateRange)}`,
+    { token },
+  );
+}

@@ -36,12 +36,14 @@ function normalizeStatus(status: BookingStatus): string {
 }
 
 function normalizePaymentStatus(status: PaymentStatus): string {
-  return status === PaymentStatus.PARTIALLY_PAID ? 'partial' : status.toLowerCase();
+  return status === PaymentStatus.PARTIALLY_PAID
+    ? 'partial'
+    : status.toLowerCase();
 }
 
 function extractSpecialConditions(
   metadata: Prisma.JsonValue | null,
-  specialRequests: string | null
+  specialRequests: string | null,
 ): { summary: string[]; detail: { category: string; detail: string }[] } {
   if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
     const parsed = metadata as BookingMetadata;
@@ -62,7 +64,10 @@ function extractSpecialConditions(
     const contactIdx = specialRequests.indexOf(contactMarker);
     const conditionText =
       contactIdx >= 0
-        ? specialRequests.slice(0, contactIdx).replace(/\s*\|\s*$/, '').trim()
+        ? specialRequests
+            .slice(0, contactIdx)
+            .replace(/\s*\|\s*$/, '')
+            .trim()
         : specialRequests.trim();
 
     if (conditionText && conditionText !== 'Özel bir durum belirtilmedi.') {
@@ -86,7 +91,9 @@ function extractSpecialConditions(
   return { summary: [], detail: [] };
 }
 
-function mapBookingToReservation(booking: BookingWithRelations): PartnerReservation {
+function mapBookingToReservation(
+  booking: BookingWithRelations,
+): PartnerReservation {
   const metadataPhone =
     booking.metadata &&
     typeof booking.metadata === 'object' &&
@@ -97,7 +104,7 @@ function mapBookingToReservation(booking: BookingWithRelations): PartnerReservat
   const paymentStatus = normalizePaymentStatus(booking.paymentStatus);
   const { summary, detail } = extractSpecialConditions(
     booking.metadata,
-    booking.specialRequests
+    booking.specialRequests,
   );
 
   return {
@@ -120,6 +127,7 @@ function mapBookingToReservation(booking: BookingWithRelations): PartnerReservat
     notes: booking.specialRequests,
     specialConditions: summary,
     specialConditionsDetail: detail,
+    createdAt: booking.createdAt.toISOString(),
   };
 }
 
@@ -129,7 +137,7 @@ function buildWhereClause(
     operatorType: 'tour' | 'experience';
     userId?: string;
   },
-  filters: ReservationFilters
+  filters: ReservationFilters,
 ): Prisma.BookingWhereInput {
   const where: Prisma.BookingWhereInput =
     context.operatorType === 'tour'
@@ -141,7 +149,11 @@ function buildWhereClause(
       { bookingNumber: { contains: filters.search, mode: 'insensitive' } },
       { user: { name: { contains: filters.search, mode: 'insensitive' } } },
       { tour: { name: { contains: filters.search, mode: 'insensitive' } } },
-      { experience: { title: { contains: filters.search, mode: 'insensitive' } } },
+      {
+        experience: {
+          title: { contains: filters.search, mode: 'insensitive' },
+        },
+      },
     ];
   }
 
@@ -185,12 +197,12 @@ export class PrismaPartnerReservationsProvider implements PartnerReservationsPro
       operatorType: 'tour' | 'experience';
       userId?: string;
     },
-    filters: ReservationFilters
+    filters: ReservationFilters,
   ): Promise<PartnerReservation[]> {
     const bookings = await prisma.booking.findMany({
       where: buildWhereClause(context, filters),
       include: bookingInclude,
-      orderBy: { startDate: filters.sort === 'asc' ? 'asc' : 'desc' },
+      orderBy: { createdAt: filters.sort === 'asc' ? 'asc' : 'desc' },
     });
 
     return bookings.map(mapBookingToReservation);
@@ -203,7 +215,7 @@ export class PrismaPartnerReservationsProvider implements PartnerReservationsPro
       userId?: string;
     },
     bookingId: string,
-    status: PartnerReservationStatusUpdate
+    status: PartnerReservationStatusUpdate,
   ): Promise<PartnerReservation | null> {
     const ownershipWhere: Prisma.BookingWhereInput =
       context.operatorType === 'tour'
@@ -233,4 +245,5 @@ export class PrismaPartnerReservationsProvider implements PartnerReservationsPro
   }
 }
 
-export const prismaPartnerReservationsProvider = new PrismaPartnerReservationsProvider();
+export const prismaPartnerReservationsProvider =
+  new PrismaPartnerReservationsProvider();

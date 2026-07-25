@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -194,6 +193,7 @@ model Tour {
   destinations        Json            @default("[]")
   inclusions          Json            @default("[]")
   exclusions          Json            @default("[]")
+  healthPrivileges    Json            @default("[]")
   features            Json            @default("[]")
   itinerary           Json?
   images              Json            @default("[]")

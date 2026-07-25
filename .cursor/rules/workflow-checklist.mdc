@@ -6,6 +6,89 @@ alwaysApply: true
 
 # İş Akışı — Kontrol & Rapor Kuralları
 
+## EN KRİTİK KURAL: Önce Anlat, Öner, Onay Al, Sonra Yap
+
+**Herhangi bir kod değişikliği yapmadan ÖNCE:**
+
+1. **Ne yapacağını açıkla** — Hangi dosyaları değiştireceksin, ne ekleyeceksin, ne sileceksin
+2. **Planını sun** — Adım adım ne yapılacak, hangi sırayla
+3. **Etkilenen alanları belirt** — Bu değişiklik başka nereleri etkiler
+4. **Risklerini söyle** — Bir şey bozulabilir mi, dikkat edilmesi gereken ne var
+5. **Önerilerini sun** — Mevcut yapıya daha mantıklı bir ekleme/değişiklik varsa öner (aşağıda detay)
+6. **ONAY BEKLE** — Kullanıcı "tamam", "yap", "devam" gibi bir onay verene kadar KOD YAZMA
+
+### Proaktif Öneri Kuralı (ÖNEMLİ)
+
+Körü körüne planı takip ETME. Her adımda şunları sorgula:
+
+- **Yapı uygun mu?** Mevcut koda baktığında daha iyi bir yol/pattern görüyor musun?
+- **Eksik var mı?** Plana yazılmamış ama mantıken olması gereken bir şey var mı?
+- **Tutarsızlık var mı?** Mevcut kodla çelişen / uyumsuz bir şey mi yapılacak?
+- **Gereksiz mi?** Yapılmak istenen şey zaten var mı veya anlamsız mı?
+- **Daha iyi alternatif var mı?** Aynı amaca daha temiz/performanslı/sürdürülebilir ulaşılabilir mi?
+
+Eğer bir önerim varsa, planın altına **ayrı bir blok** olarak sun:
+
+```
+💡 ÖNERİLERİM:
+  1. [Öneri açıklaması] — Neden: [gerekçe]
+  2. [Öneri açıklaması] — Neden: [gerekçe]
+  
+  Bu önerileri dahil edeyim mi, yoksa sadece isteneni mi yapayım?
+```
+
+**Öneri örnekleri:**
+- "Bu endpoint'e cache eklemek mantıklı olur çünkü read-heavy"
+- "Bu DTO'da validation eksik, ekleyelim mi?"
+- "Bu bileşen zaten var, yeni yapmak yerine mevcut olanı extend etmek daha iyi"
+- "Bu tablo için index eklenmemiş, performans sorunu olur"
+- "Bu yaklaşım yerine X pattern daha uygun çünkü..."
+- "Mevcut yapıda şu tutarsızlık var, düzelteyim mi?"
+- "Plan diyor ki A yap ama kodda B daha mantıklı çünkü..."
+
+**Ne zaman öneri YAPILMAZ:**
+- Kullanıcı "aynen yap, değiştirme" dediyse
+- Öneri önemsiz/kozmetik ise (import sırası gibi)
+- Zaten rules'da tanımlı ve uygulanıyorsa
+
+**Format:**
+```
+═══════════════════════════════════════════
+📋 YAPILACAK İŞ
+═══════════════════════════════════════════
+
+🎯 Hedef: [Ne yapılacak — 1 cümle]
+
+📁 Değişecek dosyalar:
+  ~ dosya1.ts (ne değişecek)
+  + dosya2.ts (yeni oluşturulacak)
+  - dosya3.ts (silinecek)
+
+📝 Adımlar:
+  1. ...
+  2. ...
+  3. ...
+
+⚠️ Riskler / dikkat:
+  - ...
+
+💡 Önerilerim (opsiyonel):
+  1. [Öneri] — Neden: [gerekçe]
+  2. [Öneri] — Neden: [gerekçe]
+
+═══════════════════════════════════════════
+Onaylıyor musun? Önerileri dahil edeyim mi?
+═══════════════════════════════════════════
+```
+
+**İstisnalar (onay gerekmez):**
+- Kullanıcı zaten açıkça "yap", "uygula", "implement et" dediyse
+- Sadece dosya okuma / analiz yapıyorsan
+- Sadece soru cevaplıyorsan
+- Lint hatası düzeltme (kendi yarattığın hata)
+
+---
+
 ## Her Görev Başlamadan ÖNCE Kontrol Et
 
 Kod yazmaya başlamadan önce şu soruları cevapla:
@@ -126,6 +209,42 @@ Eğer görev büyükse ve çok dosya değiştiyse, raporu kategorize et:
 📁 Shared (1 dosya):
   ~ packages/shared-types/src/review.types.ts (yeni)
 ```
+
+## Browser Test Kuralı
+
+> **Detaylı test senaryoları:** `docs/SPRINT_END_TEST_SCENARIOS.md`
+> **Sprint planındaki test tabloları:** `docs/SPRINT_19-24_MIGRATION_PLAN.md` → Browser Test bölümü
+
+Bir feature veya sprint görevi tamamlandığında:
+
+1. `pnpm dev:apps` çalıştığından emin ol (web:3001 + api:4000)
+2. Browser ile ilgili sayfayı aç ve kontrol et:
+   - Sayfa yükleniyor mu? (white screen yok)
+   - API çağrıları başarılı mı? (console'da 4xx/5xx yok)
+   - Temel UI render ediliyor mu? (bileşenler görünüyor)
+   - Form varsa: doldur + submit et → başarılı sonuç
+   - Responsive: viewport 375px'de de çalışıyor mu?
+3. Test sonuçlarını rapora ekle:
+
+```
+🌐 Browser Test:
+  ✓ http://localhost:3001/hotels → Sayfa yüklendi, otel kartları görünüyor
+  ✓ API: GET /api/v1/catalog/hotels → 200 OK
+  ✓ Mobil (375px) → Layout düzgün
+  ✗ Filtre butonu tıklanınca hata → [düzeltildi]
+```
+
+### Ne Zaman Browser Test YAPILIR?
+- Yeni sayfa oluşturulduğunda
+- Mevcut sayfa değiştirildiğinde
+- API endpoint eklendikten sonra (Swagger'dan kontrol)
+- Sprint görevi "Definition of Done" kontrol edilirken
+- Kullanıcı "test et" dediğinde
+
+### Ne Zaman Browser Test YAPILMAZ?
+- Sadece backend service/dto değişikliği (UI'a etkisi yoksa)
+- Sadece type/constant değişikliği
+- Sadece rules/docs dosyası düzenleme
 
 ## Ne Zaman Rapor VERİLMEZ
 

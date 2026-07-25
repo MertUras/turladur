@@ -6,33 +6,36 @@ import { authOptions } from '@/lib/auth';
 // Tur tarihlerini getir
 export async function GET(
   request: Request,
-  { params }: { params: { tourId: string } }
+  { params }: { params: { tourId: string } },
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const userId = session.user.id;
-    
+
     // Partner'ı bul
     const tourOperator = await prisma.tourOperator.findFirst({
       where: { userId },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!tourOperator) {
-      return NextResponse.json({ error: 'Tour operator not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Tour operator not found' },
+        { status: 404 },
+      );
     }
 
     // Turun partner'a ait olduğunu kontrol et
     const tour = await prisma.tour.findFirst({
       where: {
         id: params.tourId,
-        tourOperatorId: tourOperator.id
-      }
+        tourOperatorId: tourOperator.id,
+      },
     });
 
     if (!tour) {
@@ -42,11 +45,11 @@ export async function GET(
     // Tur tarihlerini getir
     const tourDates = await prisma.tourDate.findMany({
       where: {
-        tourId: params.tourId
+        tourId: params.tourId,
       },
       orderBy: {
-        startDate: 'asc'
-      }
+        startDate: 'asc',
+      },
     });
 
     return NextResponse.json(tourDates);
@@ -54,7 +57,7 @@ export async function GET(
     console.error('Error fetching tour dates:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -62,33 +65,36 @@ export async function GET(
 // Yeni tur tarihi ekle
 export async function POST(
   request: Request,
-  { params }: { params: { tourId: string } }
+  { params }: { params: { tourId: string } },
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const userId = session.user.id;
-    
+
     // Partner'ı bul
     const tourOperator = await prisma.tourOperator.findFirst({
       where: { userId },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!tourOperator) {
-      return NextResponse.json({ error: 'Tour operator not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Tour operator not found' },
+        { status: 404 },
+      );
     }
 
     // Turun partner'a ait olduğunu kontrol et
     const tour = await prisma.tour.findFirst({
       where: {
         id: params.tourId,
-        tourOperatorId: tourOperator.id
-      }
+        tourOperatorId: tourOperator.id,
+      },
     });
 
     if (!tour) {
@@ -98,19 +104,25 @@ export async function POST(
     const data = await request.json();
 
     // Gerekli alanların kontrolü
-    if (!data.startDate || !data.endDate || !data.price || !data.availableSeats) {
+    if (
+      !data.startDate ||
+      !data.endDate ||
+      !data.price ||
+      !data.availableSeats
+    ) {
       return NextResponse.json(
         { error: 'Missing required fields' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Default yaş aralıkları
+    // Default yaş aralıkları — yetişkin = tur tarihi kişi başı fiyatı
+    const datePrice = parseFloat(data.price);
     const defaultAgeRanges = [
       { minAge: 0, maxAge: 2, pricingType: 'free', value: 0 },
       { minAge: 3, maxAge: 6, pricingType: 'percentage', value: 50 },
       { minAge: 7, maxAge: 12, pricingType: 'percentage', value: 25 },
-      { minAge: 13, maxAge: null, pricingType: 'fixed', value: 0 }
+      { minAge: 13, maxAge: null, pricingType: 'fixed', value: datePrice },
     ];
 
     // Transaction ile hem tur tarihi hem yaş aralıklarını ekle
@@ -122,8 +134,8 @@ export async function POST(
           endDate: new Date(data.endDate),
           price: parseFloat(data.price),
           availableSeats: parseInt(data.availableSeats),
-          isActive: data.isActive !== undefined ? data.isActive : true
-        }
+          isActive: data.isActive !== undefined ? data.isActive : true,
+        },
       });
       for (const range of defaultAgeRanges) {
         await tx.tourDateAgeRange.create({
@@ -132,8 +144,8 @@ export async function POST(
             minAge: range.minAge,
             maxAge: range.maxAge,
             pricingType: range.pricingType,
-            value: range.value
-          }
+            value: range.value,
+          },
         });
       }
       return tourDate;
@@ -144,7 +156,7 @@ export async function POST(
     console.error('Error creating tour date:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -152,33 +164,36 @@ export async function POST(
 // Tur tarihini güncelle
 export async function PUT(
   request: Request,
-  { params }: { params: { tourId: string; dateId: string } }
+  { params }: { params: { tourId: string; dateId: string } },
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const userId = session.user.id;
-    
+
     // Partner'ı bul
     const tourOperator = await prisma.tourOperator.findFirst({
       where: { userId },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!tourOperator) {
-      return NextResponse.json({ error: 'Tour operator not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Tour operator not found' },
+        { status: 404 },
+      );
     }
 
     // Turun partner'a ait olduğunu kontrol et
     const tour = await prisma.tour.findFirst({
       where: {
         id: params.tourId,
-        tourOperatorId: tourOperator.id
-      }
+        tourOperatorId: tourOperator.id,
+      },
     });
 
     if (!tour) {
@@ -188,10 +203,15 @@ export async function PUT(
     const data = await request.json();
 
     // Gerekli alanların kontrolü
-    if (!data.startDate || !data.endDate || !data.price || !data.availableSeats) {
+    if (
+      !data.startDate ||
+      !data.endDate ||
+      !data.price ||
+      !data.availableSeats
+    ) {
       return NextResponse.json(
         { error: 'Missing required fields' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -199,15 +219,15 @@ export async function PUT(
     const tourDate = await prisma.tourDate.update({
       where: {
         id: params.dateId,
-        tourId: params.tourId
+        tourId: params.tourId,
       },
       data: {
         startDate: new Date(data.startDate),
         endDate: new Date(data.endDate),
         price: parseFloat(data.price),
         availableSeats: parseInt(data.availableSeats),
-        isActive: data.isActive !== undefined ? data.isActive : true
-      }
+        isActive: data.isActive !== undefined ? data.isActive : true,
+      },
     });
 
     return NextResponse.json(tourDate);
@@ -215,7 +235,7 @@ export async function PUT(
     console.error('Error updating tour date:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -223,33 +243,36 @@ export async function PUT(
 // Tur tarihini sil
 export async function DELETE(
   request: Request,
-  { params }: { params: { tourId: string; dateId: string } }
+  { params }: { params: { tourId: string; dateId: string } },
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const userId = session.user.id;
-    
+
     // Partner'ı bul
     const tourOperator = await prisma.tourOperator.findFirst({
       where: { userId },
-      select: { id: true }
+      select: { id: true },
     });
 
     if (!tourOperator) {
-      return NextResponse.json({ error: 'Tour operator not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Tour operator not found' },
+        { status: 404 },
+      );
     }
 
     // Turun partner'a ait olduğunu kontrol et
     const tour = await prisma.tour.findFirst({
       where: {
         id: params.tourId,
-        tourOperatorId: tourOperator.id
-      }
+        tourOperatorId: tourOperator.id,
+      },
     });
 
     if (!tour) {
@@ -260,8 +283,8 @@ export async function DELETE(
     await prisma.tourDate.delete({
       where: {
         id: params.dateId,
-        tourId: params.tourId
-      }
+        tourId: params.tourId,
+      },
     });
 
     return NextResponse.json({ success: true });
@@ -269,7 +292,7 @@ export async function DELETE(
     console.error('Error deleting tour date:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
-} 
+}

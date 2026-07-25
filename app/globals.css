@@ -1,65 +1,77 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @layer base {
-  /* Font tanımlamaları */
+  /* Font tanımlamaları + turta brand (frontend-only) */
   :root {
     --font-montserrat: 'Montserrat', sans-serif;
     --font-poppins: 'Poppins', sans-serif;
+    --brand-ink: #0a0a0a;
+    --brand-paper: #ffffff;
+    --brand-muted: #737373;
+    --brand-surface: #f5f5f5;
   }
-  
+
   html {
     font-family: var(--font-poppins);
   }
-  
+
   body {
     @apply antialiased;
     font-family: var(--font-poppins);
     font-size: 16px;
   }
-  
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-montserrat);
     @apply font-bold;
   }
-  
+
   /* Responsive başlık boyutları */
   h1 {
     @apply text-3xl md:text-4xl lg:text-5xl;
   }
-  
+
   h2 {
     @apply text-2xl md:text-3xl lg:text-4xl;
   }
-  
+
   h3 {
     @apply text-xl md:text-2xl lg:text-3xl;
   }
-  
+
   h4 {
     @apply text-lg md:text-xl;
   }
-  
+
   /* Paragraf ve metin boyutları - span için varsayılan boyutu koruma */
-  p, li, a, div {
+  p,
+  li,
+  a,
+  div {
     @apply text-base leading-relaxed;
   }
-  
+
   /* span elementlerinin kendi boyutlarını koruması için özel stillendirilme */
   span {
     font-size: inherit;
     line-height: inherit;
   }
-  
+
   /* Küçük metinler için özel sınıf */
   .text-small {
     @apply text-sm;
   }
-  
+
   /* Orta boy metinler için özel sınıf */
   .text-medium {
     @apply text-base;
   }
-  
+
   /* Büyük metinler için özel sınıf */
   .text-large {
     @apply text-lg;
@@ -72,53 +84,53 @@
     font-family: var(--font-montserrat);
     @apply font-medium;
   }
-  
+
   .container {
     @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
   }
-  
+
   /* Özel font sınıfları */
   .font-heading {
     font-family: var(--font-montserrat);
   }
-  
+
   .font-body {
     font-family: var(--font-poppins);
   }
-  
+
   /* Turizm teması için özel yazı efektleri */
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400;
     font-size: inherit; /* Mevcut font boyutunu korur */
   }
-  
+
   .text-caption {
     @apply text-sm text-gray-500 uppercase tracking-wider font-medium;
     font-family: var(--font-montserrat);
   }
-  
+
   .text-feature {
     @apply text-lg font-medium;
   }
-  
+
   /* Span boyutlarını koruyan özel sınıflar */
   .span-inherit {
     font-size: inherit;
     line-height: inherit;
   }
-  
+
   .span-small {
     @apply text-sm;
   }
-  
+
   .span-normal {
     @apply text-base;
   }
-  
+
   .span-large {
     @apply text-lg;
   }
-  
+
   .span-xl {
     @apply text-xl;
   }
@@ -233,8 +245,8 @@
 
 /* Kaydırma çubuğunu gizlemek için */
 .hide-scrollbar {
-  -ms-overflow-style: none;  /* IE ve Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none; /* IE ve Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 .hide-scrollbar::-webkit-scrollbar {
@@ -316,7 +328,8 @@
 
 /* Kaydırma göstergesi için yeni animasyon */
 @keyframes bounce-subtle {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -335,7 +348,9 @@
 
 .day-card-hover:hover {
   transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 /* Gömülü etiketler için stil */
@@ -387,7 +402,9 @@
 
 /* Bottom booking bar için özel stiller */
 .booking-bar-shadow {
-  box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.1), 0 -8px 10px -6px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 -10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 -8px 10px -6px rgba(0, 0, 0, 0.05);
 }
 
 /* Tour detail foto galerisi için overlay efekti */
@@ -401,7 +418,11 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.5) 100%);
+  background: linear-gradient(
+    to bottom,
+    transparent 50%,
+    rgba(0, 0, 0, 0.5) 100%
+  );
   opacity: 0;
   transition: opacity 0.3s ease;
   z-index: 1;
@@ -489,7 +510,9 @@
   background: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  transition: width 0.6s ease-out, height 0.6s ease-out;
+  transition:
+    width 0.6s ease-out,
+    height 0.6s ease-out;
 }
 
 .btn-hover:hover::after {
@@ -553,12 +576,12 @@
 }
 
 /* Tüm tıklanabilir öğeler için genel stil */
-[role="button"],
+[role='button'],
 button,
 a[href],
-input[type="submit"],
-input[type="button"],
-input[type="reset"] {
+input[type='submit'],
+input[type='button'],
+input[type='reset'] {
   cursor: pointer !important;
   transition: all 0.2s ease-in-out;
 }
@@ -580,10 +603,10 @@ input[type="reset"] {
 
 @layer utilities {
   .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
-  
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari and Opera */
   }
@@ -653,7 +676,8 @@ body {
   position: relative;
 }
 
-.card-front, .card-back {
+.card-front,
+.card-back {
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }
@@ -689,7 +713,9 @@ body {
 
 /* Mobil menü dropdown geçişleri için */
 .mobile-menu-dropdown {
-  transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+  transition:
+    max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.25s ease;
   will-change: max-height, opacity;
   pointer-events: none;
 }
@@ -700,15 +726,17 @@ body {
 
 /* Dropdown içeriği */
 .mobile-menu-dropdown > div {
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    opacity 0.25s ease;
 }
 
-.mobile-menu-dropdown:not([class*="max-h-0"]) > div {
+.mobile-menu-dropdown:not([class*='max-h-0']) > div {
   transform: translateY(0);
   opacity: 1;
 }
 
-.mobile-menu-dropdown[class*="max-h-0"] > div {
+.mobile-menu-dropdown[class*='max-h-0'] > div {
   transform: translateY(-8px);
   opacity: 0;
 }

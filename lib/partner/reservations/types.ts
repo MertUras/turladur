@@ -33,6 +33,8 @@ export interface PartnerReservation {
   notes?: string | null;
   specialConditions: string[];
   specialConditionsDetail: SpecialConditionRow[];
+  /** When the booking was created (for partner “new” sorting). */
+  createdAt: string;
 }
 
 export type PartnerReservationStatusUpdate = Extract<
@@ -47,7 +49,7 @@ export interface PartnerReservationsProvider {
       operatorType: 'tour' | 'experience';
       userId?: string;
     },
-    filters: ReservationFilters
+    filters: ReservationFilters,
   ): Promise<PartnerReservation[]>;
 
   updateStatus(
@@ -57,6 +59,6 @@ export interface PartnerReservationsProvider {
       userId?: string;
     },
     bookingId: string,
-    status: PartnerReservationStatusUpdate
+    status: PartnerReservationStatusUpdate,
   ): Promise<PartnerReservation | null>;
 }

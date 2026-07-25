@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 
 interface Author {
   name: string | null;
@@ -14,8 +14,10 @@ interface Post {
   id: string;
   title: string;
   content: string;
+  excerpt?: string | null;
   slug: string;
-  image: string | null;
+  image?: string | null;
+  coverImage?: string | null;
   createdAt: string;
   author: Author;
   categories: Category[];
@@ -32,14 +34,14 @@ export function usePosts() {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await fetch("/api/posts");
+        const response = await fetch('/api/posts');
         if (!response.ok) {
-          throw new Error("Posts getirilemedi");
+          throw new Error('Posts getirilemedi');
         }
         const data = await response.json();
         setPosts(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Bir hata oluştu");
+        setError(err instanceof Error ? err.message : 'Bir hata oluştu');
       } finally {
         setIsLoading(false);
       }
@@ -49,4 +51,4 @@ export function usePosts() {
   }, []);
 
   return { posts, isLoading, error };
-} 
+}

@@ -23,6 +23,11 @@ import {
   getReservationStatusClass,
   translateReservationStatus,
 } from '@/lib/partner/reservations';
+import {
+  ensureSeenBaseline,
+  isReservationUnseen,
+  markReservationSeen,
+} from '@/lib/partner/reservations/seen-storage';
 
 interface ContactInfo {
   email: string;
@@ -50,6 +55,7 @@ interface Reservation {
   notes?: string;
   specialConditions?: string[];
   specialConditionsDetail?: SpecialConditionRow[];
+  createdAt?: string;
 }
 
 type StatusAction = 'CONFIRMED' | 'CANCELLED' | 'SUSPENDED';
@@ -60,12 +66,16 @@ export default function ReservationsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [dateSort, setDateSort] = useState('desc');
-  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [selectedReservation, setSelectedReservation] =
+    useState<Reservation | null>(null);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<StatusAction | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [seenIds, setSeenIds] = useState<Set<string>>(() => new Set());
+
+  const userStorageKey = session?.user?.id ?? session?.user?.email ?? '';
 
   const fetchReservations = useCallback(async () => {
     try {
@@ -83,8 +93,26 @@ export default function ReservationsPage() {
         throw new Error('Rezervasyonlar getirilemedi');
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as Reservation[];
       setReservations(data);
+      const storageKey = session?.user?.id ?? session?.user?.email ?? '';
+      if (storageKey) {
+        const newestId =
+          data.length === 0
+            ? null
+            : ([...data].sort(
+                (left, right) =>
+                  new Date(right.createdAt ?? 0).getTime() -
+                  new Date(left.createdAt ?? 0).getTime(),
+              )[0]?.id ?? null);
+        setSeenIds(
+          ensureSeenBaseline(
+            storageKey,
+            data.map((reservation) => reservation.id),
+            newestId,
+          ),
+        );
+      }
       setError(null);
     } catch (err) {
       setError('Rezervasyonlar yüklenirken bir hata oluştu');
@@ -92,7 +120,14 @@ export default function ReservationsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchTerm, statusFilter, paymentFilter, dateSort]);
+  }, [
+    searchTerm,
+    statusFilter,
+    paymentFilter,
+    dateSort,
+    session?.user?.id,
+    session?.user?.email,
+  ]);
 
   useEffect(() => {
     if (session?.user) {
@@ -100,16 +135,32 @@ export default function ReservationsPage() {
     }
   }, [session, fetchReservations]);
 
-  const handleStatusUpdate = async (reservationId: string, status: StatusAction) => {
+  useEffect(() => {
+    const refreshOnFocus = () => {
+      if (session?.user) {
+        void fetchReservations();
+      }
+    };
+    window.addEventListener('focus', refreshOnFocus);
+    return () => window.removeEventListener('focus', refreshOnFocus);
+  }, [session?.user, fetchReservations]);
+
+  const handleStatusUpdate = async (
+    reservationId: string,
+    status: StatusAction,
+  ) => {
     setActionLoading(status);
     setActionError(null);
 
     try {
-      const response = await fetch(`/api/partner/reservations/${reservationId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
+      const response = await fetch(
+        `/api/partner/reservations/${reservationId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status }),
+        },
+      );
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -118,13 +169,15 @@ export default function ReservationsPage() {
 
       const updated = (await response.json()) as Reservation;
       setReservations((prev) =>
-        prev.map((r) => (r.id === updated.id ? updated : r))
+        prev.map((r) => (r.id === updated.id ? updated : r)),
       );
       setSelectedReservation((prev) =>
-        prev?.id === updated.id ? updated : prev
+        prev?.id === updated.id ? updated : prev,
       );
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Durum güncellenemedi');
+      setActionError(
+        err instanceof Error ? err.message : 'Durum güncellenemedi',
+      );
     } finally {
       setActionLoading(null);
     }
@@ -133,6 +186,7 @@ export default function ReservationsPage() {
   const showReservationDetail = (reservation: Reservation) => {
     setActionError(null);
     setSelectedReservation(reservation);
+    setSeenIds(markReservationSeen(userStorageKey, reservation.id));
   };
 
   if (!session?.user) {
@@ -148,11 +202,18 @@ export default function ReservationsPage() {
   }
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
+    return new Intl.NumberFormat('tr-TR', {
+      style: 'currency',
+      currency: 'TRY',
+    }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    };
     return new Date(dateString).toLocaleDateString('tr-TR', options);
   };
 
@@ -187,7 +248,9 @@ export default function ReservationsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-6 border-b border-gray-200">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Rezervasyonlar</h1>
-            <p className="text-gray-500 mt-1">Tur rezervasyonlarını görüntüle ve yönet</p>
+            <p className="text-gray-500 mt-1">
+              Tur rezervasyonlarını görüntüle ve yönet
+            </p>
           </div>
           <div className="flex space-x-3 mt-4 sm:mt-0">
             <Menu as="div" className="relative inline-block text-left">
@@ -195,7 +258,10 @@ export default function ReservationsPage() {
                 <Menu.Button className="inline-flex items-center justify-center w-full px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200">
                   <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
                   Dışa Aktar
-                  <ChevronDownIcon className="h-4 w-4 ml-2" aria-hidden="true" />
+                  <ChevronDownIcon
+                    className="h-4 w-4 ml-2"
+                    aria-hidden="true"
+                  />
                 </Menu.Button>
               </div>
               <Transition
@@ -211,21 +277,27 @@ export default function ReservationsPage() {
                   <div className="py-1">
                     <Menu.Item>
                       {({ active }) => (
-                        <span className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}>
+                        <span
+                          className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}
+                        >
                           Excel (.xlsx)
                         </span>
                       )}
                     </Menu.Item>
                     <Menu.Item>
                       {({ active }) => (
-                        <span className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}>
+                        <span
+                          className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}
+                        >
                           PDF
                         </span>
                       )}
                     </Menu.Item>
                     <Menu.Item>
                       {({ active }) => (
-                        <span className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}>
+                        <span
+                          className={`${active ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} block px-4 py-2 text-sm cursor-default`}
+                        >
                           CSV
                         </span>
                       )}
@@ -242,7 +314,10 @@ export default function ReservationsPage() {
             <div className="flex-1 min-w-0">
               <div className="relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <MagnifyingGlassIcon
+                    className="h-5 w-5 text-gray-400"
+                    aria-hidden="true"
+                  />
                 </div>
                 <input
                   type="text"
@@ -259,12 +334,19 @@ export default function ReservationsPage() {
                   <>
                     <Popover.Button
                       className={`inline-flex items-center px-4 py-3 border ${
-                        open ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 bg-white text-gray-700'
+                        open
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-300 bg-white text-gray-700'
                       } text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200`}
                     >
                       <FunnelIcon className="h-5 w-5 mr-2" />
-                      {statusOptions.find((option) => option.id === statusFilter)?.name || 'Durum'}
-                      <ChevronDownIcon className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`} aria-hidden="true" />
+                      {statusOptions.find(
+                        (option) => option.id === statusFilter,
+                      )?.name || 'Durum'}
+                      <ChevronDownIcon
+                        className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`}
+                        aria-hidden="true"
+                      />
                     </Popover.Button>
                     <Transition
                       as={Fragment}
@@ -302,12 +384,19 @@ export default function ReservationsPage() {
                   <>
                     <Popover.Button
                       className={`inline-flex items-center px-4 py-3 border ${
-                        open ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 bg-white text-gray-700'
+                        open
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-300 bg-white text-gray-700'
                       } text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200`}
                     >
                       <FunnelIcon className="h-5 w-5 mr-2" />
-                      {paymentOptions.find((option) => option.id === paymentFilter)?.name || 'Ödeme'}
-                      <ChevronDownIcon className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`} aria-hidden="true" />
+                      {paymentOptions.find(
+                        (option) => option.id === paymentFilter,
+                      )?.name || 'Ödeme'}
+                      <ChevronDownIcon
+                        className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`}
+                        aria-hidden="true"
+                      />
                     </Popover.Button>
                     <Transition
                       as={Fragment}
@@ -345,12 +434,17 @@ export default function ReservationsPage() {
                   <>
                     <Popover.Button
                       className={`inline-flex items-center px-4 py-3 border ${
-                        open ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-300 bg-white text-gray-700'
+                        open
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                          : 'border-gray-300 bg-white text-gray-700'
                       } text-sm font-medium rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200`}
                     >
                       <CalendarIcon className="h-5 w-5 mr-2" />
                       {dateSort === 'desc' ? 'En Yeni' : 'En Eski'}
-                      <ChevronDownIcon className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`} aria-hidden="true" />
+                      <ChevronDownIcon
+                        className={`ml-2 h-4 w-4 ${open ? 'transform rotate-180' : ''}`}
+                        aria-hidden="true"
+                      />
                     </Popover.Button>
                     <Transition
                       as={Fragment}
@@ -403,14 +497,51 @@ export default function ReservationsPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Referans</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Müşteri</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tur</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tarih</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tutar</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Durum</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödeme</th>
-                    <th scope="col" className="relative px-6 py-3"><span className="sr-only">İşlemler</span></th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Referans
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Müşteri
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Tur
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Tarih
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Tutar
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Durum
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Ödeme
+                    </th>
+                    <th scope="col" className="relative px-6 py-3">
+                      <span className="sr-only">İşlemler</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -422,7 +553,16 @@ export default function ReservationsPage() {
                         onClick={() => showReservationDetail(reservation)}
                       >
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-600">
-                          {reservation.referenceNumber}
+                          <span className="inline-flex items-center gap-2">
+                            {isReservationUnseen(reservation.id, seenIds) && (
+                              <span
+                                className="h-2.5 w-2.5 shrink-0 rounded-full bg-red-600"
+                                title="Yeni rezervasyon"
+                                aria-label="Yeni rezervasyon"
+                              />
+                            )}
+                            <span>{reservation.referenceNumber}</span>
+                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                           {reservation.customerName}
@@ -437,13 +577,21 @@ export default function ReservationsPage() {
                           {formatCurrency(reservation.totalPrice)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${getReservationStatusClass(reservation.status)}`}>
+                          <span
+                            className={`px-2.5 py-1 text-xs font-medium rounded-full ${getReservationStatusClass(reservation.status)}`}
+                          >
                             {translateReservationStatus(reservation.status)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${getPaymentLabelClass(reservation.paymentMethod)}`}>
-                            {reservation.paymentLabel || formatPaymentLabel(reservation.paymentMethod, reservation.paymentStatus)}
+                          <span
+                            className={`px-2.5 py-1 text-xs font-medium rounded-full ${getPaymentLabelClass(reservation.paymentMethod)}`}
+                          >
+                            {reservation.paymentLabel ||
+                              formatPaymentLabel(
+                                reservation.paymentMethod,
+                                reservation.paymentStatus,
+                              )}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -465,7 +613,9 @@ export default function ReservationsPage() {
                         <div className="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
                           <MagnifyingGlassIcon className="h-10 w-10 text-gray-400" />
                         </div>
-                        <h3 className="mt-4 text-lg font-medium text-gray-900">Rezervasyon bulunamadı</h3>
+                        <h3 className="mt-4 text-lg font-medium text-gray-900">
+                          Rezervasyon bulunamadı
+                        </h3>
                         <p className="mt-1 text-sm text-gray-500">
                           Farklı bir arama veya filtre seçeneği deneyin
                         </p>
@@ -490,7 +640,9 @@ export default function ReservationsPage() {
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full overflow-hidden max-h-[90vh] flex flex-col">
               <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center shrink-0">
-                <h3 className="text-lg font-bold text-gray-900">Rezervasyon Detayı</h3>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Rezervasyon Detayı
+                </h3>
                 <button
                   className="text-gray-500 hover:text-gray-700"
                   onClick={() => setSelectedReservation(null)}
@@ -503,13 +655,19 @@ export default function ReservationsPage() {
                 <div className="flex justify-between items-start flex-wrap gap-3">
                   <div>
                     <p className="text-sm text-gray-500">Referans Numarası</p>
-                    <p className="text-lg font-semibold text-indigo-600">{selectedReservation.referenceNumber}</p>
+                    <p className="text-lg font-semibold text-indigo-600">
+                      {selectedReservation.referenceNumber}
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${getReservationStatusClass(selectedReservation.status)}`}>
+                    <span
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${getReservationStatusClass(selectedReservation.status)}`}
+                    >
                       {translateReservationStatus(selectedReservation.status)}
                     </span>
-                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${getPaymentLabelClass(selectedReservation.paymentMethod)}`}>
+                    <span
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${getPaymentLabelClass(selectedReservation.paymentMethod)}`}
+                    >
                       {selectedReservation.paymentLabel}
                     </span>
                   </div>
@@ -517,28 +675,42 @@ export default function ReservationsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="text-sm font-bold text-gray-800 mb-3">Müşteri Bilgileri</h4>
-                    <p className="text-sm font-medium text-gray-900 mb-2">{selectedReservation.customerName}</p>
+                    <h4 className="text-sm font-bold text-gray-800 mb-3">
+                      Müşteri Bilgileri
+                    </h4>
+                    <p className="text-sm font-medium text-gray-900 mb-2">
+                      {selectedReservation.customerName}
+                    </p>
                     <div className="flex items-center text-sm text-gray-600 mb-2">
                       <EnvelopeIcon className="h-4 w-4 text-gray-400 mr-2" />
                       <span>{selectedReservation.contactInfo.email}</span>
                     </div>
                     <div className="flex items-center text-sm text-gray-600">
                       <PhoneIcon className="h-4 w-4 text-gray-400 mr-2" />
-                      <span>{selectedReservation.contactInfo.phone || '—'}</span>
+                      <span>
+                        {selectedReservation.contactInfo.phone || '—'}
+                      </span>
                     </div>
                   </div>
 
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="text-sm font-bold text-gray-800 mb-3">Tur Bilgileri</h4>
-                    <p className="text-sm font-medium text-gray-900 mb-2">{selectedReservation.tourName}</p>
+                    <h4 className="text-sm font-bold text-gray-800 mb-3">
+                      Tur Bilgileri
+                    </h4>
+                    <p className="text-sm font-medium text-gray-900 mb-2">
+                      {selectedReservation.tourName}
+                    </p>
                     <div className="flex items-center text-sm text-gray-600 mb-2">
                       <CalendarIcon className="h-4 w-4 text-gray-400 mr-2" />
                       <span>{formatDate(selectedReservation.date)}</span>
                     </div>
                     <div className="flex items-center text-sm text-gray-600">
-                      <span className="mr-4">Katılımcı: {selectedReservation.participants} kişi</span>
-                      <span>Toplam: {formatCurrency(selectedReservation.totalPrice)}</span>
+                      <span className="mr-4">
+                        Katılımcı: {selectedReservation.participants} kişi
+                      </span>
+                      <span>
+                        Toplam: {formatCurrency(selectedReservation.totalPrice)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -554,17 +726,27 @@ export default function ReservationsPage() {
                       <table className="min-w-full divide-y divide-sky-100 text-sm">
                         <thead className="bg-sky-100/60">
                           <tr>
-                            <th className="px-4 py-2 text-left font-semibold text-sky-900 w-2/5">Kategori</th>
-                            <th className="px-4 py-2 text-left font-semibold text-sky-900">Detay</th>
+                            <th className="px-4 py-2 text-left font-semibold text-sky-900 w-2/5">
+                              Kategori
+                            </th>
+                            <th className="px-4 py-2 text-left font-semibold text-sky-900">
+                              Detay
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-sky-50">
-                          {selectedReservation.specialConditionsDetail.map((row, index) => (
-                            <tr key={index} className="hover:bg-sky-50/50">
-                              <td className="px-4 py-2.5 font-medium text-sky-900 align-top">{row.category}</td>
-                              <td className="px-4 py-2.5 text-sky-800">{row.detail}</td>
-                            </tr>
-                          ))}
+                          {selectedReservation.specialConditionsDetail.map(
+                            (row, index) => (
+                              <tr key={index} className="hover:bg-sky-50/50">
+                                <td className="px-4 py-2.5 font-medium text-sky-900 align-top">
+                                  {row.category}
+                                </td>
+                                <td className="px-4 py-2.5 text-sky-800">
+                                  {row.detail}
+                                </td>
+                              </tr>
+                            ),
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -577,9 +759,11 @@ export default function ReservationsPage() {
                       Özel Durumlar ve Talepler
                     </h4>
                     <ul className="text-sm text-sky-800 space-y-2 list-disc list-inside">
-                      {selectedReservation.specialConditions.map((line, index) => (
-                        <li key={index}>{line}</li>
-                      ))}
+                      {selectedReservation.specialConditions.map(
+                        (line, index) => (
+                          <li key={index}>{line}</li>
+                        ),
+                      )}
                     </ul>
                   </div>
                 ) : (
@@ -589,7 +773,9 @@ export default function ReservationsPage() {
                         <ChatBubbleLeftIcon className="h-4 w-4 mr-1" />
                         Rezervasyon Notları
                       </h4>
-                      <p className="text-sm text-yellow-700">{selectedReservation.notes}</p>
+                      <p className="text-sm text-yellow-700">
+                        {selectedReservation.notes}
+                      </p>
                     </div>
                   )
                 )}
@@ -606,31 +792,43 @@ export default function ReservationsPage() {
                   {canConfirm(selectedReservation.status) && (
                     <button
                       disabled={actionLoading !== null}
-                      onClick={() => handleStatusUpdate(selectedReservation.id, 'CONFIRMED')}
+                      onClick={() =>
+                        handleStatusUpdate(selectedReservation.id, 'CONFIRMED')
+                      }
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 transition-colors"
                     >
                       <CheckCircleIcon className="h-4 w-4 mr-1.5" />
-                      {actionLoading === 'CONFIRMED' ? 'Onaylanıyor...' : 'Onayla'}
+                      {actionLoading === 'CONFIRMED'
+                        ? 'Onaylanıyor...'
+                        : 'Onayla'}
                     </button>
                   )}
                   {canSuspend(selectedReservation.status) && (
                     <button
                       disabled={actionLoading !== null}
-                      onClick={() => handleStatusUpdate(selectedReservation.id, 'SUSPENDED')}
+                      onClick={() =>
+                        handleStatusUpdate(selectedReservation.id, 'SUSPENDED')
+                      }
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 transition-colors"
                     >
                       <PauseCircleIcon className="h-4 w-4 mr-1.5" />
-                      {actionLoading === 'SUSPENDED' ? 'Askıya alınıyor...' : 'Askıya Al'}
+                      {actionLoading === 'SUSPENDED'
+                        ? 'Askıya alınıyor...'
+                        : 'Askıya Al'}
                     </button>
                   )}
                   {canCancel(selectedReservation.status) && (
                     <button
                       disabled={actionLoading !== null}
-                      onClick={() => handleStatusUpdate(selectedReservation.id, 'CANCELLED')}
+                      onClick={() =>
+                        handleStatusUpdate(selectedReservation.id, 'CANCELLED')
+                      }
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
                     >
                       <NoSymbolIcon className="h-4 w-4 mr-1.5" />
-                      {actionLoading === 'CANCELLED' ? 'İptal ediliyor...' : 'İptal Et'}
+                      {actionLoading === 'CANCELLED'
+                        ? 'İptal ediliyor...'
+                        : 'İptal Et'}
                     </button>
                   )}
                 </div>

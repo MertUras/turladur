@@ -1,3 +1,11 @@
+# TurlaDur (tourtech)
+
+Nx monorepo: legacy Next.js (`pnpm dev` → :3000) + Nest API + `apps/web` (`pnpm dev:apps` → API :4000, web :3001).
+
+**Yeni geliştirici:** [docs/ONBOARDING.md](docs/ONBOARDING.md) · **Production:** [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+
+---
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -31,6 +39,46 @@ Dev sunucusu "duruyor" gibi görünüyorsa genelde çökme değil, **birden fazl
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Docker altyapı (local)
+
+PostgreSQL, Redis, MinIO ve Mailhog şu compose dosyasından ayağa kalkar:
+
+```bash
+pnpm docker:up
+# veya
+docker compose -f infrastructure/docker/docker-compose.yml up -d
+```
+
+### Redis `noeviction` politikası
+
+BullMQ (email vb. kuyruk işleri) veriyi Redis’te tutar. Redis bellek dolunca key silerse kuyruk job’ları kaybolabilir.
+
+Bu yüzden compose içinde Redis şöyle ayarlıdır:
+
+```text
+maxmemory-policy noeviction
+```
+
+| Policy        | Anlamı                                                                             |
+| ------------- | ---------------------------------------------------------------------------------- |
+| `allkeys-lru` | Bellek dolunca herhangi bir key silinebilir (cache için uygun, kuyruk için riskli) |
+| `noeviction`  | Bellek dolunca key silinmez; yazma reddedilir (BullMQ için doğru seçim)            |
+
+Compose dosyasını güncelledikten sonra ayarın container’a işlemesi için Redis’i yeniden başlatın:
+
+```bash
+docker compose -f infrastructure/docker/docker-compose.yml up -d redis
+```
+
+Kontrol:
+
+```bash
+docker exec turladur-redis redis-cli CONFIG GET maxmemory-policy
+# beklenen: noeviction
+```
+
+Not: Bu komut sadece Redis container’ını yeniler; API/web veya legacy uygulamayı bozmaz. DoD geçtikten sonra yapmak opsiyonel ama önerilir.
 
 ## Learn More
 

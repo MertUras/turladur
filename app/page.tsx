@@ -28,10 +28,12 @@ export default async function Home() {
       <section className="py-8 md:py-12">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl md:text-3xl font-bold text-neutral-800">Popüler Turlar</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-neutral-800">
+              Popüler Turlar
+            </h2>
             <Link
               href="/tours"
-              className="text-sky-600 hover:text-sky-700 font-medium text-sm flex items-center group"
+              className="text-neutral-950 hover:text-neutral-700 font-medium text-sm flex items-center group"
             >
               Tümünü Gör
               <ArrowRightIcon className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
