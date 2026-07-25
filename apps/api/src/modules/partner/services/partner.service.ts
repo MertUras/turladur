@@ -7,8 +7,11 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma } from '../../../generated/prisma';
 
 import { PrismaService } from '../../../core/database/prisma.service';
+import { StorageService } from '../../../core/storage/storage.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
 import { BookingCompletedEvent } from '../../booking/events/booking-completed.event';
+import { BookingCancelledEvent } from '../../booking/events/booking-cancelled.event';
+import { PaymentCompletedEvent } from '../../payment/events/payment-completed.event';
 
 type ReportDateRangeId =
   | 'today'
@@ -135,6 +138,7 @@ export class PartnerService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly storage: StorageService,
   ) {}
 
   async getDashboardStats(
@@ -241,7 +245,7 @@ export class PartnerService {
         currency: tour.currency,
         category: tour.category,
         status: tour.status,
-        coverUrl: tour.coverUrl,
+        coverUrl: this.storage.resolvePublicUrl(tour.coverUrl),
         durationDays: tour.durationDays,
         createdAt: tour.createdAt.toISOString(),
         updatedAt: tour.updatedAt.toISOString(),
@@ -337,8 +341,8 @@ export class PartnerService {
         title: tour.title,
         slug: tour.slug,
         description: tour.description,
-        coverUrl: tour.coverUrl,
-        galleryUrls: tour.galleryUrls ?? [],
+        coverUrl: this.storage.resolvePublicUrl(tour.coverUrl),
+        galleryUrls: this.storage.resolvePublicUrlList(tour.galleryUrls ?? []),
         extras,
         price: tour.price.toString(),
         currency: tour.currency,
@@ -373,7 +377,7 @@ export class PartnerService {
         price: experience.price.toString(),
         currency: experience.currency,
         status: experience.status,
-        imageUrl: experience.imageUrl,
+        imageUrl: this.storage.resolvePublicUrl(experience.imageUrl),
         duration: experience.duration,
         averageRating: experience.averageRating.toString(),
         reviewCount: experience.reviewCount,
@@ -561,11 +565,99 @@ export class PartnerService {
       orderBy: { createdAt: 'desc' },
     });
 
+    const tourIds = [
+      ...new Set(rows.map((row) => row.tourId).filter(Boolean)),
+    ] as string[];
+    const experienceIds = [
+      ...new Set(rows.map((row) => row.experienceId).filter(Boolean)),
+    ] as string[];
+
+    const [tours, experiences] = await Promise.all([
+      tourIds.length
+        ? this.prisma.tour.findMany({
+            where: { id: { in: tourIds } },
+            select: { id: true, title: true },
+          })
+        : [],
+      experienceIds.length
+        ? this.prisma.experience.findMany({
+            where: { id: { in: experienceIds } },
+            select: { id: true, title: true },
+          })
+        : [],
+    ]);
+
+    const tourTitleById = new Map(tours.map((t) => [t.id, t.title]));
+    const experienceTitleById = new Map(
+      experiences.map((e) => [e.id, e.title]),
+    );
+
     return {
       success: true,
-      data: rows.map((row) => this.toReservation(row)),
+      data: rows.map((row) =>
+        this.toReservation(row, {
+          tourTitle: row.tourId
+            ? (tourTitleById.get(row.tourId) ?? null)
+            : row.experienceId
+              ? (experienceTitleById.get(row.experienceId) ?? null)
+              : null,
+        }),
+      ),
       error: null,
     };
+  }
+
+  async updateReservation(
+    reservationId: string,
+    partnerId: string | undefined,
+    input: {
+      status?: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+      seatNumbers?: string;
+    },
+  ) {
+    this.requirePartnerId(partnerId);
+
+    const reservation = await this.prisma.reservation.findFirst({
+      where: { id: reservationId, partnerId, deletedAt: null },
+    });
+
+    if (!reservation) {
+      throw new NotFoundException({
+        code: 'RESERVATION_NOT_FOUND',
+        message: 'Rezervasyon bulunamadı',
+      });
+    }
+
+    if (input.seatNumbers != null) {
+      const base =
+        reservation.metadata &&
+        typeof reservation.metadata === 'object' &&
+        !Array.isArray(reservation.metadata)
+          ? { ...(reservation.metadata as Record<string, unknown>) }
+          : {};
+      await this.prisma.reservation.update({
+        where: { id: reservation.id },
+        data: {
+          metadata: {
+            ...base,
+            seatNumbers: input.seatNumbers.trim(),
+          } as Prisma.InputJsonValue,
+        },
+      });
+    }
+
+    if (!input.status) {
+      const refreshed = await this.prisma.reservation.findFirstOrThrow({
+        where: { id: reservation.id },
+      });
+      return {
+        success: true,
+        data: this.toReservation(refreshed),
+        error: null,
+      };
+    }
+
+    return this.updateReservationStatus(reservationId, partnerId, input.status);
   }
 
   async updateReservationStatus(
@@ -647,6 +739,18 @@ export class PartnerService {
           data: { status: 'CANCELLED', cancelledAt: new Date() },
         });
       });
+
+      this.eventEmitter.emit(
+        'booking.cancelled',
+        new BookingCancelledEvent(
+          updated.id,
+          updated.userId,
+          'RESERVATION',
+          'PARTNER_CANCELLED',
+          'Tur firması tarafından iptal edildi',
+        ),
+      );
+
       return {
         success: true,
         data: this.toReservation(updated),
@@ -654,10 +758,40 @@ export class PartnerService {
       };
     }
 
+    // CONFIRMED — seat numbers required for participants
+    const meta =
+      reservation.metadata &&
+      typeof reservation.metadata === 'object' &&
+      !Array.isArray(reservation.metadata)
+        ? (reservation.metadata as Record<string, unknown>)
+        : {};
+    const seats =
+      typeof meta.seatNumbers === 'string' ? meta.seatNumbers.trim() : '';
+    if (!seats) {
+      throw new BusinessException(
+        'SEAT_NUMBERS_REQUIRED',
+        'Onaylamadan önce katılımcılar için koltuk numarası girmelisiniz',
+      );
+    }
+
     const updated = await this.prisma.reservation.update({
       where: { id: reservation.id },
-      data: { status: 'CONFIRMED' },
+      data: {
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        paymentMethod: reservation.paymentMethod ?? 'bank_transfer',
+      },
     });
+
+    // Bank transfer / manual confirm — trigger same post-payment notifications as card.
+    this.eventEmitter.emit(
+      'payment.completed',
+      new PaymentCompletedEvent(
+        `manual-${updated.id}`,
+        updated.id,
+        updated.totalAmount.toString(),
+      ),
+    );
 
     return {
       success: true,
@@ -982,27 +1116,49 @@ export class PartnerService {
     }
   }
 
-  private toReservation(row: {
-    id: string;
-    bookingNumber: string;
-    userId: string;
-    tourId: string | null;
-    tourDateId: string | null;
-    hotelId?: string | null;
-    roomId?: string | null;
-    experienceId?: string | null;
-    activityDateId?: string | null;
-    partnerId: string;
-    status: string;
-    adults: number;
-    children: number;
-    totalAmount: Prisma.Decimal;
-    currency: string;
-    contactEmail: string;
-    contactPhone: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }) {
+  private toReservation(
+    row: {
+      id: string;
+      bookingNumber: string;
+      userId: string;
+      tourId: string | null;
+      tourDateId: string | null;
+      hotelId?: string | null;
+      roomId?: string | null;
+      experienceId?: string | null;
+      activityDateId?: string | null;
+      partnerId: string;
+      status: string;
+      paymentStatus?: string;
+      adults: number;
+      children: number;
+      totalAmount: Prisma.Decimal;
+      currency: string;
+      contactEmail: string;
+      contactPhone: string | null;
+      guests?: Prisma.JsonValue;
+      metadata?: Prisma.JsonValue | null;
+      startDate?: Date | null;
+      endDate?: Date | null;
+      createdAt: Date;
+      updatedAt: Date;
+    },
+    extra?: { tourTitle?: string | null },
+  ) {
+    const guests = Array.isArray(row.guests)
+      ? (row.guests as Array<{ firstName?: string; lastName?: string }>)
+      : [];
+    const primary = guests[0];
+    const customerName = primary
+      ? `${primary.firstName ?? ''} ${primary.lastName ?? ''}`.trim()
+      : row.contactEmail;
+    const meta =
+      row.metadata &&
+      typeof row.metadata === 'object' &&
+      !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {};
+
     return {
       id: row.id,
       bookingNumber: row.bookingNumber,
@@ -1015,12 +1171,20 @@ export class PartnerService {
       activityDateId: row.activityDateId ?? null,
       partnerId: row.partnerId,
       status: row.status,
+      paymentStatus: row.paymentStatus ?? 'UNPAID',
       adults: row.adults,
       children: row.children,
+      guestCount: row.adults + row.children,
       totalAmount: row.totalAmount.toString(),
       currency: row.currency,
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
+      customerName,
+      tourTitle: extra?.tourTitle ?? null,
+      seatNumbers:
+        typeof meta.seatNumbers === 'string' ? meta.seatNumbers : null,
+      startDate: row.startDate?.toISOString() ?? null,
+      endDate: row.endDate?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

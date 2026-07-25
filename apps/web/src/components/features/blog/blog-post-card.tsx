@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import type { Post } from '@turladur/shared-types';
+import type { Post } from '@turta/shared-types';
 
 type PostCardData = Post & {
   coverImage?: string | null;

@@ -3,11 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DEFAULT_PAGE, DEFAULT_PAGE_LIMIT } from '@turladur/shared-constants';
+import { DEFAULT_PAGE, DEFAULT_PAGE_LIMIT } from '@turta/shared-constants';
 import type {
   Category as SharedCategory,
   Post as SharedPost,
-} from '@turladur/shared-types';
+} from '@turta/shared-types';
 import { Prisma } from '../../../generated/prisma';
 
 import { PrismaService } from '../../../core/database/prisma.service';

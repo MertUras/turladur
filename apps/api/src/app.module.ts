@@ -9,6 +9,7 @@ import { HealthModule } from './core/health/health.module';
 import { LoggerModule } from './core/logger/logger.module';
 import { MailModule } from './core/mail/mail.module';
 import { QueueModule } from './core/queue/queue.module';
+import { RealtimeModule } from './core/realtime/realtime.module';
 import { StorageModule } from './core/storage/storage.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { IdentityModule } from './modules/identity/identity.module';
@@ -26,7 +27,8 @@ import { ThrottlingModule } from './core/throttling/throttling.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '../../.env'],
+      // Prefer apps/api/.env regardless of cwd (pnpm filter vs nest from package dir)
+      envFilePath: ['apps/api/.env', '.env', '../../.env'],
     }),
     ThrottlingModule,
     EventEmitterModule.forRoot(),
@@ -37,6 +39,7 @@ import { ThrottlingModule } from './core/throttling/throttling.module';
     StorageModule,
     MailModule,
     QueueModule,
+    RealtimeModule,
     HealthModule,
     IdentityModule,
     CatalogModule,

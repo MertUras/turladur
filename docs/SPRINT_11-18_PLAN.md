@@ -1,4 +1,4 @@
-# TurlaDur — Sprint 11-18 Geliştirme Planı
+# turta — Sprint 11-18 Geliştirme Planı
 
 > **Mimari:** Nx Monorepo, Next.js 15 (Frontend) + NestJS 11 (Backend)  
 > **Sprint süresi:** 1 hafta  
@@ -146,7 +146,7 @@
 > - Rezervasyon kapasite düşürür; iptalde geri verir
 > - Ödeme: `IYZICO_*` boşsa **MockPaymentGateway** (`…0000` → fail). Key dolunca Iyzico adapter (SDK scaffold)
 > - Webhook `POST /payment/webhook/iyzico`; Refund Admin `POST /payment/refund`
-> - Shared Zod: `@turladur/shared-validators`
+> - Shared Zod: `@turta/shared-validators`
 > - Legacy root Prisma / UI dokunulmadı
 > - Sonraki: gerçek İyzico SDK + 3DS HTML wiring
 
@@ -295,7 +295,7 @@
 
 ### Definition of Done
 
-- [ ] Production URL'ler çalışıyor (turladur.com + api.turladur.com) — **deploy sonrası**
+- [ ] Production URL'ler çalışıyor (turta.com + api.turta.com) — **deploy sonrası**
 - [ ] Lighthouse: Performance > 85, SEO > 90, Accessibility > 85 — **ölçüm deploy ortamında**
 - [x] E2E testler geçiyor (API smoke + web smoke; tam ödeme akışı staging'de genişletilebilir)
 - [x] Sentry'de error tracking aktif (DSN ile)

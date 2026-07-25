@@ -4,11 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { BookingStatus as SharedBookingStatus } from '@turladur/shared-constants';
+import { BookingStatus as SharedBookingStatus } from '@turta/shared-constants';
 import type {
   BookingGuest,
   Reservation as SharedReservation,
-} from '@turladur/shared-types';
+} from '@turta/shared-types';
 import { Prisma } from '../../../generated/prisma';
 
 import { PrismaService } from '../../../core/database/prisma.service';
@@ -50,6 +50,18 @@ export class ReservationService {
             'Satın alan katılımcı için adres zorunludur',
           );
         }
+        if (!guest.phone?.trim() || guest.phone.trim().length < 10) {
+          throw new BusinessException(
+            'PHONE_REQUIRED',
+            'Satın alan katılımcı için telefon zorunludur',
+          );
+        }
+        if (!guest.email?.trim() || !guest.email.includes('@')) {
+          throw new BusinessException(
+            'EMAIL_REQUIRED',
+            'Satın alan katılımcı için e-posta zorunludur',
+          );
+        }
       }
     }
 
@@ -85,7 +97,12 @@ export class ReservationService {
     return this.createExperienceReservation(dto, userId, partySize);
   }
 
-  async getById(reservationId: string, userId: string, role: string) {
+  async getById(
+    reservationId: string,
+    userId: string,
+    role: string,
+    partnerId?: string,
+  ) {
     const reservation = await this.prisma.reservation.findFirst({
       where: { id: reservationId, deletedAt: null },
     });
@@ -97,7 +114,7 @@ export class ReservationService {
       });
     }
 
-    this.assertAccess(reservation, userId, role, undefined);
+    this.assertAccess(reservation, userId, role, partnerId);
 
     return {
       success: true,
@@ -159,7 +176,7 @@ export class ReservationService {
 
     this.eventEmitter.emit(
       'booking.cancelled',
-      new BookingCancelledEvent(updated.id, updated.userId),
+      new BookingCancelledEvent(updated.id, updated.userId, 'RESERVATION'),
     );
 
     return {
@@ -167,6 +184,132 @@ export class ReservationService {
       data: this.toShared(updated),
       error: null,
     };
+  }
+
+  /**
+   * Cancel every active reservation for a delisted tour (capacity restore + events).
+   */
+  async cancelAllForTour(
+    tourId: string,
+    reasonCode?: string,
+    reasonLabel?: string,
+  ) {
+    const rows = await this.prisma.reservation.findMany({
+      where: {
+        tourId,
+        deletedAt: null,
+        status: { notIn: ['CANCELLED', 'COMPLETED'] },
+      },
+    });
+
+    for (const reservation of rows) {
+      const partySize = reservation.adults + reservation.children;
+      const meta =
+        reservation.metadata &&
+        typeof reservation.metadata === 'object' &&
+        !Array.isArray(reservation.metadata)
+          ? { ...(reservation.metadata as Record<string, unknown>) }
+          : {};
+
+      const updated = await this.prisma.$transaction(async (tx) => {
+        await this.restoreCapacity(tx, reservation, partySize);
+        return tx.reservation.update({
+          where: { id: reservation.id },
+          data: {
+            status: 'CANCELLED',
+            cancelledAt: new Date(),
+            metadata: {
+              ...meta,
+              cancelScope: 'TOUR',
+              cancelReason: reasonCode ?? null,
+              cancelReasonLabel: reasonLabel ?? null,
+            } as Prisma.InputJsonValue,
+          },
+        });
+      });
+
+      this.eventEmitter.emit(
+        'booking.cancelled',
+        new BookingCancelledEvent(
+          updated.id,
+          updated.userId,
+          'TOUR',
+          reasonCode,
+          reasonLabel,
+        ),
+      );
+    }
+
+    return { cancelledCount: rows.length };
+  }
+
+  /**
+   * Cancel active reservations for specific tour departure dates.
+   */
+  async cancelAllForTourDates(
+    tourDateIds: string[],
+    reasonCode?: string,
+    reasonLabel?: string,
+    dateLabelById?: Record<string, string>,
+  ) {
+    if (tourDateIds.length === 0) {
+      return { cancelledCount: 0 };
+    }
+
+    const rows = await this.prisma.reservation.findMany({
+      where: {
+        tourDateId: { in: tourDateIds },
+        deletedAt: null,
+        status: { notIn: ['CANCELLED', 'COMPLETED'] },
+      },
+    });
+
+    for (const reservation of rows) {
+      const partySize = reservation.adults + reservation.children;
+      const meta =
+        reservation.metadata &&
+        typeof reservation.metadata === 'object' &&
+        !Array.isArray(reservation.metadata)
+          ? { ...(reservation.metadata as Record<string, unknown>) }
+          : {};
+
+      const dateLabel =
+        (reservation.tourDateId && dateLabelById?.[reservation.tourDateId]) ||
+        undefined;
+
+      const updated = await this.prisma.$transaction(async (tx) => {
+        await this.restoreCapacity(tx, reservation, partySize);
+        return tx.reservation.update({
+          where: { id: reservation.id },
+          data: {
+            status: 'CANCELLED',
+            cancelledAt: new Date(),
+            metadata: {
+              ...meta,
+              cancelScope: 'TOUR_DATE',
+              cancelReason: reasonCode ?? null,
+              cancelReasonLabel: reasonLabel ?? null,
+              cancelledDateLabel: dateLabel ?? null,
+              cancelledTourDateId: reservation.tourDateId,
+            } as Prisma.InputJsonValue,
+          },
+        });
+      });
+
+      this.eventEmitter.emit(
+        'booking.cancelled',
+        new BookingCancelledEvent(
+          updated.id,
+          updated.userId,
+          'TOUR_DATE',
+          reasonCode,
+          reasonLabel,
+          dateLabel,
+        ),
+      );
+    }
+
+    return { cancelledCount: rows.length };
   }
 
   async markConfirmed(reservationId: string) {
@@ -277,6 +420,7 @@ export class ReservationService {
     const unitPrice = tourDate.priceOverride ?? tourDate.tour.price;
     const totalAmount = new Prisma.Decimal(unitPrice).mul(partySize);
     const bookingNumber = await this.nextBookingNumber();
+    const metadata = await this.buildReservationMetadata(dto, tourDate.tourId);
 
     const reservation = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.tourDate.updateMany({
@@ -303,6 +447,8 @@ export class ReservationService {
           tourDateId: tourDate.id,
           partnerId: tourDate.tour.partnerId,
           status: 'PENDING',
+          paymentStatus: 'UNPAID',
+          paymentMethod: 'pending',
           adults: dto.adults,
           children: dto.children ?? 0,
           totalAmount,
@@ -311,9 +457,9 @@ export class ReservationService {
           contactPhone: dto.contactPhone,
           guests: dto.guests as unknown as Prisma.InputJsonValue,
           specialRequests: dto.specialRequests ?? null,
-          metadata: dto.billing
-            ? ({ billing: dto.billing } as unknown as Prisma.InputJsonValue)
-            : undefined,
+          startDate: tourDate.startDate,
+          endDate: tourDate.endDate,
+          metadata,
         },
       });
     });
@@ -380,6 +526,7 @@ export class ReservationService {
     const nightPrice = room.discount ?? room.price;
     const totalAmount = new Prisma.Decimal(nightPrice).mul(nights);
     const bookingNumber = await this.nextBookingNumber();
+    const metadata = await this.buildReservationMetadata(dto, null);
 
     const reservation = await this.prisma.reservation.create({
       data: {
@@ -389,6 +536,7 @@ export class ReservationService {
         roomId: room.id,
         partnerId: room.hotel.partnerId,
         status: 'PENDING',
+        paymentStatus: 'UNPAID',
         adults: dto.adults,
         children: dto.children ?? 0,
         totalAmount,
@@ -399,9 +547,7 @@ export class ReservationService {
         startDate,
         endDate,
         specialRequests: dto.specialRequests ?? null,
-        metadata: dto.billing
-          ? ({ billing: dto.billing } as unknown as Prisma.InputJsonValue)
-          : undefined,
+        metadata,
       },
     });
 
@@ -436,6 +582,7 @@ export class ReservationService {
 
     const totalAmount = new Prisma.Decimal(activityDate.price).mul(partySize);
     const bookingNumber = await this.nextBookingNumber();
+    const metadata = await this.buildReservationMetadata(dto, null);
 
     const reservation = await this.prisma.$transaction(async (tx) => {
       const remaining =
@@ -480,6 +627,8 @@ export class ReservationService {
           activityDateId: activityDate.id,
           partnerId: activityDate.experience.partnerId,
           status: 'PENDING',
+          paymentStatus: 'UNPAID',
+          paymentMethod: 'pending',
           adults: dto.adults,
           children: dto.children ?? 0,
           totalAmount,
@@ -490,9 +639,7 @@ export class ReservationService {
           startDate: activityDate.startDate,
           endDate: activityDate.endDate,
           specialRequests: dto.specialRequests ?? null,
-          metadata: dto.billing
-            ? ({ billing: dto.billing } as unknown as Prisma.InputJsonValue)
-            : undefined,
+          metadata,
         },
       });
     });
@@ -568,8 +715,61 @@ export class ReservationService {
 
     return this.prisma.reservation.update({
       where: { id: reservationId },
-      data: { status: to },
+      data: {
+        status: to,
+        ...(to === 'CONFIRMED'
+          ? { paymentStatus: 'PAID' as const }
+          : to === 'PAYMENT_FAILED'
+            ? { paymentStatus: 'UNPAID' as const }
+            : {}),
+      },
     });
+  }
+
+  private async buildReservationMetadata(
+    dto: CreateReservationDto,
+    tourId?: string | null,
+  ): Promise<Prisma.InputJsonValue> {
+    const primary = dto.guests[0];
+    const billingFullName =
+      dto.billing.fullName?.trim() ||
+      `${primary.firstName} ${primary.lastName}`.trim();
+
+    const meta: Record<string, unknown> = {
+      billing: {
+        ...dto.billing,
+        fullName: billingFullName,
+      },
+    };
+
+    if (dto.pickupPointId && tourId) {
+      const point = await this.prisma.tourPickupPoint.findFirst({
+        where: {
+          id: dto.pickupPointId,
+          tourId,
+          deletedAt: null,
+          isActive: true,
+        },
+      });
+      if (!point) {
+        throw new BusinessException(
+          'PICKUP_POINT_NOT_FOUND',
+          'Seçilen kalkış noktası bulunamadı',
+        );
+      }
+      meta.pickup = {
+        pickupPointId: point.id,
+        location: point.location,
+        city: point.city,
+        time: point.time,
+        description: point.description,
+      };
+    }
+
+    // Seat numbers are assigned later by the partner (not at checkout).
+    meta.seatNumbers = null;
+
+    return meta as Prisma.InputJsonValue;
   }
 
   private assertAccess(
@@ -596,8 +796,17 @@ export class ReservationService {
   }
 
   private async nextBookingNumber(): Promise<string> {
-    const suffix = Date.now().toString(36).toUpperCase().slice(-8);
-    return `TD-${suffix}`;
+    const ymd = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+      const candidate = `TRL-${ymd}-${suffix}`;
+      const exists = await this.prisma.reservation.findFirst({
+        where: { bookingNumber: candidate },
+        select: { id: true },
+      });
+      if (!exists) return candidate;
+    }
+    return `TRL-${ymd}-${Date.now().toString(36).toUpperCase().slice(-4)}`;
   }
 
   private toShared(row: {
@@ -612,6 +821,7 @@ export class ReservationService {
     activityDateId?: string | null;
     partnerId: string;
     status: string;
+    paymentStatus?: string;
     adults: number;
     children: number;
     totalAmount: Prisma.Decimal;
@@ -619,6 +829,9 @@ export class ReservationService {
     contactEmail: string;
     contactPhone: string | null;
     guests: Prisma.JsonValue;
+    metadata?: Prisma.JsonValue | null;
+    startDate?: Date | null;
+    endDate?: Date | null;
     createdAt: Date;
     updatedAt: Date;
   }): SharedReservation {
@@ -634,6 +847,7 @@ export class ReservationService {
       activityDateId: row.activityDateId ?? null,
       partnerId: row.partnerId,
       status: row.status as SharedBookingStatus,
+      paymentStatus: row.paymentStatus ?? 'UNPAID',
       adults: row.adults,
       children: row.children,
       totalAmount: row.totalAmount.toString(),
@@ -641,6 +855,9 @@ export class ReservationService {
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
       guests: row.guests as unknown as BookingGuest[],
+      metadata: (row.metadata as Record<string, unknown> | null) ?? null,
+      startDate: row.startDate?.toISOString() ?? null,
+      endDate: row.endDate?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };

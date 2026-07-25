@@ -254,7 +254,7 @@ export class MailService {
 
   async sendBookingConfirmation(to: string, data: { bookingId: string; tourName: string; date: string }) {
     await this.resend.emails.send({
-      from: 'TurlaDur <bildirim@turladur.com>',
+      from: 'turta <bildirim@turta.com>',
       to,
       subject: `Rezervasyonunuz Onaylandı — ${data.tourName}`,
       html: this.renderTemplate('booking-confirmed', data),
@@ -263,7 +263,7 @@ export class MailService {
 
   async sendPartnerVerification(to: string, data: { verifyUrl: string; partnerName: string }) {
     await this.resend.emails.send({
-      from: 'TurlaDur <dogrulama@turladur.com>',
+      from: 'turta <dogrulama@turta.com>',
       to,
       subject: 'Email Adresinizi Doğrulayın',
       html: this.renderTemplate('partner-verification', data),
@@ -272,7 +272,7 @@ export class MailService {
 
   async sendPasswordReset(to: string, data: { resetUrl: string }) {
     await this.resend.emails.send({
-      from: 'TurlaDur <guvenlik@turladur.com>',
+      from: 'turta <guvenlik@turta.com>',
       to,
       subject: 'Şifre Sıfırlama Talebi',
       html: this.renderTemplate('password-reset', data),

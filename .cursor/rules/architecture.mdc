@@ -1,19 +1,19 @@
 ---
-description: TurlaDur platform mimarisi - Tüm geliştirme bu kurallara uymalıdır
+description: turta platform mimarisi - Tüm geliştirme bu kurallara uymalıdır
 globs: 
 alwaysApply: true
 ---
 
-# TurlaDur — Platform Mimarisi
+# turta — Platform Mimarisi
 
 ## Genel Bakış
 
-TurlaDur, Nx monorepo içinde **ayrı frontend ve backend uygulamaları** barındıran, modüler monolit mimariye sahip bir turizm platformudur.
+turta, Nx monorepo içinde **ayrı frontend ve backend uygulamaları** barındıran, modüler monolit mimariye sahip bir turizm platformudur.
 
 ## Monorepo Yapısı
 
 ```
-turladur/
+turta/
 ├── apps/
 │   ├── web/          → Next.js 15 (App Router) — Sadece Frontend
 │   └── api/          → NestJS 11 — Modüler Monolit Backend

@@ -19,14 +19,12 @@
     "isolatedModules": true,
     "baseUrl": ".",
     "paths": {
-      "@turladur/shared-types": ["packages/shared-types/src/index.ts"],
-      "@turladur/shared-types/*": ["packages/shared-types/src/*"],
-      "@turladur/shared-validators": [
-        "packages/shared-validators/src/index.ts"
-      ],
-      "@turladur/shared-validators/*": ["packages/shared-validators/src/*"],
-      "@turladur/shared-constants": ["packages/shared-constants/src/index.ts"],
-      "@turladur/shared-constants/*": ["packages/shared-constants/src/*"]
+      "@turta/shared-types": ["packages/shared-types/src/index.ts"],
+      "@turta/shared-types/*": ["packages/shared-types/src/*"],
+      "@turta/shared-validators": ["packages/shared-validators/src/index.ts"],
+      "@turta/shared-validators/*": ["packages/shared-validators/src/*"],
+      "@turta/shared-constants": ["packages/shared-constants/src/index.ts"],
+      "@turta/shared-constants/*": ["packages/shared-constants/src/*"]
     }
   },
   "exclude": ["node_modules", "tmp", "dist", ".next"]

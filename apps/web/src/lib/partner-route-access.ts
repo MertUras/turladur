@@ -1,4 +1,4 @@
-import type { StaffPermissionKey } from '@turladur/shared-types';
+import type { StaffPermissionKey } from '@turta/shared-types';
 
 /**
  * Maps partner dashboard routes to staff permission keys.

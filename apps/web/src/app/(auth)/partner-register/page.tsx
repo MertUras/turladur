@@ -143,7 +143,7 @@ export default function PartnerRegisterPage() {
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-12 text-center">
           <div className="max-w-lg">
             <h2 className="mb-5 text-4xl font-bold leading-tight tracking-normal text-white xl:text-5xl">
-              Turladur Partner Ağına Katılın
+              turta Partner Ağına Katılın
             </h2>
             <p className="mb-10 text-lg font-light text-sky-100/90">
               Binlerce turistin seyahat planlarını yönetin, gelirinizi artırın
@@ -174,7 +174,7 @@ export default function PartnerRegisterPage() {
               İş Ortağı Hesabı Oluşturun
             </h2>
             <p className="text-sm text-neutral-500">
-              Turladur partner ağına katılarak işinizi büyütün.
+              turta partner ağına katılarak işinizi büyütün.
             </p>
           </div>
 

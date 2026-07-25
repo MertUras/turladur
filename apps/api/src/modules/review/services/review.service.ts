@@ -4,8 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import type { Review as SharedReview } from '@turladur/shared-types';
-import { DEFAULT_PAGE, DEFAULT_PAGE_LIMIT } from '@turladur/shared-constants';
+import type { Review as SharedReview } from '@turta/shared-types';
+import { DEFAULT_PAGE, DEFAULT_PAGE_LIMIT } from '@turta/shared-constants';
 
 import { PrismaService } from '../../../core/database/prisma.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';

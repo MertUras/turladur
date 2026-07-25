@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { Experience } from '@turladur/shared-types';
+import type { Experience } from '@turta/shared-types';
 
 function formatPrice(price: string) {
   const value = Number(price);

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState, useEffect } from 'react';
-import type { Reservation } from '@turladur/shared-types';
+import type { Reservation } from '@turta/shared-types';
 import { Calendar, ChevronDown, RefreshCw, X } from 'lucide-react';
 
 import {
@@ -10,7 +10,11 @@ import {
   type BookingCardModel,
 } from '@/components/features/booking/booking-card';
 import { BookingDetailsModal } from '@/components/features/booking/booking-details-modal';
-import { listReservations } from '@/services/booking';
+import {
+  downloadVoucherHtml,
+  getReservationVoucher,
+  listReservations,
+} from '@/services/booking';
 import { useAuth } from '@/providers/auth-provider';
 
 type FilterStatus = 'all' | 'CONFIRMED' | 'PENDING' | 'COMPLETED' | 'CANCELLED';
@@ -73,6 +77,7 @@ export function BookingsPageClient() {
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [typeFilter, setTypeFilter] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+  const [voucherBusyId, setVoucherBusyId] = useState<string | null>(null);
 
   const load = async (refresh = false) => {
     if (!accessToken) return;
@@ -148,6 +153,20 @@ export function BookingsPageClient() {
   const handleViewDetails = (booking: BookingCardModel) => {
     setSelectedBooking(booking as ReturnType<typeof mapReservation>);
     setShowDetailsModal(true);
+  };
+
+  const handleDownloadVoucher = async (booking: BookingCardModel) => {
+    if (!accessToken) return;
+    setVoucherBusyId(booking.id);
+    setError(null);
+    try {
+      const voucher = await getReservationVoucher(booking.id, accessToken);
+      downloadVoucherHtml(booking.bookingNumber, voucher.html);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Voucher alınamadı');
+    } finally {
+      setVoucherBusyId(null);
+    }
   };
 
   const handleCancelBooking = (bookingId: string) => {
@@ -344,6 +363,8 @@ export function BookingsPageClient() {
                 key={booking.id}
                 booking={booking}
                 onViewDetails={handleViewDetails}
+                onDownloadVoucher={(b) => void handleDownloadVoucher(b)}
+                voucherBusy={voucherBusyId === booking.id}
               />
             ))}
           </div>

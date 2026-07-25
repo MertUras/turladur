@@ -17,8 +17,8 @@ alwaysApply: false
 ### İlk Kurulum
 ```bash
 # 1. Repo'yu klonla
-git clone https://github.com/MertUras/turladur.git
-cd turladur
+git clone https://github.com/MertUras/turta.git
+cd turta
 
 # 2. Bağımlılıkları kur
 pnpm install
@@ -139,19 +139,19 @@ pnpm nx g @nx/js:library shared-types --directory=packages/shared-types
 
 ### Develop Branch'e Merge (deploy-dev.yml)
 1. `prisma migrate deploy` → Dev DB migration (Neon develop branch)
-2. `nx run api:build` → Docker image → dev-api.turladur.com deploy
+2. `nx run api:build` → Docker image → dev-api.turta.com deploy
 3. Mobil + Web ekip hemen kullanabilir
 
 ### Staging Branch'e Merge (deploy-staging.yml)
 1. `prisma migrate deploy` → Staging DB migration
 2. `prisma db seed` → Test verisi yenile
-3. `nx run web:build` → staging.turladur.com deploy
-4. `nx run api:build` → staging-api.turladur.com deploy
+3. `nx run web:build` → staging.turta.com deploy
+4. `nx run api:build` → staging-api.turta.com deploy
 5. QA süreci başlar
 
 ### Main Branch'e Merge (deploy-prod.yml)
-1. `nx run web:build` → Vercel'e deploy (turladur.com)
-2. `nx run api:build` → Docker image → Railway'e push (api.turladur.com)
+1. `nx run web:build` → Vercel'e deploy (turta.com)
+2. `nx run api:build` → Docker image → Railway'e push (api.turta.com)
 3. `prisma migrate deploy` → Production DB migration
 
 ### Scheduled: Dev DB Reset (weekly-reset.yml — Pazar 03:00)

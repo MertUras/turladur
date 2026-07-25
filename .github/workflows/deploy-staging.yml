@@ -11,9 +11,8 @@ on:
   push:
     branches: [staging]
   workflow_dispatch:
-  # Opsiyonel: her 2 günde bir sabah 09:00 (UTC) — planlı staging sync
-  # schedule:
-  #   - cron: '0 9 */2 * *'
+  # Scheduled migrate+seed: see refresh-env-dbs.yml (every 2 days).
+  # This workflow still seeds on every staging push.
 
 concurrency:
   group: deploy-staging
@@ -60,11 +59,17 @@ jobs:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: pnpm exec prisma migrate deploy
 
+      - name: Prisma seed (idempotent demo data)
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: pnpm exec prisma db seed
+
       - name: Build shared packages
         run: |
-          pnpm --filter @turladur/shared-types build
-          pnpm --filter @turladur/shared-validators build
-          pnpm --filter @turladur/shared-constants build
+          pnpm --filter @turta/shared-types build
+          pnpm --filter @turta/shared-validators build
+          pnpm --filter @turta/shared-constants build
 
       - name: Build API
         run: pnpm --filter api build

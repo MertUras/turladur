@@ -41,15 +41,23 @@ export class BookingGuestDto {
   })
   identityNumber!: string;
 
-  @ApiProperty({ example: '+905551112233' })
+  /** Primary guest required; additional guests optional. */
+  @ApiPropertyOptional({ example: '+905551112233' })
+  @ValidateIf(
+    (guest: BookingGuestDto, value: unknown) => value != null && value !== '',
+  )
   @IsString()
   @MinLength(10)
   @MaxLength(20)
-  phone!: string;
+  phone?: string;
 
-  @ApiProperty({ example: 'ahmet@example.com' })
+  /** Primary guest required; additional guests optional. */
+  @ApiPropertyOptional({ example: 'ahmet@example.com' })
+  @ValidateIf(
+    (guest: BookingGuestDto, value: unknown) => value != null && value !== '',
+  )
   @IsEmail()
-  email!: string;
+  email?: string;
 
   @ApiPropertyOptional({ example: 'Kadıköy, İstanbul' })
   @IsOptional()
@@ -60,6 +68,16 @@ export class BookingGuestDto {
 }
 
 export class ReservationBillingDto {
+  @ApiPropertyOptional({
+    example: 'Ahmet Yılmaz',
+    description: 'Fatura / ödeme sahibi ad soyad',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(200)
+  fullName?: string;
+
   @ApiProperty({ example: 'Bağdat Cad. No:1' })
   @IsString()
   @MinLength(5)
@@ -154,6 +172,14 @@ export class CreateReservationDto {
   @IsString()
   @MinLength(1)
   activityDateId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Selected TourPickupPoint id (tour bookings)',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  pickupPointId?: string;
 
   @ApiProperty({ example: 2 })
   @IsInt()

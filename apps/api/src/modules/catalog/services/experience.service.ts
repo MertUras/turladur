@@ -7,11 +7,11 @@ import {
   DEFAULT_CURRENCY,
   DEFAULT_PAGE,
   DEFAULT_PAGE_LIMIT,
-} from '@turladur/shared-constants';
+} from '@turta/shared-constants';
 import type {
   ActivityDate as SharedActivityDate,
   Experience as SharedExperience,
-} from '@turladur/shared-types';
+} from '@turta/shared-types';
 import { Prisma } from '../../../generated/prisma';
 
 import { CacheService } from '../../../core/cache/cache.service';

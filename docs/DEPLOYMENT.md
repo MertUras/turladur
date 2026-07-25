@@ -15,7 +15,7 @@
 
 1. Root Directory: `apps/web`
 2. Build: `pnpm --filter web build` (monorepo root install)
-3. Env: `NEXT_PUBLIC_API_URL=https://api.turladur.com/api/v1`
+3. Env: `NEXT_PUBLIC_API_URL=https://api.turta.com/api/v1`
 4. Opsiyonel: `SENTRY_DSN`, `SENTRY_AUTH_TOKEN` (source maps)
 
 ## Railway (`apps/api`)
@@ -32,14 +32,28 @@
 - CI secrets: `DEV_DATABASE_URL`, `STAGING_DATABASE_URL` (bkz. `.github/workflows/deploy-*.yml`)
 - Migration öncesi staging backup (Neon snapshot / `pg_dump`)
 
-## GitHub Actions (Sprint 19)
+## CDN / medya (Sprint 23.19 → soft launch)
 
-| Workflow             | Trigger        | Secret                 |
-| -------------------- | -------------- | ---------------------- |
-| `deploy-dev.yml`     | push `develop` | `DEV_DATABASE_URL`     |
-| `deploy-staging.yml` | push `staging` | `STAGING_DATABASE_URL` |
+- Local / soft launch (**custom domain yok**):  
+  `CDN_URL=https://<API_HOST>/api/v1/storage/media` (Nest public proxy → R2)  
+  Runbook: [PUBLISH.md](./PUBLISH.md)
+- Hedef prod: Cloudflare R2 + `https://media.turta.com` — [CDN_CLOUDFLARE.md](./CDN_CLOUDFLARE.md)
+- `publicUrl` her zaman `CDN_URL` tabanlı; upload `Cache-Control` immutable (unique key)
 
-Repo → Settings → Secrets and variables → Actions → Neon Direct URL ekle.
+## GitHub Actions (Sprint 19+)
+
+| Workflow              | Trigger                                                   | Secret                          | Ne yapar               |
+| --------------------- | --------------------------------------------------------- | ------------------------------- | ---------------------- |
+| `deploy-dev.yml`      | push `develop` + manual                                   | `DEV_DATABASE_URL` (Direct)     | migrate + seed + build |
+| `deploy-staging.yml`  | push `staging` + manual                                   | `STAGING_DATABASE_URL` (Direct) | migrate + seed + build |
+| `refresh-env-dbs.yml` | cron (dev günlük 03:00 UTC; staging 2 günde bir) + manual | aynı secrets                    | migrate + seed         |
+
+Repo → Settings → Secrets and variables → Actions → Neon **Direct** URL ekle (`DEV_DATABASE_URL`, `STAGING_DATABASE_URL`).
+
+Manuel refresh: Actions → **Refresh Env DBs** → Run workflow → `develop` / `staging` / `both`.
+
+> Cron yalnızca default branch’teki workflow dosyasından çalışır. Hemen test için `workflow_dispatch` kullan.
+> Seed idempotent’tir (upsert); demo tur tarihleri her çalışmada ileri alınır. **Production’a seed yok.**
 
 ## Cloudflare (P1)
 
@@ -49,7 +63,7 @@ Repo → Settings → Secrets and variables → Actions → Neon Direct URL ekle
 
 ## Uptime (18.10)
 
-Better Stack / UptimeRobot: GET `https://api.turladur.com/api/v1/health` every 1–5 min, alert on non-200 or `data.status !== ok`.
+Better Stack / UptimeRobot: GET `https://api.turta.com/api/v1/health` every 1–5 min, alert on non-200 or `data.status !== ok`.
 
 ## Soft launch (18.18)
 

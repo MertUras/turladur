@@ -8,10 +8,10 @@
 
 ## Ekip Rol Dağılımı (öneri)
 
-| Kişi | Sorumluluk |
-|------|------------|
-| **Dev A** | Neon hesap/proje/branch, connection string'ler, migrate deploy |
-| **Dev B** | Vercel env, `feat/neon-setup` branch deploy, smoke test |
+| Kişi      | Sorumluluk                                                      |
+| --------- | --------------------------------------------------------------- |
+| **Dev A** | Neon hesap/proje/branch, connection string'ler, migrate deploy  |
+| **Dev B** | Vercel env, `feat/neon-setup` branch deploy, smoke test         |
 | **Dev C** | Yerel Docker Postgres, `.env.local`, yerel geliştirme doğrulama |
 
 Her adımın sonunda Slack/Discord'da kısa durum paylaşımı yapın.
@@ -39,7 +39,7 @@ services:
     container_name: tourtech-postgres
     restart: unless-stopped
     ports:
-      - "5433:5432"
+      - '5433:5432'
     environment:
       POSTGRES_USER: tourtech
       POSTGRES_PASSWORD: tourtech
@@ -84,6 +84,7 @@ npm run dev
 ```
 
 **Yerelde kalacaklar (Neon'a taşınmaz):**
+
 - PostgreSQL container (port 5433)
 - `.env.local` (git'e girmez)
 - `npm run dev` hot-reload geliştirme
@@ -96,7 +97,7 @@ npm run dev
 ### Neon Panel Checklist (manuel)
 
 - [ ] [neon.tech](https://neon.tech) → Sign up / Sign in (GitHub ile önerilir)
-- [ ] **New Project** → İsim: `tourtech` (veya `turladur`)
+- [ ] **New Project** → İsim: `tourtech` (veya `turta`)
 - [ ] Region: **EU (Frankfurt / eu-central-1)** — Türkiye'ye yakın latency
 - [ ] Postgres sürümü: **16** (Docker ile uyumlu)
 - [ ] Proje oluştu → Dashboard açık
@@ -105,15 +106,16 @@ npm run dev
 
 Neon'da **branching** kullanın:
 
-| Branch | Amaç | Vercel eşlemesi |
-|--------|------|-----------------|
-| `main` | Production DB | Vercel Production |
-| `develop` | Ortak geliştirme / ilk preview | Vercel Preview (`feat/neon-setup`) |
-| (otomatik) | PR preview branch'leri | İleride PR başına (Day 3+) |
+| Branch     | Amaç                           | Vercel eşlemesi                    |
+| ---------- | ------------------------------ | ---------------------------------- |
+| `main`     | Production DB                  | Vercel Production                  |
+| `develop`  | Ortak geliştirme / ilk preview | Vercel Preview (`feat/neon-setup`) |
+| (otomatik) | PR preview branch'leri         | İleride PR başına (Day 3+)         |
 
 **İlk sprint için yeterli:** `main` + `develop` branch oluşturun.
 
 Neon Console → **Branches** → **Create branch**:
+
 - Parent: `main`
 - Name: `develop`
 
@@ -188,12 +190,12 @@ npm run db:seed
 
 **Seed kullanıcıları** (`prisma/seed.ts`):
 
-| E-posta | Şifre | Rol |
-|---------|-------|-----|
-| `test.activity@tourtech.com` | `test123` | Experience Provider |
-| `test.operator@tourtech.com` | `test123` | Tour Operator |
-| `test.silver.operator@tourtech.com` | `test123` | Tour Operator |
-| `test.bronze.operator@tourtech.com` | `test123` | Tour Operator |
+| E-posta                             | Şifre     | Rol                 |
+| ----------------------------------- | --------- | ------------------- |
+| `test.activity@tourtech.com`        | `test123` | Experience Provider |
+| `test.operator@tourtech.com`        | `test123` | Tour Operator       |
+| `test.silver.operator@tourtech.com` | `test123` | Tour Operator       |
+| `test.bronze.operator@tourtech.com` | `test123` | Tour Operator       |
 
 > `prisma/seed.js` ayrı çalışır (`npm run seed`) — admin/otel verisi içerir ama Prisma resmi seed **değil**. Preview için `npm run db:seed` yeterli.
 
@@ -225,13 +227,13 @@ Vercel Dashboard → Proje → **Settings → Environment Variables**
 
 `feat/neon-setup` preview deploy'u için **Preview** scope'ta ekleyin:
 
-| Değişken | Değer | Not |
-|----------|-------|-----|
-| `DATABASE_URL` | Neon **pooled** (`develop`) | Runtime |
-| `NEXTAUTH_SECRET` | `openssl rand -base64 32` | Preview ve prod'da farklı olsun |
-| `NEXTAUTH_URL` | `https://<preview-url>.vercel.app` | İlk deploy sonrası güncellenir |
-| `NEXT_PUBLIC_APP_URL` | Aynı preview URL | E-posta linkleri için |
-| `JWT_SECRET` | Güçlü random string | Partner login |
+| Değişken              | Değer                              | Not                             |
+| --------------------- | ---------------------------------- | ------------------------------- |
+| `DATABASE_URL`        | Neon **pooled** (`develop`)        | Runtime                         |
+| `NEXTAUTH_SECRET`     | `openssl rand -base64 32`          | Preview ve prod'da farklı olsun |
+| `NEXTAUTH_URL`        | `https://<preview-url>.vercel.app` | İlk deploy sonrası güncellenir  |
+| `NEXT_PUBLIC_APP_URL` | Aynı preview URL                   | E-posta linkleri için           |
+| `JWT_SECRET`          | Güçlü random string                | Partner login                   |
 
 **Build command önerisi** (Settings → Build & Development):
 
@@ -318,14 +320,14 @@ JWT_SECRET = <üretilmiş secret>
 
 ## Sorun Giderme
 
-| Sorun | Çözüm |
-|-------|-------|
-| `P1001: Can't reach database` | Neon IP allow list kapalı mı? SSL `?sslmode=require` var mı? |
-| Migrate pooled URL ile fail | Direct URL kullanın |
-| Vercel build Prisma hatası | `postinstall` → `prisma generate` zaten var; `DATABASE_URL` preview'da tanımlı mı? |
-| Login çalışmıyor (preview) | `NEXTAUTH_URL` preview URL ile birebir eşleşmeli, redeploy |
-| Seed unique constraint hatası | DB'de kısmi seed var; `develop` branch'i reset veya yeni branch |
-| Yerel port çakışması | 5433 başka serviste mi? `lsof -i :5433` |
+| Sorun                         | Çözüm                                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------------- |
+| `P1001: Can't reach database` | Neon IP allow list kapalı mı? SSL `?sslmode=require` var mı?                       |
+| Migrate pooled URL ile fail   | Direct URL kullanın                                                                |
+| Vercel build Prisma hatası    | `postinstall` → `prisma generate` zaten var; `DATABASE_URL` preview'da tanımlı mı? |
+| Login çalışmıyor (preview)    | `NEXTAUTH_URL` preview URL ile birebir eşleşmeli, redeploy                         |
+| Seed unique constraint hatası | DB'de kısmi seed var; `develop` branch'i reset veya yeni branch                    |
+| Yerel port çakışması          | 5433 başka serviste mi? `lsof -i :5433`                                            |
 
 ---
 

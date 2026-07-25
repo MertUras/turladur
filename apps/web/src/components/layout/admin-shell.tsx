@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 const NAV = [
   { href: '/admin/dashboard', label: 'Özet' },
   { href: '/admin/statistics', label: 'İstatistik' },
+  { href: '/admin/reservations', label: 'Rezervasyonlar' },
   { href: '/admin/users', label: 'Kullanıcılar' },
   { href: '/admin/agencies', label: 'Partner / Acente' },
   { href: '/admin/tours', label: 'Onay' },

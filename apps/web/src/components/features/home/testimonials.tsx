@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import Marquee from 'react-fast-marquee';
 import { MessageCircle, ArrowRight } from 'lucide-react';
 
 const testimonials = [
@@ -97,12 +98,19 @@ export function Testimonials() {
           </p>
         </div>
 
-        <div className="-mx-4 overflow-x-auto pb-4 md:-mx-6 lg:-mx-8">
-          <div className="flex w-max gap-4 px-4 md:px-6 lg:px-8">
-            {[...testimonials, ...testimonials].map((testimonial, idx) => (
+        <div className="-mx-4 md:-mx-6 lg:-mx-8">
+          <Marquee
+            gradient={true}
+            gradientColor={'rgb(248, 250, 252)'}
+            gradientWidth={100}
+            speed={25}
+            pauseOnHover={true}
+            className="py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          >
+            {testimonials.map((testimonial) => (
               <div
-                key={`${testimonial.id}-${idx}`}
-                className="w-80 flex-shrink-0 sm:w-[350px]"
+                key={testimonial.id}
+                className="mx-4 w-80 flex-shrink-0 sm:w-[350px]"
               >
                 <div className="flex h-full flex-col rounded-xl border border-neutral-200/80 bg-white p-6 shadow-sm transition-shadow duration-300 hover:shadow-md">
                   <p className="mb-6 flex-grow text-sm font-normal italic leading-relaxed text-neutral-700 before:mr-1 before:font-serif before:text-xl before:text-neutral-400 before:content-['\201C'] after:ml-1 after:font-serif after:text-xl after:text-neutral-400 after:content-['\201D']">
@@ -131,7 +139,7 @@ export function Testimonials() {
                 </div>
               </div>
             ))}
-          </div>
+          </Marquee>
         </div>
 
         <div className="mt-16 text-center md:mt-20">

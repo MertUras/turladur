@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { SubUser as SharedSubUser } from '@turladur/shared-types';
+import type { SubUser as SharedSubUser } from '@turta/shared-types';
 import * as bcrypt from 'bcrypt';
 import { Prisma, UserRole } from '../../../generated/prisma';
 

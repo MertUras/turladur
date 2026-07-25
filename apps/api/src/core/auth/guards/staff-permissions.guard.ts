@@ -5,7 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { Role } from '@turladur/shared-constants';
+import { Role } from '@turta/shared-constants';
 
 import { PrismaService } from '../../database/prisma.service';
 import { STAFF_PERMISSIONS_KEY } from '../decorators/require-staff-permissions.decorator';

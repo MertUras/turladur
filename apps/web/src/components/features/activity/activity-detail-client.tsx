@@ -71,6 +71,9 @@ interface RelatedActivity {
   reviewCount: number;
   price: number;
   category: string;
+  experienceOperator?: {
+    membershipTier?: string | null;
+  } | null;
 }
 
 export default function ActivityDetailClient() {

@@ -38,6 +38,19 @@ export enum TourStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
+/** Partner cancels an entire tour (delists) — shown in UI + emails. */
+export enum TourCancelReason {
+  OPERATIONAL = 'OPERATIONAL',
+  LOW_PARTICIPANTS = 'LOW_PARTICIPANTS',
+  WEATHER = 'WEATHER',
+}
+
+export const TOUR_CANCEL_REASON_LABELS: Record<TourCancelReason, string> = {
+  [TourCancelReason.OPERATIONAL]: 'Operasyonel nedenler',
+  [TourCancelReason.LOW_PARTICIPANTS]: 'Yetersiz katılımcı sayısı',
+  [TourCancelReason.WEATHER]: 'Hava koşulları',
+};
+
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_PAGE_LIMIT = 20;
 export const MAX_PAGE_LIMIT = 100;

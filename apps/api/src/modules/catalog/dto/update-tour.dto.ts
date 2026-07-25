@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { TourCategory, TourStatus } from '@turladur/shared-constants';
+import { TourCategory, TourStatus } from '@turta/shared-constants';
 import {
   IsArray,
   IsEnum,

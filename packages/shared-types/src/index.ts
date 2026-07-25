@@ -224,8 +224,8 @@ export interface BookingGuest {
   lastName: string;
   birthDate?: string;
   identityNumber: string;
-  phone: string;
-  email: string;
+  phone?: string;
+  email?: string;
   /** Required for primary buyer; optional for other party members. */
   address?: string;
 }
@@ -242,6 +242,7 @@ export interface Reservation {
   activityDateId: string | null;
   partnerId: string;
   status: BookingStatus;
+  paymentStatus?: string;
   adults: number;
   children: number;
   totalAmount: string;
@@ -249,6 +250,9 @@ export interface Reservation {
   contactEmail: string;
   contactPhone: string | null;
   guests: BookingGuest[];
+  metadata?: Record<string, unknown> | null;
+  startDate?: string | null;
+  endDate?: string | null;
   createdAt: string;
   updatedAt: string;
 }

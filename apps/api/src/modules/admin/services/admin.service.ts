@@ -401,4 +401,83 @@ export class AdminService {
   ) {
     return this.contentService.softDeletePost(postId, user);
   }
+
+  async listReservations() {
+    const rows = await this.prisma.reservation.findMany({
+      where: { deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+
+    const tourIds = [
+      ...new Set(rows.map((row) => row.tourId).filter(Boolean)),
+    ] as string[];
+    const experienceIds = [
+      ...new Set(rows.map((row) => row.experienceId).filter(Boolean)),
+    ] as string[];
+    const partnerIds = [...new Set(rows.map((row) => row.partnerId))];
+
+    const [tours, experiences, partners] = await Promise.all([
+      tourIds.length
+        ? this.prisma.tour.findMany({
+            where: { id: { in: tourIds } },
+            select: { id: true, title: true },
+          })
+        : [],
+      experienceIds.length
+        ? this.prisma.experience.findMany({
+            where: { id: { in: experienceIds } },
+            select: { id: true, title: true },
+          })
+        : [],
+      partnerIds.length
+        ? this.prisma.partner.findMany({
+            where: { id: { in: partnerIds } },
+            select: { id: true, companyName: true },
+          })
+        : [],
+    ]);
+
+    const tourTitleById = new Map(tours.map((t) => [t.id, t.title]));
+    const experienceTitleById = new Map(
+      experiences.map((e) => [e.id, e.title]),
+    );
+    const partnerNameById = new Map(partners.map((p) => [p.id, p.companyName]));
+
+    return {
+      success: true,
+      data: rows.map((row) => {
+        const guests = Array.isArray(row.guests)
+          ? (row.guests as Array<{ firstName?: string; lastName?: string }>)
+          : [];
+        const primary = guests[0];
+        const customerName = primary
+          ? `${primary.firstName ?? ''} ${primary.lastName ?? ''}`.trim()
+          : row.contactEmail;
+
+        return {
+          id: row.id,
+          bookingNumber: row.bookingNumber,
+          customerName,
+          contactEmail: row.contactEmail,
+          tourTitle: row.tourId
+            ? (tourTitleById.get(row.tourId) ?? null)
+            : row.experienceId
+              ? (experienceTitleById.get(row.experienceId) ?? null)
+              : null,
+          partnerName: partnerNameById.get(row.partnerId) ?? null,
+          partnerId: row.partnerId,
+          status: row.status,
+          paymentStatus: row.paymentStatus,
+          guestCount: row.adults + row.children,
+          totalAmount: row.totalAmount.toString(),
+          currency: row.currency,
+          startDate: row.startDate?.toISOString() ?? null,
+          endDate: row.endDate?.toISOString() ?? null,
+          createdAt: row.createdAt.toISOString(),
+        };
+      }),
+      error: null,
+    };
+  }
 }

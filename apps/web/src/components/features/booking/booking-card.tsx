@@ -36,9 +36,16 @@ export type BookingCardModel = {
 interface BookingCardProps {
   booking: BookingCardModel;
   onViewDetails: (booking: BookingCardModel) => void;
+  onDownloadVoucher?: (booking: BookingCardModel) => void;
+  voucherBusy?: boolean;
 }
 
-export function BookingCard({ booking, onViewDetails }: BookingCardProps) {
+export function BookingCard({
+  booking,
+  onViewDetails,
+  onDownloadVoucher,
+  voucherBusy,
+}: BookingCardProps) {
   const formatDate = (date?: Date | string | null) => {
     if (!date) return '-';
     try {
@@ -218,7 +225,18 @@ export function BookingCard({ booking, onViewDetails }: BookingCardProps) {
           </div>
         </div>
 
-        <div className="mt-5 pt-4 border-t border-neutral-100 flex justify-end">
+        <div className="mt-5 pt-4 border-t border-neutral-100 flex flex-wrap justify-end gap-2">
+          {onDownloadVoucher &&
+          (booking.status === 'CONFIRMED' || booking.status === 'COMPLETED') ? (
+            <button
+              type="button"
+              disabled={voucherBusy}
+              onClick={() => onDownloadVoucher(booking)}
+              className="inline-flex items-center justify-center px-4 py-2 bg-white hover:bg-neutral-50 text-neutral-800 border border-neutral-300 text-sm font-semibold rounded-lg transition-colors shadow-sm disabled:opacity-60"
+            >
+              Voucher indir
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => onViewDetails(booking)}

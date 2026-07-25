@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 
+import { BookingCancelledEvent } from '../../booking/events/booking-cancelled.event';
 import { BookingCompletedEvent } from '../../booking/events/booking-completed.event';
 import { PaymentCompletedEvent } from '../../payment/events/payment-completed.event';
+import { PaymentRefundedEvent } from '../../payment/events/payment-refunded.event';
 import { ReviewCreatedEvent } from '../../review/events/review-created.event';
 import { NotificationService } from '../services/notification.service';
 
@@ -20,6 +22,28 @@ export class NotificationEventsListener {
       await this.notifications.notifyBookingConfirmed(event.reservationId);
     } catch (err) {
       this.logger.warn(`payment.completed notify failed: ${String(err)}`);
+    }
+  }
+
+  @OnEvent('payment.refunded')
+  async onPaymentRefunded(event: PaymentRefundedEvent) {
+    try {
+      await this.notifications.notifyPaymentRefunded({
+        reservationId: event.reservationId,
+        amount: event.amount,
+        currency: event.currency,
+      });
+    } catch (err) {
+      this.logger.warn(`payment.refunded notify failed: ${String(err)}`);
+    }
+  }
+
+  @OnEvent('booking.cancelled')
+  async onBookingCancelled(event: BookingCancelledEvent) {
+    try {
+      await this.notifications.notifyBookingCancelled(event);
+    } catch (err) {
+      this.logger.warn(`booking.cancelled notify failed: ${String(err)}`);
     }
   }
 

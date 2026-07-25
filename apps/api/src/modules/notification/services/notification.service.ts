@@ -1,18 +1,48 @@
-import { Injectable } from '@nestjs/common';
-import type { AppNotification } from '@turladur/shared-types';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import type { AppNotification, BookingGuest } from '@turta/shared-types';
 import { Prisma } from '../../../generated/prisma';
 
 import { PrismaService } from '../../../core/database/prisma.service';
+import {
+  renderVoucherHtml,
+  resolveVoucherBrandLogos,
+} from '../../../core/mail/voucher-template';
 import { EmailQueueService } from '../../../core/queue/email-queue.service';
+import { NotificationGateway } from '../../../core/realtime/notification.gateway';
+import { BookingCancelledEvent } from '../../booking/events/booking-cancelled.event';
 import { BookingCompletedEvent } from '../../booking/events/booking-completed.event';
 import { ReviewCreatedEvent } from '../../review/events/review-created.event';
 
+type ReservationMeta = {
+  billing?: { fullName?: string };
+  pickup?: { location?: string; city?: string; time?: string };
+  seatNumbers?: string | string[] | null;
+};
+
+const DEFAULT_BRAND_URL = 'https://turladur-zjyf.vercel.app';
+
 @Injectable()
 export class NotificationService {
+  private readonly brandBaseUrl: string;
+  private readonly logger = new Logger(NotificationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailQueue: EmailQueueService,
-  ) {}
+    private readonly config: ConfigService,
+    private readonly notificationGateway: NotificationGateway,
+  ) {
+    this.brandBaseUrl = (
+      config.get<string>('EMAIL_BRAND_URL') ??
+      config.get<string>('FRONTEND_URL') ??
+      config.get<string>('PUBLIC_WEB_URL') ??
+      DEFAULT_BRAND_URL
+    )
+      .split(',')[0]
+      .trim()
+      .replace(/\/$/, '');
+  }
 
   async createInApp(input: {
     userId: string;
@@ -30,7 +60,18 @@ export class NotificationService {
         data: (input.data ?? Prisma.JsonNull) as Prisma.InputJsonValue,
       },
     });
-    return this.toShared(row);
+    const shared = this.toShared(row);
+
+    // Realtime is best-effort — never fail the write path
+    try {
+      this.notificationGateway.emitNotificationCreated(input.userId, shared);
+    } catch (err) {
+      this.logger.warn(
+        `WS emit failed for notification ${shared.id}: ${String(err)}`,
+      );
+    }
+
+    return shared;
   }
 
   async listForUser(userId: string, unreadOnly = false) {
@@ -94,28 +135,136 @@ export class NotificationService {
     });
     if (!reservation) return;
 
-    const tour = reservation.tourId
-      ? await this.prisma.tour.findFirst({
-          where: { id: reservation.tourId },
-          select: { title: true },
-        })
+    const [tour, experience, partner] = await Promise.all([
+      reservation.tourId
+        ? this.prisma.tour.findFirst({
+            where: { id: reservation.tourId },
+            select: { title: true },
+          })
+        : null,
+      reservation.experienceId
+        ? this.prisma.experience.findFirst({
+            where: { id: reservation.experienceId },
+            select: { title: true },
+          })
+        : null,
+      this.prisma.partner.findFirst({
+        where: { id: reservation.partnerId },
+        select: {
+          companyName: true,
+          contactPhone: true,
+          taxNumber: true,
+          logo: true,
+        },
+      }),
+    ]);
+
+    const tourName = tour?.title ?? experience?.title ?? 'Rezervasyonunuz';
+    const guests = (reservation.guests as unknown as BookingGuest[]) ?? [];
+    const primary = guests[0];
+    const meta = (reservation.metadata ?? {}) as ReservationMeta;
+    const guestName =
+      meta.billing?.fullName?.trim() ||
+      (primary ? `${primary.firstName} ${primary.lastName}`.trim() : 'Misafir');
+
+    const tourDateLabel = this.formatTourDateRange(
+      reservation.startDate,
+      reservation.endDate,
+    );
+    const totalAmountLabel = new Intl.NumberFormat('tr-TR', {
+      style: 'currency',
+      currency: reservation.currency || 'TRY',
+    }).format(Number(reservation.totalAmount.toString()));
+
+    const pickupLocation = meta.pickup?.location
+      ? [meta.pickup.city, meta.pickup.location].filter(Boolean).join(' — ')
       : null;
+    const seatLabel = this.formatSeatLabel(meta.seatNumbers);
+
+    const voucherHtml = renderVoucherHtml({
+      bookingNumber: reservation.bookingNumber,
+      issuedAt: reservation.createdAt,
+      tourTitle: tourName,
+      tourStartDate: reservation.startDate,
+      tourEndDate: reservation.endDate,
+      partnerName: partner?.companyName ?? 'turta Partner',
+      partnerPhone: partner?.contactPhone ?? null,
+      partnerTaxNumber: partner?.taxNumber ?? null,
+      partnerLogoUrl: partner?.logo ?? null,
+      ...resolveVoucherBrandLogos(this.brandBaseUrl),
+      guests: guests.map((guest) => ({
+        firstName: guest.firstName,
+        lastName: guest.lastName,
+        identityNumber: guest.identityNumber,
+      })),
+      pickupLocation,
+      pickupTime: meta.pickup?.time ?? null,
+      seatLabel,
+      payerName: guestName,
+      totalAmount: reservation.totalAmount.toString(),
+      currency: reservation.currency,
+      paymentStatusLabel: 'ÖDENDİ (Tahsil Edildi)',
+    });
 
     await this.createInApp({
       userId: reservation.userId,
       type: 'BOOKING_CONFIRMED',
       title: 'Rezervasyon onaylandı',
-      body: `${tour?.title ?? 'Rezervasyonunuz'} ödeme ile onaylandı.`,
+      body: `${tourName} ödeme ile onaylandı. Kod: ${reservation.bookingNumber}`,
       data: {
         reservationId: reservation.id,
         bookingNumber: reservation.bookingNumber,
       },
     });
 
+    // Notify partner users (in-app)
+    const partnerUsers = await this.findPartnerUserIds(reservation.partnerId);
+    for (const userId of partnerUsers) {
+      await this.createInApp({
+        userId,
+        type: 'BOOKING_CONFIRMED',
+        title: 'Yeni rezervasyon',
+        body: `${tourName} — ${reservation.bookingNumber}`,
+        data: {
+          reservationId: reservation.id,
+          bookingNumber: reservation.bookingNumber,
+        },
+      });
+    }
+
     await this.enqueueEmail(reservation.contactEmail, 'booking-confirmed', {
-      tourName: tour?.title ?? '',
+      tourName,
       bookingId: reservation.bookingNumber,
+      guestName,
+      partnerName: partner?.companyName ?? 'Partner',
+      tourDateLabel,
+      totalAmountLabel,
+      voucherHtml,
     });
+  }
+
+  private formatTourDateRange(start: Date | null, end: Date | null): string {
+    const fmt = (value: Date) =>
+      new Intl.DateTimeFormat('tr-TR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).format(value);
+    if (!start && !end) return '—';
+    if (start && end && start.getTime() !== end.getTime()) {
+      return `${fmt(start)} - ${fmt(end)}`;
+    }
+    return fmt(start ?? end!);
+  }
+
+  private formatSeatLabel(value: string | string[] | null | undefined): string {
+    if (value == null) return 'Partner tarafından atanacak';
+    if (Array.isArray(value)) {
+      const joined = value.map(String).filter(Boolean).join(', ');
+      return joined || 'Partner tarafından atanacak';
+    }
+    const trimmed = String(value).trim();
+    return trimmed || 'Partner tarafından atanacak';
   }
 
   async notifyReviewReceived(event: ReviewCreatedEvent) {
@@ -179,6 +328,109 @@ export class NotificationService {
         reservationId: event.reservationId,
         tourId: event.tourId,
       },
+    });
+  }
+
+  async notifyBookingCancelled(event: BookingCancelledEvent) {
+    const reservation = await this.prisma.reservation.findFirst({
+      where: { id: event.reservationId, deletedAt: null },
+    });
+    if (!reservation) return;
+
+    const [tour, experience] = await Promise.all([
+      reservation.tourId
+        ? this.prisma.tour.findFirst({
+            where: { id: reservation.tourId },
+            select: { title: true },
+          })
+        : null,
+      reservation.experienceId
+        ? this.prisma.experience.findFirst({
+            where: { id: reservation.experienceId },
+            select: { title: true },
+          })
+        : null,
+    ]);
+
+    const tourName = tour?.title ?? experience?.title ?? 'Rezervasyonunuz';
+    const guests =
+      (reservation.guests as unknown as Array<{
+        firstName?: string;
+        lastName?: string;
+      }>) ?? [];
+    const primary = guests[0];
+    const guestName = primary
+      ? `${primary.firstName ?? ''} ${primary.lastName ?? ''}`.trim()
+      : 'Misafir';
+
+    const reasonLabel =
+      event.reasonLabel ||
+      (event.scope === 'TOUR' || event.scope === 'TOUR_DATE'
+        ? 'Tur firması tarafından tur iptal edildi'
+        : event.scope === 'PAYMENT'
+          ? 'Ödeme iptali / iade'
+          : 'Rezervasyon iptali');
+
+    const datePart = event.cancelledDateLabel
+      ? ` Tarih: ${event.cancelledDateLabel}.`
+      : '';
+
+    await this.createInApp({
+      userId: reservation.userId,
+      type: 'BOOKING_CANCELLED',
+      title:
+        event.scope === 'TOUR' || event.scope === 'TOUR_DATE'
+          ? 'Tur iptal edildi'
+          : 'Rezervasyon iptal edildi',
+      body: `${tourName} — ${reservation.bookingNumber}.${datePart} ${reasonLabel}`,
+      data: {
+        reservationId: reservation.id,
+        bookingNumber: reservation.bookingNumber,
+        scope: event.scope,
+        reasonCode: event.reasonCode,
+        cancelledDateLabel: event.cancelledDateLabel,
+      },
+    });
+
+    await this.enqueueEmail(reservation.contactEmail, 'booking-cancelled', {
+      bookingId: reservation.bookingNumber,
+      tourName,
+      guestName,
+      scope: event.scope,
+      reasonLabel,
+      cancelledDateLabel: event.cancelledDateLabel,
+    });
+  }
+
+  async notifyPaymentRefunded(input: {
+    reservationId: string;
+    amount: string;
+    currency?: string;
+  }) {
+    const reservation = await this.prisma.reservation.findFirst({
+      where: { id: input.reservationId, deletedAt: null },
+    });
+    if (!reservation) return;
+
+    const amountLabel = new Intl.NumberFormat('tr-TR', {
+      style: 'currency',
+      currency: input.currency || reservation.currency || 'TRY',
+    }).format(Number(input.amount));
+
+    await this.createInApp({
+      userId: reservation.userId,
+      type: 'PAYMENT_REFUNDED',
+      title: 'Ödeme iadesi',
+      body: `${reservation.bookingNumber} için ${amountLabel} iade`,
+      data: {
+        reservationId: reservation.id,
+        bookingNumber: reservation.bookingNumber,
+      },
+    });
+
+    await this.enqueueEmail(reservation.contactEmail, 'payment-refunded', {
+      bookingId: reservation.bookingNumber,
+      amountLabel,
     });
   }
 

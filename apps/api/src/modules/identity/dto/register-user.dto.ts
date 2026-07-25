@@ -41,4 +41,14 @@ export class RegisterUserDto {
   @IsString()
   @MaxLength(20)
   phone?: string;
+
+  @ApiProperty({
+    example: '123456',
+    description: '6-digit email OTP (purpose=REGISTER)',
+  })
+  @IsString()
+  @MinLength(6)
+  @MaxLength(6)
+  @Matches(/^\d{6}$/)
+  otpCode!: string;
 }

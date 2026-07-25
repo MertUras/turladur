@@ -1,4 +1,4 @@
-import type { User } from '@turladur/shared-types';
+import type { User } from '@turta/shared-types';
 
 import { apiRequest } from './api-client';
 
@@ -29,8 +29,55 @@ export async function registerUser(input: {
   password: string;
   firstName?: string;
   lastName?: string;
+  otpCode: string;
 }) {
   return apiRequest<AuthTokens>('/identity/register', {
+    method: 'POST',
+    body: input,
+  });
+}
+
+export type OtpPurpose = 'CHECKOUT' | 'REGISTER' | 'PASSWORD_RESET';
+
+export type SendOtpResult = {
+  email: string;
+  purpose: OtpPurpose;
+  expiresInSeconds: number;
+  resendCooldownSeconds: number;
+  debugCode?: string;
+};
+
+export async function sendEmailOtp(input: {
+  email: string;
+  purpose: OtpPurpose;
+  firstName?: string;
+}) {
+  return apiRequest<SendOtpResult>('/identity/otp/send', {
+    method: 'POST',
+    body: input,
+  });
+}
+
+export async function verifyEmailOtp(input: {
+  email: string;
+  purpose: OtpPurpose;
+  code: string;
+}) {
+  return apiRequest<{ verified: boolean; email: string; purpose: OtpPurpose }>(
+    '/identity/otp/verify',
+    {
+      method: 'POST',
+      body: input,
+    },
+  );
+}
+
+export async function resetPasswordWithOtp(input: {
+  email: string;
+  code: string;
+  newPassword: string;
+}) {
+  return apiRequest<{ reset: boolean }>('/identity/password/reset', {
     method: 'POST',
     body: input,
   });

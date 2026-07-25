@@ -1,4 +1,4 @@
-import type { Category, Post } from '@turladur/shared-types';
+import type { Category, Post } from '@turta/shared-types';
 
 import { apiRequest, apiRequestWithMeta } from './api-client';
 

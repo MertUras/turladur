@@ -9,14 +9,14 @@
       "executor": "nx:run-commands",
       "outputs": ["{projectRoot}/dist"],
       "options": {
-        "command": "pnpm --filter @turladur/shared-validators build",
+        "command": "pnpm --filter @turta/shared-validators build",
         "cwd": "{workspaceRoot}"
       }
     },
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --filter @turladur/shared-validators lint",
+        "command": "pnpm --filter @turta/shared-validators lint",
         "cwd": "{workspaceRoot}"
       }
     }

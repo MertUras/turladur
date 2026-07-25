@@ -7,15 +7,15 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { JwtService } from '@nestjs/jwt';
-import { Role } from '@turladur/shared-constants';
-import type { User as SharedUser } from '@turladur/shared-types';
+import { Role } from '@turta/shared-constants';
+import type { User as SharedUser } from '@turta/shared-types';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 
 import { JwtPayload } from '../../../core/auth/types/auth.types';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { EmailQueueService } from '../../../core/queue/email-queue.service';
-import { UserRole, Prisma } from '../../../generated/prisma';
+import { UserRole, Prisma, OtpPurpose } from '../../../generated/prisma';
 import { PartnerRegisteredEvent } from '../events/partner-registered.event';
 import { PartnerVerifiedEvent } from '../events/partner-verified.event';
 import { UserRegisteredEvent } from '../events/user-registered.event';
@@ -26,6 +26,7 @@ import { RegisterUserDto } from '../dto/register-user.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { isValidTckn } from '../../../shared/utils/tckn';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
+import { OtpService } from './otp.service';
 
 const BCRYPT_ROUNDS = 12;
 
@@ -37,10 +38,16 @@ export class IdentityService {
     private readonly config: ConfigService,
     private readonly eventEmitter: EventEmitter2,
     private readonly emailQueue: EmailQueueService,
+    private readonly otpService: OtpService,
   ) {}
 
   async register(dto: RegisterUserDto) {
     await this.ensureEmailAvailable(dto.email);
+    await this.otpService.verifyAndConsume(
+      dto.email,
+      OtpPurpose.REGISTER,
+      dto.otpCode,
+    );
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     const user = await this.prisma.user.create({
@@ -116,6 +123,41 @@ export class IdentityService {
         ...tokens,
         user: this.toSharedUser(user),
       },
+      error: null,
+    };
+  }
+
+  async resetPassword(dto: {
+    email: string;
+    code: string;
+    newPassword: string;
+  }) {
+    const email = dto.email.toLowerCase().trim();
+    await this.otpService.verifyAndConsume(
+      email,
+      OtpPurpose.PASSWORD_RESET,
+      dto.code,
+    );
+
+    const user = await this.prisma.user.findFirst({
+      where: { email, deletedAt: null, isActive: true },
+    });
+    if (!user) {
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'Kullanıcı bulunamadı',
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_ROUNDS);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+
+    return {
+      success: true,
+      data: { reset: true },
       error: null,
     };
   }

@@ -17,15 +17,17 @@ import {
   MapPin,
   Users,
 } from 'lucide-react';
-import type { Experience, Tour } from '@turladur/shared-types';
+import type { Experience, Tour } from '@turta/shared-types';
 
 import { BookingSteps } from '@/components/booking/booking-steps';
+import { EmailOtpPanel } from '@/components/features/auth/email-otp-panel';
 import {
   PhoneInput,
   formatFullPhone,
   parsePhoneValue,
 } from '@/components/ui/phone-input';
 import { SHARED_ADULT_KEY, SHARED_CHILD_KEY } from '@/lib/booking-utils';
+import { BANK_TRANSFER_DETAILS } from '@/lib/constants/bank-transfer';
 import { getPhoneValidationError, isValidFullPhone } from '@/lib/phone-rules';
 import { isValidTckn } from '@/lib/tckn';
 import { ApiError } from '@/services/api-client';
@@ -33,16 +35,68 @@ import { getExperienceById, getExperienceDates } from '@/services/activity';
 import {
   getTourById,
   getTourDates,
+  getTourPickupPoints,
   type TourDateRow,
+  type TourPickupPoint,
 } from '@/services/catalog';
 import { checkoutPayment, createReservation } from '@/services/booking';
 import { guestBootstrap } from '@/services/identity';
 import { useAuth } from '@/providers/auth-provider';
-import type { ActivityDate } from '@turladur/shared-types';
+import type { ActivityDate } from '@turta/shared-types';
+
+type CardBrand = 'visa' | 'mastercard' | 'amex' | 'unknown';
+
+function digitsOnly(value: string): string {
+  return value.replace(/\D/g, '');
+}
+
+function detectCardBrand(cardNumber: string): CardBrand {
+  const digits = digitsOnly(cardNumber);
+  if (/^4/.test(digits)) return 'visa';
+  if (/^3[47]/.test(digits)) return 'amex';
+  if (/^5[1-5]/.test(digits) || /^2(2[2-9]|[3-6]\d|7[01])/.test(digits)) {
+    return 'mastercard';
+  }
+  return 'unknown';
+}
+
+function formatCardNumberInput(value: string, brand: CardBrand): string {
+  const maxLen = brand === 'amex' ? 15 : 16;
+  const digits = digitsOnly(value).slice(0, maxLen);
+  if (brand === 'amex') {
+    // 4-6-5 grouping
+    const parts = [
+      digits.slice(0, 4),
+      digits.slice(4, 10),
+      digits.slice(10, 15),
+    ].filter(Boolean);
+    return parts.join(' ');
+  }
+  return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+}
+
+function formatExpiryInput(value: string): string {
+  const digits = digitsOnly(value).slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
+function formatCvcInput(value: string, brand: CardBrand): string {
+  const maxLen = brand === 'amex' ? 4 : 3;
+  return digitsOnly(value).slice(0, maxLen);
+}
+
+const CARD_BRAND_LABEL: Record<CardBrand, string> = {
+  visa: 'Visa',
+  mastercard: 'Mastercard',
+  amex: 'Amex',
+  unknown: '',
+};
 
 type GuestForm = {
   firstName: string;
   lastName: string;
+  birthDate: string;
   identityNumber: string;
   phoneDial: string;
   phoneLocal: string;
@@ -71,6 +125,7 @@ function emptyGuest(role: GuestForm['role']): GuestForm {
   return {
     firstName: '',
     lastName: '',
+    birthDate: '',
     identityNumber: '',
     phoneDial: '+90',
     phoneLocal: '',
@@ -140,12 +195,15 @@ export function CheckoutClient() {
   const [activityDate, setActivityDate] = useState<ActivityDate | null>(null);
 
   const [guests, setGuests] = useState<GuestForm[]>([]);
+  const [billingFullName, setBillingFullName] = useState('');
   const [billingLine1, setBillingLine1] = useState('');
   const [billingCity, setBillingCity] = useState('');
   const [billingCountry, setBillingCountry] = useState('Türkiye');
   const [taxId, setTaxId] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
+  const [pickupPoints, setPickupPoints] = useState<TourPickupPoint[]>([]);
+  const [pickupPointId, setPickupPointId] = useState('');
 
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>('bank_transfer');
@@ -153,6 +211,18 @@ export function CheckoutClient() {
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvc, setCardCvc] = useState('');
   const [cardName, setCardName] = useState('');
+  const [threeDsHtml, setThreeDsHtml] = useState<string | null>(null);
+  const [emailOtpVerified, setEmailOtpVerified] = useState(false);
+  const [bankTransferAck, setBankTransferAck] = useState(false);
+
+  const cardBrand = useMemo(() => detectCardBrand(cardNumber), [cardNumber]);
+  const cardBrandLabel = CARD_BRAND_LABEL[cardBrand];
+  const expectedCvcLength = cardBrand === 'amex' ? 4 : 3;
+  const primaryEmail = guests[0]?.email?.trim() ?? '';
+
+  useEffect(() => {
+    setEmailOtpVerified(false);
+  }, [primaryEmail]);
 
   const isTour = type === 'tour';
   const isActivity = type === 'activity';
@@ -172,12 +242,16 @@ export function CheckoutClient() {
       setError(null);
       try {
         if (isTour) {
-          const [t, dates] = await Promise.all([
+          const [t, dates, pickups] = await Promise.all([
             getTourById(itemId),
             getTourDates(itemId),
+            getTourPickupPoints(itemId).catch(() => [] as TourPickupPoint[]),
           ]);
           setTour(t);
           setTourDate(dates.find((d) => d.id === dateId) ?? dates[0] ?? null);
+          const activePickups = pickups.filter((p) => p.isActive !== false);
+          setPickupPoints(activePickups);
+          setPickupPointId(activePickups[0]?.id ?? '');
         } else {
           const [e, dates] = await Promise.all([
             getExperienceById(itemId),
@@ -187,6 +261,8 @@ export function CheckoutClient() {
           setActivityDate(
             dates.find((d) => d.id === dateId) ?? dates[0] ?? null,
           );
+          setPickupPoints([]);
+          setPickupPointId('');
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Önizleme yüklenemedi');
@@ -208,6 +284,9 @@ export function CheckoutClient() {
       primary.phoneLocal = parsedPhone.localNumber;
       primary.identityNumber = user.identityNumber ?? '';
       primary.address = user.address ?? '';
+      setBillingFullName(
+        `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
+      );
       setBillingLine1(user.billingLine1 ?? user.address ?? '');
       setBillingCity(user.billingCity ?? '');
       setBillingCountry(user.billingCountry ?? 'Türkiye');
@@ -293,23 +372,30 @@ export function CheckoutClient() {
         return `${label}: geçerli bir TC kimlik no girin`;
       }
 
-      if (!isValidFullPhone(guest.phoneDial, guest.phoneLocal)) {
-        return (
-          getPhoneValidationError(guest.phoneLocal, guest.phoneDial) ??
-          `${label}: geçerli telefon numarası zorunlu`
-        );
-      }
-
-      if (!guest.email.trim() || !guest.email.includes('@')) {
-        return `${label}: geçerli e-posta zorunlu`;
-      }
-
-      // Adres yalnızca satın alan (birincil) kullanıcıda zorunlu
       if (guest.role === 'primary') {
+        if (!isValidFullPhone(guest.phoneDial, guest.phoneLocal)) {
+          return (
+            getPhoneValidationError(guest.phoneLocal, guest.phoneDial) ??
+            `${label}: geçerli telefon numarası zorunlu`
+          );
+        }
+
+        if (!guest.email.trim() || !guest.email.includes('@')) {
+          return `${label}: geçerli e-posta zorunlu`;
+        }
+
         if (!guest.address.trim() || guest.address.trim().length < 5) {
           return `${label}: adres zorunlu (en az 5 karakter)`;
         }
       }
+    }
+
+    if (isTour && pickupPoints.length > 0 && !pickupPointId) {
+      return 'Kalkış noktası seçimi zorunlu';
+    }
+
+    if (!billingFullName.trim() || billingFullName.trim().length < 2) {
+      return 'Fatura / ödeme sahibi ad soyad zorunlu';
     }
 
     if (!billingLine1.trim() || billingLine1.trim().length < 5) {
@@ -336,11 +422,13 @@ export function CheckoutClient() {
   };
 
   const canProceedPayment =
-    paymentMethod === 'bank_transfer' ||
-    (cardNumber.replace(/\s/g, '').length >= 15 &&
-      cardExpiry.trim().length >= 4 &&
-      cardCvc.trim().length >= 3 &&
-      cardName.trim().length > 0);
+    emailOtpVerified &&
+    (paymentMethod === 'bank_transfer'
+      ? bankTransferAck
+      : digitsOnly(cardNumber).length >= 15 &&
+        digitsOnly(cardExpiry).length === 4 &&
+        digitsOnly(cardCvc).length >= expectedCvcLength &&
+        cardName.trim().length > 0);
 
   const handleSubmit = async () => {
     const validationError = validateGuests();
@@ -384,19 +472,28 @@ export function CheckoutClient() {
       const reservation = await createReservation(
         {
           ...(isTour ? { tourDateId: dateId } : { activityDateId: dateId }),
+          ...(isTour && pickupPointId ? { pickupPointId } : {}),
           adults: party.adults,
           children: party.children,
           contactEmail: primary.email,
           contactPhone: primaryPhone,
-          guests: guests.map((guest) => ({
+          guests: guests.map((guest, index) => ({
             firstName: guest.firstName.trim(),
             lastName: guest.lastName.trim(),
+            birthDate: guest.birthDate.trim() || undefined,
             identityNumber: guest.identityNumber.replace(/\D/g, ''),
-            phone: formatFullPhone(guest.phoneDial, guest.phoneLocal),
-            email: guest.email.trim(),
+            ...(index === 0 || guest.phoneLocal.trim()
+              ? {
+                  phone: formatFullPhone(guest.phoneDial, guest.phoneLocal),
+                }
+              : {}),
+            ...(index === 0 || guest.email.trim()
+              ? { email: guest.email.trim() }
+              : {}),
             address: guest.address.trim() || undefined,
           })),
           billing: {
+            fullName: billingFullName.trim(),
             line1: billingLine1.trim(),
             city: billingCity.trim(),
             country: billingCountry.trim(),
@@ -413,21 +510,40 @@ export function CheckoutClient() {
         const [month, year] = cardExpiry.includes('/')
           ? cardExpiry.split('/')
           : [cardExpiry.slice(0, 2), cardExpiry.slice(2)];
-        await checkoutPayment(
+        const payment = await checkoutPayment(
           {
             reservationId: reservation.id,
             cardHolderName: cardName,
-            cardNumber: cardNumber.replace(/\s/g, ''),
+            cardNumber: digitsOnly(cardNumber),
             expireMonth: month.trim().padStart(2, '0'),
             expireYear: year.trim().slice(-2),
-            cvc: cardCvc.trim(),
+            cvc: digitsOnly(cardCvc),
           },
           token,
         );
+
+        if (payment.requires3ds && payment.threeDSHtmlContent) {
+          // Bank / mock 3DS will POST to API callback → redirect to success
+          sessionStorage.setItem(
+            'turta.pendingCheckout',
+            JSON.stringify({
+              bookingNumber: reservation.bookingNumber,
+              reservationId: reservation.id,
+              title,
+              totalPrice,
+              paymentMethod,
+              startDate: startDate ? String(startDate) : null,
+            }),
+          );
+          setThreeDsHtml(payment.threeDSHtmlContent);
+          setSubmitting(false);
+          return;
+        }
       }
 
       const params = new URLSearchParams({
         bookingNumber: reservation.bookingNumber,
+        reservationId: reservation.id,
         title,
         totalPrice: String(totalPrice),
         paymentMethod,
@@ -446,6 +562,7 @@ export function CheckoutClient() {
       setError(
         err instanceof ApiError ? err.message : 'Rezervasyon tamamlanamadı',
       );
+      setCurrentStep(2);
     } finally {
       setSubmitting(false);
     }
@@ -461,6 +578,28 @@ export function CheckoutClient() {
           <p className="text-neutral-600">
             Rezervasyon bilgileri yükleniyor...
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (threeDsHtml) {
+    return (
+      <div className="min-h-screen bg-neutral-950 px-4 py-8 text-white">
+        <div className="mx-auto max-w-3xl">
+          <h1 className="mb-2 text-center text-xl font-semibold">
+            3D Secure doğrulama
+          </h1>
+          <p className="mb-6 text-center text-sm text-neutral-400">
+            Banka doğrulama ekranı. Sandbox SMS kodu genelde{' '}
+            <strong className="text-white">123456</strong>.
+          </p>
+          <iframe
+            title="3D Secure"
+            className="h-[70vh] w-full rounded-xl border border-neutral-800 bg-white"
+            srcDoc={threeDsHtml}
+            sandbox="allow-forms allow-scripts allow-same-origin allow-top-navigation allow-top-navigation-by-user-activation"
+          />
         </div>
       </div>
     );
@@ -664,62 +803,98 @@ export function CheckoutClient() {
                               required
                             />
                           </div>
-                          <PhoneInput
-                            countryCode={guest.phoneDial}
-                            onCountryCodeChange={(dial) =>
-                              updateGuest(index, { phoneDial: dial })
-                            }
-                            value={guest.phoneLocal}
-                            onChange={(local) =>
-                              updateGuest(index, { phoneLocal: local })
-                            }
-                            required
-                          />
-                          <div className="sm:col-span-2">
+                          <div>
                             <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-                              E-posta <span className="text-red-500">*</span>
+                              Doğum Tarihi
                             </label>
                             <input
-                              value={guest.email}
+                              type="date"
+                              value={guest.birthDate}
                               onChange={(e) =>
-                                updateGuest(index, { email: e.target.value })
-                              }
-                              type="email"
-                              placeholder="E-posta"
-                              className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                              required
-                            />
-                          </div>
-                          <div className="sm:col-span-2">
-                            <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-                              Adres
-                              {guest.role === 'primary' ? (
-                                <span className="text-red-500"> *</span>
-                              ) : (
-                                <span className="font-normal text-neutral-400">
-                                  {' '}
-                                  (opsiyonel)
-                                </span>
-                              )}
-                            </label>
-                            <input
-                              value={guest.address}
-                              onChange={(e) =>
-                                updateGuest(index, { address: e.target.value })
-                              }
-                              placeholder={
-                                guest.role === 'primary'
-                                  ? 'Açık adres'
-                                  : 'Adres (opsiyonel)'
+                                updateGuest(index, {
+                                  birthDate: e.target.value,
+                                })
                               }
                               className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                              required={guest.role === 'primary'}
                             />
                           </div>
+                          {guest.role === 'primary' ? (
+                            <>
+                              <PhoneInput
+                                countryCode={guest.phoneDial}
+                                onCountryCodeChange={(dial) =>
+                                  updateGuest(index, { phoneDial: dial })
+                                }
+                                value={guest.phoneLocal}
+                                onChange={(local) =>
+                                  updateGuest(index, { phoneLocal: local })
+                                }
+                                required
+                              />
+                              <div className="sm:col-span-2">
+                                <label className="mb-1.5 block text-sm font-medium text-neutral-700">
+                                  E-posta{' '}
+                                  <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                  value={guest.email}
+                                  onChange={(e) =>
+                                    updateGuest(index, {
+                                      email: e.target.value,
+                                    })
+                                  }
+                                  type="email"
+                                  placeholder="E-posta"
+                                  className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
+                                  required
+                                />
+                              </div>
+                              <div className="sm:col-span-2">
+                                <label className="mb-1.5 block text-sm font-medium text-neutral-700">
+                                  Adres
+                                  <span className="text-red-500"> *</span>
+                                </label>
+                                <input
+                                  value={guest.address}
+                                  onChange={(e) =>
+                                    updateGuest(index, {
+                                      address: e.target.value,
+                                    })
+                                  }
+                                  placeholder="Açık adres"
+                                  className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
+                                  required
+                                />
+                              </div>
+                            </>
+                          ) : null}
                         </div>
                       </div>
                     );
                   })}
+
+                  {isTour && pickupPoints.length > 0 ? (
+                    <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm sm:p-8">
+                      <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-neutral-900">
+                        <MapPin className="h-5 w-5" />
+                        Kalkış noktası
+                      </h2>
+                      <select
+                        value={pickupPointId}
+                        onChange={(e) => setPickupPointId(e.target.value)}
+                        className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
+                      >
+                        {pickupPoints.map((point) => (
+                          <option key={point.id} value={point.id}>
+                            {point.city} — {point.location} ({point.time})
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-2 text-xs text-neutral-500">
+                        Koltuk numarası partner tarafından atanacaktır.
+                      </p>
+                    </div>
+                  ) : null}
 
                   <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm sm:p-8">
                     <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-neutral-900">
@@ -730,6 +905,19 @@ export function CheckoutClient() {
                       </span>
                     </h2>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <label className="mb-1.5 block text-sm font-medium text-neutral-700">
+                          Ödeme / fatura sahibi{' '}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          value={billingFullName}
+                          onChange={(e) => setBillingFullName(e.target.value)}
+                          placeholder="Ad Soyad"
+                          className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
+                          required
+                        />
+                      </div>
                       <div className="sm:col-span-2">
                         <label className="mb-1.5 block text-sm font-medium text-neutral-700">
                           Fatura adresi <span className="text-red-500">*</span>
@@ -822,7 +1010,10 @@ export function CheckoutClient() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <button
                       type="button"
-                      onClick={() => setPaymentMethod('bank_transfer')}
+                      onClick={() => {
+                        setPaymentMethod('bank_transfer');
+                        setBankTransferAck(false);
+                      }}
                       className={`rounded-xl border p-4 text-left ${
                         paymentMethod === 'bank_transfer'
                           ? 'border-neutral-950 bg-neutral-50'
@@ -832,12 +1023,15 @@ export function CheckoutClient() {
                       <Building2 className="mb-2 h-5 w-5" />
                       <p className="font-semibold">Havale / EFT</p>
                       <p className="text-xs text-neutral-500">
-                        Onay sonrası IBAN bilgisi
+                        IBAN bilgilerini görüp onaylayın
                       </p>
                     </button>
                     <button
                       type="button"
-                      onClick={() => setPaymentMethod('card')}
+                      onClick={() => {
+                        setPaymentMethod('card');
+                        setBankTransferAck(false);
+                      }}
                       className={`rounded-xl border p-4 text-left ${
                         paymentMethod === 'card'
                           ? 'border-neutral-950 bg-neutral-50'
@@ -847,10 +1041,59 @@ export function CheckoutClient() {
                       <CreditCard className="mb-2 h-5 w-5" />
                       <p className="font-semibold">Kredi / Banka Kartı</p>
                       <p className="text-xs text-neutral-500">
-                        Mock: …0008 başarılı
+                        Kart (3DS): …0008 mock 3DS · …0000 red · İyzico key
+                        varsa sandbox test kartı
                       </p>
                     </button>
                   </div>
+
+                  {paymentMethod === 'bank_transfer' ? (
+                    <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                      <p className="font-semibold">Havale / EFT bilgileri</p>
+                      <dl className="mt-3 space-y-2 text-sm">
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-amber-800/80">Banka</dt>
+                          <dd className="font-medium text-right">
+                            {BANK_TRANSFER_DETAILS.bankName}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-amber-800/80">Hesap sahibi</dt>
+                          <dd className="font-medium text-right">
+                            {BANK_TRANSFER_DETAILS.accountHolder}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <dt className="text-amber-800/80">Şube</dt>
+                          <dd className="font-medium text-right">
+                            {BANK_TRANSFER_DETAILS.branch}
+                          </dd>
+                        </div>
+                        <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-3">
+                          <dt className="text-amber-800/80">IBAN</dt>
+                          <dd className="font-mono text-sm font-semibold tracking-wide sm:text-right">
+                            {BANK_TRANSFER_DETAILS.iban}
+                          </dd>
+                        </div>
+                      </dl>
+                      <p className="mt-3 text-xs text-amber-800">
+                        {BANK_TRANSFER_DETAILS.descriptionHint}. Partner ödemeyi
+                        onayladıktan sonra rezervasyon kesinleşir.
+                      </p>
+                      <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={bankTransferAck}
+                          onChange={(e) => setBankTransferAck(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-amber-400"
+                        />
+                        <span>
+                          IBAN ve havale bilgilerini okudum, ödemeyi bu hesaba
+                          yapacağımı onaylıyorum.
+                        </span>
+                      </label>
+                    </div>
+                  ) : null}
 
                   {paymentMethod === 'card' ? (
                     <div className="mt-6 space-y-3">
@@ -858,30 +1101,76 @@ export function CheckoutClient() {
                         value={cardName}
                         onChange={(e) => setCardName(e.target.value)}
                         placeholder="Kart üzerindeki isim"
+                        autoComplete="cc-name"
                         className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
                       />
-                      <input
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value)}
-                        placeholder="5528790000000008"
-                        className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                      />
+                      <div className="relative">
+                        <input
+                          value={cardNumber}
+                          onChange={(e) => {
+                            const nextBrand = detectCardBrand(e.target.value);
+                            setCardNumber(
+                              formatCardNumberInput(e.target.value, nextBrand),
+                            );
+                            setCardCvc((prev) =>
+                              formatCvcInput(prev, nextBrand),
+                            );
+                          }}
+                          placeholder="5528 7900 0000 0008"
+                          inputMode="numeric"
+                          autoComplete="cc-number"
+                          maxLength={19}
+                          className="h-11 w-full rounded-lg border border-neutral-300 px-3 pr-28 text-sm tracking-wide"
+                        />
+                        {cardBrandLabel ? (
+                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-semibold uppercase tracking-wide text-neutral-600">
+                            {cardBrandLabel}
+                          </span>
+                        ) : null}
+                      </div>
                       <div className="grid grid-cols-2 gap-3">
                         <input
                           value={cardExpiry}
-                          onChange={(e) => setCardExpiry(e.target.value)}
+                          onChange={(e) =>
+                            setCardExpiry(formatExpiryInput(e.target.value))
+                          }
                           placeholder="AA/YY"
+                          inputMode="numeric"
+                          autoComplete="cc-exp"
+                          maxLength={5}
                           className="h-11 rounded-lg border border-neutral-300 px-3 text-sm"
                         />
                         <input
                           value={cardCvc}
-                          onChange={(e) => setCardCvc(e.target.value)}
-                          placeholder="CVC"
+                          onChange={(e) =>
+                            setCardCvc(
+                              formatCvcInput(e.target.value, cardBrand),
+                            )
+                          }
+                          placeholder={cardBrand === 'amex' ? 'CVC (4)' : 'CVC'}
+                          inputMode="numeric"
+                          autoComplete="cc-csc"
+                          maxLength={expectedCvcLength}
                           className="h-11 rounded-lg border border-neutral-300 px-3 text-sm"
                         />
                       </div>
                     </div>
                   ) : null}
+
+                  <div className="mt-6">
+                    <EmailOtpPanel
+                      email={primaryEmail}
+                      purpose="CHECKOUT"
+                      firstName={guests[0]?.firstName}
+                      verifyOnSubmit
+                      onVerified={() => setEmailOtpVerified(true)}
+                    />
+                    {!primaryEmail ? (
+                      <p className="mt-2 text-xs text-amber-700">
+                        Önce katılımcı formunda e-posta girin.
+                      </p>
+                    ) : null}
+                  </div>
 
                   <div className="mt-8 flex justify-between">
                     <button
@@ -929,6 +1218,18 @@ export function CheckoutClient() {
                       Ödeme:{' '}
                       {paymentMethod === 'card' ? 'Kart' : 'Havale / EFT'}
                     </li>
+                    {paymentMethod === 'bank_transfer' ? (
+                      <li className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                        <p className="font-semibold">IBAN</p>
+                        <p className="mt-1 font-mono text-xs tracking-wide">
+                          {BANK_TRANSFER_DETAILS.iban}
+                        </p>
+                        <p className="mt-1 text-xs">
+                          {BANK_TRANSFER_DETAILS.bankName} ·{' '}
+                          {BANK_TRANSFER_DETAILS.accountHolder}
+                        </p>
+                      </li>
+                    ) : null}
                     <li className="flex items-start gap-2 font-semibold">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
                       Toplam: {formatPrice(totalPrice)}

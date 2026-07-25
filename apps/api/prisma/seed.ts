@@ -78,7 +78,7 @@ async function main() {
     create: {
       id: 'seed-partner-demo',
       companyName: 'Demo Tur & Aktivite',
-      contactEmail: 'partner@demo.turladur.com',
+      contactEmail: 'partner@demo.turta.com',
       contactPhone: '+90 312 555 0000',
       status: 'VERIFIED',
       capabilities: ['TOURS', 'EXPERIENCES'],
@@ -89,10 +89,10 @@ async function main() {
   });
 
   await prisma.user.upsert({
-    where: { email: 'partner@demo.turladur.com' },
+    where: { email: 'partner@demo.turta.com' },
     update: {},
     create: {
-      email: 'partner@demo.turladur.com',
+      email: 'partner@demo.turta.com',
       passwordHash,
       firstName: 'Demo',
       lastName: 'Partner',
@@ -102,10 +102,10 @@ async function main() {
   });
 
   await prisma.user.upsert({
-    where: { email: 'demo@turladur.com' },
+    where: { email: 'demo@turta.com' },
     update: {},
     create: {
-      email: 'demo@turladur.com',
+      email: 'demo@turta.com',
       passwordHash,
       firstName: 'Demo',
       lastName: 'Müşteri',
@@ -114,14 +114,14 @@ async function main() {
   });
 
   const admin = await prisma.user.upsert({
-    where: { email: 'editor@turladur.com' },
+    where: { email: 'editor@turta.com' },
     update: {
       firstName: 'Turta',
       lastName: 'Editör',
       role: 'ADMIN',
     },
     create: {
-      email: 'editor@turladur.com',
+      email: 'editor@turta.com',
       passwordHash,
       firstName: 'Turta',
       lastName: 'Editör',
@@ -153,18 +153,28 @@ async function main() {
   const existingDate = await prisma.tourDate.findFirst({
     where: { tourId: tour.id, deletedAt: null },
   });
-  const tourDate =
-    existingDate ??
-    (await prisma.tourDate.create({
-      data: {
-        tourId: tour.id,
-        startDate: start,
-        endDate: end,
-        capacity: 24,
-        remainingCapacity: 24,
-        isActive: true,
-      },
-    }));
+  // Re-seed: keep demo tour dates in the future (CI refresh jobs)
+  const tourDate = existingDate
+    ? await prisma.tourDate.update({
+        where: { id: existingDate.id },
+        data: {
+          startDate: start,
+          endDate: end,
+          capacity: 24,
+          remainingCapacity: Math.max(existingDate.remainingCapacity, 8),
+          isActive: true,
+        },
+      })
+    : await prisma.tourDate.create({
+        data: {
+          tourId: tour.id,
+          startDate: start,
+          endDate: end,
+          capacity: 24,
+          remainingCapacity: 24,
+          isActive: true,
+        },
+      });
 
   const ageRangeCount = await prisma.tourDateAgeRange.count({
     where: { tourDateId: tourDate.id, deletedAt: null },

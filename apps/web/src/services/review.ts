@@ -1,5 +1,5 @@
 import { apiRequest, apiRequestWithMeta } from './api-client';
-import type { Review } from '@turladur/shared-types';
+import type { Review } from '@turta/shared-types';
 
 export async function listTourReviews(
   tourId: string,

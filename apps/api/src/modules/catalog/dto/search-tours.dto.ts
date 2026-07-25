@@ -3,7 +3,7 @@ import {
   TourCategory,
   DEFAULT_PAGE,
   DEFAULT_PAGE_LIMIT,
-} from '@turladur/shared-constants';
+} from '@turta/shared-constants';
 import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,

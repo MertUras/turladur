@@ -180,7 +180,8 @@ export function TourCard({
                   <button
                     onClick={() => onDelete(id)}
                     className="inline-flex items-center p-1.5 border border-gray-200 text-xs rounded-lg text-gray-600 bg-white hover:bg-gray-50 hover:text-red-600 transition-colors"
-                    aria-label="Sil"
+                    aria-label="Turu iptal et"
+                    title="Turu iptal et"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>
@@ -312,7 +313,8 @@ export function TourCard({
               <button
                 onClick={() => onDelete(id)}
                 className="inline-flex items-center p-1.5 border border-gray-200 text-xs rounded-lg text-gray-600 bg-white hover:bg-gray-50 hover:text-red-600 transition-colors"
-                aria-label="Sil"
+                aria-label="Turu iptal et"
+                title="Turu iptal et"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>

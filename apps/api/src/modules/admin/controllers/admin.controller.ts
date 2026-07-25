@@ -16,7 +16,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { IsBoolean, IsIn, IsOptional } from 'class-validator';
-import { Role } from '@turladur/shared-constants';
+import { Role } from '@turta/shared-constants';
 
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Roles } from '../../../core/auth/decorators/roles.decorator';
@@ -139,6 +139,12 @@ export class AdminController {
   @ApiOperation({ summary: 'Approve / reject / suspend agency' })
   agencyStatus(@Param('id') id: string, @Body() dto: SetAgencyStatusDto) {
     return this.adminService.setAgencyStatus(id, dto.status);
+  }
+
+  @Get('reservations')
+  @ApiOperation({ summary: 'List platform reservations' })
+  reservations() {
+    return this.adminService.listReservations();
   }
 
   @Get('content/posts')

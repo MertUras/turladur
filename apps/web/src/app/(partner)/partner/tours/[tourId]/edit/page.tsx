@@ -281,7 +281,26 @@ export default function PartnerTourEditPage() {
                 <h2 className="text-lg font-medium text-gray-900">Önizleme</h2>
                 <div className="mt-4 space-y-4">
                   <div className="h-48 w-full overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
-                    <ImageIcon className="h-14 w-14 text-gray-400" />
+                    {(() => {
+                      const previewSrc =
+                        formData.mainImage?.preview ||
+                        formData.mainImage?.url ||
+                        formData.galleryImages?.[0]?.preview ||
+                        formData.galleryImages?.[0]?.url ||
+                        formData.images?.[0]?.preview ||
+                        formData.images?.[0]?.url ||
+                        null;
+                      return previewSrc ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- live form preview (blob / proxy)
+                        <img
+                          src={previewSrc}
+                          alt="Tur önizleme"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon className="h-14 w-14 text-gray-400" />
+                      );
+                    })()}
                   </div>
                   <h3 className="text-lg font-medium text-gray-900">
                     {formData?.title || 'Tur başlığı'}

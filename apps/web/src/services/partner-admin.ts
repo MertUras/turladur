@@ -21,13 +21,20 @@ export type PartnerTour = {
 export type PartnerReservation = {
   id: string;
   bookingNumber: string;
-  tourId: string;
+  tourId: string | null;
+  tourTitle: string | null;
   status: string;
+  paymentStatus?: string;
   totalAmount: string;
   currency: string;
   contactEmail: string;
+  customerName?: string;
   adults: number;
   children: number;
+  guestCount?: number;
+  seatNumbers?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   createdAt: string;
 };
 
@@ -62,14 +69,39 @@ export async function listPartnerReservations(token: string) {
 
 export async function updatePartnerReservation(
   id: string,
-  status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED',
+  body: {
+    status?: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+    seatNumbers?: string;
+  },
   token: string,
 ) {
   return apiRequest<PartnerReservation>(`/partner/reservations/${id}`, {
     method: 'PATCH',
-    body: { status },
+    body,
     token,
   });
+}
+
+export type AdminReservationRow = {
+  id: string;
+  bookingNumber: string;
+  customerName: string;
+  contactEmail: string;
+  tourTitle: string | null;
+  partnerName: string | null;
+  partnerId: string;
+  status: string;
+  paymentStatus: string;
+  guestCount: number;
+  totalAmount: string;
+  currency: string;
+  startDate: string | null;
+  endDate: string | null;
+  createdAt: string;
+};
+
+export async function listAdminReservations(token: string) {
+  return apiRequest<AdminReservationRow[]>('/admin/reservations', { token });
 }
 
 export type AdminStats = {
@@ -206,6 +238,64 @@ export async function updatePartnerTour(
   });
 }
 
+export type TourCancelReason = 'OPERATIONAL' | 'LOW_PARTICIPANTS' | 'WEATHER';
+
+export const TOUR_CANCEL_REASON_OPTIONS: Array<{
+  value: TourCancelReason;
+  label: string;
+}> = [
+  { value: 'OPERATIONAL', label: 'Operasyonel nedenler' },
+  { value: 'LOW_PARTICIPANTS', label: 'Yetersiz katılımcı sayısı' },
+  { value: 'WEATHER', label: 'Hava koşulları' },
+];
+
+/** Cancel / delist tour — cancels active bookings and emails all guests. */
+export async function cancelPartnerTour(
+  id: string,
+  body: { reason: TourCancelReason; note?: string },
+  token: string,
+) {
+  return apiRequest<{
+    id: string;
+    cancelled: boolean;
+    reason: string;
+    reasonLabel: string;
+  }>(`/catalog/tours/${id}/cancel`, {
+    method: 'POST',
+    body,
+    token,
+  });
+}
+
+/** Cancel selected departure dates — emails only guests booked on those dates. */
+export async function cancelPartnerTourDates(
+  tourId: string,
+  body: {
+    dateIds: string[];
+    reason: TourCancelReason;
+    note?: string;
+  },
+  token: string,
+) {
+  return apiRequest<{
+    id: string;
+    cancelledDateIds: string[];
+    cancelledDates: Array<{
+      id: string;
+      startDate: string;
+      endDate: string;
+      label: string;
+    }>;
+    reason: string;
+    reasonLabel: string;
+    tourArchived: boolean;
+  }>(`/catalog/tours/${tourId}/dates/cancel`, {
+    method: 'POST',
+    body,
+    token,
+  });
+}
+
 export async function getPresignedUpload(
   body: {
     folder: string;
@@ -219,6 +309,8 @@ export async function getPresignedUpload(
     uploadUrl: string;
     publicUrl: string;
     key: string;
+    cdnBase?: string;
+    uploadHeaders?: Record<string, string>;
   }>('/storage/presigned-url', {
     method: 'POST',
     body,

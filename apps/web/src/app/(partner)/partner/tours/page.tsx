@@ -6,13 +6,32 @@ import { Plus, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { TourCard } from '@/components/features/partner-dashboard/tour-card';
-import { listPartnerTours, type PartnerTour } from '@/services/partner-admin';
+import { getTourDates, type TourDateRow } from '@/services/catalog';
+import {
+  cancelPartnerTour,
+  cancelPartnerTourDates,
+  listPartnerTours,
+  TOUR_CANCEL_REASON_OPTIONS,
+  type PartnerTour,
+  type TourCancelReason,
+} from '@/services/partner-admin';
 import { useAuth } from '@/providers/auth-provider';
 
 function mapStatus(status: string): 'active' | 'draft' | 'archived' {
   if (status === 'PUBLISHED' || status === 'ACTIVE') return 'active';
   if (status === 'ARCHIVED') return 'archived';
   return 'draft';
+}
+
+function formatDateRange(startDate: string, endDate: string): string {
+  const fmt = new Intl.DateTimeFormat('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+  const start = fmt.format(new Date(startDate));
+  const end = fmt.format(new Date(endDate));
+  return start === end ? start : `${start} – ${end}`;
 }
 
 export default function PartnerToursPage() {
@@ -24,13 +43,58 @@ export default function PartnerToursPage() {
   const [query, setQuery] = useState('');
   const [listView, setListView] = useState(false);
 
+  const [cancelTour, setCancelTour] = useState<PartnerTour | null>(null);
+  const [cancelDates, setCancelDates] = useState<TourDateRow[]>([]);
+  const [selectedDateIds, setSelectedDateIds] = useState<string[]>([]);
+  const [datesLoading, setDatesLoading] = useState(false);
+  const [cancelReason, setCancelReason] =
+    useState<TourCancelReason>('OPERATIONAL');
+  const [cancelNote, setCancelNote] = useState('');
+  const [cancelBusy, setCancelBusy] = useState(false);
+
+  async function reload() {
+    if (!accessToken) return;
+    setTours(await listPartnerTours(accessToken));
+  }
+
   useEffect(() => {
     if (!accessToken) return;
-    void listPartnerTours(accessToken)
-      .then(setTours)
+    void reload()
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken]);
+
+  useEffect(() => {
+    if (!cancelTour) {
+      setCancelDates([]);
+      setSelectedDateIds([]);
+      return;
+    }
+
+    let cancelled = false;
+    setDatesLoading(true);
+    void getTourDates(cancelTour.id)
+      .then((dates) => {
+        if (cancelled) return;
+        setCancelDates(dates);
+        setSelectedDateIds(dates.map((d) => d.id));
+      })
+      .catch((err: Error) => {
+        if (!cancelled) {
+          setError(err.message);
+          setCancelDates([]);
+          setSelectedDateIds([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setDatesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cancelTour]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -43,6 +107,62 @@ export default function PartnerToursPage() {
     );
   }, [tours, query]);
 
+  function toggleDate(id: string) {
+    setSelectedDateIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  function toggleAllDates() {
+    if (selectedDateIds.length === cancelDates.length) {
+      setSelectedDateIds([]);
+    } else {
+      setSelectedDateIds(cancelDates.map((d) => d.id));
+    }
+  }
+
+  async function handleConfirmCancel() {
+    if (!accessToken || !cancelTour) return;
+
+    if (cancelDates.length > 0 && selectedDateIds.length === 0) {
+      setError('İptal için en az bir tarih seçin');
+      return;
+    }
+
+    setCancelBusy(true);
+    setError(null);
+    try {
+      if (cancelDates.length > 0) {
+        await cancelPartnerTourDates(
+          cancelTour.id,
+          {
+            dateIds: selectedDateIds,
+            reason: cancelReason,
+            note: cancelNote.trim() || undefined,
+          },
+          accessToken,
+        );
+      } else {
+        await cancelPartnerTour(
+          cancelTour.id,
+          {
+            reason: cancelReason,
+            note: cancelNote.trim() || undefined,
+          },
+          accessToken,
+        );
+      }
+      setCancelTour(null);
+      setCancelNote('');
+      setCancelReason('OPERATIONAL');
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Tur iptal edilemedi');
+    } finally {
+      setCancelBusy(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -51,13 +171,22 @@ export default function PartnerToursPage() {
     );
   }
 
+  const allDatesSelected =
+    cancelDates.length > 0 && selectedDateIds.length === cancelDates.length;
+  const canSubmit =
+    !cancelBusy &&
+    !datesLoading &&
+    (cancelDates.length === 0 || selectedDateIds.length > 0);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Turlar</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Turlarınızı yönetin. Yeni turlar admin onayına gider.
+            Turlarınızı yönetin. İptal ederken tarih seçin; yalnızca o tarihteki
+            rezervasyonlar iptal edilir ve müşterilere bilgilendirme maili
+            gider.
           </p>
         </div>
         <Link
@@ -145,10 +274,130 @@ export default function PartnerToursPage() {
               status={mapStatus(tour.status)}
               listView={listView}
               onEdit={(id) => router.push(`/partner/tours/${id}/edit`)}
+              onDelete={
+                mapStatus(tour.status) === 'archived'
+                  ? undefined
+                  : () => {
+                      setError(null);
+                      setCancelTour(tour);
+                      setCancelReason('OPERATIONAL');
+                      setCancelNote('');
+                    }
+              }
             />
           ))}
         </div>
       )}
+
+      {cancelTour ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-bold text-gray-900">Turu iptal et</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              <strong>{cancelTour.title}</strong> için iptal edilecek tarihleri
+              seçin. Sadece seçilen tarihlerdeki müşterilere özür içeren
+              bilgilendirme maili gider.
+              {allDatesSelected && cancelDates.length > 0
+                ? ' Tüm tarihler seçilirse tur ilandan kalkar.'
+                : ''}
+            </p>
+
+            <label className="mt-4 block text-sm font-medium text-gray-700">
+              İptal edilecek tarihler <span className="text-red-500">*</span>
+            </label>
+            {datesLoading ? (
+              <p className="mt-2 text-sm text-gray-500">Tarihler yükleniyor…</p>
+            ) : cancelDates.length === 0 ? (
+              <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                Bu turda aktif tarih yok. Onaylarsanız tur tamamen ilandan
+                kaldırılır.
+              </p>
+            ) : (
+              <div className="mt-2 space-y-2 rounded-lg border border-gray-200 p-3">
+                <label className="flex items-center gap-2 border-b border-gray-100 pb-2 text-sm font-medium text-gray-800">
+                  <input
+                    type="checkbox"
+                    checked={allDatesSelected}
+                    onChange={toggleAllDates}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                  />
+                  Tümünü seç ({cancelDates.length})
+                </label>
+                {cancelDates.map((date) => {
+                  const checked = selectedDateIds.includes(date.id);
+                  return (
+                    <label
+                      key={date.id}
+                      className="flex cursor-pointer items-start gap-2 text-sm text-gray-700"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleDate(date.id)}
+                        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600"
+                      />
+                      <span>
+                        <span className="font-medium text-gray-900">
+                          {formatDateRange(date.startDate, date.endDate)}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-gray-500">
+                          Kapasite {date.remainingCapacity}/{date.capacity}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            <label className="mt-4 block text-sm font-medium text-gray-700">
+              İptal nedeni <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={cancelReason}
+              onChange={(e) =>
+                setCancelReason(e.target.value as TourCancelReason)
+              }
+              className="mt-1 h-11 w-full rounded-lg border border-gray-300 px-3 text-sm"
+            >
+              {TOUR_CANCEL_REASON_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <label className="mt-3 block text-sm font-medium text-gray-700">
+              Not (opsiyonel)
+            </label>
+            <textarea
+              value={cancelNote}
+              onChange={(e) => setCancelNote(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="İç not / ek açıklama"
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={cancelBusy}
+                onClick={() => setCancelTour(null)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                disabled={!canSubmit}
+                onClick={() => void handleConfirmCancel()}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {cancelBusy ? 'İptal ediliyor…' : 'İptali onayla'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

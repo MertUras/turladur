@@ -77,10 +77,10 @@ tourtech-media/                       # Ana bucket
 http://localhost:9000/tourtech-media/tours/{tourId}/cover.webp
 
 # Production (S3 + CDN)
-https://media.turladur.com/tours/{tourId}/cover.webp
+https://media.turta.com/tours/{tourId}/cover.webp
 
 # Thumbnail (on-the-fly resize)
-https://media.turladur.com/tours/{tourId}/cover.webp?w=400&h=300&fit=cover
+https://media.turta.com/tours/{tourId}/cover.webp?w=400&h=300&fit=cover
 ```
 
 ## Backend Storage Service
@@ -314,7 +314,7 @@ S3_BUCKET=tourtech-media
 
 # CDN
 CDN_URL=http://localhost:9000/tourtech-media
-# Production: CDN_URL=https://media.turladur.com
+# Production: CDN_URL=https://media.turta.com
 ```
 
 ## Güvenlik Kuralları (Tekrar)

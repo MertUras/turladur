@@ -13,7 +13,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { Role } from '@turladur/shared-constants';
+import { Role } from '@turta/shared-constants';
 
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { RequireStaffPermissions } from '../../../core/auth/decorators/require-staff-permissions.decorator';
@@ -22,9 +22,19 @@ import { UserPayload } from '../../../core/auth/types/auth.types';
 import { PartnerService } from '../services/partner.service';
 
 class UpdatePartnerReservationDto {
-  @ApiProperty({ enum: ['CONFIRMED', 'CANCELLED', 'COMPLETED'] })
+  @ApiPropertyOptional({ enum: ['CONFIRMED', 'CANCELLED', 'COMPLETED'] })
+  @IsOptional()
   @IsIn(['CONFIRMED', 'CANCELLED', 'COMPLETED'])
-  status!: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+  status?: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+
+  @ApiPropertyOptional({
+    example: '14, 15',
+    description: 'Partner-assigned seat numbers',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  seatNumbers?: string;
 }
 
 class UpdatePartnerProfileDto {
@@ -182,16 +192,17 @@ export class PartnerController {
 
   @Patch('reservations/:id')
   @RequireStaffPermissions('reservations')
-  @ApiOperation({ summary: 'Confirm or cancel a partner reservation' })
+  @ApiOperation({
+    summary: 'Update partner reservation status and/or seat numbers',
+  })
   updateReservation(
     @Param('id') id: string,
     @Body() dto: UpdatePartnerReservationDto,
     @CurrentUser() user: UserPayload,
   ) {
-    return this.partnerService.updateReservationStatus(
-      id,
-      user.partnerId,
-      dto.status,
-    );
+    return this.partnerService.updateReservation(id, user.partnerId, {
+      status: dto.status,
+      seatNumbers: dto.seatNumbers,
+    });
   }
 }

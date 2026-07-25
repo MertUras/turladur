@@ -7,7 +7,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Role } from '@turladur/shared-constants';
+import { Role } from '@turta/shared-constants';
 
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
@@ -26,8 +26,10 @@ import { RegisterUserDto } from '../dto/register-user.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { VerifyPartnerDto } from '../dto/verify-partner.dto';
 import { GuestBootstrapDto } from '../dto/guest-bootstrap.dto';
+import { ResetPasswordDto, SendOtpDto, VerifyOtpDto } from '../dto/otp.dto';
 import { GetProfileQuery } from '../queries/get-profile/get-profile.query';
 import { IdentityService } from '../services/identity.service';
+import { OtpService } from '../services/otp.service';
 
 @ApiTags('Identity')
 @Controller('identity')
@@ -36,6 +38,7 @@ export class IdentityController {
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
     private readonly identityService: IdentityService,
+    private readonly otpService: OtpService,
   ) {}
 
   @Public()
@@ -53,6 +56,32 @@ export class IdentityController {
   @ApiOperation({ summary: 'Login and receive JWT access token' })
   login(@Body() dto: LoginUserDto) {
     return this.commandBus.execute(new LoginUserCommand(dto));
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @Post('otp/send')
+  @ApiOperation({
+    summary: 'Send 6-digit email OTP (CHECKOUT | REGISTER | PASSWORD_RESET)',
+  })
+  sendOtp(@Body() dto: SendOtpDto) {
+    return this.otpService.send(dto.email, dto.purpose, dto.firstName);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('otp/verify')
+  @ApiOperation({ summary: 'Verify email OTP code' })
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.otpService.verify(dto.email, dto.purpose, dto.code);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('password/reset')
+  @ApiOperation({ summary: 'Reset password with email OTP' })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.identityService.resetPassword(dto);
   }
 
   @Public()

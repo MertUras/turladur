@@ -3,9 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { MapPin, Star, ArrowRight } from 'lucide-react';
 
+import MembershipBadge from '@/components/features/tour/membership-badge';
 import { IMAGE_PLACEHOLDER } from '@/lib/image-placeholder';
+import type { MembershipTier } from '@/lib/tours/legacy-tour';
 import { getPublicApiBaseUrl } from '@/services/api-client';
 
 type Deal = {
@@ -18,6 +21,7 @@ type Deal = {
   location: string;
   type: 'tour' | 'activity';
   partnerName: string | null;
+  partnerTier: MembershipTier | null;
   operatorRating: number;
   discount?: number;
 };
@@ -67,6 +71,16 @@ async function loadDeals(kind: 'tour' | 'activity'): Promise<Deal[]> {
     const rows = Array.isArray(json.data) ? json.data : [];
     return rows.map((row) => {
       const price = Number(row.price ?? row.salePrice ?? 0);
+      const tierRaw = String(
+        (row.partner as { membershipTier?: string } | undefined)
+          ?.membershipTier ??
+          row.membershipTier ??
+          '',
+      ).toUpperCase();
+      const partnerTier =
+        tierRaw === 'GOLD' || tierRaw === 'SILVER' || tierRaw === 'BRONZE'
+          ? (tierRaw as MembershipTier)
+          : null;
       return {
         id: String(row.id),
         title: String(row.title ?? ''),
@@ -77,6 +91,7 @@ async function loadDeals(kind: 'tour' | 'activity'): Promise<Deal[]> {
         location: String(row.location ?? row.city ?? 'Türkiye'),
         type: kind,
         partnerName: null,
+        partnerTier,
         operatorRating: Number(row.averageRating ?? 0),
       };
     });
@@ -278,7 +293,13 @@ function DealCard({
     deal.type === 'tour' ? `/tours/${deal.id}` : `/activities/${deal.id}`;
 
   return (
-    <div className="group flex flex-col overflow-hidden rounded-lg border border-neutral-200/80 bg-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-md">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1, duration: 0.5 }}
+      whileHover={{ y: -4 }}
+      className="group flex flex-col overflow-hidden rounded-lg border border-neutral-200/80 bg-white shadow-sm transition-all duration-300 ease-out hover:shadow-md"
+    >
       <div className="relative aspect-[4/3] w-full overflow-hidden">
         <Image
           src={imageSrc}
@@ -293,6 +314,11 @@ function DealCard({
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/0 to-black/0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+        {deal.partnerTier ? (
+          <div className="absolute left-2 top-2">
+            <MembershipBadge tier={deal.partnerTier} variant="onImage" />
+          </div>
+        ) : null}
         {deal.discount && deal.discount > 0 ? (
           <div className="absolute right-2 top-2 rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm">
             %{deal.discount} İndirim
@@ -316,7 +342,7 @@ function DealCard({
           </div>
         </div>
 
-        <h3 className="mb-2 text-base font-semibold leading-snug text-neutral-800">
+        <h3 className="mb-2 text-base font-semibold leading-snug text-neutral-800 transition-colors group-hover:text-neutral-800">
           {deal.title}
         </h3>
 
@@ -347,7 +373,7 @@ function DealCard({
           Detayları Gör
         </Link>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

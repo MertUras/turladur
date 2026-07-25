@@ -5,9 +5,25 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
+import type { Readable } from 'stream';
+
+import { resolveMediaUrl, resolveMediaUrlList } from './resolve-media-url';
+
+/** Long-lived CDN cache — object keys are unique (timestamp + uuid). */
+export const PUBLIC_OBJECT_CACHE_CONTROL =
+  'public, max-age=31536000, immutable';
+
+function stripTrailingSlash(url: string): string {
+  return url.replace(/\/+$/, '');
+}
 
 @Injectable()
 export class StorageService implements OnModuleInit {
@@ -18,6 +34,9 @@ export class StorageService implements OnModuleInit {
 
   constructor(private readonly config: ConfigService) {
     const endpoint = config.getOrThrow<string>('MINIO_ENDPOINT');
+    const forcePathStyle =
+      (config.get<string>('S3_FORCE_PATH_STYLE') ?? 'true').toLowerCase() !==
+      'false';
 
     this.s3 = new S3Client({
       endpoint,
@@ -26,18 +45,28 @@ export class StorageService implements OnModuleInit {
         accessKeyId: config.getOrThrow<string>('MINIO_ACCESS_KEY'),
         secretAccessKey: config.getOrThrow<string>('MINIO_SECRET_KEY'),
       },
-      forcePathStyle: true,
+      forcePathStyle,
     });
 
     this.bucket = config.get<string>('S3_BUCKET', 'tourtech-media');
-    this.cdnUrl = config.get<string>(
-      'CDN_URL',
-      `${endpoint.replace(/\/$/, '')}/${this.bucket}`,
+    // Soft launch without media.* custom domain: stream via Nest public proxy.
+    // Prefer CDN_URL; else API_PUBLIC_URL/api/v1/storage/media; else MinIO path.
+    const explicitCdn = config.get<string>('CDN_URL')?.trim();
+    const apiPublic = config.get<string>('API_PUBLIC_URL')?.trim();
+    const proxyFallback = apiPublic
+      ? `${stripTrailingSlash(apiPublic)}/api/v1/storage/media`
+      : null;
+    this.cdnUrl = stripTrailingSlash(
+      explicitCdn ||
+        proxyFallback ||
+        `${stripTrailingSlash(endpoint)}/${this.bucket}`,
     );
   }
 
   onModuleInit(): void {
-    this.logger.log(`Storage ready (bucket=${this.bucket})`);
+    this.logger.log(
+      `Storage ready (bucket=${this.bucket}, cdn=${this.cdnUrl})`,
+    );
   }
 
   async getPresignedUploadUrl(
@@ -49,8 +78,17 @@ export class StorageService implements OnModuleInit {
       Bucket: this.bucket,
       Key: key,
       ContentType: contentType,
+      CacheControl: PUBLIC_OBJECT_CACHE_CONTROL,
     });
     return getSignedUrl(this.s3, command, { expiresIn });
+  }
+
+  /** Headers the browser MUST send on PUT (included in the signature). */
+  getUploadHeaders(contentType: string): Record<string, string> {
+    return {
+      'Content-Type': contentType,
+      'Cache-Control': PUBLIC_OBJECT_CACHE_CONTROL,
+    };
   }
 
   async getPresignedDownloadUrl(
@@ -73,8 +111,67 @@ export class StorageService implements OnModuleInit {
     );
   }
 
+  /**
+   * Stream an object for the public media proxy (dev fallback when r2.dev TLS fails).
+   */
+  async getObjectStream(key: string): Promise<{
+    body: Readable;
+    contentType: string;
+    contentLength?: number;
+    cacheControl: string;
+  }> {
+    const normalizedKey = key.replace(/^\/+/, '');
+    if (
+      !normalizedKey ||
+      normalizedKey.includes('..') ||
+      normalizedKey.length > 512
+    ) {
+      throw new NotFoundException('Object not found');
+    }
+
+    try {
+      const result = await this.s3.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: normalizedKey,
+        }),
+      );
+      if (!result.Body) {
+        throw new NotFoundException('Object not found');
+      }
+      return {
+        body: result.Body as Readable,
+        contentType: result.ContentType ?? 'application/octet-stream',
+        contentLength: result.ContentLength,
+        cacheControl: result.CacheControl ?? PUBLIC_OBJECT_CACHE_CONTROL,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      this.logger.warn(`getObjectStream failed for key=${normalizedKey}`);
+      throw new NotFoundException('Object not found');
+    }
+  }
+
+  /** Public URL served via CDN (local: MinIO path; prod: https://media.turta.com/…). */
   getPublicUrl(key: string): string {
-    return `${this.cdnUrl}/${key}`;
+    const normalizedKey = key.replace(/^\/+/, '');
+    return `${this.cdnUrl}/${normalizedKey}`;
+  }
+
+  getCdnBaseUrl(): string {
+    return this.cdnUrl;
+  }
+
+  /**
+   * Map a DB-stored URL or storage key to the active CDN_URL.
+   * Ensures Vercel/prod clients never receive localhost MinIO links.
+   */
+  resolvePublicUrl(pathOrUrl: string | null | undefined): string | null {
+    return resolveMediaUrl(this.cdnUrl, pathOrUrl);
+  }
+
+  resolvePublicUrlList(urls: string[] | null | undefined): string[] {
+    return resolveMediaUrlList(this.cdnUrl, urls);
   }
 
   generateKey(folder: string, entityId: string, filename: string): string {
@@ -85,7 +182,6 @@ export class StorageService implements OnModuleInit {
 
   async isHealthy(): Promise<boolean> {
     try {
-      // Lightweight probe: attempt a short-lived signed URL generation
       await this.getPresignedUploadUrl(
         `_health/${randomUUID()}.txt`,
         'text/plain',

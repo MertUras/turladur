@@ -7,11 +7,18 @@ export type InitializePaymentInput = {
   expireMonth: string;
   expireYear: string;
   cvc: string;
+  callbackUrl: string;
   buyer: {
     id: string;
     email: string;
     name: string;
     surname: string;
+    phone?: string;
+    identityNumber?: string;
+    registrationAddress?: string;
+    city?: string;
+    country?: string;
+    ip?: string;
   };
 };
 
@@ -19,6 +26,22 @@ export type InitializePaymentResult = {
   success: boolean;
   providerPaymentId?: string;
   status: 'SUCCESS' | 'FAILED' | 'AWAITING_3DS';
+  /** Bank / İyzico 3DS HTML (iframe or document.write). */
+  threeDSHtmlContent?: string;
+  errorMessage?: string;
+  raw?: Record<string, unknown>;
+};
+
+export type CompleteThreeDsInput = {
+  conversationId: string;
+  paymentId: string;
+  conversationData?: string;
+};
+
+export type CompleteThreeDsResult = {
+  success: boolean;
+  status: 'SUCCESS' | 'FAILED';
+  providerPaymentId?: string;
   errorMessage?: string;
   raw?: Record<string, unknown>;
 };
@@ -43,5 +66,8 @@ export abstract class PaymentGateway {
   abstract initialize(
     input: InitializePaymentInput,
   ): Promise<InitializePaymentResult>;
+  abstract completeThreeDs(
+    input: CompleteThreeDsInput,
+  ): Promise<CompleteThreeDsResult>;
   abstract refund(input: RefundPaymentInput): Promise<RefundPaymentResult>;
 }

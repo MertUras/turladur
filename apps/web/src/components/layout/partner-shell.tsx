@@ -5,7 +5,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   BarChart3,
-  Bell,
   Calendar,
   CircleHelp,
   Cog,
@@ -22,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
+import { NotificationBell } from '@/components/layout/notification-bell';
 import {
   MembershipBadge,
   type MembershipTier,
@@ -143,7 +143,6 @@ export function PartnerShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [membershipTier, setMembershipTier] = useState<MembershipTier | null>(
     null,
   );
@@ -244,7 +243,6 @@ export function PartnerShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     setSidebarOpen(false);
     setShowProfileMenu(false);
-    setShowNotifications(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -252,7 +250,6 @@ export function PartnerShell({ children }: { children: ReactNode }) {
       if (e.key === 'Escape') {
         setSidebarOpen(false);
         setShowProfileMenu(false);
-        setShowNotifications(false);
       }
     };
     window.addEventListener('keydown', handleEsc);
@@ -261,17 +258,16 @@ export function PartnerShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (showProfileMenu || showNotifications) {
+      if (showProfileMenu) {
         const target = e.target as HTMLElement;
         if (!target.closest('[data-dropdown]')) {
           setShowProfileMenu(false);
-          setShowNotifications(false);
         }
       }
     };
     document.addEventListener('click', handleOutsideClick);
     return () => document.removeEventListener('click', handleOutsideClick);
-  }, [showProfileMenu, showNotifications]);
+  }, [showProfileMenu]);
 
   if (gate !== 'allowed' || !isAuthenticated) {
     return (
@@ -466,62 +462,12 @@ export function PartnerShell({ children }: { children: ReactNode }) {
                 />
               </div>
 
-              <div className="relative" data-dropdown>
-                <button
-                  type="button"
-                  className="relative rounded-lg p-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus:outline-none"
-                  onClick={() => {
-                    setShowNotifications(!showNotifications);
-                    setShowProfileMenu(false);
-                  }}
-                >
-                  <Bell className="h-6 w-6" />
-                  <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" />
-                </button>
-
-                {showNotifications ? (
-                  <div className="absolute right-0 z-50 mt-2 w-80 origin-top-right rounded-lg border border-gray-200 bg-white shadow-lg">
-                    <div className="flex items-center justify-between border-b border-gray-200 p-3">
-                      <h3 className="text-sm font-semibold text-gray-900">
-                        Bildirimler
-                      </h3>
-                      <button
-                        type="button"
-                        className="text-xs text-blue-600 hover:text-blue-800"
-                      >
-                        Tümünü Okundu İşaretle
-                      </button>
-                    </div>
-                    <div className="max-h-72 overflow-y-auto">
-                      <div className="border-b border-gray-100 px-4 py-2 transition-colors hover:bg-gray-50">
-                        <div className="flex">
-                          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-100">
-                            <Calendar className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-900">
-                              Yeni Rezervasyon
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              Yeni bir rezervasyon aldınız.
-                            </p>
-                            <p className="mt-1 text-xs text-gray-400">
-                              Az önce
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="border-t border-gray-200 p-2">
-                      <Link
-                        href="/partner/reservations"
-                        className="block w-full rounded-lg px-3 py-2 text-center text-sm text-blue-600 transition-colors hover:bg-blue-50"
-                      >
-                        Tüm Bildirimleri Gör
-                      </Link>
-                    </div>
-                  </div>
-                ) : null}
+              <div className="relative mr-1">
+                <NotificationBell
+                  solid
+                  footerHref="/partner/reservations"
+                  footerLabel="Tüm Bildirimleri Gör"
+                />
               </div>
 
               <Link
@@ -537,7 +483,6 @@ export function PartnerShell({ children }: { children: ReactNode }) {
                   className="flex items-center text-gray-600 hover:text-gray-900 focus:outline-none"
                   onClick={() => {
                     setShowProfileMenu(!showProfileMenu);
-                    setShowNotifications(false);
                   }}
                 >
                   <div className="mr-1 flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-700">

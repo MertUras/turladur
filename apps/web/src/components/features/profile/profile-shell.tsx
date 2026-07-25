@@ -2,16 +2,21 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useState } from 'react';
-import type { Reservation, Review, User } from '@turladur/shared-types';
+import type { Reservation, Review, User } from '@turta/shared-types';
 import {
   CreditCard,
+  FileDown,
   KeyRound,
   MessageSquare,
   Ticket,
   UserRound,
 } from 'lucide-react';
 
-import { listReservations } from '@/services/booking';
+import {
+  downloadVoucherHtml,
+  getReservationVoucher,
+  listReservations,
+} from '@/services/booking';
 import {
   changePassword,
   updateProfile,
@@ -470,6 +475,7 @@ function BookingsTab({ token }: { token: string }) {
   const [items, setItems] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -482,6 +488,19 @@ function BookingsTab({ token }: { token: string }) {
       }
     })();
   }, [token]);
+
+  async function handleVoucher(reservation: Reservation) {
+    setBusyId(reservation.id);
+    setError(null);
+    try {
+      const voucher = await getReservationVoucher(reservation.id, token);
+      downloadVoucherHtml(reservation.bookingNumber, voucher.html);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Voucher alınamadı');
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   if (loading) return <p className="text-sm text-neutral-600">Yükleniyor…</p>;
   if (error) return <p className="text-sm text-red-700">{error}</p>;
@@ -509,25 +528,45 @@ function BookingsTab({ token }: { token: string }) {
         </p>
       ) : (
         <ul className="space-y-3">
-          {items.slice(0, 8).map((r) => (
-            <li
-              key={r.id}
-              className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-3 text-sm"
-            >
-              <div>
-                <p className="font-medium text-neutral-900">
-                  {r.bookingNumber}
-                </p>
-                <p className="text-neutral-600">
-                  {r.activityDateId ? 'Aktivite' : 'Tur'} · {r.totalAmount}{' '}
-                  {r.currency}
-                </p>
-              </div>
-              <span className="text-xs font-semibold text-neutral-700">
-                {r.status}
-              </span>
-            </li>
-          ))}
+          {items.slice(0, 8).map((r) => {
+            const canDownload =
+              r.status === 'CONFIRMED' ||
+              r.status === 'COMPLETED' ||
+              r.paymentStatus === 'PAID';
+            return (
+              <li
+                key={r.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-200 px-3 py-3 text-sm"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-neutral-900">
+                    {r.bookingNumber}
+                  </p>
+                  <p className="text-neutral-600">
+                    {r.activityDateId ? 'Aktivite' : 'Tur'} · {r.totalAmount}{' '}
+                    {r.currency}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-neutral-700">
+                    {r.status}
+                  </span>
+                  {canDownload ? (
+                    <button
+                      type="button"
+                      disabled={busyId === r.id}
+                      onClick={() => void handleVoucher(r)}
+                      className="inline-flex items-center gap-1 rounded-md border border-neutral-300 px-2 py-1 text-xs font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-60"
+                      title="Güncel voucher indir (koltuk dahil)"
+                    >
+                      <FileDown className="h-3.5 w-3.5" />
+                      Voucher
+                    </button>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

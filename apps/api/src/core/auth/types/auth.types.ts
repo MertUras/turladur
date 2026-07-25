@@ -1,4 +1,4 @@
-import { Role } from '@turladur/shared-constants';
+import { Role } from '@turta/shared-constants';
 
 export interface JwtPayload {
   sub: string;

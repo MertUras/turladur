@@ -3,11 +3,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { AlertCircle, Eye, EyeOff, Lock, Mail, User, X } from 'lucide-react';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { ApiError } from '@/services/api-client';
+import { sendEmailOtp } from '@/services/identity';
 import { useAuth } from '@/providers/auth-provider';
 
 const REGISTER_VISUAL =
@@ -29,6 +30,30 @@ export default function RegisterPage() {
   const [pending, setPending] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
 
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpPending, setOtpPending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [expiresIn, setExpiresIn] = useState(0);
+  const [debugCode, setDebugCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = window.setInterval(() => {
+      setCooldown((c) => Math.max(0, c - 1));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [cooldown]);
+
+  useEffect(() => {
+    if (expiresIn <= 0) return;
+    const id = window.setInterval(() => {
+      setExpiresIn((c) => Math.max(0, c - 1));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [expiresIn]);
+
   function updateField(name: string, value: string | boolean) {
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (name === 'password' && typeof value === 'string') {
@@ -42,38 +67,96 @@ export default function RegisterPage() {
     }
   }
 
+  function validateForm(): string | null {
+    if (formData.password !== formData.confirmPassword) {
+      return 'Şifreler eşleşmiyor.';
+    }
+    if (passwordStrength < 3) {
+      return 'Şifre en az 8 karakter, 1 büyük harf ve 1 rakam içermelidir.';
+    }
+    if (!formData.termsAccepted) {
+      return 'Devam etmek için Kullanım Şartları ve Gizlilik Politikasını kabul etmelisiniz.';
+    }
+    return null;
+  }
+
+  async function requestOtp() {
+    const result = await sendEmailOtp({
+      email: formData.email.trim(),
+      purpose: 'REGISTER',
+      firstName: formData.firstName.trim() || undefined,
+    });
+    setCooldown(result.resendCooldownSeconds);
+    setExpiresIn(result.expiresInSeconds);
+    setDebugCode(result.debugCode ?? null);
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Şifreler eşleşmiyor.');
-      return;
-    }
-    if (passwordStrength < 3) {
-      setError('Şifre en az 8 karakter, 1 büyük harf ve 1 rakam içermelidir.');
-      return;
-    }
-    if (!formData.termsAccepted) {
-      setError(
-        'Devam etmek için Kullanım Şartları ve Gizlilik Politikasını kabul etmelisiniz.',
-      );
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
     setPending(true);
     try {
+      await requestOtp();
+      setOtpCode('');
+      setOtpError(null);
+      setOtpOpen(true);
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : 'Doğrulama kodu gönderilemedi. Lütfen tekrar deneyin.',
+      );
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleResendOtp() {
+    if (cooldown > 0 || otpPending) return;
+    setOtpPending(true);
+    setOtpError(null);
+    try {
+      await requestOtp();
+      setOtpCode('');
+    } catch (err) {
+      setOtpError(
+        err instanceof ApiError ? err.message : 'Kod tekrar gönderilemedi',
+      );
+    } finally {
+      setOtpPending(false);
+    }
+  }
+
+  async function handleConfirmOtp() {
+    if (otpCode.length !== 6) {
+      setOtpError('6 haneli kodu girin.');
+      return;
+    }
+    setOtpPending(true);
+    setOtpError(null);
+    try {
       await register({
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
         firstName: formData.firstName || undefined,
         lastName: formData.lastName || undefined,
+        otpCode,
       });
+      setOtpOpen(false);
       router.push('/tours');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Kayıt başarısız oldu');
+      setOtpError(
+        err instanceof ApiError ? err.message : 'Kayıt başarısız oldu',
+      );
     } finally {
-      setPending(false);
+      setOtpPending(false);
     }
   }
 
@@ -317,6 +400,95 @@ export default function RegisterPage() {
           </form>
         </div>
       </div>
+
+      {otpOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="register-otp-title"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3
+                  id="register-otp-title"
+                  className="text-lg font-bold text-neutral-900"
+                >
+                  E-posta doğrulama
+                </h3>
+                <p className="mt-1 text-sm text-neutral-600">
+                  <span className="font-medium text-neutral-900">
+                    {formData.email}
+                  </span>{' '}
+                  adresine 6 haneli kod gönderdik.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOtpOpen(false)}
+                className="rounded-full p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+                aria-label="Kapat"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <input
+              value={otpCode}
+              onChange={(e) =>
+                setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+              }
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              maxLength={6}
+              placeholder="6 haneli kod"
+              className="h-12 w-full rounded-lg border border-neutral-300 px-3 text-center text-lg tracking-[0.35em] text-neutral-900 focus:border-neutral-950 focus:outline-none focus:ring-1 focus:ring-neutral-300"
+            />
+
+            <div className="mt-3 flex items-center justify-between gap-2 text-xs text-neutral-500">
+              {expiresIn > 0 ? (
+                <span>
+                  Süre: {Math.floor(expiresIn / 60)}:
+                  {String(expiresIn % 60).padStart(2, '0')}
+                </span>
+              ) : (
+                <span>Kodun süresi dolmuş olabilir</span>
+              )}
+              <button
+                type="button"
+                disabled={cooldown > 0 || otpPending}
+                onClick={() => void handleResendOtp()}
+                className="font-medium text-neutral-950 underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                {cooldown > 0
+                  ? `Tekrar gönder (${cooldown}s)`
+                  : 'Tekrar gönder'}
+              </button>
+            </div>
+
+            {debugCode ? (
+              <p className="mt-3 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
+                Dev kod: <strong>{debugCode}</strong>
+              </p>
+            ) : null}
+
+            {otpError ? (
+              <p className="mt-3 text-xs text-red-600">{otpError}</p>
+            ) : null}
+
+            <button
+              type="button"
+              disabled={otpPending || otpCode.length !== 6}
+              onClick={() => void handleConfirmOtp()}
+              className="mt-5 flex min-h-[44px] w-full items-center justify-center rounded-lg bg-neutral-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-60"
+            >
+              {otpPending ? 'Doğrulanıyor…' : 'Doğrula ve hesabı oluştur'}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

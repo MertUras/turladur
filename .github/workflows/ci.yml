@@ -49,9 +49,9 @@ jobs:
 
       - name: Build shared packages
         run: |
-          pnpm --filter @turladur/shared-types build
-          pnpm --filter @turladur/shared-validators build
-          pnpm --filter @turladur/shared-constants build
+          pnpm --filter @turta/shared-types build
+          pnpm --filter @turta/shared-validators build
+          pnpm --filter @turta/shared-constants build
 
       - name: Build web
         run: pnpm --filter web build

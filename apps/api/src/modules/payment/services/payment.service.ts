@@ -4,8 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import type { PaymentTransaction as SharedPayment } from '@turladur/shared-types';
+import type { PaymentTransaction as SharedPayment } from '@turta/shared-types';
 import { randomUUID } from 'crypto';
 import { Prisma } from '../../../generated/prisma';
 
@@ -17,14 +18,17 @@ import {
 } from '../adapters/payment-gateway.interface';
 import { CheckoutPaymentDto } from '../dto/checkout-payment.dto';
 import { IyzicoWebhookDto } from '../dto/iyzico-webhook.dto';
+import { ThreeDsCallbackDto } from '../dto/three-ds-callback.dto';
 import { PaymentCompletedEvent } from '../events/payment-completed.event';
 import { PaymentFailedEvent } from '../events/payment-failed.event';
+import { PaymentRefundedEvent } from '../events/payment-refunded.event';
 
 @Injectable()
 export class PaymentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly config: ConfigService,
     @Inject(PAYMENT_GATEWAY) private readonly gateway: PaymentGateway,
   ) {}
 
@@ -84,6 +88,7 @@ export class PaymentService {
     });
 
     const nameParts = dto.cardHolderName.trim().split(/\s+/);
+    const callbackUrl = this.resolveThreeDsCallbackUrl();
     const result = await this.gateway.initialize({
       conversationId,
       amount: reservation.totalAmount.toString(),
@@ -93,11 +98,13 @@ export class PaymentService {
       expireMonth: dto.expireMonth,
       expireYear: dto.expireYear,
       cvc: dto.cvc,
+      callbackUrl,
       buyer: {
         id: userId,
         email: reservation.contactEmail,
         name: nameParts[0] ?? 'Musteri',
         surname: nameParts.slice(1).join(' ') || 'Musteri',
+        phone: reservation.contactPhone ?? undefined,
       },
     });
 
@@ -115,7 +122,8 @@ export class PaymentService {
         success: true,
         data: {
           ...this.toShared(updated),
-          requires3ds: true,
+          requires3ds: true as const,
+          threeDSHtmlContent: result.threeDSHtmlContent ?? null,
         },
         error: null,
       };
@@ -173,6 +181,124 @@ export class PaymentService {
       success: true,
       data: this.toShared(paid),
       error: null,
+    };
+  }
+
+  /**
+   * Completes 3DS after bank / mock form POST.
+   * Returns redirect target for browser (success or fail checkout page).
+   */
+  async completeThreeDsCallback(dto: ThreeDsCallbackDto): Promise<{
+    redirectUrl: string;
+  }> {
+    const frontend = (
+      this.config.get<string>('FRONTEND_URL') ?? 'http://localhost:3001'
+    )
+      .split(',')[0]
+      .trim();
+
+    const transaction = await this.prisma.paymentTransaction.findUnique({
+      where: { conversationId: dto.conversationId },
+    });
+
+    if (!transaction) {
+      return {
+        redirectUrl: `${frontend}/checkout/success?paymentStatus=failed&reason=not_found`,
+      };
+    }
+
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id: transaction.reservationId },
+      select: { bookingNumber: true },
+    });
+    const bookingNumber = reservation?.bookingNumber ?? '';
+
+    if (transaction.status === 'SUCCESS') {
+      return {
+        redirectUrl: `${frontend}/checkout/success?paymentStatus=success&reservationId=${transaction.reservationId}&bookingNumber=${bookingNumber}`,
+      };
+    }
+
+    const bankOk =
+      dto.status.toLowerCase() === 'success' ||
+      dto.mdStatus === '1' ||
+      dto.status === 'SUCCESS';
+
+    if (!bankOk) {
+      const failed = await this.prisma.paymentTransaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: 'FAILED',
+          errorMessage: dto.errorMessage ?? '3DS doğrulama başarısız',
+          rawResponse: dto as unknown as Prisma.InputJsonValue,
+        },
+      });
+      this.eventEmitter.emit(
+        'payment.failed',
+        new PaymentFailedEvent(
+          failed.id,
+          failed.reservationId,
+          dto.errorMessage ?? '3DS doğrulama başarısız',
+        ),
+      );
+      return {
+        redirectUrl: `${frontend}/checkout/success?paymentStatus=failed&reservationId=${transaction.reservationId}`,
+      };
+    }
+
+    const complete = await this.gateway.completeThreeDs({
+      conversationId: dto.conversationId,
+      paymentId:
+        dto.paymentId ?? transaction.providerPaymentId ?? dto.conversationId,
+      conversationData: dto.conversationData,
+    });
+
+    if (!complete.success || complete.status === 'FAILED') {
+      const failed = await this.prisma.paymentTransaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: 'FAILED',
+          errorMessage: complete.errorMessage ?? 'Ödeme tamamlanamadı',
+          rawResponse: complete.raw as Prisma.InputJsonValue,
+        },
+      });
+      this.eventEmitter.emit(
+        'payment.failed',
+        new PaymentFailedEvent(
+          failed.id,
+          failed.reservationId,
+          complete.errorMessage ?? 'Ödeme tamamlanamadı',
+        ),
+      );
+      return {
+        redirectUrl: `${frontend}/checkout/success?paymentStatus=failed&reservationId=${transaction.reservationId}`,
+      };
+    }
+
+    const paid = await this.prisma.paymentTransaction.update({
+      where: { id: transaction.id },
+      data: {
+        status: 'SUCCESS',
+        providerPaymentId:
+          complete.providerPaymentId ??
+          dto.paymentId ??
+          transaction.providerPaymentId,
+        paidAt: new Date(),
+        rawResponse: complete.raw as Prisma.InputJsonValue,
+      },
+    });
+
+    this.eventEmitter.emit(
+      'payment.completed',
+      new PaymentCompletedEvent(
+        paid.id,
+        paid.reservationId,
+        paid.amount.toString(),
+      ),
+    );
+
+    return {
+      redirectUrl: `${frontend}/checkout/success?paymentStatus=success&reservationId=${paid.reservationId}&bookingNumber=${bookingNumber}`,
     };
   }
 
@@ -298,11 +424,35 @@ export class PaymentService {
       },
     });
 
+    await this.prisma.reservation.updateMany({
+      where: { id: transaction.reservationId, deletedAt: null },
+      data: { paymentStatus: 'REFUNDED' },
+    });
+
+    this.eventEmitter.emit(
+      'payment.refunded',
+      new PaymentRefundedEvent(
+        refunded.id,
+        refunded.reservationId,
+        refundAmount.toString(),
+        refunded.currency,
+      ),
+    );
+
     return {
       success: true,
       data: this.toShared(refunded),
       error: null,
     };
+  }
+
+  private resolveThreeDsCallbackUrl(): string {
+    const explicit = this.config.get<string>('IYZICO_CALLBACK_URL')?.trim();
+    if (explicit) return explicit;
+    const apiPublic =
+      this.config.get<string>('API_PUBLIC_URL')?.trim() ||
+      `http://localhost:${this.config.get<string>('PORT') ?? '4000'}`;
+    return `${apiPublic.replace(/\/$/, '')}/api/v1/payment/3ds/callback`;
   }
 
   private toShared(row: {

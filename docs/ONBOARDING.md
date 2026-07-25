@@ -1,6 +1,6 @@
-# TurlaDur — Geliştirici Onboarding (~30 dk)
+# turta — Geliştirici Onboarding (~30 dk)
 
-Monorepo: **legacy** müşteri/partner UI (`pnpm dev` → `:3000`) + **yeni stack** (`pnpm dev:apps` → web `:3001`, api `:4000`).
+Monorepo: **Nest API** (`apps/api` → `:4000`) + **Next web** (`apps/web` → `:3001`).
 
 ## 1. Ön koşullar
 
@@ -20,13 +20,14 @@ pnpm --filter api prisma db seed   # seed varsa
 
 ## 3. Çalıştırma
 
-| Komut           | Açıklama                                 |
-| --------------- | ---------------------------------------- |
-| `pnpm dev:apps` | Nest API + `apps/web`                    |
-| `pnpm dev:api`  | Sadece API                               |
-| `pnpm dev:web`  | Sadece yeni web (3001)                   |
-| `pnpm dev`      | Legacy Next.js (3000) — taşıma sürecinde |
+| Komut           | Açıklama              |
+| --------------- | --------------------- |
+| `pnpm dev`      | Web :3001 + API :4000 |
+| `pnpm dev:apps` | `pnpm dev` ile aynı   |
+| `pnpm dev:api`  | Sadece API            |
+| `pnpm dev:web`  | Sadece web (3001)     |
 
+- Web: http://localhost:3001
 - Swagger: http://localhost:4000/api/docs
 - Health: http://localhost:4000/api/v1/health
 
@@ -57,12 +58,3 @@ Yeni migration `apps/api/prisma/migrations/` altında:
 ```bash
 pnpm --filter api prisma:deploy
 ```
-
-Ekip kuralı: local Docker DB, staging Neon branch, prod ayrı — bkz. `.cursor/rules/team-workflow.mdc`.
-
-## 7. Deploy
-
-Production checklist: `docs/DEPLOYMENT.md`  
-Güvenlik: `docs/SECURITY_CHECKLIST.md`  
-Mobil ekip: `docs/MOBILE_ONBOARDING.md`  
-Schema taşıma: `docs/LEGACY_TO_NEST_SCHEMA_MAPPING.md`

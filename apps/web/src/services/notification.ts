@@ -1,5 +1,5 @@
 import { apiRequest } from './api-client';
-import type { AppNotification } from '@turladur/shared-types';
+import type { AppNotification } from '@turta/shared-types';
 
 export async function listNotifications(token: string, unreadOnly = false) {
   const qs = unreadOnly ? '?unreadOnly=true' : '';

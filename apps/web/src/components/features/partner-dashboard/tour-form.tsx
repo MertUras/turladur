@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { ImageIcon, X, Plus, ChevronDown, Trash2 } from 'lucide-react';
-import NextImage from 'next/image';
 import { useDropzone, FileWithPath } from 'react-dropzone';
 import { DatePicker } from '@/components/booking/date-picker';
 import { PickupPointForm } from '@/components/features/partner-dashboard/pickup-point-form';
@@ -626,10 +625,26 @@ export function TourForm({
     setUploadError(null);
     setIsUploadingImages(true);
     try {
+      const {
+        prepareTourImageFile,
+        TOUR_COVER_IMAGE_OPTIONS,
+        TOUR_GALLERY_IMAGE_OPTIONS,
+      } = await import('@/lib/prepare-tour-image');
       const uploadedImages: ImageFile[] = [];
       for (const file of imageFiles) {
-        const url = await uploadImageFile(file);
-        uploadedImages.push({ url, file: null, preview: url });
+        const prepared = await prepareTourImageFile(
+          file,
+          target === 'main'
+            ? TOUR_COVER_IMAGE_OPTIONS
+            : TOUR_GALLERY_IMAGE_OPTIONS,
+        );
+        const url = await uploadImageFile(prepared);
+        // Blob preview avoids Next /_next/image → r2.dev TLS 500 while uploading
+        uploadedImages.push({
+          url,
+          file: prepared,
+          preview: URL.createObjectURL(prepared),
+        });
       }
 
       setFormData((prev) => {
@@ -2495,12 +2510,12 @@ export function TourForm({
                 <div className="mt-5 grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                   {formData.images.map((image, index) => (
                     <div key={index} className="relative group">
-                      <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-200 relative">
-                        <NextImage
+                      <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-200 relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- blob/local preview must bypass next/image */}
+                        <img
                           src={image.preview || image.url || IMAGE_PLACEHOLDER}
                           alt={`Tour image ${index + 1}`}
-                          fill
-                          className="object-cover"
+                          className="h-full w-full object-cover"
                           onError={handlePreviewImageError}
                         />
                         <button
@@ -2529,16 +2544,15 @@ export function TourForm({
               />
               {formData.mainImage && (
                 <div className="mt-4 relative w-full max-w-xs">
-                  <NextImage
+                  {/* eslint-disable-next-line @next/next/no-img-element -- blob/local preview must bypass next/image */}
+                  <img
                     src={
                       formData.mainImage.preview ||
                       formData.mainImage.url ||
                       IMAGE_PLACEHOLDER
                     }
                     alt="Ana görsel"
-                    width={320}
-                    height={180}
-                    className="rounded-lg object-cover"
+                    className="h-[180px] w-full rounded-lg object-cover"
                     onError={handlePreviewImageError}
                   />
                 </div>
@@ -2574,12 +2588,11 @@ export function TourForm({
                     key={idx}
                     className="relative group border rounded-lg p-2 bg-white"
                   >
-                    <NextImage
+                    {/* eslint-disable-next-line @next/next/no-img-element -- blob/local preview must bypass next/image */}
+                    <img
                       src={img.preview || img.url || IMAGE_PLACEHOLDER}
                       alt={`Galeri görseli ${idx + 1}`}
-                      width={160}
-                      height={90}
-                      className="rounded-lg object-cover"
+                      className="h-[90px] w-full rounded-lg object-cover"
                       onError={handlePreviewImageError}
                     />
                     <input

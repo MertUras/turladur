@@ -1,7 +1,4 @@
-import type {
-  StaffPermissionKey,
-  StaffPermissions,
-} from '@turladur/shared-types';
+import type { StaffPermissionKey, StaffPermissions } from '@turta/shared-types';
 
 export function normalizeStaffPermissions(
   raw: unknown,

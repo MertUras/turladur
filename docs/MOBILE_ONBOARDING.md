@@ -1,23 +1,23 @@
 # Mobil Ekip — API Onboarding
 
-TurlaDur mobil uygulaması **tek NestJS API** kullanır. Ayrı mobil backend / DB yoktur.
+turta mobil uygulaması **tek NestJS API** kullanır. Ayrı mobil backend / DB yoktur.
 
 ## Ortamlar
 
-| Ortam              | API base URL                              | Neon DB branch  | Ne zaman               |
-| ------------------ | ----------------------------------------- | --------------- | ---------------------- |
-| Local (opsiyonel)  | `http://localhost:4000/api/v1`            | Docker Postgres | Offline / kendi deneme |
-| **Dev (önerilen)** | `https://dev-api.turladur.com/api/v1`     | `develop`       | Günlük geliştirme      |
-| Staging            | `https://staging-api.turladur.com/api/v1` | `staging`       | QA / demo              |
-| Production         | `https://api.turladur.com/api/v1`         | `production`    | Store release          |
+| Ortam              | API base URL                           | Neon DB branch  | Ne zaman               |
+| ------------------ | -------------------------------------- | --------------- | ---------------------- |
+| Local (opsiyonel)  | `http://localhost:4000/api/v1`         | Docker Postgres | Offline / kendi deneme |
+| **Dev (önerilen)** | `https://dev-api.turta.com/api/v1`     | `develop`       | Günlük geliştirme      |
+| Staging            | `https://staging-api.turta.com/api/v1` | `staging`       | QA / demo              |
+| Production         | `https://api.turta.com/api/v1`         | `production`    | Store release          |
 
 > Dev API henüz deploy edilmediyse geçici olarak local API veya legacy Next (`:3000`) kullanılabilir — ekiple teyit et.
 
 ## Hızlı başlangıç (local API)
 
 ```bash
-git clone https://github.com/MertUras/turladur.git   # veya tourtech repo
-cd turladur
+git clone https://github.com/MertUras/turta.git   # veya tourtech repo
+cd turta
 pnpm install
 cp apps/api/.env.example apps/api/.env
 pnpm docker:up

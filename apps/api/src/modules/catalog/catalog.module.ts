@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 
+import { StorageModule } from '../../core/storage/storage.module';
 import { CreateTourDateHandler } from './commands/create-tour-date/create-tour-date.handler';
 import { CreateTourHandler } from './commands/create-tour/create-tour.handler';
 import { DeleteTourHandler } from './commands/delete-tour/delete-tour.handler';
@@ -36,7 +37,7 @@ const QueryHandlers = [
 ];
 
 @Module({
-  imports: [CqrsModule],
+  imports: [CqrsModule, StorageModule],
   controllers: [
     TourController,
     TourExtrasController,

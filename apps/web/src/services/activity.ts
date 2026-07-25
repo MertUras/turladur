@@ -1,4 +1,4 @@
-import type { ActivityDate, Experience } from '@turladur/shared-types';
+import type { ActivityDate, Experience } from '@turta/shared-types';
 
 import { apiRequest, apiRequestWithMeta } from './api-client';
 

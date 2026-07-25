@@ -102,11 +102,18 @@ export async function uploadTourImageFile(
       contentType: string;
     },
     token: string,
-  ) => Promise<{ uploadUrl: string; publicUrl: string }>,
+  ) => Promise<{
+    uploadUrl: string;
+    publicUrl: string;
+    uploadHeaders?: Record<string, string>;
+  }>,
 ): Promise<string> {
-  const contentType = file.type as
+  const { prepareTourImageFile, TOUR_COVER_IMAGE_OPTIONS } =
+    await import('@/lib/prepare-tour-image');
+  const prepared = await prepareTourImageFile(file, TOUR_COVER_IMAGE_OPTIONS);
+  const contentType = (prepared.type || 'image/jpeg') as
     'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif';
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const safeName = prepared.name.replace(/[^a-zA-Z0-9._-]/g, '_');
   const presigned = await getPresignedUpload(
     {
       folder: 'tours',
@@ -118,8 +125,10 @@ export async function uploadTourImageFile(
   );
   const uploadRes = await fetch(presigned.uploadUrl, {
     method: 'PUT',
-    headers: { 'Content-Type': contentType },
-    body: file,
+    headers:
+      presigned.uploadHeaders ??
+      ({ 'Content-Type': contentType } satisfies Record<string, string>),
+    body: prepared,
   });
   if (!uploadRes.ok) {
     throw new Error('Görsel yüklenemedi');

@@ -17,7 +17,7 @@ Bu dosyadaki adımlar **Vercel Dashboard'da manuel** yapılır (Dev B). Agent/CI
 2. **Add New… → Project**.
 3. **Import Git Repository** altında GitHub hesabınızı bağlayın (gerekirse).
 4. Repoyu seçin:
-   - `halilmertogut/turladur` **veya**
+   - `halilmertogut/turta` **veya**
    - `halilmertogut/tourtech` (hangisi güncel remote ise)
 5. **Import** ile devam edin.
 
@@ -25,11 +25,11 @@ Bu dosyadaki adımlar **Vercel Dashboard'da manuel** yapılır (Dev B). Agent/CI
 
 ## Adım 2 — Framework ve proje ayarları
 
-| Alan | Değer |
-|------|--------|
-| **Framework Preset** | Next.js |
-| **Root Directory** | `./` (kök) |
-| **Node.js Version** | 20.x (varsayılan uygunsa bırakın) |
+| Alan                 | Değer                             |
+| -------------------- | --------------------------------- |
+| **Framework Preset** | Next.js                           |
+| **Root Directory**   | `./` (kök)                        |
+| **Node.js Version**  | 20.x (varsayılan uygunsa bırakın) |
 
 **Production Branch:** Şimdilik `main` kalabilir; preview için önemli olan feature branch deploy'udur.
 
@@ -47,11 +47,11 @@ npx prisma generate && npx prisma migrate deploy && next build
 
 ### Neden?
 
-| Parça | Açıklama |
-|-------|----------|
-| `prisma generate` | Prisma Client üretir. `package.json` içinde `postinstall` zaten `prisma generate` çalıştırır; tekrar etmek zararsızdır. |
+| Parça                   | Açıklama                                                                                                                                                    |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `prisma generate`       | Prisma Client üretir. `package.json` içinde `postinstall` zaten `prisma generate` çalıştırır; tekrar etmek zararsızdır.                                     |
 | `prisma migrate deploy` | Bekleyen SQL migration'ları Neon'a uygular. **Neon direct (pooled olmayan) bağlantı** ister; pooled URL ile build sırasında migrate genelde başarısız olur. |
-| `next build` | Next.js production build. |
+| `next build`            | Next.js production build.                                                                                                                                   |
 
 ### Pratik MVP seçimi (Day 1–2)
 
@@ -85,14 +85,14 @@ npx prisma generate && DATABASE_URL="$DIRECT_DATABASE_URL" npx prisma migrate de
 
 Her satır için **Environment** kutusunda en az **Preview** işaretleyin. (Production'ı Day 3+ için ayrı tutun.)
 
-| Değişken | Nereden alınır? | Placeholder / not |
-|----------|-----------------|-------------------|
-| `DATABASE_URL` | `.env.local` içindeki **yorum satırı** (Vercel Preview/Production — **POOLED**); veya Neon Console → `develop` → Connection Details → **Pooled** | `postgresql://USER:PASSWORD@ep-XXXX-pooler....neon.tech/neondb?sslmode=require&channel_binding=require` |
-| `NEXTAUTH_SECRET` | `.env.local` → `NEXTAUTH_SECRET` (preview için aynı veya yeni `openssl rand -base64 32`) | `<gizli — panelde yapıştırın, sohbete yazmayın>` |
-| `NEXTAUTH_URL` | İlk deploy **sonrası** preview URL | `https://tourtech-git-feat-neon-setup-....vercel.app` |
-| `NEXT_PUBLIC_APP_URL` | `NEXTAUTH_URL` ile **aynı** preview URL | Aynı |
-| `JWT_SECRET` | `.env.local` → `JWT_SECRET` | `<gizli>` |
-| `BCRYPT_SALT` | `.env.local` → `BCRYPT_SALT` (ör. `10`) | `10` |
+| Değişken              | Nereden alınır?                                                                                                                                  | Placeholder / not                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`        | `.env.local` içindeki **yorum satırı** (Vercel Preview/Production — **POOLED**); veya Neon Console → `develop` → Connection Details → **Pooled** | `postgresql://USER:PASSWORD@ep-XXXX-pooler....neon.tech/neondb?sslmode=require&channel_binding=require` |
+| `NEXTAUTH_SECRET`     | `.env.local` → `NEXTAUTH_SECRET` (preview için aynı veya yeni `openssl rand -base64 32`)                                                         | `<gizli — panelde yapıştırın, sohbete yazmayın>`                                                        |
+| `NEXTAUTH_URL`        | İlk deploy **sonrası** preview URL                                                                                                               | `https://tourtech-git-feat-neon-setup-....vercel.app`                                                   |
+| `NEXT_PUBLIC_APP_URL` | `NEXTAUTH_URL` ile **aynı** preview URL                                                                                                          | Aynı                                                                                                    |
+| `JWT_SECRET`          | `.env.local` → `JWT_SECRET`                                                                                                                      | `<gizli>`                                                                                               |
+| `BCRYPT_SALT`         | `.env.local` → `BCRYPT_SALT` (ör. `10`)                                                                                                          | `10`                                                                                                    |
 
 **Opsiyonel (MVP'de boş bırakılabilir):** `RESEND_API_KEY`, `SMTP_*`, `GOOGLE_MAPS_API_KEY`
 
@@ -151,12 +151,12 @@ NextAuth, cookie ve callback URL'leri için zorunlu:
 
 ## Sorun giderme
 
-| Belirti | Kontrol |
-|---------|---------|
+| Belirti               | Kontrol                                                                                   |
+| --------------------- | ----------------------------------------------------------------------------------------- |
 | Build'de migrate fail | `DATABASE_URL` pooled mu? Yerelde migrate yaptınız mı veya `DIRECT_DATABASE_URL` kullanın |
-| Login redirect loop | `NEXTAUTH_URL` preview URL ile birebir eşleşiyor mu + redeploy |
-| `P1001` runtime | Preview'da `DATABASE_URL` pooled ve `sslmode=require` var mı |
-| Boş liste | Neon `develop`'da `npm run db:seed` çalıştırıldı mı |
+| Login redirect loop   | `NEXTAUTH_URL` preview URL ile birebir eşleşiyor mu + redeploy                            |
+| `P1001` runtime       | Preview'da `DATABASE_URL` pooled ve `sslmode=require` var mı                              |
+| Boş liste             | Neon `develop`'da `npm run db:seed` çalıştırıldı mı                                       |
 
 ---
 

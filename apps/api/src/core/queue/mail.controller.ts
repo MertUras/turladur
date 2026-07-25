@@ -11,7 +11,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import { EmailQueueService } from './email-queue.service';
 
 class EnqueueTestEmailDto {
-  @ApiProperty({ example: 'test@turladur.com' })
+  @ApiProperty({ example: 'test@turta.com' })
   @IsEmail()
   to!: string;
 

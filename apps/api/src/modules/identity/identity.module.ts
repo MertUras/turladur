@@ -15,6 +15,7 @@ import { SubUserController } from './controllers/sub-user.controller';
 import { GetProfileHandler } from './queries/get-profile/get-profile.handler';
 import { AgencyService } from './services/agency.service';
 import { IdentityService } from './services/identity.service';
+import { OtpService } from './services/otp.service';
 import { SubUserService } from './services/sub-user.service';
 
 const CommandHandlers = [
@@ -33,11 +34,12 @@ const QueryHandlers = [GetProfileHandler];
   controllers: [IdentityController, SubUserController, AgencyController],
   providers: [
     IdentityService,
+    OtpService,
     SubUserService,
     AgencyService,
     ...CommandHandlers,
     ...QueryHandlers,
   ],
-  exports: [IdentityService, SubUserService, AgencyService],
+  exports: [IdentityService, OtpService, SubUserService, AgencyService],
 })
 export class IdentityModule {}

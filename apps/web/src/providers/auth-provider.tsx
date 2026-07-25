@@ -1,6 +1,6 @@
 'use client';
 
-import type { User } from '@turladur/shared-types';
+import type { User } from '@turta/shared-types';
 import {
   createContext,
   useCallback,
@@ -22,6 +22,7 @@ type AuthContextValue = {
     password: string;
     firstName?: string;
     lastName?: string;
+    otpCode: string;
   }) => Promise<User>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string;
       firstName?: string;
       lastName?: string;
+      otpCode: string;
     }) => {
       const result = await registerUser(input);
       setAccessToken(result.accessToken);

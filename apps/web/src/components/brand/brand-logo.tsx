@@ -8,7 +8,7 @@ type BrandLogoProps = {
   /** light = siyah logo (beyaz navbar); dark = beyaz logo (şeffaf navbar / hero) */
   surface?: 'light' | 'dark';
   /**
-   * Navbar scroll: eski Turladur gibi — üstte beyaz, kaydırınca siyah (crossfade).
+   * Navbar scroll: eski turta gibi — üstte beyaz, kaydırınca siyah (crossfade).
    */
   adaptive?: boolean;
   href?: string | null;
@@ -71,7 +71,7 @@ export function BrandLogo({
         priority={priority}
         className={layerClass(surface === 'light', imageClass, false)}
       />
-      {/* En üst: beyaz (şeffaf navbar / hero) — eski text-white Turladur */}
+      {/* En üst: beyaz (şeffaf navbar / hero) — eski text-white turta */}
       <Image
         src={ASSETS[variant].dark}
         alt=""

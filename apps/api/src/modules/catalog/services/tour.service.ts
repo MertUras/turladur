@@ -8,23 +8,39 @@ import {
   DEFAULT_CURRENCY,
   DEFAULT_PAGE,
   DEFAULT_PAGE_LIMIT,
-} from '@turladur/shared-constants';
+  TOUR_CANCEL_REASON_LABELS,
+  TourCancelReason,
+} from '@turta/shared-constants';
 import type {
   Tour as SharedTour,
   TourDate as SharedTourDate,
-} from '@turladur/shared-types';
+} from '@turta/shared-types';
 import { Prisma } from '../../../generated/prisma';
 
 import { CacheService } from '../../../core/cache/cache.service';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { StorageService } from '../../../core/storage/storage.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
 import { CreateTourDateDto } from '../dto/create-tour-date.dto';
 import { CreateTourDto } from '../dto/create-tour.dto';
 import { SearchToursDto } from '../dto/search-tours.dto';
 import { UpdateTourDto } from '../dto/update-tour.dto';
+import { TourCancelledEvent } from '../events/tour-cancelled.event';
+import { TourDatesCancelledEvent } from '../events/tour-dates-cancelled.event';
 import { TourCreatedEvent } from '../events/tour-created.event';
 import { TourSearchPerformedEvent } from '../events/tour-search-performed.event';
 import { slugify } from '../utils/slugify';
+
+function formatTourDateLabel(start: Date, end: Date): string {
+  const fmt = new Intl.DateTimeFormat('tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+  const startLabel = fmt.format(start);
+  const endLabel = fmt.format(end);
+  return startLabel === endLabel ? startLabel : `${startLabel} – ${endLabel}`;
+}
 
 const SEARCH_CACHE_TTL_SECONDS = 300;
 
@@ -34,6 +50,7 @@ export class TourService {
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly storage: StorageService,
   ) {}
 
   async create(dto: CreateTourDto, partnerId: string | undefined) {
@@ -127,6 +144,8 @@ export class TourService {
     partnerId: string | undefined,
     role: string,
   ) {
+    // Prefer cancelWithReason for published tours with bookings.
+    // Soft-delete without reason still archives; no mass-cancel email.
     const tour = await this.findOwnedTour(tourId, partnerId, role);
 
     await this.prisma.tour.update({
@@ -140,6 +159,199 @@ export class TourService {
     return {
       success: true,
       data: { id: tourId, deleted: true },
+      error: null,
+    };
+  }
+
+  /**
+   * Partner cancels / delists a tour with a mandatory reason.
+   * Emits tour.cancelled so booking cancels active reservations + emails guests.
+   */
+  async cancelWithReason(
+    tourId: string,
+    partnerId: string | undefined,
+    role: string,
+    reason: TourCancelReason,
+    note?: string,
+  ) {
+    const tour = await this.findOwnedTour(tourId, partnerId, role);
+    const reasonLabel = TOUR_CANCEL_REASON_LABELS[reason];
+
+    const extras =
+      tour.extras &&
+      typeof tour.extras === 'object' &&
+      !Array.isArray(tour.extras)
+        ? { ...(tour.extras as Record<string, unknown>) }
+        : {};
+
+    await this.prisma.tour.update({
+      where: { id: tour.id },
+      data: {
+        status: 'ARCHIVED',
+        deletedAt: new Date(),
+        extras: {
+          ...extras,
+          cancelReason: reason,
+          cancelReasonLabel: reasonLabel,
+          cancelNote: note?.trim() || null,
+          cancelledAt: new Date().toISOString(),
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    await this.cache.del(`catalog:tour:${tourId}`);
+    await this.cache.invalidatePattern('catalog:tours:search:*');
+
+    this.eventEmitter.emit(
+      'tour.cancelled',
+      new TourCancelledEvent(
+        tour.id,
+        tour.partnerId,
+        tour.title,
+        reason,
+        reasonLabel,
+      ),
+    );
+
+    return {
+      success: true,
+      data: {
+        id: tour.id,
+        cancelled: true,
+        reason,
+        reasonLabel,
+      },
+      error: null,
+    };
+  }
+
+  /**
+   * Cancel selected departure dates. Bookings for those dates are cancelled via event.
+   * Archives the tour only when no active dates remain.
+   */
+  async cancelDates(
+    tourId: string,
+    partnerId: string | undefined,
+    role: string,
+    dateIds: string[],
+    reason: TourCancelReason,
+    note?: string,
+  ) {
+    const tour = await this.findOwnedTour(tourId, partnerId, role);
+    const uniqueIds = [...new Set(dateIds)];
+    const reasonLabel = TOUR_CANCEL_REASON_LABELS[reason];
+
+    const dates = await this.prisma.tourDate.findMany({
+      where: {
+        id: { in: uniqueIds },
+        tourId: tour.id,
+        deletedAt: null,
+        isActive: true,
+      },
+    });
+
+    if (dates.length === 0) {
+      throw new BusinessException(
+        'TOUR_DATES_NOT_FOUND',
+        'Seçilen aktif tur tarihi bulunamadı',
+      );
+    }
+
+    if (dates.length !== uniqueIds.length) {
+      throw new BusinessException(
+        'TOUR_DATES_INVALID',
+        'Bazı tarihler bu tura ait değil veya zaten iptal edilmiş',
+      );
+    }
+
+    const cancelledAt = new Date().toISOString();
+    const cancelledInfos = dates.map((d) => ({
+      id: d.id,
+      startDate: d.startDate.toISOString(),
+      endDate: d.endDate.toISOString(),
+      label: formatTourDateLabel(d.startDate, d.endDate),
+    }));
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const date of dates) {
+        await tx.tourDate.update({
+          where: { id: date.id },
+          data: {
+            isActive: false,
+            deletedAt: new Date(),
+          },
+        });
+      }
+
+      const remaining = await tx.tourDate.count({
+        where: {
+          tourId: tour.id,
+          deletedAt: null,
+          isActive: true,
+        },
+      });
+
+      if (remaining === 0) {
+        const extras =
+          tour.extras &&
+          typeof tour.extras === 'object' &&
+          !Array.isArray(tour.extras)
+            ? { ...(tour.extras as Record<string, unknown>) }
+            : {};
+
+        await tx.tour.update({
+          where: { id: tour.id },
+          data: {
+            status: 'ARCHIVED',
+            deletedAt: new Date(),
+            extras: {
+              ...extras,
+              cancelReason: reason,
+              cancelReasonLabel: reasonLabel,
+              cancelNote: note?.trim() || null,
+              cancelledAt,
+              cancelledDateIds: cancelledInfos.map((d) => d.id),
+            } as Prisma.InputJsonValue,
+          },
+        });
+      }
+    });
+
+    const remainingAfter = await this.prisma.tourDate.count({
+      where: {
+        tourId: tour.id,
+        deletedAt: null,
+        isActive: true,
+      },
+    });
+    const tourArchived = remainingAfter === 0;
+
+    await this.cache.del(`catalog:tour:${tourId}`);
+    await this.cache.invalidatePattern('catalog:tours:search:*');
+
+    this.eventEmitter.emit(
+      'tour.dates.cancelled',
+      new TourDatesCancelledEvent(
+        tour.id,
+        tour.partnerId,
+        tour.title,
+        cancelledInfos,
+        reason,
+        reasonLabel,
+        tourArchived,
+      ),
+    );
+
+    return {
+      success: true,
+      data: {
+        id: tour.id,
+        cancelledDateIds: cancelledInfos.map((d) => d.id),
+        cancelledDates: cancelledInfos,
+        reason,
+        reasonLabel,
+        tourArchived,
+      },
       error: null,
     };
   }
@@ -500,8 +712,8 @@ export class TourService {
       title: tour.title,
       slug: tour.slug,
       description: tour.description,
-      coverUrl: tour.coverUrl,
-      galleryUrls: tour.galleryUrls ?? [],
+      coverUrl: this.storage.resolvePublicUrl(tour.coverUrl),
+      galleryUrls: this.storage.resolvePublicUrlList(tour.galleryUrls ?? []),
       extras:
         tour.extras &&
         typeof tour.extras === 'object' &&
@@ -521,7 +733,7 @@ export class TourService {
         ? {
             id: tour.partner.id,
             companyName: tour.partner.companyName,
-            logo: tour.partner.logo,
+            logo: this.storage.resolvePublicUrl(tour.partner.logo),
             membershipTier: tour.partner.membershipTier,
             averageRating: tour.partner.averageRating.toString(),
             reviewCount: tour.partner.reviewCount,

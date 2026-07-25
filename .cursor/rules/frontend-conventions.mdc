@@ -152,7 +152,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 
 // 3. Shared packages
-import type { Tour } from '@turladur/shared-types';
+import type { Tour } from '@turta/shared-types';
 
 // 4. Internal — services, hooks, stores
 import { catalogService } from '@/services/catalog.service';

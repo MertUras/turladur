@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import type { Tour } from '@turladur/shared-types';
+import type { Tour } from '@turta/shared-types';
+import { resolveMediaUrl, shouldUnoptimizeMedia } from '@/lib/media';
 
 function formatPrice(price: string, currency: string) {
   const value = Number(price);
@@ -13,15 +14,18 @@ function formatPrice(price: string, currency: string) {
 }
 
 export function TourCard({ tour }: { tour: Tour }) {
+  const coverSrc = resolveMediaUrl(tour.coverUrl);
+
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm transition hover:shadow-md">
       <div className="relative aspect-[16/10] overflow-hidden bg-neutral-100">
-        {tour.coverUrl ? (
+        {coverSrc ? (
           <Image
-            src={tour.coverUrl}
+            src={coverSrc}
             alt={tour.title}
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
+            unoptimized={shouldUnoptimizeMedia(coverSrc)}
             className="object-cover transition duration-500 group-hover:scale-105"
             loading="lazy"
           />

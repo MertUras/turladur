@@ -8,7 +8,7 @@ import {
   listTourReviews,
 } from '@/services/review';
 import { useAuth } from '@/providers/auth-provider';
-import type { Review } from '@turladur/shared-types';
+import type { Review } from '@turta/shared-types';
 
 type Props = { tourId: string };
 

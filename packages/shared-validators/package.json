@@ -1,8 +1,8 @@
 {
-  "name": "@turladur/shared-validators",
+  "name": "@turta/shared-validators",
   "version": "0.0.1",
   "private": true,
-  "description": "Shared Zod validators for TurlaDur web and api",
+  "description": "Shared Zod validators for turta web and api",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

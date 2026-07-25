@@ -257,7 +257,7 @@ export class Get{Resource}Handler implements IQueryHandler<Get{Resource}Query> {
 ```typescript
 // apps/web/src/services/{module}.service.ts
 import { apiClient } from './api-client';
-import type { Tour, TourSearchResponse } from '@turladur/shared-types';
+import type { Tour, TourSearchResponse } from '@turta/shared-types';
 
 export const catalogService = {
   searchTours: (params: Record<string, unknown>) =>
@@ -274,7 +274,7 @@ export const catalogService = {
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Tur Ara | TurlaDur',
+  title: 'Tur Ara | turta',
   description: "Türkiye'nin en güzel turlarını keşfedin.",
 };
 
@@ -312,7 +312,7 @@ export default function BookingsPage() {
 'use client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createBookingSchema, type CreateBookingInput } from '@turladur/shared-validators';
+import { createBookingSchema, type CreateBookingInput } from '@turta/shared-validators';
 
 export function BookingForm({ tourDateId }: { tourDateId: string }) {
   const form = useForm<CreateBookingInput>({

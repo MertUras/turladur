@@ -1,4 +1,4 @@
-import type { Tour } from '@turladur/shared-types';
+import type { Tour } from '@turta/shared-types';
 
 import { apiRequest, apiRequestWithMeta } from './api-client';
 
@@ -64,4 +64,22 @@ export async function getTourDates(tourId: string) {
   return apiRequest<TourDateRow[]>(`/catalog/tours/${tourId}/dates`, {
     next: { revalidate: 30 },
   });
+}
+
+export type TourPickupPoint = {
+  id: string;
+  tourId: string;
+  city: string;
+  location: string;
+  time: string;
+  description: string | null;
+  order: number;
+  isActive: boolean;
+};
+
+export async function getTourPickupPoints(tourId: string) {
+  return apiRequest<TourPickupPoint[]>(
+    `/catalog/tours/${tourId}/pickup-points`,
+    { next: { revalidate: 60 } },
+  );
 }

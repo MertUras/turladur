@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: turladur-postgres
+    container_name: turta-postgres
     ports:
       - '5433:5432'
     environment:
@@ -18,7 +18,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: turladur-redis
+    container_name: turta-redis
     ports:
       - '6379:6379'
     command: redis-server --maxmemory 256mb --maxmemory-policy noeviction
@@ -32,7 +32,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: turladur-minio
+    container_name: turta-minio
     ports:
       - '9000:9000'
       - '9001:9001'
@@ -50,7 +50,7 @@ services:
 
   mailhog:
     image: mailhog/mailhog:latest
-    container_name: turladur-mailhog
+    container_name: turta-mailhog
     ports:
       - '1025:1025'
       - '8025:8025'

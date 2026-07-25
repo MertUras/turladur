@@ -29,16 +29,38 @@ async function bootstrap() {
     .map((origin) => origin.trim())
     .filter(Boolean);
 
+  const allowVercelPreviews =
+    (process.env.CORS_ALLOW_VERCEL ?? '').toLowerCase() === 'true';
+
   app.enableCors({
-    origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // Same-origin / server-to-server / mobile without Origin
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      if (corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      // Soft launch: Vercel preview/production *.vercel.app before custom domain
+      if (allowVercelPreviews && /\.vercel\.app$/i.test(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('TurlaDur API')
-    .setDescription('TurlaDur platform API')
+    .setTitle('turta API')
+    .setDescription('turta platform API')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

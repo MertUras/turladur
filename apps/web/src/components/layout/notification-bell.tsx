@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Bell } from 'lucide-react';
 import Link from 'next/link';
 
@@ -10,20 +10,30 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '@/services/notification';
+import { useNotificationSocket } from '@/hooks/use-notification-socket';
 import { useAuth } from '@/providers/auth-provider';
 import { cn } from '@/lib/utils';
-import type { AppNotification } from '@turladur/shared-types';
+import type { AppNotification } from '@turta/shared-types';
 
-type Props = { solid: boolean };
+type Props = {
+  solid: boolean;
+  /** Optional footer link (e.g. partner reservations) — layout additive only */
+  footerHref?: string;
+  footerLabel?: string;
+};
 
-export function NotificationBell({ solid }: Props) {
+export function NotificationBell({
+  solid,
+  footerHref,
+  footerLabel = 'Tüm Bildirimleri Gör',
+}: Props) {
   const { accessToken, isAuthenticated } = useAuth();
   const [open, setOpen] = useState(false);
   const [count, setCount] = useState(0);
   const [items, setItems] = useState<AppNotification[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     if (!accessToken) return;
     const [c, list] = await Promise.all([
       getUnreadNotificationCount(accessToken),
@@ -31,7 +41,7 @@ export function NotificationBell({ solid }: Props) {
     ]);
     setCount(c.count);
     setItems(list);
-  }
+  }, [accessToken]);
 
   useEffect(() => {
     if (!isAuthenticated || !accessToken) {
@@ -40,12 +50,16 @@ export function NotificationBell({ solid }: Props) {
       return;
     }
     void refresh().catch(() => undefined);
+    // Poll fallback if WebSocket drops (risk mitigation)
     const id = window.setInterval(() => {
       void refresh().catch(() => undefined);
     }, 30000);
     return () => window.clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, accessToken]);
+  }, [isAuthenticated, accessToken, refresh]);
+
+  useNotificationSocket(accessToken, () => {
+    void refresh().catch(() => undefined);
+  });
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -82,7 +96,7 @@ export function NotificationBell({ solid }: Props) {
       </button>
 
       {open ? (
-        <div className="absolute right-0 mt-2 w-80 rounded-xl border border-neutral-200 bg-white shadow-lg">
+        <div className="absolute right-0 z-50 mt-2 w-80 rounded-xl border border-neutral-200 bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-neutral-100 px-3 py-2">
             <span className="text-sm font-semibold text-neutral-900">
               Bildirimler
@@ -140,6 +154,17 @@ export function NotificationBell({ solid }: Props) {
               </li>
             ))}
           </ul>
+          {footerHref ? (
+            <div className="border-t border-neutral-100 p-2">
+              <Link
+                href={footerHref}
+                className="block w-full rounded-lg px-3 py-2 text-center text-sm text-blue-600 transition-colors hover:bg-blue-50"
+                onClick={() => setOpen(false)}
+              >
+                {footerLabel}
+              </Link>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

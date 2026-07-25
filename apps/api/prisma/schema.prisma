@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
@@ -82,6 +83,30 @@ model User {
   @@index([partnerId])
   @@index([role])
   @@index([deletedAt])
+  @@schema("identity")
+}
+
+/// Email OTP — checkout, kayıt, şifre sıfırlama (SMS sonraki aşama).
+enum OtpPurpose {
+  CHECKOUT
+  REGISTER
+  PASSWORD_RESET
+
+  @@schema("identity")
+}
+
+model EmailOtp {
+  id         String     @id @default(cuid())
+  email      String
+  purpose    OtpPurpose
+  codeHash   String
+  attempts   Int        @default(0)
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  @@index([email, purpose])
+  @@index([expiresAt])
   @@schema("identity")
 }
 

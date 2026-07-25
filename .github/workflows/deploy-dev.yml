@@ -58,11 +58,17 @@ jobs:
           DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
         run: pnpm exec prisma migrate deploy
 
+      - name: Prisma seed (idempotent demo data)
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+        run: pnpm exec prisma db seed
+
       - name: Build shared packages
         run: |
-          pnpm --filter @turladur/shared-types build
-          pnpm --filter @turladur/shared-validators build
-          pnpm --filter @turladur/shared-constants build
+          pnpm --filter @turta/shared-types build
+          pnpm --filter @turta/shared-validators build
+          pnpm --filter @turta/shared-constants build
 
       - name: Build API
         run: pnpm --filter api build

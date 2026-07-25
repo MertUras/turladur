@@ -46,7 +46,9 @@ export function ImageUploadField({
       );
       const uploadRes = await fetch(presigned.uploadUrl, {
         method: 'PUT',
-        headers: { 'Content-Type': contentType },
+        headers:
+          presigned.uploadHeaders ??
+          ({ 'Content-Type': contentType } satisfies Record<string, string>),
         body: file,
       });
       if (!uploadRes.ok) throw new Error('Yükleme başarısız');

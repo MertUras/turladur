@@ -16,6 +16,7 @@ import { DEFAULT_DEPARTURE_CITIES } from '@/lib/departure-cities';
 import MembershipBadge from '@/components/features/tour/membership-badge';
 import StarRating from '@/components/features/tour/star-rating';
 import { getPublicApiBaseUrl } from '@/services/api-client';
+import { resolveMediaUrl, shouldUnoptimizeMedia } from '@/lib/media';
 import {
   MapPin,
   Calendar,
@@ -132,16 +133,16 @@ const mapTourFromApi = (tour: any): Tour => {
       ? tour.extras
       : {};
   const cover =
-    tour.coverUrl ||
-    (Array.isArray(tour.galleryUrls) && tour.galleryUrls[0]) ||
-    (Array.isArray(tour.images) ? tour.images[0] : null);
+    resolveMediaUrl(tour.coverUrl) ||
+    (Array.isArray(tour.galleryUrls) && tour.galleryUrls[0]
+      ? resolveMediaUrl(tour.galleryUrls[0])
+      : null) ||
+    (Array.isArray(tour.images) ? resolveMediaUrl(tour.images[0]) : null);
+  const galleryResolved = Array.isArray(tour.galleryUrls)
+    ? tour.galleryUrls.map((u: string) => resolveMediaUrl(u)).filter(Boolean)
+    : [];
   const imagesJson = cover
-    ? JSON.stringify(
-        [
-          cover,
-          ...(Array.isArray(tour.galleryUrls) ? tour.galleryUrls : []),
-        ].filter(Boolean),
-      )
+    ? JSON.stringify([cover, ...galleryResolved].filter(Boolean))
     : typeof tour.images === 'string'
       ? tour.images
       : '[]';
@@ -832,11 +833,14 @@ function ToursPageContent() {
           <div className="relative h-48 overflow-hidden">
             <Image
               src={
-                tourImages[0] ||
+                resolveMediaUrl(tourImages[0]) ||
                 'https://placehold.co/800x600/e5e7eb/6b7280?text=Tur'
               }
               alt={tour.name || 'Tur görseli'}
               fill
+              unoptimized={shouldUnoptimizeMedia(
+                resolveMediaUrl(tourImages[0]) || undefined,
+              )}
               className={`object-cover transition-transform duration-500 ${
                 isHovered ? 'scale-105' : 'scale-100'
               }`}

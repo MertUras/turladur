@@ -27,6 +27,7 @@ import { getPartnerTourById } from '@/services/partner-admin';
 type TourExtras = {
   includes?: string[];
   excludes?: string[];
+  healthPrivileges?: string[];
   itinerary?: { title: string; description: string }[];
   destinations?: string[];
   languages?: string[];

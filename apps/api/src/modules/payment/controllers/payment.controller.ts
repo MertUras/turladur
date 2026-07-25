@@ -1,8 +1,9 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, Post, Res } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { SkipThrottle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@turladur/shared-constants';
+import { Role } from '@turta/shared-constants';
+import type { Response } from 'express';
 
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
@@ -14,16 +15,23 @@ import { RefundPaymentCommand } from '../commands/refund-payment/refund-payment.
 import { CheckoutPaymentDto } from '../dto/checkout-payment.dto';
 import { IyzicoWebhookDto } from '../dto/iyzico-webhook.dto';
 import { RefundPaymentDto } from '../dto/refund-payment.dto';
+import { ThreeDsCallbackDto } from '../dto/three-ds-callback.dto';
+import { PaymentService } from '../services/payment.service';
 
 @ApiTags('Payment')
 @Controller('payment')
 export class PaymentController {
-  constructor(private readonly commandBus: CommandBus) {}
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly paymentService: PaymentService,
+  ) {}
 
   @Post('checkout')
   @ApiBearerAuth()
   @Roles(Role.CUSTOMER, Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Initialize payment for a reservation' })
+  @ApiOperation({
+    summary: 'Initialize payment for a reservation (may return 3DS HTML)',
+  })
   checkout(@Body() dto: CheckoutPaymentDto, @CurrentUser() user: UserPayload) {
     return this.commandBus.execute(
       new InitializePaymentCommand(dto, user.userId),
@@ -32,8 +40,22 @@ export class PaymentController {
 
   @Public()
   @SkipThrottle()
+  @Post('3ds/callback')
+  @HttpCode(302)
+  @ApiOperation({
+    summary:
+      'İyzico / mock 3DS bank callback — redirects browser to checkout success/fail',
+  })
+  async threeDsCallback(@Body() dto: ThreeDsCallbackDto, @Res() res: Response) {
+    const { redirectUrl } =
+      await this.paymentService.completeThreeDsCallback(dto);
+    return res.redirect(redirectUrl);
+  }
+
+  @Public()
+  @SkipThrottle()
   @Post('webhook/iyzico')
-  @ApiOperation({ summary: 'İyzico / sandbox payment callback' })
+  @ApiOperation({ summary: 'İyzico server-to-server payment webhook' })
   webhook(@Body() dto: IyzicoWebhookDto) {
     return this.commandBus.execute(new HandleWebhookCommand(dto));
   }

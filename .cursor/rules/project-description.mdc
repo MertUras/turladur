@@ -1,14 +1,14 @@
 ---
-description: TurlaDur platform tanımı ve vizyon dokümanı
+description: turta platform tanımı ve vizyon dokümanı
 globs: 
 alwaysApply: true
 ---
 
-# TurlaDur — Kapsamlı Turizm Ekosistem Platformu
+# turta — Kapsamlı Turizm Ekosistem Platformu
 
 ## Platform Özeti
 
-TurlaDur, Türkiye'nin turizm sektöründeki tüm paydaşları (küçük oteller, pansiyonlar, acenteler, tur operatörleri, yerel deneyim sağlayıcıları) tek bir dijital ekosistemde buluşturan, veri odaklı ve ölçeklenebilir bir platformdur.
+turta, Türkiye'nin turizm sektöründeki tüm paydaşları (küçük oteller, pansiyonlar, acenteler, tur operatörleri, yerel deneyim sağlayıcıları) tek bir dijital ekosistemde buluşturan, veri odaklı ve ölçeklenebilir bir platformdur.
 
 **Hedef:** Pilot uygulama → Türkiye geneli → Akdeniz ülkeleri (Yunanistan, İspanya, İtalya, Hırvatistan, Fas, Mısır)
 

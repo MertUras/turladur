@@ -19,7 +19,6 @@ import {
   Tag,
 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
-import NextImage from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import { getPartnerProfile } from '@/services/partner-admin';
 import { getPresignedUpload } from '@/services/partner-admin';
@@ -128,8 +127,8 @@ export default function PartnerNewTourPage() {
 
   // Önizleme için yardımcı fonksiyonlar
   const getPreviewImage = () => {
-    if (formData.mainImage?.preview) {
-      return formData.mainImage.preview;
+    if (formData.mainImage?.preview || formData.mainImage?.url) {
+      return formData.mainImage.preview || formData.mainImage.url;
     }
     if (formData.galleryImages && formData.galleryImages.length > 0) {
       return formData.galleryImages[0].preview || formData.galleryImages[0].url;
@@ -250,11 +249,10 @@ export default function PartnerNewTourPage() {
                   {/* Ana Görsel */}
                   <div className="h-48 w-full overflow-hidden rounded-lg bg-gray-100 flex items-center justify-center">
                     {getPreviewImage() ? (
-                      <NextImage
+                      // eslint-disable-next-line @next/next/no-img-element -- live form preview (blob / proxy)
+                      <img
                         src={getPreviewImage()!}
                         alt="Tur görseli"
-                        width={400}
-                        height={200}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -767,11 +765,11 @@ export default function PartnerNewTourPage() {
                                 key={idx}
                                 className="relative aspect-square overflow-hidden rounded-lg bg-gray-100"
                               >
-                                <NextImage
+                                {/* eslint-disable-next-line @next/next/no-img-element -- live form preview (blob / proxy) */}
+                                <img
                                   src={img.preview || img.url}
                                   alt={`Galeri görseli ${idx + 1}`}
-                                  fill
-                                  className="object-cover"
+                                  className="h-full w-full object-cover"
                                 />
                                 {img.description && (
                                   <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-1">

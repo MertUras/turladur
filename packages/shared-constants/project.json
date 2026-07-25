@@ -9,14 +9,14 @@
       "executor": "nx:run-commands",
       "outputs": ["{projectRoot}/dist"],
       "options": {
-        "command": "pnpm --filter @turladur/shared-constants build",
+        "command": "pnpm --filter @turta/shared-constants build",
         "cwd": "{workspaceRoot}"
       }
     },
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm --filter @turladur/shared-constants lint",
+        "command": "pnpm --filter @turta/shared-constants lint",
         "cwd": "{workspaceRoot}"
       }
     }
