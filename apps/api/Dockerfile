@@ -4,9 +4,12 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nx.json tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
+# postinstall → prisma generate; schema must exist before pnpm install
+COPY apps/api/prisma apps/api/prisma
 COPY packages/shared-types/package.json packages/shared-types/
 COPY packages/shared-constants/package.json packages/shared-constants/
 COPY packages/shared-validators/package.json packages/shared-validators/
+ENV HUSKY=0
 RUN pnpm install --frozen-lockfile --filter api...
 
 FROM deps AS build
