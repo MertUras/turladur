@@ -143,13 +143,20 @@ export class OtpService {
         await this.prisma.emailOtp.deleteMany({
           where: { email, purpose, verifiedAt: null },
         });
-        throw new BusinessException(
-          'OTP_MAIL_FAILED',
+        const detail = err instanceof Error ? err.message : String(err);
+        const message =
           err instanceof Error && err.message.includes('only send')
             ? 'Doğrulama maili gönderilemedi. Şirket domain’i yokken Gmail SMTP (SMTP_USER/SMTP_PASS) gerekir — docs/EMAIL_SETUP.md'
-            : 'Doğrulama e-postası gönderilemedi. Lütfen tekrar deneyin.',
-          422,
-        );
+            : /timeout|ETIMEDOUT|ECONNREFUSED|ECONNECTION|ESOCKET|Greeting never received/i.test(
+                  detail,
+                )
+              ? 'SMTP’ye bağlanılamadı. Railway’de SMTP_HOST/PORT/SECURE ve ağ çıkışını kontrol edin (587+SECURE=false veya 465+SECURE=true).'
+              : /EAUTH|Invalid login|Username and Password not accepted|BadCredentials/i.test(
+                    detail,
+                  )
+                ? 'SMTP giriş reddedildi. Gmail App Password’ü kontrol edin (normal şifre olmaz, boşluksuz).'
+                : 'Doğrulama e-postası gönderilemedi. Lütfen tekrar deneyin.';
+        throw new BusinessException('OTP_MAIL_FAILED', message, 422);
       }
       this.logger.warn(
         `OTP code (mail failed, local debug): ${code} → ${email} (${purpose})`,
