@@ -34,17 +34,8 @@ export function EmailOtpPanel({
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
   const [expiresIn, setExpiresIn] = useState(0);
   const [debugCode, setDebugCode] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const id = window.setInterval(() => {
-      setCooldown((c) => Math.max(0, c - 1));
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [cooldown]);
 
   useEffect(() => {
     if (expiresIn <= 0) return;
@@ -76,7 +67,6 @@ export function EmailOtpPanel({
       });
       setSent(true);
       setVerified(false);
-      setCooldown(result.resendCooldownSeconds);
       setExpiresIn(result.expiresInSeconds);
       setDebugCode(result.debugCode ?? null);
     } catch (err) {
@@ -115,6 +105,10 @@ export function EmailOtpPanel({
     onCodeChange?.(next);
   }
 
+  function formatOtpClock(totalSeconds: number) {
+    return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`;
+  }
+
   return (
     <div className="space-y-3 rounded-lg border border-neutral-200 bg-neutral-50/80 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -130,13 +124,13 @@ export function EmailOtpPanel({
         <button
           type="button"
           disabled={
-            disabled || pending || !email.trim() || cooldown > 0 || verified
+            disabled || pending || !email.trim() || expiresIn > 0 || verified
           }
           onClick={() => void handleSend()}
           className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-900 hover:bg-neutral-100 disabled:opacity-50"
         >
-          {cooldown > 0
-            ? `Tekrar gönder (${cooldown}s)`
+          {expiresIn > 0
+            ? `Tekrar gönder (${formatOtpClock(expiresIn)})`
             : sent
               ? 'Tekrar gönder'
               : 'Kod gönder'}
@@ -167,8 +161,7 @@ export function EmailOtpPanel({
           ) : null}
           {expiresIn > 0 && !verified ? (
             <p className="text-xs text-neutral-500">
-              Süre: {Math.floor(expiresIn / 60)}:
-              {String(expiresIn % 60).padStart(2, '0')}
+              Süre: {formatOtpClock(expiresIn)}
             </p>
           ) : null}
           {verified ? (

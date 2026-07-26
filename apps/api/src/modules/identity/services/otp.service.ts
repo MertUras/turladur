@@ -10,7 +10,8 @@ import { OtpPurposeDto } from '../dto/otp.dto';
 
 const OTP_TTL_MS = 2 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
-const OTP_RESEND_COOLDOWN_MS = 30 * 1000;
+/** Resend only after the active code expires (same window as TTL). */
+const OTP_RESEND_COOLDOWN_MS = OTP_TTL_MS;
 
 const PURPOSE_COPY: Record<
   OtpPurpose,
@@ -53,6 +54,16 @@ export class OtpService {
     const copy = PURPOSE_COPY[purpose];
 
     await this.assertPurposeRules(email, purpose);
+
+    const isProduction =
+      this.config.get<string>('NODE_ENV', 'development') === 'production';
+    if (isProduction && !this.mail.usesRealInbox) {
+      throw new BusinessException(
+        'OTP_MAIL_NOT_CONFIGURED',
+        'E-posta gönderimi yapılandırılmamış. Railway’de SMTP_USER/SMTP_PASS (veya RESEND_API_KEY) gerekli.',
+        503,
+      );
+    }
 
     let greetingName = firstName?.trim() || '';
 
@@ -127,10 +138,11 @@ export class OtpService {
       this.logger.error(
         `OTP mail failed for ${email}: ${err instanceof Error ? err.message : String(err)}`,
       );
-      this.logger.warn(
-        `OTP code (mail failed): ${code} → ${email} (${purpose})`,
-      );
-      if (this.mail.usesRealInbox) {
+      // Never pretend success when the user needs the code in their inbox.
+      if (isProduction || this.mail.usesRealInbox) {
+        await this.prisma.emailOtp.deleteMany({
+          where: { email, purpose, verifiedAt: null },
+        });
         throw new BusinessException(
           'OTP_MAIL_FAILED',
           err instanceof Error && err.message.includes('only send')
@@ -139,6 +151,9 @@ export class OtpService {
           422,
         );
       }
+      this.logger.warn(
+        `OTP code (mail failed, local debug): ${code} → ${email} (${purpose})`,
+      );
     }
 
     return this.sendSuccessPayload(email, purpose, code);

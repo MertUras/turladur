@@ -109,15 +109,18 @@ S3_FORCE_PATH_STYLE=false
 # Custom domain YOK → media proxy
 CDN_URL=https://YOUR-API.up.railway.app/api/v1/storage/media
 
-# Mail (OTP / voucher)
+# Mail (OTP / voucher) — ZORUNLU soft-launch için
+# SMTP yoksa OTP 201 dönüp mail gitmezdi; artık production'da 503/422 döner.
+# docs/EMAIL_SETUP.md — Gmail App Password önerilir
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASS=
-MAIL_FROM="turta <noreply@…>"
+SMTP_USER=learnedfromai@gmail.com
+SMTP_PASS=<gmail-app-password>
+MAIL_FROM="turta <learnedfromai@gmail.com>"
 EMAIL_BRAND_URL=https://YOUR-APP.vercel.app
 OTP_SHOW_DEBUG_CODE=false
+NODE_ENV=production
 
 # İyzico — boş = mock; sandbox key ile gerçek 3DS
 IYZICO_API_KEY=

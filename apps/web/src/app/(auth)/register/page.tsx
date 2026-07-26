@@ -34,17 +34,8 @@ export default function RegisterPage() {
   const [otpCode, setOtpCode] = useState('');
   const [otpError, setOtpError] = useState<string | null>(null);
   const [otpPending, setOtpPending] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
   const [expiresIn, setExpiresIn] = useState(0);
   const [debugCode, setDebugCode] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const id = window.setInterval(() => {
-      setCooldown((c) => Math.max(0, c - 1));
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [cooldown]);
 
   useEffect(() => {
     if (expiresIn <= 0) return;
@@ -86,7 +77,7 @@ export default function RegisterPage() {
       purpose: 'REGISTER',
       firstName: formData.firstName.trim() || undefined,
     });
-    setCooldown(result.resendCooldownSeconds);
+    // Resend unlocked only after code TTL ends (backend enforces the same).
     setExpiresIn(result.expiresInSeconds);
     setDebugCode(result.debugCode ?? null);
   }
@@ -119,7 +110,7 @@ export default function RegisterPage() {
   }
 
   async function handleResendOtp() {
-    if (cooldown > 0 || otpPending) return;
+    if (expiresIn > 0 || otpPending) return;
     setOtpPending(true);
     setOtpError(null);
     try {
@@ -132,6 +123,10 @@ export default function RegisterPage() {
     } finally {
       setOtpPending(false);
     }
+  }
+
+  function formatOtpClock(totalSeconds: number) {
+    return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`;
   }
 
   async function handleConfirmOtp() {
@@ -449,21 +444,18 @@ export default function RegisterPage() {
 
             <div className="mt-3 flex items-center justify-between gap-2 text-xs text-neutral-500">
               {expiresIn > 0 ? (
-                <span>
-                  Süre: {Math.floor(expiresIn / 60)}:
-                  {String(expiresIn % 60).padStart(2, '0')}
-                </span>
+                <span>Süre: {formatOtpClock(expiresIn)}</span>
               ) : (
-                <span>Kodun süresi dolmuş olabilir</span>
+                <span>Kodun süresi doldu — yeni kod isteyin</span>
               )}
               <button
                 type="button"
-                disabled={cooldown > 0 || otpPending}
+                disabled={expiresIn > 0 || otpPending}
                 onClick={() => void handleResendOtp()}
                 className="font-medium text-neutral-950 underline-offset-2 hover:underline disabled:opacity-50"
               >
-                {cooldown > 0
-                  ? `Tekrar gönder (${cooldown}s)`
+                {expiresIn > 0
+                  ? `Tekrar gönder (${formatOtpClock(expiresIn)})`
                   : 'Tekrar gönder'}
               </button>
             </div>
