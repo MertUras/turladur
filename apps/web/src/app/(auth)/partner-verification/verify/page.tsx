@@ -151,17 +151,18 @@ function PartnerVerificationVerifyContent() {
                 <CheckCircle className="h-8 w-8 text-emerald-600" />
               </div>
               <h2 className="mb-3 text-2xl font-bold tracking-tight text-neutral-900 md:text-3xl">
-                Hesap Doğrulandı
+                E-posta Doğrulandı
               </h2>
               <p className="mb-6 text-sm text-neutral-500">
-                Hesabınız başarıyla doğrulandı. Şimdi giriş yapabilirsiniz.
+                E-posta adresiniz doğrulandı. Başvurunuz editör onayına alındı.
+                Onay maili geldikten sonra giriş yapabilirsiniz.
               </p>
               <button
                 type="button"
                 onClick={() => router.push('/partner-login')}
                 className="inline-flex w-full items-center justify-center rounded-lg border border-transparent bg-sky-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
               >
-                Giriş Yap
+                Giriş Sayfasına Dön
               </button>
             </div>
           ) : null}

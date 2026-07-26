@@ -1,7 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { CacheService } from '../../../core/cache/cache.service';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { EmailQueueService } from '../../../core/queue/email-queue.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
 import {
   CreatePostDto,
@@ -9,6 +12,7 @@ import {
   UpdatePostDto,
 } from '../../content/dto/content.dto';
 import { ContentService } from '../../content/services/content.service';
+import { PartnerVerifiedEvent } from '../../identity/events/partner-verified.event';
 
 @Injectable()
 export class AdminService {
@@ -16,6 +20,9 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
     private readonly contentService: ContentService,
+    private readonly emailQueue: EmailQueueService,
+    private readonly config: ConfigService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getDashboardStats() {
@@ -172,6 +179,7 @@ export class AdminService {
       });
     }
 
+    const wasVerified = partner.status === 'VERIFIED';
     const updated = await this.prisma.partner.update({
       where: { id: partnerId },
       data: {
@@ -181,6 +189,31 @@ export class AdminService {
           status === 'VERIFIED' ? null : partner.verificationToken,
       },
     });
+
+    if (status === 'VERIFIED' && !wasVerified) {
+      this.eventEmitter.emit(
+        'partner.verified',
+        new PartnerVerifiedEvent(updated.id, updated.contactEmail),
+      );
+
+      const webBase = (
+        this.config.get<string>('EMAIL_BRAND_URL') ??
+        this.config.get<string>('FRONTEND_URL') ??
+        'https://turladur-zjyf.vercel.app'
+      )
+        .split(',')[0]
+        .trim()
+        .replace(/\/$/, '');
+
+      await this.emailQueue.enqueue({
+        to: updated.contactEmail,
+        template: 'partner-approved',
+        data: {
+          companyName: updated.companyName,
+          loginUrl: `${webBase}/partner-login`,
+        },
+      });
+    }
 
     return {
       success: true,

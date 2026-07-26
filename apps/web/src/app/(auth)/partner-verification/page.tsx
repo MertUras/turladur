@@ -53,8 +53,8 @@ function PartnerVerificationContent() {
               E-posta Adresinizi Doğrulayın
             </h2>
             <p className="mb-10 text-lg font-light text-sky-100/90">
-              Hesabınızı aktifleştirmek için e-posta adresinize gönderilen
-              doğrulama bağlantısına tıklayın.
+              E-postanızdaki bağlantıyı açın. Ardından editör onayı sonrası
+              partner paneline giriş yapabileceksiniz.
             </p>
           </div>
         </div>

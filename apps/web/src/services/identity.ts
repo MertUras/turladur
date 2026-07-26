@@ -142,12 +142,17 @@ export type RegisterPartnerInput = {
   lastName?: string;
 };
 
-export type RegisterPartnerResult = AuthTokens & {
+export type RegisterPartnerResult = {
   partner: {
     id: string;
     companyName: string;
     status: string;
     contactEmail: string;
+  };
+  user?: {
+    id: string;
+    email: string;
+    role: string;
   };
   message?: string;
 };

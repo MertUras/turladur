@@ -363,9 +363,26 @@ export class MailService {
             'Partner hesabını doğrula',
             `${company} partner kaydınızı doğrulayın.`,
             `<p style="margin:0 0 12px;color:#404040;">
-               <strong>${company}</strong> partner kaydınız oluşturuldu. Devam etmek için hesabınızı doğrulayın.
+               <strong>${company}</strong> partner kaydınız oluşturuldu. Devam etmek için e-posta adresinizi doğrulayın.
+               Ardından editör onayından sonra paneline giriş yapabileceksiniz.
              </p>
-             ${primaryButton(verifyUrl, 'Hesabı doğrula')}`,
+             ${primaryButton(verifyUrl, 'E-postayı doğrula')}`,
+          ),
+        };
+      }
+      case 'partner-approved': {
+        const company = escapeHtml(String(data.companyName ?? ''));
+        const loginUrl = String(data.loginUrl ?? '#');
+        return {
+          subject: 'Partner hesabınız onaylandı — turta',
+          html: this.layout(
+            'Hesabınız onaylandı',
+            `${company} partner hesabınız onaylandı. Giriş yapabilirsiniz.`,
+            `<p style="margin:0 0 12px;color:#404040;">
+               Merhaba, <strong>${company}</strong> partner başvurunuz editör tarafından
+               <strong>onaylanmıştır</strong>. Artık partner paneline giriş yapabilirsiniz.
+             </p>
+             ${primaryButton(loginUrl, 'Giriş yap')}`,
           ),
         };
       }

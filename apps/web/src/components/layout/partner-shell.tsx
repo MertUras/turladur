@@ -224,6 +224,14 @@ export function PartnerShell({ children }: { children: ReactNode }) {
         const tier = (profile as { membershipTier?: MembershipTier | null })
           .membershipTier;
         setMembershipTier(tier ?? null);
+
+        // Admin/super-admin may browse without partner row; partners must be VERIFIED.
+        if (user?.role === 'PARTNER' || user?.role === 'PARTNER_STAFF') {
+          if (profile.status && profile.status !== 'VERIFIED') {
+            logout();
+            router.replace('/partner-login');
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setMembershipTier(null);
@@ -231,7 +239,7 @@ export function PartnerShell({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [accessToken]);
+  }, [accessToken, user?.role, logout, router]);
 
   useEffect(() => {
     document.body.style.overflow = sidebarOpen ? 'hidden' : 'auto';

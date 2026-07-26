@@ -17,7 +17,6 @@ import { PrismaService } from '../../../core/database/prisma.service';
 import { EmailQueueService } from '../../../core/queue/email-queue.service';
 import { UserRole, Prisma, OtpPurpose } from '../../../generated/prisma';
 import { PartnerRegisteredEvent } from '../events/partner-registered.event';
-import { PartnerVerifiedEvent } from '../events/partner-verified.event';
 import { UserRegisteredEvent } from '../events/user-registered.event';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import { LoginUserDto } from '../dto/login-user.dto';
@@ -109,6 +108,8 @@ export class IdentityService {
         message: 'Email veya şifre hatalı',
       });
     }
+
+    await this.assertPartnerCanLogin(user);
 
     const role = this.mapRole(user.role);
     const tokens = await this.issueTokens({
@@ -406,31 +407,22 @@ export class IdentityService {
       ),
     );
 
-    const frontendUrl = this.config.get<string>(
-      'FRONTEND_URL',
-      'http://localhost:3000',
-    );
+    const webBase = this.partnerWebBaseUrl();
 
     await this.emailQueue.enqueue({
       to: result.partner.contactEmail,
       template: 'partner-verify',
       data: {
         companyName: result.partner.companyName,
-        verifyUrl: `${frontendUrl}/partner-verification/verify?token=${verificationToken}`,
+        verifyUrl: `${webBase}/partner-verification/verify?token=${verificationToken}`,
         token: verificationToken,
       },
     });
 
-    const tokens = await this.issueTokens({
-      sub: result.user.id,
-      role: Role.PARTNER,
-      partnerId: result.partner.id,
-    });
-
+    // Do not issue dashboard session until editor approves (status VERIFIED).
     return {
       success: true,
       data: {
-        ...tokens,
         partner: {
           id: result.partner.id,
           companyName: result.partner.companyName,
@@ -438,7 +430,8 @@ export class IdentityService {
           contactEmail: result.partner.contactEmail,
         },
         user: this.toSharedUser(result.user),
-        message: 'Partner kaydı oluşturuldu. Doğrulama e-postası gönderildi.',
+        message:
+          'Partner kaydı oluşturuldu. E-posta doğrulamasından sonra editör onayı beklenir.',
       },
       error: null,
     };
@@ -459,19 +452,13 @@ export class IdentityService {
       });
     }
 
+    // Email confirm only — stay PENDING until admin/editor sets VERIFIED.
     const updated = await this.prisma.partner.update({
       where: { id: partner.id },
       data: {
-        status: 'VERIFIED',
-        verifiedAt: new Date(),
         verificationToken: null,
       },
     });
-
-    this.eventEmitter.emit(
-      'partner.verified',
-      new PartnerVerifiedEvent(updated.id, updated.contactEmail),
-    );
 
     return {
       success: true,
@@ -480,9 +467,89 @@ export class IdentityService {
         companyName: updated.companyName,
         status: updated.status,
         verifiedAt: updated.verifiedAt?.toISOString() ?? null,
+        message:
+          'E-posta doğrulandı. Hesabınız editör onayına alındı; onay maili geldikten sonra giriş yapabilirsiniz.',
       },
       error: null,
     };
+  }
+
+  private partnerWebBaseUrl(): string {
+    return (
+      this.config.get<string>('EMAIL_BRAND_URL') ??
+      this.config.get<string>('FRONTEND_URL') ??
+      'https://turladur-zjyf.vercel.app'
+    )
+      .split(',')[0]
+      .trim()
+      .replace(/\/$/, '');
+  }
+
+  private async assertPartnerCanLogin(user: {
+    role: UserRole;
+    partnerId: string | null;
+  }): Promise<void> {
+    if (
+      user.role !== UserRole.PARTNER &&
+      user.role !== UserRole.PARTNER_STAFF
+    ) {
+      return;
+    }
+    if (!user.partnerId) {
+      throw new BusinessException(
+        'PARTNER_NOT_LINKED',
+        'Partner hesabı bulunamadı. Destek ile iletişime geçin.',
+        403,
+      );
+    }
+
+    const partner = await this.prisma.partner.findFirst({
+      where: { id: user.partnerId, deletedAt: null },
+      select: {
+        status: true,
+        verificationToken: true,
+      },
+    });
+
+    if (!partner) {
+      throw new BusinessException(
+        'PARTNER_NOT_FOUND',
+        'Partner hesabı bulunamadı.',
+        403,
+      );
+    }
+
+    if (partner.verificationToken) {
+      throw new BusinessException(
+        'PARTNER_EMAIL_NOT_VERIFIED',
+        'E-posta adresiniz henüz doğrulanmamış. Lütfen gelen kutunuzdaki bağlantıyı kullanın.',
+        403,
+      );
+    }
+
+    if (partner.status === 'PENDING') {
+      throw new BusinessException(
+        'PARTNER_PENDING_APPROVAL',
+        'Hesabınız henüz onaylanmamış. Editör onayını bekleyin; onay maili geldikten sonra giriş yapabilirsiniz.',
+        403,
+      );
+    }
+
+    if (partner.status === 'REJECTED') {
+      throw new BusinessException(
+        'PARTNER_REJECTED',
+        'Hesabınız reddedilmiş. Daha fazla bilgi için bizimle iletişime geçin.',
+        403,
+      );
+    }
+
+    if (partner.status === 'SUSPENDED') {
+      throw new BusinessException(
+        'PARTNER_SUSPENDED',
+        'Hesabınız askıya alınmış. Daha fazla bilgi için bizimle iletişime geçin.',
+        403,
+      );
+    }
   }
 
   private async ensureEmailAvailable(email: string): Promise<void> {

@@ -72,6 +72,11 @@ export default function PartnerLoginPage() {
 
       if (message.includes('onaylanmamış')) {
         setAccountStatus('PENDING');
+      } else if (
+        message.includes('e-posta') &&
+        message.includes('doğrulanmamış')
+      ) {
+        setAccountStatus('PENDING');
       } else if (message.includes('reddedilmiş')) {
         setAccountStatus('REJECTED');
       } else if (message.includes('askıya alınmış')) {
@@ -89,7 +94,8 @@ export default function PartnerLoginPage() {
         return {
           icon: Clock,
           colorClass: 'text-yellow-500',
-          message: 'Hesabınız onay bekliyor. Lütfen admin onayını bekleyin.',
+          message:
+            'Hesabınız onay bekliyor. Editör onayından sonra giriş yapabilirsiniz.',
         };
       case 'REJECTED':
         return {
