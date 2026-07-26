@@ -62,11 +62,16 @@ async function fetchApi(path: string, init: RequestInit): Promise<Response> {
     const aborted =
       err instanceof Error &&
       (err.name === 'AbortError' || err.name === 'TimeoutError');
+    const isLocalApi = /localhost|127\.0\.0\.1/.test(API_BASE);
     throw new ApiError(
       aborted ? 'TIMEOUT' : 'NETWORK_ERROR',
       aborted
-        ? 'API zaman aşımı. Nest kapalı olabilir — pnpm dev:api'
-        : 'API’ye bağlanılamadı. Nest çalışıyor mu? (localhost:4000)',
+        ? isLocalApi
+          ? 'API zaman aşımı. Nest kapalı olabilir — pnpm dev:api'
+          : 'API zaman aşımı. Sunucu yanıt vermiyor; biraz sonra tekrar deneyin.'
+        : isLocalApi
+          ? 'API’ye bağlanılamadı. Nest çalışıyor mu? (localhost:4000)'
+          : 'API’ye bağlanılamadı. Bağlantıyı kontrol edip tekrar deneyin.',
       0,
     );
   }

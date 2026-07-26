@@ -102,6 +102,10 @@ export class MailService {
         port,
         secure,
         requireTLS: !secure && port === 587,
+        // Soft-launch: never hang OTP behind frontend 12s timeout
+        connectionTimeout: 8_000,
+        greetingTimeout: 8_000,
+        socketTimeout: 12_000,
         auth: {
           user: this.smtpUser,
           pass: this.smtpPass,
@@ -115,6 +119,9 @@ export class MailService {
         host: config.get<string>('SMTP_HOST', 'localhost'),
         port: Number(config.get<string>('SMTP_PORT', '1025')),
         secure: false,
+        connectionTimeout: 3_000,
+        greetingTimeout: 3_000,
+        socketTimeout: 5_000,
       });
       if (this.resendApiKey) {
         this.logger.log(
