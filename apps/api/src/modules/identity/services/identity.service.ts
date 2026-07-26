@@ -41,7 +41,7 @@ export class IdentityService {
   ) {}
 
   async register(dto: RegisterUserDto) {
-    await this.ensureEmailAvailable(dto.email);
+    await this.ensureEmailAvailable(dto.email, 'customer');
     await this.otpService.verifyAndConsume(
       dto.email,
       OtpPurpose.REGISTER,
@@ -357,7 +357,7 @@ export class IdentityService {
   }
 
   async registerPartner(dto: RegisterPartnerDto) {
-    await this.ensureEmailAvailable(dto.contactEmail);
+    await this.ensureEmailAvailable(dto.contactEmail, 'partner');
 
     const verificationToken = randomUUID();
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
@@ -552,19 +552,65 @@ export class IdentityService {
     }
   }
 
-  private async ensureEmailAvailable(email: string): Promise<void> {
-    const existing = await this.prisma.user.findFirst({
-      where: {
-        email: email.toLowerCase().trim(),
-        deletedAt: null,
-      },
+  private async ensureEmailAvailable(
+    email: string,
+    context: 'customer' | 'partner' = 'customer',
+  ): Promise<void> {
+    const normalized = email.toLowerCase().trim();
+
+    const existingUser = await this.prisma.user.findFirst({
+      where: { email: normalized, deletedAt: null },
+      select: { id: true, role: true, partnerId: true },
     });
 
-    if (existing) {
+    if (existingUser) {
+      if (context === 'partner') {
+        if (
+          existingUser.role === UserRole.PARTNER ||
+          existingUser.role === UserRole.PARTNER_STAFF
+        ) {
+          throw new ConflictException({
+            code: 'EMAIL_ALREADY_PARTNER',
+            message:
+              'Bu e-posta ile partner hesabı zaten var. Partner girişinden devam edin.',
+          });
+        }
+        throw new ConflictException({
+          code: 'EMAIL_ALREADY_CUSTOMER',
+          message:
+            'Bu e-posta müşteri hesabı olarak kayıtlı. Partner kayıt için farklı bir e-posta kullanın.',
+        });
+      }
+
+      if (
+        existingUser.role === UserRole.PARTNER ||
+        existingUser.role === UserRole.PARTNER_STAFF
+      ) {
+        throw new ConflictException({
+          code: 'EMAIL_ALREADY_PARTNER',
+          message:
+            'Bu e-posta partner hesabına ait. Müşteri kaydı için farklı e-posta kullanın veya partner girişinden devam edin.',
+        });
+      }
+
       throw new ConflictException({
         code: 'EMAIL_ALREADY_EXISTS',
         message: 'Bu e-posta adresi zaten kayıtlı',
       });
+    }
+
+    if (context === 'partner') {
+      const existingPartner = await this.prisma.partner.findFirst({
+        where: { contactEmail: normalized, deletedAt: null },
+        select: { id: true },
+      });
+      if (existingPartner) {
+        throw new ConflictException({
+          code: 'EMAIL_ALREADY_PARTNER',
+          message:
+            'Bu e-posta ile partner firması zaten kayıtlı. Partner girişinden devam edin.',
+        });
+      }
     }
   }
 

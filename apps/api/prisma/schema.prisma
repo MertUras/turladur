@@ -142,6 +142,7 @@ model Partner {
   @@index([status])
   @@index([membershipTier])
   @@index([deletedAt])
+  @@unique([contactEmail])
   @@schema("identity")
 }
 
