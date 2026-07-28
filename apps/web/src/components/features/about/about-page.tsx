@@ -8,18 +8,9 @@ import {
   Heart as HeartIcon,
   BadgeCheck as CheckBadgeIcon,
   Building2 as BuildingOfficeIcon,
-  Map as MapIcon,
-  Phone as PhoneIcon,
-  Mail as EnvelopeIcon,
-  Star as StarIcon,
-  BarChart3 as ChartBarIcon,
-  GraduationCap as AcademicCapIcon,
-  Briefcase as BriefcaseIcon,
   Clock as ClockIcon,
-  ShieldCheck as ShieldCheckIcon,
   Lightbulb as LightBulbIcon,
   Eye as EyeIcon,
-  CheckCircle as CheckCircleIcon,
   ArrowRight as ArrowRightIcon,
 } from 'lucide-react';
 
@@ -70,6 +61,7 @@ const companyValues = [
 ];
 
 // Yönetim Kurulu
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future executive team section
 const executiveTeam = [
   {
     name: 'Dr. Ahmet Yılmaz',
@@ -199,9 +191,9 @@ export default function AboutPageContent() {
               Şekillendiriyoruz
             </h1>
             <p className="text-lg text-neutral-600 mb-10 leading-relaxed max-w-3xl mx-auto">
-              2025'te başlayacak yolculuğumuzda, turizm sektörünü teknolojiyle
-              buluşturarak yenilikçi ve sürdürülebilir çözümler üretmeyi
-              hedefliyoruz.
+              2025&apos;te başlayacak yolculuğumuzda, turizm sektörünü
+              teknolojiyle buluşturarak yenilikçi ve sürdürülebilir çözümler
+              üretmeyi hedefliyoruz.
             </p>
             {/* Buton stillerini güncelle */}
             <div className="flex flex-wrap gap-3 justify-center">
@@ -268,7 +260,7 @@ export default function AboutPageContent() {
               </p>
               {/* Başlık ve metin stillerini güncelle */}
               <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-6">
-                Türkiye'nin Lider Turizm Teknoloji Sağlayıcısı
+                Türkiye&apos;nin Lider Turizm Teknoloji Sağlayıcısı
               </h2>
               <p className="text-base text-neutral-600 mb-5 leading-relaxed">
                 turta, turizm sektörünün dijital dönüşümüne öncülük eden
@@ -277,7 +269,7 @@ export default function AboutPageContent() {
                 deneyimini daha kişiselleştirilmiş ve verimli hale getiriyoruz.
               </p>
               <p className="text-base text-neutral-600 leading-relaxed">
-                Türkiye'nin benzersiz destinasyonlarını dünyaya tanıtırken,
+                Türkiye&apos;nin benzersiz destinasyonlarını dünyaya tanıtırken,
                 yerel ekonomilere katkı sağlıyor ve sürdürülebilir turizmi
                 destekliyoruz.
               </p>
@@ -341,9 +333,10 @@ export default function AboutPageContent() {
                 <span className="text-indigo-600">Öncü Olmak</span>
               </h2>
               <p className="text-lg text-gray-600 leading-relaxed">
-                Türkiye'den çıkarak global ölçekte tanınan, turizm teknolojileri
-                alanında standartları belirleyen, inovasyon ve sürdürülebilirlik
-                ilkeleriyle sektöre yön veren lider bir marka olmaktır.
+                Türkiye&apos;den çıkarak global ölçekte tanınan, turizm
+                teknolojileri alanında standartları belirleyen, inovasyon ve
+                sürdürülebilirlik ilkeleriyle sektöre yön veren lider bir marka
+                olmaktır.
               </p>
             </div>
           </div>

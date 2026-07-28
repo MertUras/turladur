@@ -291,7 +291,7 @@ export default function ContactPageContent() {
               Global Ağımız
             </h2>
             <p className="text-lg text-neutral-600">
-              Türkiye'nin farklı şehirlerindeki turta ofisleri, profesyonel
+              Türkiye&apos;nin farklı şehirlerindeki turta ofisleri, profesyonel
               ekibimizle hizmetinizdedir. Size en yakın ofisimizi ziyaret
               edebilirsiniz.
             </p>

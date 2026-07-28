@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, RefObject } from 'react';
+import { useState, useRef, RefObject } from 'react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/booking/calendar';
 
@@ -17,7 +17,7 @@ interface DatePickerProps {
 // window'a özel bir property ekleyeceğimiz için typescript'e bildir
 declare global {
   interface Window {
-    __openCalendar__?: any;
+    __openCalendar__?: (() => void) | undefined;
   }
 }
 
