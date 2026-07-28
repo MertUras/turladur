@@ -45,7 +45,7 @@ turta/
 | DB | PostgreSQL 16 |
 | Cache | Redis 7 |
 | Queue | BullMQ |
-| Auth | Keycloak + Passport.js |
+| Auth | Nest identity + Passport JWT (`passport-jwt`) |
 | Storage | MinIO (dev) / S3 (prod) |
 | Email | Resend |
 | Logging | Pino |

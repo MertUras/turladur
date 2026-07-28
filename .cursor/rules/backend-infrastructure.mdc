@@ -618,7 +618,7 @@ export class PartnerNotVerifiedException extends BusinessException {
 | Forms | `react-hook-form` `@hookform/resolvers` | Performanslı form management |
 | Validation | `zod` | Runtime type validation |
 | HTTP | `axios` | Interceptors, instance config |
-| Auth | `next-auth` | Session, OAuth, JWT |
+| Auth | Nest identity API + `AuthProvider` (Bearer JWT memory) | next-auth / Keycloak yok |
 | Toast | `sonner` | Modern bildirimler |
 | Date | `date-fns` | Tree-shakeable, lightweight |
 | Icons | `lucide-react` | Modern SVG icon set |

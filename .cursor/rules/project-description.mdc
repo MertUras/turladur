@@ -23,7 +23,7 @@ turta, Türkiye'nin turizm sektöründeki tüm paydaşları (küçük oteller, p
 - **Veritabanı:** PostgreSQL 16 (multi-schema: catalog, booking, payment, identity, review, notification)
 - **ORM:** Prisma 6
 - **Cache & Queue:** Redis 7 + BullMQ
-- **Auth:** Keycloak + Passport.js (JWT)
+- **Auth:** Nest identity + Passport JWT (`passport-jwt`, Bearer access token)
 - **Storage:** MinIO (dev) / S3 (prod)
 - **Deploy:** Vercel (web) + Railway/Fly.io (api)
 
