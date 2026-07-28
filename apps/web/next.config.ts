@@ -1,13 +1,12 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Ported legacy pages still have pre-existing lint/type debt.
-  // Keep CI/build green for single-system cutover; clean under Faz C.
+  // ESLint: still ignored during build (Faz 2 / ~146 errors). Typecheck is enforced.
   eslint: {
     ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     formats: ['image/webp'],

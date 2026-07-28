@@ -513,7 +513,9 @@ function ToursPageContent() {
         sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
         break;
       case 'duration':
-        sorted.sort((a, b) => (a.duration || 0) - (b.duration || 0));
+        sorted.sort(
+          (a, b) => (Number(a.duration) || 0) - (Number(b.duration) || 0),
+        );
         break;
       case 'rating':
         sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));

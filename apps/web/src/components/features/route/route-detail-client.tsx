@@ -13,10 +13,16 @@ import type { RouteWithStats } from '@/services/route';
 type TourWithOperator = {
   id: string;
   title: string;
+  /** Legacy list cards sometimes expose `name` instead of `title`. */
+  name?: string;
   description?: string;
   price: string | number;
   images?: string | null;
+  features?: string | null;
   durationDays?: number;
+  duration?: string | number | null;
+  difficultyLevel?: string | null;
+  rating?: number | null;
   averageRating?: string | number;
   reviewCount?: number;
   category?: string;
@@ -25,6 +31,7 @@ type TourWithOperator = {
     id?: string;
     companyName?: string | null;
     logo?: string | null;
+    email?: string | null;
   } | null;
 };
 import {
@@ -95,7 +102,35 @@ export default function RouteDetailClient({ routeId }: PageProps) {
         return;
       }
       if (!res.ok) throw new Error('Rota yüklenemedi');
-      setData(await res.json());
+      const payload = (await res.json()) as {
+        success?: boolean;
+        data?: RouteDetailResponse;
+      } & Partial<RouteDetailResponse>;
+      const body =
+        payload.data &&
+        typeof payload.data === 'object' &&
+        'route' in payload.data
+          ? payload.data
+          : (payload as RouteDetailResponse);
+      if (!body?.route) {
+        setNotFound(true);
+        setData(null);
+        return;
+      }
+      const tours = body.tours ?? [];
+      const toursByCategory =
+        body.toursByCategory && Object.keys(body.toursByCategory).length > 0
+          ? body.toursByCategory
+          : tours.reduce<Record<string, TourWithOperator[]>>((acc, tour) => {
+              const key = tour.category?.trim() || 'Turlar';
+              (acc[key] ??= []).push(tour);
+              return acc;
+            }, {});
+      setData({
+        route: body.route,
+        tours,
+        toursByCategory,
+      });
     } catch (error) {
       console.error('Route detail fetch error:', error);
       setData(null);
@@ -306,9 +341,15 @@ export default function RouteDetailClient({ routeId }: PageProps) {
                     {tours.map((tour) => {
                       const operatorName = getOperatorDisplayName(
                         tour.tourOperator?.companyName,
-                        tour.tourOperator?.email,
+                        tour.tourOperator?.email ?? undefined,
                       );
                       const features = getTourFeatures(tour);
+                      const displayName = tour.name ?? tour.title;
+                      const ratingValue =
+                        tour.rating ??
+                        (tour.averageRating != null
+                          ? Number(tour.averageRating)
+                          : null);
 
                       return (
                         <div
@@ -318,7 +359,7 @@ export default function RouteDetailClient({ routeId }: PageProps) {
                           <div className="relative h-64">
                             <Image
                               src={getTourImage(tour)}
-                              alt={tour.name}
+                              alt={displayName}
                               fill
                               className="object-cover group-hover:scale-105 transition-transform duration-700"
                               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -331,16 +372,16 @@ export default function RouteDetailClient({ routeId }: PageProps) {
                                 </span>
                               )}
                               <h3 className="text-xl font-bold text-white mb-2">
-                                {tour.name}
+                                {displayName}
                               </h3>
                               <div className="flex items-center text-white/80 text-sm">
                                 <div className="flex items-center mr-4">
                                   <ClockIcon className="w-4 h-4 mr-1" />
-                                  {tour.duration} gün
+                                  {tour.duration ?? tour.durationDays} gün
                                 </div>
                                 <div className="flex items-center">
                                   <CurrencyDollarIcon className="w-4 h-4 mr-1" />
-                                  {formatPrice(tour.price)}
+                                  {formatPrice(Number(tour.price) || 0)}
                                 </div>
                               </div>
                             </div>
@@ -351,14 +392,14 @@ export default function RouteDetailClient({ routeId }: PageProps) {
                               {operatorName}
                             </p>
 
-                            {tour.rating !== null && tour.rating > 0 && (
+                            {ratingValue != null && ratingValue > 0 && (
                               <div className="flex items-center mb-3">
                                 <div className="flex items-center">
                                   {[...Array(5)].map((_, i) => (
                                     <StarIcon
                                       key={i}
                                       className={`w-4 h-4 ${
-                                        i < Math.floor(tour.rating ?? 0)
+                                        i < Math.floor(ratingValue)
                                           ? 'text-yellow-400 fill-yellow-400'
                                           : 'text-gray-300'
                                       }`}
@@ -366,7 +407,7 @@ export default function RouteDetailClient({ routeId }: PageProps) {
                                   ))}
                                 </div>
                                 <span className="text-sm text-gray-600 ml-2">
-                                  {tour.rating.toFixed(1)}
+                                  {ratingValue.toFixed(1)}
                                 </span>
                               </div>
                             )}

@@ -38,6 +38,8 @@ export function Header() {
     : isAuthenticated
       ? 'authenticated'
       : 'unauthenticated';
+  // AuthProvider has no async "loading" gate; keep skeleton branch for future parity.
+  const isAuthLoading = false as boolean;
   const sessionUser = user
     ? {
         name:
@@ -416,7 +418,7 @@ export function Header() {
 
           {/* Desktop Auth Area */}
           <div className="hidden lg:flex items-center space-x-2 flex-shrink-0">
-            {authStatus === 'loading' ? (
+            {isAuthLoading ? (
               <div className="flex space-x-2">
                 <div
                   className={`h-8 w-20 rounded-md animate-pulse ${pulseBg}`}
@@ -596,7 +598,7 @@ export function Header() {
 
             {/* Mobile Menu Content */}
             <div className="flex-1 py-3 px-3">
-              {authStatus === 'loading' ? (
+              {isAuthLoading ? (
                 <div className="p-3 space-y-4">
                   <div className="h-12 bg-neutral-200 animate-pulse rounded-md"></div>
                   <div className="h-10 bg-neutral-200 animate-pulse rounded-md"></div>
