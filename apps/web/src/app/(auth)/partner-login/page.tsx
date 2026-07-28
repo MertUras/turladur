@@ -131,8 +131,8 @@ export default function PartnerLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-neutral-50 pt-16 lg:flex-row">
-      <div className="relative hidden min-h-[420px] overflow-hidden lg:block lg:min-h-[calc(100vh-4rem)] lg:w-1/2">
+    <div className="flex min-h-screen flex-col bg-neutral-50 lg:flex-row">
+      <div className="relative hidden min-h-[420px] overflow-hidden lg:block lg:min-h-screen lg:w-1/2">
         <Image
           src={PARTNER_LOGIN_VISUAL}
           alt="İş Ortaklığı Platformu"
