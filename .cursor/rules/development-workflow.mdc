@@ -23,7 +23,7 @@ cd turta
 # 2. Bağımlılıkları kur
 pnpm install
 
-# 3. Altyapı servislerini başlat (PostgreSQL, Redis, MinIO, Keycloak)
+# 3. Altyapı servislerini başlat (PostgreSQL, Redis, MinIO)
 docker compose -f infrastructure/docker/docker-compose.yml up -d
 
 # 4. Ortam değişkenlerini ayarla
@@ -98,7 +98,6 @@ services:
 | Redis | 6379 | localhost:6379 |
 | MinIO Console | 9001 | http://localhost:9001 |
 | MinIO API | 9000 | http://localhost:9000 |
-| Keycloak | 8080 | http://localhost:8080 |
 | Mailhog UI | 8025 | http://localhost:8025 |
 
 ## Nx Komutları

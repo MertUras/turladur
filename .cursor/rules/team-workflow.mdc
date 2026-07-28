@@ -130,7 +130,7 @@ pnpm --filter api prisma db seed         # seed veri tekrar
 | Yeni endpoint | Backend ekibine issue açar veya kendi PR gönderir |
 | Breaking change | API'de breaking change YASAK — field deprecation, yeni versiyon `/v2/` |
 | Swagger | `dev-api.turta.com/api/docs` → tüm endpoint'leri, request/response'ları görebilir |
-| Auth | Aynı Keycloak, aynı JWT token yapısı — platform farkı yok |
+| Auth | Aynı Nest identity API + JWT (Bearer); mobil/web platform farkı yok |
 
 ### Mobil Ekip Hızlı Başlangıç
 

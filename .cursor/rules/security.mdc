@@ -25,11 +25,13 @@ alwaysApply: true
 - Düz metin şifre hiçbir yerde loglanmaz veya saklanmaz.
 - Şifre sıfırlama token'ı: tek kullanımlık, 1 saat geçerli.
 
-### Keycloak Entegrasyonu
-- Kullanıcı kayıt/giriş: Keycloak üzerinden OAuth2 + OIDC.
-- Backend JWT doğrulama: Keycloak public key ile imza kontrolü.
-- Multi-tenant: Her partner kendi realm'inde (ileride).
-- MFA (2FA): Keycloak'ta TOTP ile (kritik işlemler için zorunlu).
+### Auth Stack (mevcut)
+- Kullanıcı / partner kayıt-giriş: NestJS `identity` modülü (email + bcrypt şifre).
+- Backend JWT doğrulama: `@nestjs/passport` + `passport-jwt` (`JwtStrategy`, `JWT_SECRET`).
+- Access token: `Authorization: Bearer` — frontend memory state (`AuthProvider`); localStorage’a yazılmaz.
+- Tek e-posta → tek rol (CUSTOMER veya PARTNER); aynı e-posta ile çapraz kayıt engellenir.
+- MFA (2FA): henüz yok; ileride TOTP eklenebilir (kritik işlemler için).
+- Not: Harici IdP (Keycloak/OIDC) kullanılmıyor; gerekirse ayrı ürün kararı + migration gerekir.
 
 ---
 
@@ -245,7 +247,7 @@ USER app
 - Backend API: public internet'e açık ama rate-limited.
 - PostgreSQL: sadece backend container'ından erişilebilir (iç network).
 - Redis: sadece backend container'ından erişilebilir.
-- Keycloak admin: sadece iç network veya VPN üzerinden.
+- Admin panel API: JWT + `@Roles(ADMIN|SUPER_ADMIN)`; public internet’te rate-limited.
 - MinIO: presigned URL ile erişim (direkt public erişim yok).
 
 ### Dependency Güvenliği
