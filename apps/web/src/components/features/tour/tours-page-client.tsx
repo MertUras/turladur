@@ -2,16 +2,12 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import type { LegacyTourCard as Tour } from '@/lib/tours/legacy-tour';
-import {
-  parseJsonString,
-  parseDepartureCities,
-  parseDestinationCities,
-} from '@/lib/tours/parse';
+import { parseJsonString } from '@/lib/tours/parse';
 import { DEFAULT_DEPARTURE_CITIES } from '@/lib/departure-cities';
 import MembershipBadge from '@/components/features/tour/membership-badge';
 import StarRating from '@/components/features/tour/star-rating';
@@ -196,6 +192,147 @@ const mapTourFromApi = (tour: any): Tour => {
   };
 };
 
+/** Nest search’e gitmeyen extras filtreleri — client-side. */
+function getTourExtrasRecord(
+  tour: Record<string, unknown>,
+): Record<string, unknown> {
+  if (
+    tour.extras &&
+    typeof tour.extras === 'object' &&
+    !Array.isArray(tour.extras)
+  ) {
+    return tour.extras as Record<string, unknown>;
+  }
+  return {};
+}
+
+function normalizeFilterText(value: string): string {
+  return value.trim().toLocaleLowerCase('tr-TR');
+}
+
+function matchesClientExtrasFilters(
+  tour: Record<string, unknown>,
+  filterOptions: FilterOptions,
+): boolean {
+  const extras = getTourExtrasRecord(tour);
+
+  if (filterOptions.departureCity) {
+    const needle = normalizeFilterText(filterOptions.departureCity);
+    const dep = extras.departureCity ?? tour.departureCity;
+    const cities = (
+      Array.isArray(dep) ? dep : dep != null && dep !== '' ? [dep] : []
+    )
+      .map((city) => normalizeFilterText(String(city)))
+      .filter(Boolean);
+    if (!cities.some((city) => city === needle || city.includes(needle))) {
+      return false;
+    }
+  }
+  if (filterOptions.region) {
+    const needle = normalizeFilterText(filterOptions.region);
+    const region = normalizeFilterText(
+      String(extras.region ?? tour.region ?? ''),
+    );
+    if (!region || !(region === needle || region.includes(needle))) {
+      return false;
+    }
+  }
+  if (filterOptions.transportation) {
+    const needle = normalizeFilterText(filterOptions.transportation);
+    const transportation = normalizeFilterText(
+      String(extras.transportation ?? ''),
+    );
+    if (
+      !transportation ||
+      !(transportation === needle || transportation.includes(needle))
+    ) {
+      return false;
+    }
+  }
+  if (filterOptions.period) {
+    const needle = normalizeFilterText(filterOptions.period);
+    const period = normalizeFilterText(String(extras.period ?? ''));
+    if (!period || !(period === needle || period.includes(needle))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+const DEFAULT_TOUR_REGIONS = [
+  'Marmara',
+  'Ege',
+  'Akdeniz',
+  'İç Anadolu',
+  'Karadeniz',
+  'Doğu Anadolu',
+  'Güneydoğu Anadolu',
+] as const;
+
+const TOURS_FACET_FETCH_LIMIT = 100;
+
+function buildDepartureFacets(
+  rows: Record<string, unknown>[],
+): DepartureCityOption[] {
+  const counts = new Map<string, number>();
+  for (const tour of rows) {
+    const extras = getTourExtrasRecord(tour);
+    const dep = extras.departureCity ?? tour.departureCity;
+    const cities = Array.isArray(dep)
+      ? dep
+      : dep != null && dep !== ''
+        ? [dep]
+        : [];
+    for (const cityRaw of cities) {
+      const city = String(cityRaw).trim();
+      if (!city) continue;
+      counts.set(city, (counts.get(city) ?? 0) + 1);
+    }
+  }
+
+  const seen = new Set<string>();
+  const options: DepartureCityOption[] = [];
+  for (const city of DEFAULT_DEPARTURE_CITIES) {
+    seen.add(city);
+    options.push({ city, count: counts.get(city) ?? 0 });
+  }
+  for (const [city, count] of counts) {
+    if (seen.has(city)) continue;
+    seen.add(city);
+    options.push({ city, count });
+  }
+  return options.sort(
+    (a, b) => b.count - a.count || a.city.localeCompare(b.city, 'tr'),
+  );
+}
+
+function buildRegionFacets(rows: Record<string, unknown>[]): RegionOption[] {
+  const counts = new Map<string, number>();
+  for (const tour of rows) {
+    const extras = getTourExtrasRecord(tour);
+    const region = String(extras.region ?? tour.region ?? '').trim();
+    if (!region) continue;
+    counts.set(region, (counts.get(region) ?? 0) + 1);
+  }
+
+  const seen = new Set<string>();
+  const options: RegionOption[] = [];
+  for (const region of DEFAULT_TOUR_REGIONS) {
+    seen.add(region);
+    options.push({ region, count: counts.get(region) ?? 0 });
+  }
+  for (const [region, count] of counts) {
+    if (seen.has(region)) continue;
+    seen.add(region);
+    options.push({ region, count });
+  }
+  return options.sort(
+    (a, b) => b.count - a.count || a.region.localeCompare(b.region, 'tr'),
+  );
+}
+
+const TOURS_SEARCH_DEBOUNCE_MS = 400;
+
 function ToursPageContent() {
   const searchParams = useSearchParams();
   const durationParam = searchParams.get('duration');
@@ -207,7 +344,8 @@ function ToursPageContent() {
 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredTours, setFilteredTours] = useState<Tour[]>([]);
+  const [apiTourRows, setApiTourRows] = useState<Record<string, unknown>[]>([]);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('popular');
   const [showFilters, setShowFilters] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -252,7 +390,6 @@ function ToursPageContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [isLoading, setIsLoading] = useState(false);
-  const [totalTours, setTotalTours] = useState(0);
 
   const [loadingMore, setLoadingMore] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -264,20 +401,41 @@ function ToursPageContent() {
 
   useEffect(() => {
     const cities = DEFAULT_DEPARTURE_CITIES.map((city) => ({ city, count: 0 }));
+    const regions = DEFAULT_TOUR_REGIONS.map((region) => ({
+      region,
+      count: 0,
+    }));
     setDepartureCityOptions(cities);
     setFilteredDepartureCities(cities);
-    const regions = [
-      'Marmara',
-      'Ege',
-      'Akdeniz',
-      'İç Anadolu',
-      'Karadeniz',
-      'Doğu Anadolu',
-      'Güneydoğu Anadolu',
-    ].map((region) => ({ region, count: 0 }));
     setRegionOptions(regions);
     setFilteredRegions(regions);
   }, []);
+
+  // extras.departureCity / extras.region → facet sayaçları (API facet endpoint yok)
+  useEffect(() => {
+    const cities = buildDepartureFacets(apiTourRows);
+    const regions = buildRegionFacets(apiTourRows);
+    setDepartureCityOptions(cities);
+    setRegionOptions(regions);
+
+    const departureQuery = normalizeFilterText(departureSearch);
+    setFilteredDepartureCities(
+      departureQuery
+        ? cities.filter((item) =>
+            normalizeFilterText(item.city).includes(departureQuery),
+          )
+        : cities,
+    );
+
+    const regionQuery = normalizeFilterText(regionSearch);
+    setFilteredRegions(
+      regionQuery
+        ? regions.filter((item) =>
+            normalizeFilterText(item.region).includes(regionQuery),
+          )
+        : regions,
+    );
+  }, [apiTourRows, departureSearch, regionSearch]);
 
   // Hero ve header linklerinden gelen URL parametrelerini uygula
   useEffect(() => {
@@ -388,145 +546,146 @@ function ToursPageContent() {
     }, 1000);
   }, []);
 
-  const fetchTours = useCallback(async () => {
-    try {
-      setIsLoading(true);
-
-      const nestSort =
-        sortBy === 'price-low' || sortBy === 'price-high'
-          ? 'price'
-          : sortBy === 'rating'
-            ? 'rating'
-            : sortBy === 'duration'
-              ? 'durationDays'
-              : 'createdAt';
-
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: itemsPerPage.toString(),
-        sortBy: nestSort,
-        sortOrder: sortBy === 'price-low' ? 'asc' : 'desc',
-      });
-
-      const q = searchTerm.trim();
-      if (q) params.set('q', q);
-
-      if (filterOptions.minPrice != null) {
-        params.set('minPrice', String(filterOptions.minPrice));
-      }
-      if (filterOptions.maxPrice != null) {
-        params.set('maxPrice', String(filterOptions.maxPrice));
-      }
-      if (filterOptions.featured) params.set('featured', 'true');
-      if (filterOptions.rating != null) {
-        params.set('minRating', String(filterOptions.rating));
-      }
-      if (filterOptions.duration) {
-        const allowedDurations = new Set(['1', '2-3', '4-6', '7+']);
-        if (allowedDurations.has(filterOptions.duration)) {
-          params.set('duration', filterOptions.duration);
-        } else {
-          const days = Number(filterOptions.duration);
-          if (Number.isFinite(days) && days >= 1) {
-            params.set('durationDays', String(Math.floor(days)));
-          }
-        }
-      }
-      if (filterOptions.tourType) {
-        const category = filterOptions.tourType.toUpperCase();
-        if (
-          [
-            'CULTURAL',
-            'ADVENTURE',
-            'GASTRONOMY',
-            'NATURE',
-            'CITY',
-            'BEACH',
-          ].includes(category)
-        ) {
-          params.set('category', category);
-        }
-      }
-
-      const response = await fetch(
-        `${getPublicApiBaseUrl()}/catalog/tours/search?${params}`,
-        { headers: { Accept: 'application/json' } },
-      );
-      const data = await response.json();
-
-      if (response.ok && data.success !== false) {
-        let rows = Array.isArray(data.data) ? data.data : data.tours || [];
-
-        // Legacy filters stored in extras — apply client-side until Nest extras filters land
-        rows = rows.filter((tour: Record<string, unknown>) => {
-          const extras =
-            tour.extras &&
-            typeof tour.extras === 'object' &&
-            !Array.isArray(tour.extras)
-              ? (tour.extras as Record<string, unknown>)
-              : {};
-
-          if (filterOptions.departureCity) {
-            const dep = extras.departureCity ?? tour.departureCity;
-            const hay = Array.isArray(dep) ? dep.join(' ') : String(dep ?? '');
-            if (
-              !hay
-                .toLowerCase()
-                .includes(filterOptions.departureCity.toLowerCase())
-            ) {
-              return false;
-            }
-          }
-          if (filterOptions.region) {
-            const region = String(extras.region ?? tour.region ?? '');
-            if (
-              !region.toLowerCase().includes(filterOptions.region.toLowerCase())
-            ) {
-              return false;
-            }
-          }
-          if (filterOptions.transportation) {
-            const t = String(extras.transportation ?? '');
-            if (
-              !t
-                .toLowerCase()
-                .includes(filterOptions.transportation.toLowerCase())
-            ) {
-              return false;
-            }
-          }
-          if (filterOptions.period) {
-            const p = String(extras.period ?? '');
-            if (!p.toLowerCase().includes(filterOptions.period.toLowerCase())) {
-              return false;
-            }
-          }
-          return true;
-        });
-
-        setFilteredTours(rows.map(mapTourFromApi));
-        setTotalTours(data.meta?.total ?? data.total ?? rows.length);
-      } else {
-        const errMsg =
-          typeof data?.error === 'string'
-            ? data.error
-            : data?.error?.message || data?.message || 'Turlar yüklenemedi';
-        console.error('Error fetching tours:', errMsg, data?.error);
-        setFilteredTours([]);
-        setTotalTours(0);
-      }
-    } catch (error) {
-      console.error('Error fetching tours:', error);
-      setFilteredTours([]);
-      setTotalTours(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentPage, itemsPerPage, searchTerm, sortBy, filterOptions]);
+  // Nest’e giden parametreler — extras (bölge/kalkış) her değişimde istek atmaz.
+  const serverMinPrice = filterOptions.minPrice;
+  const serverMaxPrice = filterOptions.maxPrice;
+  const serverFeatured = filterOptions.featured;
+  const serverRating = filterOptions.rating;
+  const serverDuration = filterOptions.duration;
+  const serverTourType = filterOptions.tourType;
 
   useEffect(() => {
-    fetchTours();
-  }, [fetchTours]);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          setIsLoading(true);
+          setFetchError(null);
+
+          const nestSort =
+            sortBy === 'price-low' || sortBy === 'price-high'
+              ? 'price'
+              : sortBy === 'rating'
+                ? 'rating'
+                : sortBy === 'duration'
+                  ? 'durationDays'
+                  : 'createdAt';
+
+          const params = new URLSearchParams({
+            // extras (kalkış/bölge) client-side; facet + filtre için tek seferde yeterince tur çek
+            page: '1',
+            limit: String(TOURS_FACET_FETCH_LIMIT),
+            sortBy: nestSort,
+            sortOrder: sortBy === 'price-low' ? 'asc' : 'desc',
+          });
+
+          const q = searchTerm.trim();
+          if (q) params.set('q', q);
+
+          if (serverMinPrice != null) {
+            params.set('minPrice', String(serverMinPrice));
+          }
+          if (serverMaxPrice != null) {
+            params.set('maxPrice', String(serverMaxPrice));
+          }
+          if (serverFeatured) params.set('featured', 'true');
+          if (serverRating != null) {
+            params.set('minRating', String(serverRating));
+          }
+          if (serverDuration) {
+            const allowedDurations = new Set(['1', '2-3', '4-6', '7+']);
+            if (allowedDurations.has(serverDuration)) {
+              params.set('duration', serverDuration);
+            } else {
+              const days = Number(serverDuration);
+              if (Number.isFinite(days) && days >= 1) {
+                params.set('durationDays', String(Math.floor(days)));
+              }
+            }
+          }
+          if (serverTourType) {
+            const category = serverTourType.toUpperCase();
+            if (
+              [
+                'CULTURAL',
+                'ADVENTURE',
+                'GASTRONOMY',
+                'NATURE',
+                'CITY',
+                'BEACH',
+              ].includes(category)
+            ) {
+              params.set('category', category);
+            }
+          }
+
+          const response = await fetch(
+            `${getPublicApiBaseUrl()}/catalog/tours/search?${params}`,
+            {
+              headers: { Accept: 'application/json' },
+              signal: controller.signal,
+            },
+          );
+
+          if (response.status === 429) {
+            setFetchError(
+              'Çok hızlı filtrelediniz. Birkaç saniye bekleyip tekrar deneyin.',
+            );
+            return;
+          }
+
+          const data = await response.json();
+
+          if (response.ok && data.success !== false) {
+            const rows = Array.isArray(data.data)
+              ? data.data
+              : data.tours || [];
+            setApiTourRows(rows);
+          } else {
+            const errMsg =
+              typeof data?.error === 'string'
+                ? data.error
+                : data?.error?.message || data?.message || 'Turlar yüklenemedi';
+            setFetchError(errMsg);
+            setApiTourRows([]);
+          }
+        } catch (error) {
+          if (error instanceof DOMException && error.name === 'AbortError') {
+            return;
+          }
+          setFetchError('Turlar yüklenirken bir sorun oluştu.');
+          setApiTourRows([]);
+        } finally {
+          if (!controller.signal.aborted) {
+            setIsLoading(false);
+          }
+        }
+      })();
+    }, TOURS_SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    searchTerm,
+    sortBy,
+    serverMinPrice,
+    serverMaxPrice,
+    serverFeatured,
+    serverRating,
+    serverDuration,
+    serverTourType,
+  ]);
+
+  const filteredTours = useMemo(() => {
+    const mapped = apiTourRows
+      .filter((tour) => matchesClientExtrasFilters(tour, filterOptions))
+      .map(mapTourFromApi);
+    return sortTours(mapped);
+  }, [apiTourRows, filterOptions, sortBy]);
+
+  const totalTours = filteredTours.length;
 
   // Filtre veya arama değişince sayfayı başa al
   useEffect(() => {
@@ -654,13 +813,6 @@ function ToursPageContent() {
     const departureText = formatDepartureCity(tour.departureCity);
 
     const tourImages = parseJsonString<string[]>(tour.images || '[]', []);
-    const destinationCities = parseDestinationCities(tour.destinations);
-    const locationText =
-      destinationCities.length > 0
-        ? destinationCities.join(', ')
-        : tour.region?.trim() ||
-          parseDepartureCities(tour.departureCity).join(', ') ||
-          '';
 
     const inclusions = parseJsonString<string[]>(tour.inclusions || '[]', []);
     const features = parseJsonString<string[]>(
@@ -925,17 +1077,8 @@ function ToursPageContent() {
               {tour.name}
             </h3>
 
-            {/* Konum ve Tarih */}
-            <div className="space-y-1 mb-3 min-h-[2.5rem]">
-              {locationText && (
-                <div className="flex items-center gap-1 text-gray-600 min-w-0">
-                  <div
-                    className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"
-                    aria-hidden="true"
-                  />
-                  <span className="text-xs truncate">{locationText}</span>
-                </div>
-              )}
+            {/* Tarih */}
+            <div className="mb-3 min-h-[1.25rem]">
               <div className="flex items-center gap-1 text-gray-600 min-w-0">
                 <Calendar
                   className="w-3 h-3 text-gray-400 flex-shrink-0"
@@ -971,14 +1114,13 @@ function ToursPageContent() {
             {/* Fiyat ve Buton */}
             <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto min-h-[3rem]">
               <div className="flex flex-col flex-1 min-w-0">
-                {(appliedDiscount > 0 ||
-                  (tour.discount && tour.discount > 0)) && (
+                {(appliedDiscount > 0 || Number(tour.discount) > 0) && (
                   <span className="text-gray-400 text-xs line-through">
                     ₺{formatPrice(price)}
                   </span>
                 )}
                 <div className="flex items-baseline gap-1">
-                  <span className="text-lg font-bold text-gray-900">
+                  <span className="text-lg font-semibold text-gray-900">
                     ₺{formatPrice(discountedPrice)}
                   </span>
                   <span className="text-gray-500 text-xs">kişi</span>
@@ -1213,13 +1355,7 @@ function ToursPageContent() {
                         value={departureSearch}
                         className={`${MOBILE_FILTER_INPUT} mb-0 lg:mb-2`}
                         onChange={(e) => {
-                          const query = e.target.value.toLowerCase();
                           setDepartureSearch(e.target.value);
-                          setFilteredDepartureCities(
-                            departureCityOptions.filter((item) =>
-                              item.city.toLowerCase().includes(query),
-                            ),
-                          );
                         }}
                       />
                     </div>
@@ -1392,13 +1528,7 @@ function ToursPageContent() {
                         value={regionSearch}
                         className={`${MOBILE_FILTER_INPUT} mb-0 lg:mb-2`}
                         onChange={(e) => {
-                          const query = e.target.value.toLowerCase();
                           setRegionSearch(e.target.value);
-                          setFilteredRegions(
-                            regionOptions.filter((item) =>
-                              item.region.toLowerCase().includes(query),
-                            ),
-                          );
                         }}
                       />
                     </div>
@@ -1554,6 +1684,11 @@ function ToursPageContent() {
             </div>
 
             {/* Yükleme Durumu */}
+            {fetchError ? (
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                {fetchError}
+              </div>
+            ) : null}
             {isLoading ? (
               <LoadingSkeleton />
             ) : filteredTours.length === 0 ? (
@@ -1563,20 +1698,20 @@ function ToursPageContent() {
                 {/* Tur Kartları */}
                 {view === 'grid' ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-                    {filteredTours.map((tour) => (
+                    {currentTours.map((tour) => (
                       <ModernTourCard key={tour.id} tour={tour} />
                     ))}
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
-                    {filteredTours.map((tour) => (
+                    {currentTours.map((tour) => (
                       <ModernTourCard key={tour.id} tour={tour} />
                     ))}
                   </div>
                 )}
 
                 {/* Sayfalama */}
-                {totalTours > itemsPerPage && (
+                {totalItems > itemsPerPage && (
                   <div className="mt-8 flex justify-center">
                     <div className="flex items-center gap-2">
                       <button
@@ -1587,28 +1722,25 @@ function ToursPageContent() {
                         Önceki
                       </button>
 
-                      {Array.from(
-                        { length: Math.ceil(totalTours / itemsPerPage) },
-                        (_, i) => i + 1,
-                      ).map((page) => (
-                        <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          className={`px-3 py-2 rounded-md ${
-                            currentPage === page
-                              ? 'bg-neutral-950 text-white'
-                              : 'border hover:bg-gray-100 text-gray-700'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                        (page) => (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`px-3 py-2 rounded-md ${
+                              currentPage === page
+                                ? 'bg-neutral-950 text-white'
+                                : 'border hover:bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ),
+                      )}
 
                       <button
                         onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={
-                          currentPage === Math.ceil(totalTours / itemsPerPage)
-                        }
+                        disabled={currentPage === totalPages}
                         className="px-3 py-2 border rounded-md hover:bg-gray-100 disabled:opacity-50 text-gray-700"
                       >
                         Sonraki

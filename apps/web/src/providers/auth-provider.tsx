@@ -22,6 +22,9 @@ type AuthContextValue = {
     password: string;
     firstName?: string;
     lastName?: string;
+    phone: string;
+    identityNumber: string;
+    address: string;
     otpCode: string;
   }) => Promise<User>;
   logout: () => void;
@@ -52,6 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password: string;
       firstName?: string;
       lastName?: string;
+      phone: string;
+      identityNumber: string;
+      address: string;
       otpCode: string;
     }) => {
       const result = await registerUser(input);

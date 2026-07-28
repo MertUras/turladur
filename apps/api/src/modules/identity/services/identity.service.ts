@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -48,6 +49,13 @@ export class IdentityService {
       dto.otpCode,
     );
 
+    if (!isValidTckn(dto.identityNumber)) {
+      throw new BadRequestException({
+        code: 'INVALID_TCKN',
+        message: 'TC Kimlik No geçersiz',
+      });
+    }
+
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
     const user = await this.prisma.user.create({
       data: {
@@ -55,7 +63,9 @@ export class IdentityService {
         passwordHash,
         firstName: dto.firstName,
         lastName: dto.lastName,
-        phone: dto.phone,
+        phone: dto.phone.trim(),
+        identityNumber: dto.identityNumber.trim(),
+        address: dto.address.trim(),
         role: UserRole.CUSTOMER,
       },
     });

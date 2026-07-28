@@ -9,41 +9,12 @@ import {
   Phone as PhoneIcon,
   Mail as EnvelopeIcon,
   Clock as ClockIcon,
-  ChevronDown as ChevronDownIcon,
   Building2 as BuildingOffice2Icon,
   User as UserIcon,
-  HelpCircle as QuestionMarkCircleIcon,
   Users as UserGroupIcon,
 } from 'lucide-react';
 
-// SSS verileri
-const faqData = [
-  {
-    question: 'Rezervasyon iptali nasıl yapılır?',
-    answer:
-      "Rezervasyon iptallerinizi hesabınızın 'Rezervasyonlarım' bölümünden yapabilirsiniz. İptal koşulları rezervasyon tipine göre değişiklik gösterebilir. Detaylı bilgi için müşteri hizmetlerimizle iletişime geçebilirsiniz.",
-  },
-  {
-    question: 'Ödeme seçenekleri nelerdir?',
-    answer:
-      'turta üzerinden kredi kartı, banka kartı, havale/EFT ve online ödeme sistemleri ile ödeme yapabilirsiniz. Bazı rezervasyonlarda taksit seçenekleri de sunulmaktadır.',
-  },
-  {
-    question: 'Rezervasyon sonrası değişiklik yapabilir miyim?',
-    answer:
-      'Evet, çoğu rezervasyonda değişiklik yapabilirsiniz. Değişiklik koşulları ve ücretleri, rezervasyon tipine ve otel/tur politikasına göre değişiklik gösterebilir.',
-  },
-  {
-    question: 'Grup rezervasyonları için özel fiyatlar mevcut mu?',
-    answer:
-      'Evet, 10 kişi ve üzeri grup rezervasyonları için özel fiyat ve avantajlar sunuyoruz. Grup rezervasyonları için iletişim formumuz üzerinden bize ulaşabilirsiniz.',
-  },
-  {
-    question: 'Yurt dışı turlarında vize desteği sağlıyor musunuz?',
-    answer:
-      'Evet, yurt dışı turlarımızda vize süreçlerinize destek sağlıyoruz. Gerekli evraklar ve başvuru süreci hakkında detaylı bilgilendirme yapıyoruz.',
-  },
-];
+import { FaqSection } from '@/components/features/faq/faq-section';
 
 // Ofis bilgileri
 const officeLocations = [
@@ -396,62 +367,7 @@ export default function ContactPageContent() {
         </div>
       </div>
 
-      {/* SSS */}
-      <div className="py-24 bg-white">
-        <div className="container mx-auto px-6">
-          <div className="mb-16 text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center px-3 py-1 bg-sky-100 rounded-full text-sky-700 font-medium text-xs mb-6">
-              <QuestionMarkCircleIcon className="w-4 h-4 mr-1.5" />
-              Sıkça Sorulan Sorular
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
-              Aklınızdaki Soruların Yanıtları
-            </h2>
-            <p className="text-lg text-neutral-600">
-              Seyahat ve rezervasyon süreçlerinizle ilgili en çok sorulan
-              soruların yanıtlarını burada bulabilirsiniz.
-            </p>
-          </div>
-
-          <div className="max-w-3xl mx-auto">
-            <div className="space-y-3">
-              {faqData.map((faq, index) => (
-                <details
-                  key={index}
-                  className="group bg-white rounded-lg border border-neutral-200/80 overflow-hidden"
-                >
-                  <summary className="flex justify-between items-center font-medium cursor-pointer list-none p-5 hover:bg-neutral-50 transition-colors">
-                    <span className="text-base font-semibold text-neutral-800">
-                      {faq.question}
-                    </span>
-                    <span className="ml-4 flex-shrink-0 transform transition-transform duration-200 group-open:rotate-180">
-                      <ChevronDownIcon className="w-5 h-5 text-neutral-500" />
-                    </span>
-                  </summary>
-                  <div className="px-5 pb-5 pt-2 border-t border-neutral-200/60">
-                    <p className="text-neutral-600 text-sm leading-relaxed">
-                      {faq.answer}
-                    </p>
-                  </div>
-                </details>
-              ))}
-            </div>
-
-            <div className="mt-12 text-center border-t border-neutral-200 pt-8">
-              <p className="text-neutral-600 mb-5 text-sm">
-                Aradığınız sorunun cevabını bulamadınız mı?
-              </p>
-              <a
-                href="#contactForm"
-                className="inline-flex items-center px-6 py-3 bg-white hover:bg-neutral-100 text-sky-600 font-medium rounded-lg transition-colors shadow-sm border border-neutral-200 text-sm"
-              >
-                <EnvelopeIcon className="w-4 h-4 mr-2" />
-                Bize Sorun
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
+      <FaqSection contactHref="#contactForm" />
 
       {/* CTA */}
       <div className="py-20 bg-gradient-to-r from-sky-600 to-blue-700">

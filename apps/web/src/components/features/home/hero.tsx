@@ -70,7 +70,17 @@ const monthNames = [
 ];
 
 const routesHeroImage =
-  'https://images.unsplash.com/photo-1570654230464-9e63b3497a1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80';
+  'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=2070&q=80';
+
+const HOME_HERO_SLOGANS = [
+  "Aradığın deneyim Turta'da.",
+  "Rotan Turta'da",
+  "Aradığın Tatil Turta'da",
+  'Aradığın Turtada',
+] as const;
+
+const HOME_HERO_SLOGAN_INTERVAL_MS = 10_000;
+const HOME_HERO_SLOGAN_FADE_MS = 300;
 
 type HeroProps = {
   variant?: 'default' | 'routes';
@@ -106,30 +116,33 @@ export function Hero({ variant = 'default' }: HeroProps) {
 
   const modalRef = useRef<HTMLDivElement>(null);
   const [isBrowser, setIsBrowser] = useState(false);
+  const [sloganIndex, setSloganIndex] = useState(0);
+  const [sloganOpaque, setSloganOpaque] = useState(true);
 
   useEffect(() => {
     setIsBrowser(true);
   }, []);
 
+  // Ana sayfa hero slogan rotasyonu — sadece default variant; layout aynı.
   useEffect(() => {
-    const fetchDepartureCities = async () => {
-      try {
-        const response = await fetch('/api/tours/filters');
-        const data = await response.json();
-        if (
-          response.ok &&
-          Array.isArray(data.departureCities) &&
-          data.departureCities.length > 0
-        ) {
-          setDepartureCityOptions(data.departureCities);
-        }
-      } catch {
-        // Varsayılan şehir listesi kullanılır
-      }
-    };
+    if (variant !== 'default') return;
 
-    fetchDepartureCities();
-  }, []);
+    let fadeTimeout: ReturnType<typeof setTimeout> | undefined;
+    const interval = setInterval(() => {
+      setSloganOpaque(false);
+      fadeTimeout = setTimeout(() => {
+        setSloganIndex((prev) => (prev + 1) % HOME_HERO_SLOGANS.length);
+        setSloganOpaque(true);
+      }, HOME_HERO_SLOGAN_FADE_MS);
+    }, HOME_HERO_SLOGAN_INTERVAL_MS);
+
+    return () => {
+      clearInterval(interval);
+      if (fadeTimeout) clearTimeout(fadeTimeout);
+    };
+  }, [variant]);
+
+  // Nest’te facet endpoint yok; kalkış şehirleri DEFAULT_DEPARTURE_CITIES ile init.
 
   // Dışarı tıklanınca modal kapatma
   useEffect(() => {
@@ -968,11 +981,20 @@ export function Hero({ variant = 'default' }: HeroProps) {
         <div
           className={`w-full max-w-4xl animate-fadeIn ${isRoutesVariant ? 'mb-10 md:mb-12' : 'mb-4 md:mb-10'}`}
         >
-          <h1 className="text-[1.75rem] leading-tight sm:text-4xl md:text-6xl lg:text-[64px] font-bold mb-3 md:mb-5 tracking-tight text-white">
+          <h1
+            className="text-[1.75rem] leading-tight sm:text-4xl md:text-6xl lg:text-[64px] font-bold mb-3 md:mb-5 tracking-tight text-white"
+            aria-live="polite"
+          >
             {isRoutesVariant ? (
               <>Popüler Rotaları Keşfet</>
             ) : (
-              <>İçinden gelene git</>
+              <span
+                className={`inline-block transition-opacity duration-300 ease-out ${
+                  sloganOpaque ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                {HOME_HERO_SLOGANS[sloganIndex]}
+              </span>
             )}
           </h1>
           <p className="text-sm leading-relaxed md:text-xl max-w-2xl mx-auto text-white/85 md:text-white/90 font-light px-1 md:px-2">

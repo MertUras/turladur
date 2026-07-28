@@ -36,11 +36,27 @@ export class RegisterUserDto {
   @MaxLength(100)
   lastName?: string;
 
-  @ApiPropertyOptional({ example: '+905551234567' })
-  @IsOptional()
+  @ApiProperty({ example: '+905551234567' })
   @IsString()
+  @MinLength(8)
   @MaxLength(20)
-  phone?: string;
+  phone!: string;
+
+  @ApiProperty({
+    example: '10000000146',
+    description: 'TC Kimlik No (11 hane)',
+  })
+  @IsString()
+  @Matches(/^[1-9][0-9]{10}$/, {
+    message: 'TC Kimlik No 11 haneli ve geçerli olmalıdır',
+  })
+  identityNumber!: string;
+
+  @ApiProperty({ example: 'Çankaya Mah. …, Ankara' })
+  @IsString()
+  @MinLength(5)
+  @MaxLength(500)
+  address!: string;
 
   @ApiProperty({
     example: '123456',

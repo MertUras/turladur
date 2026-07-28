@@ -78,7 +78,7 @@ export const ROUTE_DEFINITIONS: RouteDefinition[] = [
 
 Balon turları, at turları, yürüyüş rotaları ve şarap tadımları gibi birçok aktivite seçeneği bulunmaktadır. Bölge, her mevsim farklı güzellikler sunar ve fotoğraf tutkunları için ideal bir destinasyondur.`,
     image:
-      'https://images.unsplash.com/photo-1570654230464-9e63b3497a1e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80',
+      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=2070&q=80',
     location: 'Nevşehir, Türkiye',
     bestTimeToVisit: 'Nisan - Ekim',
     weather: 'Yazları sıcak (25-35°C), kışları soğuk (-5-5°C)',

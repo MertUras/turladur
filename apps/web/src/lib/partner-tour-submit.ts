@@ -11,7 +11,9 @@ import {
   createTourDate,
   createTourDateAgeRange,
   createTourPickupPoint,
+  deleteTourPickupPoint,
   getPresignedUpload,
+  listTourPickupPoints,
   updatePartnerTour,
   upsertTourAccommodation,
 } from '@/services/partner-admin';
@@ -268,6 +270,13 @@ export async function persistPartnerTourUpdate(
     }
   }
 
+  // Replace pickup points (create-only on update was duplicating rows)
+  const existingPickups = await listTourPickupPoints(tourId, token).catch(
+    () => [],
+  );
+  for (const existing of existingPickups) {
+    await deleteTourPickupPoint(tourId, existing.id, token);
+  }
   for (const [index, point] of payload.pickupPoints.entries()) {
     await createTourPickupPoint(
       tourId,

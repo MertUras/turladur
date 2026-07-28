@@ -250,8 +250,23 @@ export function CheckoutClient() {
           setTour(t);
           setTourDate(dates.find((d) => d.id === dateId) ?? dates[0] ?? null);
           const activePickups = pickups.filter((p) => p.isActive !== false);
-          setPickupPoints(activePickups);
-          setPickupPointId(activePickups[0]?.id ?? '');
+          // Partner update historically re-created pickups → duplicate rows in DB.
+          // Deduplicate by city+location+time for checkout UX (keep first by order).
+          const seenPickupKeys = new Set<string>();
+          const uniquePickups = [...activePickups]
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            .filter((point) => {
+              const key = [
+                point.city.trim().toLocaleLowerCase('tr-TR'),
+                point.location.trim().toLocaleLowerCase('tr-TR'),
+                point.time.trim(),
+              ].join('|');
+              if (seenPickupKeys.has(key)) return false;
+              seenPickupKeys.add(key);
+              return true;
+            });
+          setPickupPoints(uniquePickups);
+          setPickupPointId(uniquePickups[0]?.id ?? '');
         } else {
           const [e, dates] = await Promise.all([
             getExperienceById(itemId),

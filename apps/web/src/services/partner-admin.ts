@@ -653,6 +653,17 @@ export async function createTourPickupPoint(
   });
 }
 
+export async function deleteTourPickupPoint(
+  tourId: string,
+  pointId: string,
+  token: string,
+) {
+  return apiRequest(`/catalog/tours/${tourId}/pickup-points/${pointId}`, {
+    method: 'DELETE',
+    token,
+  });
+}
+
 export async function listPendingExperiences(token: string) {
   return apiRequest<
     Array<{

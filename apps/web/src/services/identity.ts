@@ -29,6 +29,9 @@ export async function registerUser(input: {
   password: string;
   firstName?: string;
   lastName?: string;
+  phone: string;
+  identityNumber: string;
+  address: string;
   otpCode: string;
 }) {
   return apiRequest<AuthTokens>('/identity/register', {

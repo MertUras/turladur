@@ -367,6 +367,14 @@ export function Header() {
               )}
             </div>
 
+            {/* Blog */}
+            <Link
+              href="/blog"
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${linkColor} ${linkHoverColor} ${linkBgHoverColor}`}
+            >
+              Blog
+            </Link>
+
             {/* Diğer Linkler */}
             <Link
               href="/about"
@@ -760,6 +768,15 @@ export function Header() {
                     </div>
                   </div>
                 </div>
+
+                {/* Mobil Blog */}
+                <Link
+                  href="/blog"
+                  className="block py-2.5 px-3 text-sm font-medium text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 rounded-md transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Blog
+                </Link>
 
                 {/* Mobil Diğer Linkler */}
                 <Link

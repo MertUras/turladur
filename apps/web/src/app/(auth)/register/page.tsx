@@ -4,9 +4,22 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
-import { AlertCircle, Eye, EyeOff, Lock, Mail, User, X } from 'lucide-react';
+import {
+  AlertCircle,
+  CreditCard,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  MapPin,
+  User,
+  X,
+} from 'lucide-react';
 
 import { BrandLogo } from '@/components/brand/brand-logo';
+import { formatFullPhone, PhoneInput } from '@/components/ui/phone-input';
+import { getPhoneValidationError, isValidFullPhone } from '@/lib/phone-rules';
+import { isValidTckn } from '@/lib/tckn';
 import { ApiError } from '@/services/api-client';
 import { sendEmailOtp } from '@/services/identity';
 import { useAuth } from '@/providers/auth-provider';
@@ -21,10 +34,15 @@ export default function RegisterPage() {
     firstName: '',
     lastName: '',
     email: '',
+    phoneDial: '+90',
+    phoneLocal: '',
+    identityNumber: '',
+    address: '',
     password: '',
     confirmPassword: '',
     termsAccepted: false,
   });
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -59,6 +77,21 @@ export default function RegisterPage() {
   }
 
   function validateForm(): string | null {
+    if (!isValidFullPhone(formData.phoneDial, formData.phoneLocal)) {
+      const msg =
+        getPhoneValidationError(formData.phoneLocal, formData.phoneDial) ??
+        'Geçerli bir telefon numarası girin (alan kodu dahil).';
+      setPhoneError(msg);
+      return msg;
+    }
+    setPhoneError(null);
+    const tckn = formData.identityNumber.replace(/\D/g, '');
+    if (!tckn || tckn.length !== 11 || !isValidTckn(tckn)) {
+      return 'Geçerli bir TC Kimlik No girin (11 hane).';
+    }
+    if (formData.address.trim().length < 5) {
+      return 'Adres en az 5 karakter olmalıdır.';
+    }
     if (formData.password !== formData.confirmPassword) {
       return 'Şifreler eşleşmiyor.';
     }
@@ -142,6 +175,9 @@ export default function RegisterPage() {
         password: formData.password,
         firstName: formData.firstName || undefined,
         lastName: formData.lastName || undefined,
+        phone: formatFullPhone(formData.phoneDial, formData.phoneLocal),
+        identityNumber: formData.identityNumber.replace(/\D/g, ''),
+        address: formData.address.trim(),
         otpCode,
       });
       setOtpOpen(false);
@@ -280,6 +316,67 @@ export default function RegisterPage() {
                   onChange={(e) => updateField('email', e.target.value)}
                   className={`${baseInputClass} ${inputPad} ${borderOk}`}
                   placeholder="ornek@mail.com"
+                />
+              </div>
+            </div>
+
+            <PhoneInput
+              label="Telefon"
+              size="compact"
+              countryCode={formData.phoneDial}
+              onCountryCodeChange={(dial) => {
+                setPhoneError(null);
+                updateField('phoneDial', dial);
+              }}
+              value={formData.phoneLocal}
+              onChange={(local) => {
+                setPhoneError(null);
+                updateField('phoneLocal', local);
+              }}
+              error={phoneError ?? undefined}
+            />
+
+            <div>
+              <label htmlFor="identityNumber" className={labelClass}>
+                TC Kimlik No
+              </label>
+              <div className="relative">
+                <CreditCard className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
+                <input
+                  id="identityNumber"
+                  name="identityNumber"
+                  required
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={11}
+                  value={formData.identityNumber}
+                  onChange={(e) =>
+                    updateField(
+                      'identityNumber',
+                      e.target.value.replace(/\D/g, '').slice(0, 11),
+                    )
+                  }
+                  className={`${baseInputClass} ${inputPad} ${borderOk}`}
+                  placeholder="11 haneli TC Kimlik No"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="address" className={labelClass}>
+                Adres
+              </label>
+              <div className="relative">
+                <MapPin className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-neutral-400" />
+                <textarea
+                  id="address"
+                  name="address"
+                  required
+                  rows={2}
+                  value={formData.address}
+                  onChange={(e) => updateField('address', e.target.value)}
+                  className={`${baseInputClass} resize-none px-3 py-2 pl-8 ${borderOk}`}
+                  placeholder="Mahalle, sokak, ilçe / il"
                 />
               </div>
             </div>

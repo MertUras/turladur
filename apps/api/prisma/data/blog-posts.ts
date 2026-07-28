@@ -49,7 +49,7 @@ export const BLOG_SEED_POSTS: BlogSeedPost[] = [
     excerpt:
       'Göreme, Ürgüp ve Avanos’u kapsayan pratik Kapadokya rotası: balon, açık hava müzesi, vadi yürüyüşleri ve konaklama ipuçları.',
     coverImage:
-      'https://images.unsplash.com/photo-1509339022327-1e7f8577ea96?auto=format&fit=crop&w=1600&q=80',
+      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1600&q=80',
     categorySlugs: ['yurtici-rotalar', 'seyahat-ipuclari'],
     content: `Kapadokya, Türkiye’nin en çok aranan yurtiçi destinasyonlarından biri. Peri bacaları, yeraltı şehirleri ve gün doğumu balon turlarıyla hem ilk kez gelenler hem de tekrar ziyaretçiler için güçlü bir rota sunuyor.
 
@@ -235,7 +235,7 @@ Türkiye tarafında Çeşme–Sakız veya Bodrum feribotları da kısa kaçamak 
     excerpt:
       'Yakın mesafe, güçlü gastronomi ve dağ manzarası: Gürcistan neden yükselen bir yurtdışı rota?',
     coverImage:
-      'https://images.unsplash.com/photo-1565008576549-57569a49379d?auto=format&fit=crop&w=1600&q=80',
+      'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1600&q=80',
     categorySlugs: ['yurtdisi-rotalar', 'gastronomi'],
     content: `Gürcistan, son yıllarda hem bütçe hem deneyim arayanların listesinde hızla yükseldi. Tiflis’in eski şehir dokusu, Kazbegi’nin dağ kiliseleri ve Batum’un sahili aynı haftada birleştirilebilir.
 
@@ -285,7 +285,7 @@ turta ekosistemi, yerel deneyim sağlayıcılarını öne çıkararak “büyük
     excerpt:
       'Tek başına gezenler için popüler yurtiçi rotalar, güvenlik alışkanlıkları ve sosyal deneyim önerileri.',
     coverImage:
-      'https://images.unsplash.com/photo-1488646953015-4ad6d7e2c1f7?auto=format&fit=crop&w=1600&q=80',
+      'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=1600&q=80',
     categorySlugs: ['seyahat-ipuclari', 'yurtici-rotalar'],
     content: `Solo travel aramaları her yıl artıyor. Türkiye’de Kapadokya, İstanbul, Antalya ve Karadeniz; yalnız gezginlerin en çok tercih ettiği hatlar arasında.
 
@@ -303,7 +303,7 @@ Yalnız gelseniz bile günübirlik turlar yeni insanlarla tanışma fırsatı ya
     excerpt:
       'UNESCO ve sokak lezzeti kesişimi: Türkiye’nin en çok konuşulan yemek destinasyonları.',
     coverImage:
-      'https://images.unsplash.com/photo-1555939596-5767d1a0c0c1?auto=format&fit=crop&w=1600&q=80',
+      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1600&q=80',
     categorySlugs: ['gastronomi', 'yurtici-rotalar'],
     content: `Gastronomi turizmi, klasik “deniz-kum-güneş” aramasının yanında hızla büyüyor. Gaziantep ve Hatay mutfak mirasıyla, İstanbul ise hem geleneksel hem modern sahnesiyle öne çıkıyor.
 

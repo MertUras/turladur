@@ -23,6 +23,8 @@ interface PhoneInputProps {
   required?: boolean;
   label?: string;
   className?: string;
+  /** Compact height for denser auth forms */
+  size?: 'default' | 'compact';
 }
 
 export function formatFullPhone(
@@ -75,9 +77,11 @@ export function PhoneInput({
   required,
   label = 'Telefon',
   className,
+  size = 'default',
 }: PhoneInputProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const isCompact = size === 'compact';
 
   const selectedCountry = getPhoneCountry(countryCode);
   const digits = value.replace(/\D/g, '');
@@ -111,7 +115,11 @@ export function PhoneInput({
 
   return (
     <div className={className}>
-      <label className="mb-1.5 block text-sm font-medium text-neutral-700">
+      <label
+        className={`block font-medium text-neutral-700 ${
+          isCompact ? 'mb-1 text-xs' : 'mb-1.5 text-sm'
+        }`}
+      >
         {label}
         {required ? (
           <span className="ml-0.5 text-red-500" aria-hidden="true">
@@ -129,7 +137,9 @@ export function PhoneInput({
           <button
             type="button"
             onClick={() => setDropdownOpen((open) => !open)}
-            className="flex h-full items-center gap-1.5 rounded-l-lg border-r border-neutral-300 bg-neutral-50 px-3 py-2.5 text-sm transition-colors hover:bg-neutral-100"
+            className={`flex h-full items-center gap-1.5 rounded-l-lg border-r border-neutral-300 bg-neutral-50 text-sm transition-colors hover:bg-neutral-100 ${
+              isCompact ? 'px-2.5 py-2' : 'px-3 py-2.5'
+            }`}
             aria-label="Ülke kodu seç"
             aria-expanded={dropdownOpen}
           >
@@ -176,7 +186,9 @@ export function PhoneInput({
           type="tel"
           value={displayValue}
           onChange={(e) => handleLocalChange(e.target.value)}
-          className="flex-1 rounded-r-lg border-0 px-4 py-2.5 text-neutral-900 placeholder-neutral-400 focus:ring-0"
+          className={`flex-1 rounded-r-lg border-0 text-sm text-neutral-900 placeholder-neutral-400 focus:ring-0 ${
+            isCompact ? 'px-3 py-2' : 'px-4 py-2.5'
+          }`}
           placeholder={selectedCountry.placeholder}
           inputMode="numeric"
           autoComplete="tel-national"
@@ -185,7 +197,11 @@ export function PhoneInput({
           }
         />
       </div>
-      {error ? <p className="mt-1 text-sm text-red-600">{error}</p> : null}
+      {error ? (
+        <p className={`mt-1 text-red-600 ${isCompact ? 'text-xs' : 'text-sm'}`}>
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
