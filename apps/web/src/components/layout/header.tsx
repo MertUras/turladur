@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Tag as TagIcon,
-  User as UserIcon,
   X as XMarkIcon,
   ChevronDown as ChevronDownIcon,
   Building2 as BuildingOfficeIcon,
@@ -163,7 +162,7 @@ export function Header() {
     window.location.replace('/');
   }, [logout]);
 
-  const handleAuthClick = (_e: React.MouseEvent) => {
+  const handleAuthClick = () => {
     // Nest auth: no partner-credentials session on marketing header
   };
 
@@ -643,8 +642,8 @@ export function Header() {
                   <Link
                     href="/login"
                     className="px-4 py-2 rounded-md text-sm font-medium text-center border border-neutral-950 text-neutral-800 hover:bg-neutral-100 transition-colors"
-                    onClick={(e) => {
-                      handleAuthClick(e);
+                    onClick={() => {
+                      handleAuthClick();
                       setIsMenuOpen(false);
                     }}
                   >
@@ -653,8 +652,8 @@ export function Header() {
                   <Link
                     href="/register"
                     className="px-4 py-2 rounded-md text-sm font-medium text-center bg-neutral-950 text-white hover:bg-neutral-800 transition-colors"
-                    onClick={(e) => {
-                      handleAuthClick(e);
+                    onClick={() => {
+                      handleAuthClick();
                       setIsMenuOpen(false);
                     }}
                   >

@@ -17,24 +17,13 @@ import {
   MapPin,
   Calendar,
   Clock,
-  Users,
   Search,
   Filter,
-  ChevronDown,
-  Check,
   X,
   ChevronRight,
   SlidersHorizontal,
-  ArrowDownWideNarrow,
-  Loader2,
   Heart,
-  Eye,
   Zap,
-  Shield,
-  Award,
-  Plane,
-  Hotel,
-  ShieldCheck,
   ArrowRight,
   Trash2,
   Globe,
@@ -121,21 +110,29 @@ const formatPrice = (price: number) => {
     .replace(/,/g, '.');
 };
 
-const mapTourFromApi = (tour: any): Tour => {
-  const extras =
-    tour.extras &&
-    typeof tour.extras === 'object' &&
-    !Array.isArray(tour.extras)
-      ? tour.extras
-      : {};
+function readPartnerRecord(value: unknown): Record<string, unknown> | null {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
+}
+
+const mapTourFromApi = (tour: Record<string, unknown>): Tour => {
+  const extras = getTourExtrasRecord(tour);
   const cover =
-    resolveMediaUrl(tour.coverUrl) ||
-    (Array.isArray(tour.galleryUrls) && tour.galleryUrls[0]
+    resolveMediaUrl(
+      typeof tour.coverUrl === 'string' ? tour.coverUrl : undefined,
+    ) ||
+    (Array.isArray(tour.galleryUrls) && typeof tour.galleryUrls[0] === 'string'
       ? resolveMediaUrl(tour.galleryUrls[0])
       : null) ||
-    (Array.isArray(tour.images) ? resolveMediaUrl(tour.images[0]) : null);
+    (Array.isArray(tour.images) && typeof tour.images[0] === 'string'
+      ? resolveMediaUrl(tour.images[0])
+      : null);
   const galleryResolved = Array.isArray(tour.galleryUrls)
-    ? tour.galleryUrls.map((u: string) => resolveMediaUrl(u)).filter(Boolean)
+    ? tour.galleryUrls
+        .map((url) => (typeof url === 'string' ? resolveMediaUrl(url) : null))
+        .filter(Boolean)
     : [];
   const imagesJson = cover
     ? JSON.stringify([cover, ...galleryResolved].filter(Boolean))
@@ -145,49 +142,70 @@ const mapTourFromApi = (tour: any): Tour => {
 
   const departureCity = extras.departureCity ?? tour.departureCity ?? null;
   const destinations = extras.destinations ?? tour.destinations ?? [];
-  const partner = tour.partner ?? tour.tourOperator ?? null;
+  const partner =
+    readPartnerRecord(tour.partner) ?? readPartnerRecord(tour.tourOperator);
+  const partnerId =
+    typeof tour.partnerId === 'string' ? tour.partnerId : undefined;
   const companyName =
-    partner?.companyName ||
-    partner?.name ||
-    (tour.partnerId === 'seed-partner-demo'
-      ? 'Demo Tur & Aktivite'
-      : 'Partner');
+    (typeof partner?.companyName === 'string' ? partner.companyName : null) ||
+    (typeof partner?.name === 'string' ? partner.name : null) ||
+    (partnerId === 'seed-partner-demo' ? 'Demo Tur & Aktivite' : 'Partner');
+
+  const rawTourDates = Array.isArray(tour.tourDates)
+    ? tour.tourDates
+    : Array.isArray(tour.dates)
+      ? tour.dates
+      : [];
 
   return {
     id: String(tour.id),
-    name: tour.title || tour.name || '',
-    description: tour.description || '',
+    name:
+      (typeof tour.title === 'string' ? tour.title : '') ||
+      (typeof tour.name === 'string' ? tour.name : '') ||
+      '',
+    description: typeof tour.description === 'string' ? tour.description : '',
     price: Number(tour.price ?? 0),
     rating: Number(tour.averageRating ?? tour.rating ?? 0),
     reviewCount: Number(tour.reviewCount ?? 0),
     images: imagesJson,
     departureCity: Array.isArray(departureCity)
       ? departureCity.join(', ')
-      : departureCity,
+      : (departureCity as string | null),
     destinations:
       typeof destinations === 'string'
         ? destinations
         : JSON.stringify(destinations),
-    region: extras.region ?? tour.region ?? null,
+    region:
+      typeof extras.region === 'string'
+        ? extras.region
+        : typeof tour.region === 'string'
+          ? tour.region
+          : null,
     duration:
       tour.durationDays != null
         ? String(tour.durationDays)
-        : (tour.duration ?? null),
+        : typeof tour.duration === 'string' || typeof tour.duration === 'number'
+          ? tour.duration
+          : null,
     maxParticipants: Number(
       extras.maxParticipants ?? tour.maxParticipants ?? 0,
     ),
     discount: Number(extras.discount ?? tour.discount ?? 0),
     inclusions: Array.isArray(extras.includes)
       ? JSON.stringify(extras.includes)
-      : (tour.inclusions ?? '[]'),
-    tourDates: tour.tourDates ?? tour.dates ?? [],
+      : typeof tour.inclusions === 'string'
+        ? tour.inclusions
+        : '[]',
+    tourDates: rawTourDates as Tour['tourDates'],
     tourOperator: {
-      id: partner?.id || tour.partnerId || '',
+      id:
+        (typeof partner?.id === 'string' ? partner.id : '') || partnerId || '',
       companyName,
-      logo: partner?.logo || null,
-      membershipTier:
-        partner?.membershipTier ||
-        (tour.partnerId === 'seed-partner-demo' ? 'SILVER' : null),
+      logo: typeof partner?.logo === 'string' ? partner.logo : null,
+      membershipTier: ((typeof partner?.membershipTier === 'string'
+        ? partner.membershipTier
+        : null) || (partnerId === 'seed-partner-demo' ? 'SILVER' : null)) as
+        'BRONZE' | 'SILVER' | 'GOLD' | null,
     },
   };
 };
@@ -333,6 +351,15 @@ function buildRegionFacets(rows: Record<string, unknown>[]): RegionOption[] {
 
 const TOURS_SEARCH_DEBOUNCE_MS = 400;
 
+type TourDateWithPromotions = Tour['tourDates'][number] & {
+  earlyBirdDiscount?: number;
+  earlyBirdDeadlineStart?: string | null;
+  earlyBirdDeadline?: string | null;
+  lastMinuteDiscount?: number;
+  lastMinuteStart?: string | null;
+  lastMinuteStartEnd?: string | null;
+};
+
 function ToursPageContent() {
   const searchParams = useSearchParams();
   const durationParam = searchParams.get('duration');
@@ -342,11 +369,13 @@ function ToursPageContent() {
   const urlStartDate = searchParams.get('startDate');
   const urlEndDate = searchParams.get('endDate');
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- hero search loading state reserved for filter UI
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [apiTourRows, setApiTourRows] = useState<Record<string, unknown>[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('popular');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for desktop filter panel toggle
   const [showFilters, setShowFilters] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -391,7 +420,9 @@ function ToursPageContent() {
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [isLoading, setIsLoading] = useState(false);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for infinite scroll pagination
   const [loadingMore, setLoadingMore] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for mobile filter drawer
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const activeFilterCount = useMemo(
@@ -489,9 +520,11 @@ function ToursPageContent() {
   ]);
 
   // Sayfalama seçenekleri
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for page size selector UI
   const pageSizeOptions = [15, 30, 45, 60]; // Seçenekleri 15'ten başlayacak şekilde güncelledim
 
   // Sıralama seçenekleri
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for sort dropdown UI
   const sortOptions = [
     { value: 'popular', label: 'Popülerlik' },
     { value: 'price-low', label: 'Fiyat (Artan)' },
@@ -749,6 +782,7 @@ function ToursPageContent() {
   };
 
   // Sayfalama ve sıralama işlevleri
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for page size selector UI
   const handlePageSizeChange = (size: number) => {
     setItemsPerPage(size);
     setCurrentPage(1);
@@ -816,12 +850,6 @@ function ToursPageContent() {
 
     const tourImages = parseJsonString<string[]>(tour.images || '[]', []);
 
-    const inclusions = parseJsonString<string[]>(tour.inclusions || '[]', []);
-    const features = parseJsonString<string[]>(
-      (tour as any).features || '[]',
-      [],
-    );
-
     const remainingSpots = (tour.maxParticipants || 0) - 0; // currentParticipants yok
     const reviewCount = tour.reviewCount ?? 0;
     const averageRating = tour.rating ?? 0;
@@ -835,8 +863,10 @@ function ToursPageContent() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    if ((tour as any).tourDates && (tour as any).tourDates.length > 0) {
-      for (const tourDate of (tour as any).tourDates) {
+    const tourDatesWithPromotions = tour.tourDates as TourDateWithPromotions[];
+
+    if (tourDatesWithPromotions.length > 0) {
+      for (const tourDate of tourDatesWithPromotions) {
         // Erken rezervasyon kontrolü
         if (tourDate.earlyBirdDiscount && tourDate.earlyBirdDiscount > 0) {
           const earlyBirdStart = tourDate.earlyBirdDeadlineStart
@@ -846,17 +876,19 @@ function ToursPageContent() {
             ? new Date(tourDate.earlyBirdDeadline)
             : null;
 
+          const earlyBirdPrice = tourDate.price;
           if (
+            earlyBirdPrice != null &&
             earlyBirdStart &&
             earlyBirdEnd &&
             today >= earlyBirdStart &&
             today <= earlyBirdEnd
           ) {
             const discountAmount =
-              tourDate.price * (tourDate.earlyBirdDiscount / 100);
+              earlyBirdPrice * (tourDate.earlyBirdDiscount / 100);
             if (discountAmount > appliedDiscount) {
               appliedDiscount = discountAmount;
-              discountedPrice = tourDate.price - discountAmount;
+              discountedPrice = earlyBirdPrice - discountAmount;
             }
           }
         }
@@ -870,17 +902,19 @@ function ToursPageContent() {
             ? new Date(tourDate.lastMinuteStartEnd)
             : null;
 
+          const lastMinutePrice = tourDate.price;
           if (
+            lastMinutePrice != null &&
             lastMinuteStart &&
             lastMinuteEnd &&
             today >= lastMinuteStart &&
             today <= lastMinuteEnd
           ) {
             const discountAmount =
-              tourDate.price * (tourDate.lastMinuteDiscount / 100);
+              lastMinutePrice * (tourDate.lastMinuteDiscount / 100);
             if (discountAmount > appliedDiscount) {
               appliedDiscount = discountAmount;
-              discountedPrice = tourDate.price - discountAmount;
+              discountedPrice = lastMinutePrice - discountAmount;
             }
           }
         }
@@ -892,15 +926,13 @@ function ToursPageContent() {
       discountedPrice = price * (1 - (tour.discount || 0) / 100);
     }
 
-    const firstDate = (tour as any).tourDates?.[0];
+    const firstDate = tourDatesWithPromotions[0];
     const tourDateText =
       firstDate?.startDate && firstDate?.endDate
         ? `${format(new Date(firstDate.startDate), 'd MMMM', { locale: tr })} - ${format(new Date(firstDate.endDate), 'd MMMM yyyy', { locale: tr })}`
         : `${tour.duration || 1} Gün`;
 
-    const otherDatesCount = (tour as any).tourDates
-      ? (tour as any).tourDates.length - 1
-      : 0;
+    const otherDatesCount = tourDatesWithPromotions.length - 1;
 
     // Tur için tek ve öncelikli etiket belirle
     const getTourBadge = () => {
@@ -908,8 +940,8 @@ function ToursPageContent() {
       today.setHours(0, 0, 0, 0); // Sadece tarih kısmını al
 
       // Tur tarihlerini kontrol et
-      if ((tour as any).tourDates && (tour as any).tourDates.length > 0) {
-        for (const tourDate of (tour as any).tourDates) {
+      if (tourDatesWithPromotions.length > 0) {
+        for (const tourDate of tourDatesWithPromotions) {
           // Erken rezervasyon kontrolü
           if (tourDate.earlyBirdDiscount && tourDate.earlyBirdDiscount > 0) {
             const earlyBirdStart = tourDate.earlyBirdDeadlineStart
@@ -1215,7 +1247,8 @@ function ToursPageContent() {
               En İyi Tur Deneyimleri
             </div>
             <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight">
-              Türkiye'nin <span className="text-white/90">En İyi</span> Turları
+              Türkiye&apos;nin <span className="text-white/90">En İyi</span>{' '}
+              Turları
             </h1>
             <p className="text-lg text-neutral-200 md:px-8 mb-8">
               Profesyonel rehberler eşliğinde, en iyi tur operatörlerinin özenle

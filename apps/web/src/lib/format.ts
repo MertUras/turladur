@@ -49,7 +49,7 @@ export const parseJsonString = <T>(
       return JSON.parse(jsonString) as T;
     }
     return jsonString;
-  } catch (error) {
+  } catch {
     return defaultValue;
   }
 };

@@ -69,7 +69,7 @@ export async function persistNewPartnerTour(
 ) {
   const { formData } = payload;
 
-  let coverUrl =
+  const coverUrl =
     (await resolveImageUrl(
       formData.mainImage?.file,
       formData.mainImage?.url,
@@ -200,7 +200,7 @@ export async function persistPartnerTourUpdate(
 ) {
   const { formData } = payload;
 
-  let coverUrl =
+  const coverUrl =
     (await resolveImageUrl(
       formData.mainImage?.file,
       formData.mainImage?.url,

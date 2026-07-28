@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  type ComponentType,
-} from 'react';
+import { useState, useEffect, useRef, type ComponentType } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -100,9 +94,9 @@ export function Hero({ variant = 'default' }: HeroProps) {
   const [selectedDepartureCity, setSelectedDepartureCity] = useState<
     string | null
   >(null);
-  const [departureCityOptions, setDepartureCityOptions] = useState<
-    DepartureCityOption[]
-  >(DEFAULT_DEPARTURE_CITIES.map((city) => ({ city, count: 0 })));
+  const [departureCityOptions] = useState<DepartureCityOption[]>(
+    DEFAULT_DEPARTURE_CITIES.map((city) => ({ city, count: 0 })),
+  );
   const [departureCitySearch, setDepartureCitySearch] = useState('');
   const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);

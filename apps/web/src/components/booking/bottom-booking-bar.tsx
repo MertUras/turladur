@@ -3,15 +3,12 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import {
-  CalendarDays as CalendarDaysIcon,
   User as UserIcon,
   ArrowRight as ArrowRightIcon,
   CheckCircle as CheckCircleIcon,
   ChevronUp as ChevronUpIcon,
-  DollarSign as CurrencyDollarIcon,
   X as XMarkIcon,
   Calendar as CalendarIcon,
-  ChevronDown as ChevronDownIcon,
   Info as InformationCircleIcon,
   AlertCircle as ExclamationCircleIcon,
 } from 'lucide-react';
@@ -285,10 +282,6 @@ export default function BottomBookingBar({
         ),
       );
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'Yaş aralıkları yüklenirken bir hata oluştu';
       console.error('Yaş aralıkları yüklenemedi:', { dateId, error: err });
       // Keep counters usable (legacy) even if Nest age-range fetch fails
       setSelectedDateAgeRanges(DEFAULT_TOUR_AGE_RANGES);
@@ -364,6 +357,7 @@ export default function BottomBookingBar({
       style: 'currency',
       currency: 'TRY',
     }).format(price);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for discount badge UI
   const checkDiscounts = useCallback(
     (date: TourDate | ActivityDate) => {
       const hasEarlyBird =
@@ -384,6 +378,7 @@ export default function BottomBookingBar({
     [today],
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for age-range price display
   const calculatePriceForRange = (
     basePrice: number,
     range: TourDateAgeRange,
@@ -402,6 +397,7 @@ export default function BottomBookingBar({
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for age-range price display
   const getPriceDisplayText = (
     range: TourDateAgeRange,
     basePrice: number,
@@ -433,6 +429,7 @@ export default function BottomBookingBar({
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for age-range labels
   function formatAgeRange(minAge: number, maxAge: number | null): string {
     if (maxAge === null) {
       return `${minAge}+`;

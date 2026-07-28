@@ -2,12 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon,
-  X,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 
 interface CalendarProps {
@@ -51,7 +47,7 @@ export function Calendar({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarDays, setCalendarDays] = useState<Date[]>([]);
   const calendarRef = useRef<HTMLDivElement>(null);
-  const [popupStyle, setPopupStyle] = useState<any>({});
+  const [popupStyle, setPopupStyle] = useState<CSSProperties>({});
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
@@ -229,7 +225,7 @@ export function Calendar({
       const spaceBelow = window.innerHeight - rect.bottom;
       const spaceAbove = rect.top;
       let top = rect.bottom + 6;
-      let left = rect.left;
+      const left = rect.left;
       // Eğer aşağıda yeterli yer yoksa yukarıya aç
       if (spaceBelow < calendarHeight && spaceAbove > calendarHeight) {
         top = rect.top - calendarHeight - 6;
@@ -376,11 +372,6 @@ export function Calendar({
             const today = new Date();
 
             // Bugünün tarihini YYYY-MM-DD formatına çevir
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            const formattedToday = `${year}-${month}-${day}`;
-
             if (isDateSelectable(today)) {
               handleDateSelect(today);
             } else {

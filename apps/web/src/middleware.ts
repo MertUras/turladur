@@ -1,4 +1,3 @@
-import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 /**
@@ -11,7 +10,7 @@ import { NextResponse } from 'next/server';
  * Bu middleware korunan alanlarda "no-store" set ederek özel sayfaların
  * cache'den görünmesini azaltır; client-side auth akışı bozulmaz.
  */
-export function middleware(_request: NextRequest) {
+export function middleware() {
   const response = NextResponse.next();
   response.headers.set('Cache-Control', 'no-store, max-age=0, must-revalidate');
   return response;

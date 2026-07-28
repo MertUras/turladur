@@ -1,9 +1,9 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // ESLint: still ignored during build (Faz 2 / ~146 errors). Typecheck is enforced.
+  // Sprint 25.8 — lint + typecheck both enforced on build.
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
     ignoreBuildErrors: false,

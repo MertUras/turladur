@@ -33,9 +33,7 @@ import {
   uploadTourImageFile,
 } from '@/lib/partner-tour-helpers';
 
-interface FormData extends Partial<TourFormData> {
-  [key: string]: any;
-}
+type FormData = Partial<TourFormData>;
 
 export default function PartnerTourEditPage() {
   const router = useRouter();

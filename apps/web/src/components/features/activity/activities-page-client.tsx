@@ -3,12 +3,9 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
-  Loader2,
   MapPin,
   Clock,
-  ChevronLeft,
   ChevronRight,
   Search,
   Star,
@@ -16,14 +13,11 @@ import {
   Calendar,
   Users,
   X,
-  Wallet,
   Timer,
   ChevronDown,
   SlidersHorizontal,
   Trash2,
-  ArrowUpDown,
   Plus,
-  CheckCircle2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MembershipBadge from '@/components/features/tour/membership-badge';
@@ -53,6 +47,29 @@ interface Experience {
   } | null;
 }
 
+interface ExperienceApiRow {
+  id?: string | number;
+  title?: string;
+  description?: string;
+  coverUrl?: string;
+  imageUrl?: string;
+  featured?: boolean;
+  createdAt?: string;
+  location?: string;
+  city?: string;
+  durationHours?: number;
+  duration?: string;
+  averageRating?: number;
+  rating?: number;
+  reviewCount?: number;
+  popularityRate?: number;
+  price?: number;
+  category?: string;
+  experienceType?: string;
+  experienceOperator?: Experience['experienceOperator'];
+  partner?: Experience['experienceOperator'];
+}
+
 // --- Helper Function for Countdown ---
 const calculateTimeLeft = (targetDate: Date) => {
   const difference = +targetDate - +new Date();
@@ -78,7 +95,6 @@ const calculateTimeLeft = (targetDate: Date) => {
 const ITEMS_PER_PAGE = 8; // Number of items to load per page
 
 export default function ActivitiesPageClient() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<Experience[]>([]);
   const [allFilteredActivities, setAllFilteredActivities] = useState<
@@ -169,7 +185,7 @@ export default function ActivitiesPageClient() {
         }
         const payload = await response.json();
         const rows = Array.isArray(payload) ? payload : payload.data || [];
-        const mapped = rows.map((row: any) => ({
+        const mapped = rows.map((row: ExperienceApiRow) => ({
           id: String(row.id),
           title: row.title || '',
           description: row.description || '',
@@ -359,7 +375,7 @@ export default function ActivitiesPageClient() {
     const maxDurationNum =
       typeof maxDuration === 'string' ? parseFloat(maxDuration) : maxDuration;
 
-    let tempFiltered = activities.filter((experience) => {
+    const tempFiltered = activities.filter((experience) => {
       const matchesSearch =
         experience.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         experience.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -617,8 +633,8 @@ export default function ActivitiesPageClient() {
               Keşfedin
             </h1>
             <p className="mt-4 text-lg text-sky-100/90 max-w-3xl mx-auto font-light">
-              Türkiye'nin dört bir yanındaki en popüler turları ve aktiviteleri
-              bulun.
+              Türkiye&apos;nin dört bir yanındaki en popüler turları ve
+              aktiviteleri bulun.
             </p>
           </div>
 
@@ -1112,9 +1128,9 @@ export default function ActivitiesPageClient() {
                     Yaz Tatili Erken Rezervasyon Fırsatı
                   </h2>
                   <p className="text-sky-100/90 mb-5 text-sm font-light">
-                    Yaz aylarındaki tüm tur paketlerinde %25'e varan indirim
-                    fırsatını kaçırmayın. Erken rezervasyon avantajlarıyla
-                    hayalinizdeki tatili şimdiden planlayın.
+                    Yaz aylarındaki tüm tur paketlerinde %25&apos;e varan
+                    indirim fırsatını kaçırmayın. Erken rezervasyon
+                    avantajlarıyla hayalinizdeki tatili şimdiden planlayın.
                   </p>
                   <div className="flex flex-wrap gap-2 sm:gap-3 mb-6">
                     {Object.entries(timeLeft).map(([unit, value]) => (
@@ -1329,7 +1345,7 @@ export default function ActivitiesPageClient() {
                     ))}
                   </div>
                   <p className="text-neutral-600 italic mb-4 text-sm flex-grow">
-                    "{testimonial.text}"
+                    {`"${testimonial.text}"`}
                   </p>
                   <div className="flex items-center mt-auto pt-3.5 border-t border-neutral-100/80">
                     <div className="relative w-9 h-9 mr-3 flex-shrink-0">

@@ -28,9 +28,15 @@ import {
 } from '@/lib/partner-tour-submit';
 import { uploadTourImageFile } from '@/lib/partner-tour-helpers';
 
-interface FormData extends Partial<TourFormData> {
-  [key: string]: any;
-}
+type FormData = Partial<TourFormData>;
+
+type TourDestination = TourFormData['destinations'][number];
+type TourItineraryDay = TourFormData['itinerary'][number];
+type TourFormDate = TourFormData['tourDates'][number];
+type TourGalleryImage = TourFormData['galleryImages'][number];
+type TourPickupPoint = TourFormData['pickupPoints'][number];
+type TourAgeRange = TourFormDate['ageRanges'][number];
+type TourItineraryImage = NonNullable<TourItineraryDay['images']>[number];
 
 export default function PartnerNewTourPage() {
   const router = useRouter();
@@ -339,7 +345,7 @@ export default function PartnerNewTourPage() {
                           </div>
                           <div className="ml-6 space-y-1">
                             {formData.destinations.map(
-                              (dest: any, idx: number) => (
+                              (dest: TourDestination, idx: number) => (
                                 <div
                                   key={idx}
                                   className="text-xs text-gray-600 flex items-center"
@@ -526,7 +532,7 @@ export default function PartnerNewTourPage() {
                       <div className="space-y-2">
                         {formData.itinerary
                           .slice(0, 3)
-                          .map((day: any, idx: number) => (
+                          .map((day: TourItineraryDay, idx: number) => (
                             <div
                               key={idx}
                               className="bg-gray-50 rounded-lg p-3"
@@ -582,16 +588,21 @@ export default function PartnerNewTourPage() {
                                 <div className="mt-2 flex gap-1">
                                   {day.images
                                     .slice(0, 3)
-                                    .map((img: any, imgIdx: number) => (
-                                      <div
-                                        key={imgIdx}
-                                        className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center"
-                                      >
-                                        <span className="text-xs text-gray-500">
-                                          📷
-                                        </span>
-                                      </div>
-                                    ))}
+                                    .map(
+                                      (
+                                        img: TourItineraryImage,
+                                        imgIdx: number,
+                                      ) => (
+                                        <div
+                                          key={imgIdx}
+                                          className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center"
+                                        >
+                                          <span className="text-xs text-gray-500">
+                                            📷
+                                          </span>
+                                        </div>
+                                      ),
+                                    )}
                                   {day.images.length > 3 && (
                                     <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center">
                                       <span className="text-xs text-gray-500">
@@ -621,7 +632,7 @@ export default function PartnerNewTourPage() {
                       <div className="space-y-2">
                         {formData.tourDates
                           .slice(0, 2)
-                          .map((date: any, idx: number) => (
+                          .map((date: TourFormDate, idx: number) => (
                             <div
                               key={idx}
                               className="bg-blue-50 rounded-lg p-3"
@@ -658,7 +669,7 @@ export default function PartnerNewTourPage() {
                                             .slice(0, 3)
                                             .map(
                                               (
-                                                range: any,
+                                                range: TourAgeRange,
                                                 rangeIdx: number,
                                               ) => (
                                                 <div
@@ -760,7 +771,7 @@ export default function PartnerNewTourPage() {
                         <div className="grid grid-cols-3 gap-2">
                           {formData.galleryImages
                             .slice(0, 6)
-                            .map((img: any, idx: number) => (
+                            .map((img: TourGalleryImage, idx: number) => (
                               <div
                                 key={idx}
                                 className="relative aspect-square overflow-hidden rounded-lg bg-gray-100"
@@ -801,7 +812,7 @@ export default function PartnerNewTourPage() {
                         <div className="space-y-1">
                           {formData.pickupPoints
                             .slice(0, 3)
-                            .map((point: any, idx: number) => (
+                            .map((point: TourPickupPoint, idx: number) => (
                               <div
                                 key={idx}
                                 className="text-xs text-gray-600 flex items-center"

@@ -28,6 +28,14 @@ import BottomBookingBar, {
 import MembershipBadge from '@/components/features/tour/membership-badge';
 import type { MembershipTier } from '@/lib/tours/legacy-tour';
 
+interface ActivityOperator {
+  id: string;
+  companyName?: string;
+  logo?: string | null;
+  description?: string;
+  membershipTier?: MembershipTier | null;
+}
+
 interface Activity {
   id: string;
   title: string;
@@ -54,10 +62,10 @@ interface Activity {
     date: string;
   }>;
   discount?: number;
-  activityDates: any[];
+  activityDates: ActivityDate[];
   meetingPoint?: string;
   meetingPointAddress?: string;
-  operator: any;
+  operator: ActivityOperator | null;
   ageRestriction: string;
 }
 
@@ -84,13 +92,16 @@ export default function ActivityDetailClient() {
   const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for related activity modal wiring
   const [selectedActivity, setSelectedActivity] =
     useState<RelatedActivity | null>(null);
   const [relatedActivities, setRelatedActivities] = useState<RelatedActivity[]>(
     [],
   );
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for review carousel wiring
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
-  const [activityDates, setActivityDates] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for local date state wiring
+  const [activityDates, setActivityDates] = useState<ActivityDate[]>([]);
   const [showBookingBar, setShowBookingBar] = useState(false);
   const [selectedDate, setSelectedDate] = useState<ActivityDate | null>(null);
 
@@ -119,7 +130,7 @@ export default function ActivityDetailClient() {
           const relatedData = relatedRaw.data ?? relatedRaw;
           setRelatedActivities(relatedData);
         }
-      } catch (err) {
+      } catch {
         setError('Failed to load activity');
       } finally {
         setLoading(false);
@@ -132,7 +143,7 @@ export default function ActivityDetailClient() {
   const PLACEHOLDER_IMAGE =
     'https://placehold.co/1200x800/e5e7eb/6b7280?text=G%C3%B6rsel+Yok';
 
-  const getImageUrl = (img: any) => {
+  const getImageUrl = (img: unknown) => {
     if (!img) return PLACEHOLDER_IMAGE;
     if (Array.isArray(img)) return img[0] || PLACEHOLDER_IMAGE;
     if (typeof img === 'string') {
@@ -423,7 +434,7 @@ export default function ActivityDetailClient() {
                         className="inline-flex items-center gap-2 text-sky-700 hover:text-sky-900 underline text-base font-medium mt-2"
                       >
                         <MapPin className="w-5 h-5" />
-                        Google Maps'te Aç
+                        Google Maps&apos;te Aç
                       </a>
                     )}
                 </div>
@@ -727,6 +738,7 @@ export default function ActivityDetailClient() {
                       activity.activityDates.map((date) => {
                         const isLimited = date.availableSeats <= 5;
                         const startDate = new Date(date.startDate);
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- endDate reserved for multi-day display
                         const endDate = new Date(date.endDate);
 
                         return (
