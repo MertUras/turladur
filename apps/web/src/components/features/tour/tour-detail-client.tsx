@@ -8,7 +8,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { parseJsonString } from '@/lib/format';
-import BottomBookingBar from '@/components/booking/bottom-booking-bar';
+import BottomBookingBar, {
+  type ActivityDate as BookingActivityDate,
+} from '@/components/booking/bottom-booking-bar';
 import TourItineraryMobile from '@/components/features/tour/itinerary/tour-itinerary-mobile';
 import { stripDayPrefixFromTitle } from '@/components/features/tour/itinerary/normalize-itinerary';
 import MembershipBadge from '@/components/features/tour/membership-badge';
@@ -767,9 +769,9 @@ export default function TourDetailClient() {
           .slice(0, 4)
           .map((row: Record<string, unknown>) => {
             const cover =
-              typeof row.coverUrl === 'string' && row.coverUrl
+              (typeof row.coverUrl === 'string' && row.coverUrl
                 ? resolveMediaUrl(row.coverUrl)
-                : '/brand/mark-on-light.png';
+                : null) ?? '/brand/mark-on-light.png';
             return {
               id: String(row.id),
               name: String(row.title ?? ''),
@@ -840,9 +842,11 @@ export default function TourDetailClient() {
     return dedupeTourDatesByRange(upcoming);
   }, [tour?.tourDates, today]);
 
-  const handleDateSelect = (date: TourDate | null) => {
-    setSelectedTourDate(date);
-    if (date) {
+  const handleDateSelect = (date: TourDate | BookingActivityDate | null) => {
+    // This page only mounts BottomBookingBar with `tour` (not activity).
+    const tourDate = date as TourDate | null;
+    setSelectedTourDate(tourDate);
+    if (tourDate) {
       setShowDateSelectionHint(false);
       setExpanded(true);
     }

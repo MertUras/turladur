@@ -14,7 +14,7 @@ import {
   normalizeItinerary,
   NormalizedItineraryDay,
   stripDayPrefixFromTitle,
-} from './normalize-itinerary';
+} from './normalizeItinerary';
 
 interface TourItineraryMobileProps {
   itinerary: unknown;

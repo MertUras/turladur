@@ -201,3 +201,53 @@ Projede HttpOnly refresh cookie akışı henüz yok; auth tamamen client memory 
 6. Mobil / harici bookmark etkisini kontrol.
 
 **Kaynak:** `docs/SPRINT_25_CLEANUP.md` → URL Stratejisi Kararı (25.4).
+
+---
+
+### 9) `/routes/[id]` — Hydration mismatch + rota CMS (ertelendi)
+
+**Gözlem (2026-07-28):**  
+`http://localhost:3001/routes/kapadokya` açılınca Next.js overlay:
+
+> Hydration failed because the server rendered HTML didn't match the client.
+
+**Muhtemel kök neden (kod):**
+
+1. `apps/web/src/app/(marketing)/routes/[id]/page.tsx` — `RouteDetailClient` `useSearchParams()` kullandığı için `Suspense` ile sarılı.
+2. **Sunucu HTML:** Suspense fallback → `"Yükleniyor..."`
+3. **İstemci ilk render:** `RouteDetailClient` state `loading === true` → `"Rota yükleniyor..."`
+4. Metin / DOM ağacı eşleşmediği için hydration fail; React ağacı client’ta yeniden üretilir (overlay “1/2 Issues”).
+
+**İkincil / katkı riskleri:**
+
+- Layout `Header` (`mounted`, scroll) — genelde `useEffect` sonrası; ilk paint’te daha az şüpheli.
+- Tarayıcı eklentileri DOM’u bozabilir (Next overlay’de de listeleniyor).
+- (Ayrı bug, düzeltilmiş) API `{ success, data }` unwrap edilmiyordu → rota detay takılıyordu; TS branch’te unwrap + `toursByCategory` fallback eklendi. Hydration’ın asıl sebebi bu değil.
+
+**Şimdilik yapılmayacak:** Hydration fix’i bu turda zorunlu değil; overlay dev-only, prod’da çoğu kullanıcı görmez ama SSR/SEO için sonra düzeltilmeli.
+
+**Önerilen teknik fix (sonra, küçük PR):**
+
+- Suspense fallback metnini client loading ile **aynı** yap (`Rota yükleniyor...`), veya
+- Fallback’te client ile birebir aynı markup kullan, veya
+- Rota detayı için `useSearchParams` bağımlılığını azaltıp SSR-friendly fetch (page’den prop) — admin CMS ile birlikte düşünülür.
+
+---
+
+#### İleride: Rota içeriği + bağlantılar — Admin / Editor hesabı
+
+**Ürün kararı (kullanıcı):**  
+Rota sayfalarının düzenlenmesi ve bağlantıları **editor / admin hesabından** yönetilecek. Şimdi hardcoded / seed / marketing static akış kalır; CMS eklenmeyecek.
+
+**Sonraki sprint kapsamı (taslak):**
+
+| Alan      | Not                                                                        |
+| --------- | -------------------------------------------------------------------------- |
+| Kim       | `ADMIN` / `SUPER_ADMIN` (veya ayrı `EDITOR` rolü — ürün onayı)             |
+| Ne        | Rota metinleri, görseller, linkler, kategori ilişkileri, tur eşlemeleri    |
+| Nerede    | `/admin/...` paneli (mevcut admin shell’e uyum)                            |
+| API       | Catalog veya content modülü — CRUD + ownership/RBAC                        |
+| Web       | `/routes/[id]` API’den okusun; admin yazsın                                |
+| Hydration | CMS ile SSR snapshot (generateMetadata + server fetch) uyumlu tasarlanmalı |
+
+**Bu sprintte:** Sadece bulgu; admin rota editörü **implement edilmez**.

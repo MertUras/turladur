@@ -40,9 +40,9 @@ import {
   type TourPickupPoint,
 } from '@/services/catalog';
 import { checkoutPayment, createReservation } from '@/services/booking';
-import { guestBootstrap } from '@/services/identity';
+import { guestBootstrap, getProfile } from '@/services/identity';
 import { useAuth } from '@/providers/auth-provider';
-import type { ActivityDate } from '@turta/shared-types';
+import type { ActivityDate, User } from '@turta/shared-types';
 
 type CardBrand = 'visa' | 'mastercard' | 'amex' | 'unknown';
 
@@ -174,6 +174,42 @@ function parsePartySize(searchParams: URLSearchParams): {
   }
 }
 
+function toDateInputValue(value: string | null | undefined): string {
+  if (!value?.trim()) return '';
+  // Profile API returns YYYY-MM-DD; tolerate ISO datetime. Clamp year to 4 digits.
+  const match = value.trim().match(/^(\d+)-(\d{2})-(\d{2})/);
+  if (!match) return '';
+  return `${match[1].slice(0, 4)}-${match[2]}-${match[3]}`;
+}
+
+function clampBirthDateInput(raw: string): string {
+  if (!raw) return '';
+  const match = /^(\d+)-(\d{1,2})-(\d{1,2})$/.exec(raw);
+  if (!match) return raw.slice(0, 10);
+  const year = match[1].slice(0, 4);
+  const month = match[2].padStart(2, '0').slice(0, 2);
+  const day = match[3].padStart(2, '0').slice(0, 2);
+  return `${year}-${month}-${day}`;
+}
+
+function applyProfileToPrimaryGuest(
+  primary: GuestForm,
+  profile: User,
+): GuestForm {
+  const parsedPhone = parsePhoneValue(profile.phone ?? '');
+  return {
+    ...primary,
+    firstName: profile.firstName ?? '',
+    lastName: profile.lastName ?? '',
+    email: profile.email ?? '',
+    phoneDial: parsedPhone.countryCode,
+    phoneLocal: parsedPhone.localNumber,
+    identityNumber: profile.identityNumber ?? '',
+    birthDate: toDateInputValue(profile.birthDate),
+    address: profile.address ?? '',
+  };
+}
+
 export function CheckoutClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -188,6 +224,8 @@ export function CheckoutClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  /** Fresh Nest `/identity/profile` — preferred over login memory snapshot. */
+  const [profile, setProfile] = useState<User | null>(null);
 
   const [tour, setTour] = useState<Tour | null>(null);
   const [experience, setExperience] = useState<Experience | null>(null);
@@ -288,44 +326,53 @@ export function CheckoutClient() {
   }, [itemId, dateId, isTour, isActivity]);
 
   useEffect(() => {
+    if (!isAuthenticated || !accessToken) {
+      setProfile(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const fresh = await getProfile(accessToken);
+        if (!cancelled) setProfile(fresh);
+      } catch {
+        // Fallback: AuthProvider memory user (login payload).
+        if (!cancelled) setProfile(user);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, accessToken, user]);
+
+  useEffect(() => {
     const forms: GuestForm[] = [];
-    const primary = emptyGuest('primary');
-    if (user) {
-      primary.firstName = user.firstName ?? '';
-      primary.lastName = user.lastName ?? '';
-      primary.email = user.email ?? '';
-      const parsedPhone = parsePhoneValue(user.phone ?? '');
-      primary.phoneDial = parsedPhone.countryCode;
-      primary.phoneLocal = parsedPhone.localNumber;
-      primary.identityNumber = user.identityNumber ?? '';
-      primary.address = user.address ?? '';
+    let primary = emptyGuest('primary');
+    const source = profile ?? user;
+    if (source) {
+      primary = applyProfileToPrimaryGuest(primary, source);
       setBillingFullName(
-        `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim(),
+        `${source.firstName ?? ''} ${source.lastName ?? ''}`.trim(),
       );
-      setBillingLine1(user.billingLine1 ?? user.address ?? '');
-      setBillingCity(user.billingCity ?? '');
-      setBillingCountry(user.billingCountry ?? 'Türkiye');
-      setTaxId(user.identityNumber ?? '');
+      setBillingLine1(source.billingLine1 ?? source.address ?? '');
+      setBillingCity(source.billingCity ?? '');
+      setBillingCountry(source.billingCountry ?? 'Türkiye');
+      setTaxId(source.identityNumber ?? '');
     }
     forms.push(primary);
 
-    const extraAdults = isGuest
-      ? Math.max(0, party.adults - 1)
-      : Math.max(0, party.adults - 1);
+    const extraAdults = Math.max(0, party.adults - 1);
     for (let i = 0; i < extraAdults; i += 1) {
       forms.push(emptyGuest('adult'));
     }
-    // Guest: all adults already counted (1 primary + extras). Logged-in same.
-    // For guest with adults=2: primary + 1 adult. Good.
-    // Wait: guest should ask for ALL. primary is adult 1, extras = adults-1. Same.
-    // Children: always collect full forms for each child (both guest and logged-in)
     for (let i = 0; i < party.children; i += 1) {
       forms.push(emptyGuest('child'));
     }
 
-    // Guest edge: if somehow adults=0, keep at least primary
     setGuests(forms);
-  }, [user, isGuest, party.adults, party.children]);
+  }, [profile, user, party.adults, party.children]);
 
   const unitPrice = useMemo(() => {
     if (isTour && tourDate) {
@@ -825,9 +872,13 @@ export function CheckoutClient() {
                             <input
                               type="date"
                               value={guest.birthDate}
+                              min="1900-01-01"
+                              max={new Date().toISOString().slice(0, 10)}
                               onChange={(e) =>
                                 updateGuest(index, {
-                                  birthDate: e.target.value,
+                                  birthDate: clampBirthDateInput(
+                                    e.target.value,
+                                  ),
                                 })
                               }
                               className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"

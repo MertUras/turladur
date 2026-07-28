@@ -49,6 +49,9 @@ export class UpdateProfileDto {
   @ApiPropertyOptional({ example: '1990-01-01' })
   @IsOptional()
   @ValidateIf((_, v) => v !== '' && v != null)
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'Doğum tarihi YYYY-MM-DD formatında ve yılı 4 haneli olmalıdır',
+  })
   @IsDateString()
   birthDate?: string | null;
 

@@ -57,6 +57,37 @@ function isValidTcknClient(value: string): boolean {
   return d.slice(0, 10).reduce((s, n) => s + n, 0) % 10 === d[10];
 }
 
+/** YYYY-MM-DD; year clamped to 4 digits (some browsers allow typing 5+). */
+function clampBirthDateInput(raw: string): string {
+  if (!raw) return '';
+  const match = /^(\d+)-(\d{1,2})-(\d{1,2})$/.exec(raw);
+  if (!match) return raw.slice(0, 10);
+  const year = match[1].slice(0, 4);
+  const month = match[2].padStart(2, '0').slice(0, 2);
+  const day = match[3].padStart(2, '0').slice(0, 2);
+  return `${year}-${month}-${day}`;
+}
+
+function isValidBirthDateClient(value: string): boolean {
+  if (!value) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const currentYear = new Date().getFullYear();
+  if (year < 1900 || year > currentYear) return false;
+  const parsed = new Date(year, month - 1, day);
+  return (
+    parsed.getFullYear() === year &&
+    parsed.getMonth() === month - 1 &&
+    parsed.getDate() === day &&
+    parsed.getTime() <= Date.now()
+  );
+}
+
+function toDateInputValue(isoOrDate: string | null | undefined): string {
+  if (!isoOrDate) return '';
+  return clampBirthDateInput(isoOrDate.slice(0, 10));
+}
+
 export function ProfileShell() {
   const { isAuthenticated, accessToken, user, refreshProfile } = useAuth();
   const [tab, setTab] = useState<TabId>('personal');
@@ -203,12 +234,20 @@ function PersonalTab({
       return;
     }
 
+    const birthDateRaw = clampBirthDateInput(
+      String(form.get('birthDate') ?? '').trim(),
+    );
+    if (birthDateRaw && !isValidBirthDateClient(birthDateRaw)) {
+      onError('Doğum tarihi geçersiz (yıl 4 haneli, 1900–bugün arası).');
+      return;
+    }
+
     const payload: UpdateProfileInput = {
       firstName: String(form.get('firstName') ?? '').trim(),
       lastName: String(form.get('lastName') ?? '').trim(),
       phone: String(form.get('phone') ?? '').trim() || null,
       identityNumber: identityNumber || null,
-      birthDate: String(form.get('birthDate') ?? '').trim() || null,
+      birthDate: birthDateRaw || null,
       address: String(form.get('address') ?? '').trim() || null,
     };
 
@@ -274,11 +313,9 @@ function PersonalTab({
         hint="Fatura ve rezervasyon için. Sadece siz görürsünüz."
       />
 
-      <Field
-        label="Doğum tarihi"
+      <BirthDateField
         name="birthDate"
-        type="date"
-        defaultValue={user.birthDate ?? ''}
+        defaultValue={toDateInputValue(user.birthDate)}
       />
 
       <label className="block text-sm font-medium text-neutral-800">
@@ -659,6 +696,43 @@ function ReviewsTab({ token }: { token: string }) {
         </ul>
       )}
     </div>
+  );
+}
+
+function BirthDateField({
+  name,
+  defaultValue,
+}: {
+  name: string;
+  defaultValue?: string;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [value, setValue] = useState(defaultValue ?? '');
+
+  useEffect(() => {
+    setValue(defaultValue ?? '');
+  }, [defaultValue]);
+
+  return (
+    <label className="block text-sm font-medium text-neutral-800">
+      Doğum tarihi
+      <input
+        name={name}
+        type="date"
+        value={value}
+        min="1900-01-01"
+        max={today}
+        onChange={(e) => setValue(clampBirthDateInput(e.target.value))}
+        onInput={(e) => {
+          const next = clampBirthDateInput(e.currentTarget.value);
+          if (next !== e.currentTarget.value) {
+            e.currentTarget.value = next;
+            setValue(next);
+          }
+        }}
+        className="mt-1 h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm outline-none ring-neutral-950 focus:ring-2"
+      />
+    </label>
   );
 }
 

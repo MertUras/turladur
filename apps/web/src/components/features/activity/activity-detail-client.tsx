@@ -26,6 +26,7 @@ import BottomBookingBar, {
   ActivityDate,
 } from '@/components/booking/bottom-booking-bar';
 import MembershipBadge from '@/components/features/tour/membership-badge';
+import type { MembershipTier } from '@/lib/tours/legacy-tour';
 
 interface Activity {
   id: string;
@@ -606,7 +607,8 @@ export default function ActivityDetailClient() {
                               <MembershipBadge
                                 tier={
                                   relatedActivity.experienceOperator
-                                    ?.membershipTier
+                                    ?.membershipTier as
+                                    MembershipTier | null | undefined
                                 }
                                 variant="onImage"
                               />

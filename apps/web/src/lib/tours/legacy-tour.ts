@@ -12,10 +12,15 @@ export type LegacyTourCard = {
   departureCity: string | string[] | null;
   destinations: string;
   region: string | null;
-  duration: string | null;
+  /** Days as number or legacy string label from API mapping. */
+  duration: string | number | null;
   maxParticipants: number;
   discount: number;
   inclusions: string;
+  /** Optional first departure for list sorting (legacy UI). */
+  startDate?: string | null;
+  isLastMinute?: boolean;
+  isEarlyBird?: boolean;
   tourDates: Array<{ startDate: string; endDate: string; price?: number }>;
   tourOperator: {
     id: string;
