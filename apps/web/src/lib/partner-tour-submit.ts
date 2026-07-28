@@ -6,6 +6,7 @@ import {
   mapLegacyTourCategory,
   uploadTourImageFile,
 } from '@/lib/partner-tour-helpers';
+import { getTourDates } from '@/services/catalog';
 import {
   createPartnerTour,
   createTourDate,
@@ -238,18 +239,35 @@ export async function persistPartnerTourUpdate(
     token,
   );
 
+  // Only create NEW date windows — never re-create existing start/end
+  // (create-on-update was duplicating TourDate rows and breaking the date picker).
+  const existingDates = await getTourDates(tourId).catch(() => []);
+  const existingRangeKeys = new Set(
+    existingDates.map(
+      (date) =>
+        `${String(date.startDate).slice(0, 10)}|${String(date.endDate).slice(0, 10)}`,
+    ),
+  );
+
   for (const date of payload.tourDates) {
     if (!date.startDate || !date.endDate) continue;
+    const startDate = date.startDate.slice(0, 10);
+    const endDate = date.endDate.slice(0, 10);
+    const rangeKey = `${startDate}|${endDate}`;
+    if (existingRangeKeys.has(rangeKey)) continue;
+
     const created = await createTourDate(
       tourId,
       {
-        startDate: date.startDate.slice(0, 10),
-        endDate: date.endDate.slice(0, 10),
+        startDate,
+        endDate,
         capacity: date.availableSeats || 1,
         priceOverride: payload.price,
       },
       token,
     );
+    existingRangeKeys.add(rangeKey);
+
     for (const range of date.ageRanges ?? []) {
       await createTourDateAgeRange(
         tourId,

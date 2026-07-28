@@ -544,6 +544,29 @@ export class TourService {
       );
     }
 
+    // Heal accidental duplicates from older create-on-update bugs (booking-safe).
+    await this.quietDedupeTourDates(tourId);
+
+    const existing = await this.prisma.tourDate.findMany({
+      where: {
+        tourId,
+        deletedAt: null,
+        isActive: true,
+        startDate,
+        endDate,
+      },
+      orderBy: [{ remainingCapacity: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    // Idempotent: same window already active → reuse (no second row, checkout IDs stay).
+    if (existing.length > 0) {
+      return {
+        success: true,
+        data: this.toSharedTourDate(existing[0]),
+        error: null,
+      };
+    }
+
     const tourDate = await this.prisma.tourDate.create({
       data: {
         tourId,
@@ -577,6 +600,9 @@ export class TourService {
       });
     }
 
+    // Self-heal unused duplicate windows without cancelling bookings.
+    await this.quietDedupeTourDates(tourId);
+
     const dates = await this.prisma.tourDate.findMany({
       where: { tourId, deletedAt: null, isActive: true },
       orderBy: { startDate: 'asc' },
@@ -587,6 +613,60 @@ export class TourService {
       data: dates.map((d) => this.toSharedTourDate(d)),
       error: null,
     };
+  }
+
+  /**
+   * Soft-deactivate unused duplicate date windows.
+   * Keeps the row with lowest remainingCapacity (likely has bookings).
+   * Never emits tour.dates.cancelled — reservations / checkout stay intact.
+   */
+  async quietDedupeTourDates(tourId: string): Promise<number> {
+    const dates = await this.prisma.tourDate.findMany({
+      where: { tourId, deletedAt: null, isActive: true },
+      orderBy: [{ startDate: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    const groups = new Map<string, typeof dates>();
+    for (const date of dates) {
+      const key = `${this.toDayKey(date.startDate)}|${this.toDayKey(date.endDate)}`;
+      const group = groups.get(key) ?? [];
+      group.push(date);
+      groups.set(key, group);
+    }
+
+    const toDeactivate: string[] = [];
+    for (const group of groups.values()) {
+      if (group.length < 2) continue;
+
+      const sorted = [...group].sort((a, b) => {
+        if (a.remainingCapacity !== b.remainingCapacity) {
+          return a.remainingCapacity - b.remainingCapacity;
+        }
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      });
+
+      for (const duplicate of sorted.slice(1)) {
+        // Seats already sold → leave alone (reservation.tourDateId may point here).
+        if (duplicate.remainingCapacity < duplicate.capacity) continue;
+        toDeactivate.push(duplicate.id);
+      }
+    }
+
+    if (toDeactivate.length === 0) return 0;
+
+    await this.prisma.tourDate.updateMany({
+      where: { id: { in: toDeactivate } },
+      data: { isActive: false, deletedAt: new Date() },
+    });
+
+    await this.cache.del(`catalog:tour:${tourId}`);
+    await this.cache.invalidatePattern('catalog:tours:search:*');
+
+    return toDeactivate.length;
+  }
+
+  private toDayKey(date: Date): string {
+    return date.toISOString().slice(0, 10);
   }
 
   private async ensurePartnerCanPublish(partnerId: string): Promise<void> {

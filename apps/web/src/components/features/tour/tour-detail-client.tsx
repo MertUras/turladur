@@ -1,6 +1,7 @@
 'use client';
 
 import { getPublicApiBaseUrl } from '@/services/api-client';
+import { dedupeTourDatesByRange } from '@/lib/dedupe-tour-dates';
 import { resolveMediaUrl, shouldUnoptimizeMedia } from '@/lib/media';
 
 import Image from 'next/image';
@@ -833,12 +834,11 @@ export default function TourDetailClient() {
 
   const availableTourDates = useMemo(() => {
     if (!tour?.tourDates) return [];
-    return tour.tourDates
-      .filter((date) => new Date(date.startDate) >= today)
-      .sort(
-        (a, b) =>
-          new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
-      );
+    const upcoming = tour.tourDates.filter(
+      (date) => new Date(date.startDate) >= today,
+    );
+    // Belt-and-suspenders while API quiet-dedupe rolls out / caches warm.
+    return dedupeTourDatesByRange(upcoming);
   }, [tour?.tourDates, today]);
 
   const handleDateSelect = (date: TourDate | null) => {

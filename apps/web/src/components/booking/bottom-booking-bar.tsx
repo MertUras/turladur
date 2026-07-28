@@ -24,6 +24,7 @@ import {
   findAdultAgeRange,
   findChildAgeRange,
 } from '@/lib/booking-utils';
+import { dedupeTourDatesByRange } from '@/lib/dedupe-tour-dates';
 
 interface TourDateAgeRange {
   id: string;
@@ -352,12 +353,10 @@ export default function BottomBookingBar({
   ]);
 
   const availableDates = useMemo(() => {
-    return (dates || [])
-      .filter((date) => new Date(date.startDate) >= today)
-      .sort(
-        (a, b) =>
-          new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
-      );
+    const upcoming = (dates || []).filter(
+      (date) => new Date(date.startDate) >= today,
+    );
+    return dedupeTourDatesByRange(upcoming);
   }, [dates, today]);
 
   const formatPrice = (price: number) =>
