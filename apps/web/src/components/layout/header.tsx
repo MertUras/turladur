@@ -189,18 +189,23 @@ export function Header() {
     '/kultur-turlari',
     '/macera-aktiviteleri',
   ];
+  // Sadece gerçek App Router path'leri — ghost EN slug'lar ve silinmiş
+  // `/destinations/`, `/agency/` kaldırıldı (Sprint 25.3).
   const lightBackgroundPrefixes = [
     '/blog',
     '/checkout',
     '/tour/',
     '/activities/',
     '/routes/',
-    '/destinations/',
-    '/gastronomy/',
-    '/cultural-tours/',
-    '/adventure-activities/',
+    '/gastronomi',
+    '/kultur-turlari',
+    '/macera-aktiviteleri',
     '/tour-operator',
-    '/agency/',
+    '/faq',
+    '/privacy',
+    '/terms',
+    '/cookie-policy',
+    '/accessibility',
   ];
   const forceScrolledAppearance =
     lightBackgroundRoutes.includes(pathname) ||

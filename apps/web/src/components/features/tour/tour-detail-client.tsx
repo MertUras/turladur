@@ -7,7 +7,6 @@ import { resolveMediaUrl, shouldUnoptimizeMedia } from '@/lib/media';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { dummyTours, dummyTourOperators } from '@/lib/dummy-data';
 import { parseJsonString } from '@/lib/format';
 import BottomBookingBar from '@/components/booking/bottom-booking-bar';
 import TourItineraryMobile from '@/components/features/tour/itinerary/tour-itinerary-mobile';

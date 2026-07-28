@@ -200,14 +200,23 @@ export async function persistPartnerTourUpdate(
 ) {
   const { formData } = payload;
 
-  let coverUrl = await resolveImageUrl(
-    formData.mainImage?.file,
-    formData.mainImage?.url,
-    uploadEntityId,
-    token,
-  );
+  let coverUrl =
+    (await resolveImageUrl(
+      formData.mainImage?.file,
+      formData.mainImage?.url,
+      uploadEntityId,
+      token,
+    )) ??
+    (await resolveImageUrl(
+      formData.images[0]?.file,
+      formData.images[0]?.url,
+      uploadEntityId,
+      token,
+    ));
 
   const galleryUrls: string[] = [];
+  // Keep update behavior aligned with create:
+  // accept both explicit galleryImages and legacy images[] slots.
   for (const img of formData.galleryImages ?? []) {
     const uploaded = await resolveImageUrl(
       img.file,
@@ -217,6 +226,16 @@ export async function persistPartnerTourUpdate(
     );
     if (uploaded) galleryUrls.push(uploaded);
   }
+  for (const img of formData.images.slice(1)) {
+    const uploaded = await resolveImageUrl(
+      img.file,
+      img.url,
+      uploadEntityId,
+      token,
+    );
+    if (uploaded) galleryUrls.push(uploaded);
+  }
+  const dedupedGalleryUrls = [...new Set(galleryUrls)];
 
   const category = mapLegacyTourCategory(
     payload.tourType ?? formData.tourType,
@@ -233,7 +252,7 @@ export async function persistPartnerTourUpdate(
       category,
       durationDays: payload.duration || 1,
       coverUrl,
-      galleryUrls: galleryUrls.length ? galleryUrls : undefined,
+      galleryUrls: dedupedGalleryUrls.length ? dedupedGalleryUrls : undefined,
       extras: buildTourExtrasFromForm(formData),
     },
     token,
