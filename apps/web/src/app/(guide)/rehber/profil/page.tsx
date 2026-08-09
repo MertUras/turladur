@@ -58,9 +58,9 @@ export default function RehberProfilPage() {
         ruhsatNo: profile.ruhsatNo ?? '',
         ruhsatExpiresAt: profile.ruhsatExpiresAt ?? undefined,
         birthDate: profile.birthDate ?? undefined,
-        phone: profile.phone,
-        city: profile.city,
-        bio: profile.bio,
+        phone: profile.phone ?? undefined,
+        city: profile.city ?? undefined,
+        bio: profile.bio ?? undefined,
       });
       setProfile(updated);
       setLanguagesText(updated.languages.join(', '));
