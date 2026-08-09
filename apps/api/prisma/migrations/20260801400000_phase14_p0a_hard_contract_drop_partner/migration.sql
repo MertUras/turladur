@@ -39,6 +39,40 @@ WHERE rv."partnerId" = p.id
   AND rv."agencyId" IS NULL
   AND p."marketplaceAgencyId" IS NOT NULL;
 
+-- Ensure at least one marketplace Agency exists for orphan backfill (Neon may have Tours without Partner link)
+INSERT INTO identity."Agency" (
+  "id",
+  "companyName",
+  "taxNumber",
+  "legalTitle",
+  "address",
+  "contactEmail",
+  "status",
+  "sellerTier",
+  "tursabVerificationStatus",
+  "averageRating",
+  "reviewCount",
+  "createdAt",
+  "updatedAt"
+)
+SELECT
+  'seed-agency-demo',
+  'Demo Satıcı Acente',
+  '0000000000',
+  'Demo Satıcı Acente',
+  'İstanbul',
+  'agency@demo.turta.com',
+  'VERIFIED',
+  'SILVER',
+  'NOT_SUBMITTED',
+  0,
+  0,
+  CURRENT_TIMESTAMP,
+  CURRENT_TIMESTAMP
+WHERE NOT EXISTS (
+  SELECT 1 FROM identity."Agency" WHERE "deletedAt" IS NULL
+);
+
 -- Fallback: any remaining nulls → seed agency if present, else first Agency
 UPDATE catalog."Tour" SET "agencyId" = COALESCE(
   (SELECT id FROM identity."Agency" WHERE id = 'seed-agency-demo' AND "deletedAt" IS NULL LIMIT 1),
