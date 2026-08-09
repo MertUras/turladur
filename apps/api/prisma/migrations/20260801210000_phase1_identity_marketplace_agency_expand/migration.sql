@@ -12,6 +12,24 @@ ALTER TABLE "identity"."Agency" RENAME TO "LegacyAgency";
 
 ALTER TABLE "identity"."LegacyAgency" RENAME CONSTRAINT "Agency_pkey" TO "LegacyAgency_pkey";
 
+-- Table rename keeps index names — must rename before marketplace Agency indexes
+-- (otherwise CREATE INDEX "Agency_status_idx" collides: 42P07).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'identity' AND c.relname = 'Agency_status_idx') THEN
+    ALTER INDEX "identity"."Agency_status_idx" RENAME TO "LegacyAgency_status_idx";
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'identity' AND c.relname = 'Agency_userId_idx') THEN
+    ALTER INDEX "identity"."Agency_userId_idx" RENAME TO "LegacyAgency_userId_idx";
+  END IF;
+  IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'identity' AND c.relname = 'Agency_deletedAt_idx') THEN
+    ALTER INDEX "identity"."Agency_deletedAt_idx" RENAME TO "LegacyAgency_deletedAt_idx";
+  END IF;
+END $$;
+
 -- Prisma FK / index names may still say Agency; rename for clarity where present
 DO $$
 BEGIN
