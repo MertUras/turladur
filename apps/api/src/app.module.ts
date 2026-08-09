@@ -21,7 +21,11 @@ import { ReviewModule } from './modules/review/review.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ContentModule } from './modules/content/content.module';
+import { PromotionModule } from './modules/promotion/promotion.module';
 import { ThrottlingModule } from './core/throttling/throttling.module';
+import { AuditModule } from './core/audit/audit.module';
+import { IdempotencyModule } from './core/idempotency/idempotency.module';
+import { AgencyLinkModule } from './core/agency/agency-link.module';
 
 @Module({
   imports: [
@@ -35,6 +39,9 @@ import { ThrottlingModule } from './core/throttling/throttling.module';
     LoggerModule,
     PrismaModule,
     CacheModule,
+    AuditModule,
+    IdempotencyModule,
+    AgencyLinkModule,
     AuthModule,
     StorageModule,
     MailModule,
@@ -51,6 +58,7 @@ import { ThrottlingModule } from './core/throttling/throttling.module';
     NotificationModule,
     AnalyticsModule,
     ContentModule,
+    PromotionModule,
   ],
 })
 export class AppModule {}

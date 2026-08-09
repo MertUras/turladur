@@ -16,7 +16,11 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { Role } from '@turta/shared-constants';
+
+import {
+  AGENCY_SELLER_ROLES,
+  resolveActorId,
+} from '../../../core/auth/utils/role-access';
 
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
@@ -56,6 +60,17 @@ export class TourController {
   }
 
   @Public()
+  @Get(':id/related')
+  @ApiOperation({ summary: 'Related tours by shared tags (RelatedTours)' })
+  listRelated(@Param('id') id: string, @Query('limit') limit?: string) {
+    const parsed = limit ? Number(limit) : 6;
+    return this.tourService.listRelatedTours(
+      id,
+      Number.isFinite(parsed) ? parsed : 6,
+    );
+  }
+
+  @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get tour detail by id' })
   getById(@Param('id') id: string) {
@@ -71,17 +86,17 @@ export class TourController {
 
   @Post()
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Create a tour (verified partner)' })
   @ApiResponse({ status: 201 })
   create(@Body() dto: CreateTourDto, @CurrentUser() user: UserPayload) {
-    return this.commandBus.execute(new CreateTourCommand(dto, user.partnerId));
+    return this.commandBus.execute(new CreateTourCommand(dto, user.agencyId));
   }
 
   @Patch(':id')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Update owned tour' })
   update(
@@ -90,24 +105,24 @@ export class TourController {
     @CurrentUser() user: UserPayload,
   ) {
     return this.commandBus.execute(
-      new UpdateTourCommand(id, dto, user.partnerId, user.role),
+      new UpdateTourCommand(id, dto, user.agencyId, user.role),
     );
   }
 
   @Delete(':id')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Soft-delete owned tour' })
   remove(@Param('id') id: string, @CurrentUser() user: UserPayload) {
     return this.commandBus.execute(
-      new DeleteTourCommand(id, user.partnerId, user.role),
+      new DeleteTourCommand(id, user.agencyId, user.role, resolveActorId(user)),
     );
   }
 
   @Post(':id/cancel')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({
     summary:
@@ -120,7 +135,7 @@ export class TourController {
   ) {
     return this.tourService.cancelWithReason(
       id,
-      user.partnerId,
+      user.agencyId,
       user.role,
       dto.reason,
       dto.note,
@@ -129,7 +144,7 @@ export class TourController {
 
   @Post(':id/dates/cancel')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({
     summary:
@@ -142,7 +157,7 @@ export class TourController {
   ) {
     return this.tourService.cancelDates(
       id,
-      user.partnerId,
+      user.agencyId,
       user.role,
       dto.dateIds,
       dto.reason,
@@ -152,7 +167,7 @@ export class TourController {
 
   @Post(':id/dates')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Add a date/capacity window to a tour' })
   createDate(
@@ -161,7 +176,7 @@ export class TourController {
     @CurrentUser() user: UserPayload,
   ) {
     return this.commandBus.execute(
-      new CreateTourDateCommand(id, dto, user.partnerId, user.role),
+      new CreateTourDateCommand(id, dto, user.agencyId, user.role),
     );
   }
 }

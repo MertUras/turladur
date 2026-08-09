@@ -134,7 +134,7 @@ function PartnerVerificationContent() {
             <div className="flex items-center justify-between pt-4">
               <button
                 type="button"
-                onClick={() => router.push('/partner-login')}
+                onClick={() => router.push('/acente/giris')}
                 className="inline-flex items-center text-sm font-medium text-sky-600 hover:text-sky-800 hover:underline"
               >
                 <ArrowLeft className="mr-1.5 h-4 w-4" />

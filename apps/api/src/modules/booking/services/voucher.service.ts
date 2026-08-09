@@ -8,6 +8,10 @@ import type { BookingGuest } from '@turta/shared-types';
 import { Prisma } from '../../../generated/prisma';
 
 import {
+  isAgencyTenantRole,
+  isPlatformAdminRole,
+} from '../../../core/auth/utils/role-access';
+import {
   renderVoucherHtml,
   resolveVoucherBrandLogos,
   wrapVoucherDocument,
@@ -51,7 +55,7 @@ export class VoucherService {
     actor: {
       userId: string;
       role: string;
-      partnerId?: string;
+      agencyId?: string;
     },
   ) {
     const data = await this.buildTemplateData(reservationId, actor);
@@ -73,7 +77,7 @@ export class VoucherService {
     actor?: {
       userId: string;
       role: string;
-      partnerId?: string;
+      agencyId?: string;
     },
   ): Promise<VoucherTemplateData> {
     const reservation = await this.prisma.reservation.findFirst({
@@ -104,8 +108,8 @@ export class VoucherService {
             select: { title: true },
           })
         : null,
-      this.prisma.partner.findFirst({
-        where: { id: reservation.partnerId },
+      this.prisma.agency.findFirst({
+        where: { id: reservation.agencyId },
         select: {
           companyName: true,
           contactPhone: true,
@@ -178,15 +182,15 @@ export class VoucherService {
   }
 
   private assertAccess(
-    reservation: { userId: string; partnerId: string },
-    actor: { userId: string; role: string; partnerId?: string },
+    reservation: { userId: string; agencyId: string },
+    actor: { userId: string; role: string; agencyId?: string },
   ) {
-    const isAdmin = actor.role === 'ADMIN' || actor.role === 'SUPER_ADMIN';
+    const isAdmin = isPlatformAdminRole(actor.role);
     const isOwner = reservation.userId === actor.userId;
     const isPartnerOwner =
-      (actor.role === 'PARTNER' || actor.role === 'PARTNER_STAFF') &&
-      Boolean(actor.partnerId) &&
-      reservation.partnerId === actor.partnerId;
+      isAgencyTenantRole(actor.role) &&
+      Boolean(actor.agencyId) &&
+      reservation.agencyId === actor.agencyId;
 
     if (isAdmin || isOwner || isPartnerOwner) return;
 

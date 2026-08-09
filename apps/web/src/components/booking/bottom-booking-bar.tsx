@@ -234,24 +234,8 @@ export default function BottomBookingBar({
         return;
       }
 
-      const { getPublicApiBaseUrl } = await import('@/services/api-client');
-      const response = await fetch(
-        `${getPublicApiBaseUrl()}/catalog/tours/${tour.id}/dates/${dateId}/age-ranges`,
-        { headers: { Accept: 'application/json' }, cache: 'no-store' },
-      );
-      const raw = await response.json().catch(() => null);
-      if (!response.ok || raw?.success === false) {
-        const apiMessage =
-          (typeof raw?.error === 'string' && raw.error) ||
-          (typeof raw?.error?.message === 'string' && raw.error.message) ||
-          (typeof raw?.message === 'string' && raw.message) ||
-          null;
-        throw new Error(
-          apiMessage || `Yaş aralıkları getirilemedi (HTTP ${response.status})`,
-        );
-      }
-
-      const rows = Array.isArray(raw?.data) ? raw.data : [];
+      const { getTourDateAgeRanges } = await import('@/services/catalog');
+      const rows = await getTourDateAgeRanges(tour.id, dateId);
       const mapPricingType = (
         type: string | undefined,
       ): TourDateAgeRange['pricingType'] => {

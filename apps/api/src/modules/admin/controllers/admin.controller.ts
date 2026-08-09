@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -18,14 +9,9 @@ import {
 import { IsBoolean, IsIn, IsOptional } from 'class-validator';
 import { Role } from '@turta/shared-constants';
 
-import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
+import { PLATFORM_ADMIN_ROLES } from '../../../core/auth/utils/role-access';
+
 import { Roles } from '../../../core/auth/decorators/roles.decorator';
-import { UserPayload } from '../../../core/auth/types/auth.types';
-import {
-  CreatePostDto,
-  SearchPostsDto,
-  UpdatePostDto,
-} from '../../content/dto/content.dto';
 import { SetAgencyStatusDto } from '../../identity/dto/agency.dto';
 import { AdminService } from '../services/admin.service';
 
@@ -62,7 +48,7 @@ class UpdateExperienceStatusDto {
 @ApiTags('Admin')
 @ApiBearerAuth()
 @Controller('admin')
-@Roles(Role.ADMIN, Role.SUPER_ADMIN)
+@Roles(...PLATFORM_ADMIN_ROLES)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
@@ -94,6 +80,18 @@ export class AdminController {
   @ApiOperation({ summary: 'Approve / reject / suspend partner' })
   partnerStatus(@Param('id') id: string, @Body() dto: UpdatePartnerStatusDto) {
     return this.adminService.setPartnerStatus(id, dto.status);
+  }
+
+  @Get('guides')
+  @ApiOperation({ summary: 'List guides (optional status filter)' })
+  guides(@Query('status') status?: string) {
+    return this.adminService.listGuides(status);
+  }
+
+  @Patch('guides/:id/status')
+  @ApiOperation({ summary: 'Approve / reject / suspend guide' })
+  guideStatus(@Param('id') id: string, @Body() dto: UpdatePartnerStatusDto) {
+    return this.adminService.setGuideStatus(id, dto.status);
   }
 
   @Get('tours/pending')
@@ -130,51 +128,21 @@ export class AdminController {
   }
 
   @Patch('agencies/:id/approve')
-  @ApiOperation({ summary: 'Approve agency (shortcut → APPROVED)' })
+  @ApiOperation({ summary: 'Approve agency (shortcut → VERIFIED)' })
   approveAgency(@Param('id') id: string) {
-    return this.adminService.setAgencyStatus(id, 'APPROVED');
+    return this.adminService.setAgencyStatus(id, 'VERIFIED');
   }
 
   @Patch('agencies/:id/status')
-  @ApiOperation({ summary: 'Approve / reject / suspend agency' })
+  @ApiOperation({ summary: 'Verify / reject / suspend agency' })
   agencyStatus(@Param('id') id: string, @Body() dto: SetAgencyStatusDto) {
-    return this.adminService.setAgencyStatus(id, dto.status);
+    const status = dto.status === 'APPROVED' ? 'VERIFIED' : dto.status;
+    return this.adminService.setAgencyStatus(id, status);
   }
 
   @Get('reservations')
   @ApiOperation({ summary: 'List platform reservations' })
   reservations() {
     return this.adminService.listReservations();
-  }
-
-  @Get('content/posts')
-  @ApiOperation({ summary: 'Admin list posts including drafts' })
-  contentPosts(@Query() dto: SearchPostsDto) {
-    return this.adminService.listContentPosts(dto);
-  }
-
-  @Post('content/posts')
-  @ApiOperation({ summary: 'Admin create post' })
-  createContentPost(
-    @Body() dto: CreatePostDto,
-    @CurrentUser() user: UserPayload,
-  ) {
-    return this.adminService.createContentPost(dto, user.userId);
-  }
-
-  @Patch('content/posts/:id')
-  @ApiOperation({ summary: 'Admin update post' })
-  updateContentPost(
-    @Param('id') id: string,
-    @Body() dto: UpdatePostDto,
-    @CurrentUser() user: UserPayload,
-  ) {
-    return this.adminService.updateContentPost(id, dto, user);
-  }
-
-  @Delete('content/posts/:id')
-  @ApiOperation({ summary: 'Admin soft-delete post' })
-  deleteContentPost(@Param('id') id: string, @CurrentUser() user: UserPayload) {
-    return this.adminService.deleteContentPost(id, user);
   }
 }

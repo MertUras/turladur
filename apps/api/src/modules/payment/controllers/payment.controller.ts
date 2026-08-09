@@ -8,6 +8,7 @@ import type { Response } from 'express';
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
 import { Roles } from '../../../core/auth/decorators/roles.decorator';
+import { PLATFORM_ADMIN_ROLES } from '../../../core/auth/utils/role-access';
 import { UserPayload } from '../../../core/auth/types/auth.types';
 import { HandleWebhookCommand } from '../commands/handle-webhook/handle-webhook.command';
 import { InitializePaymentCommand } from '../commands/initialize-payment/initialize-payment.command';
@@ -28,7 +29,7 @@ export class PaymentController {
 
   @Post('checkout')
   @ApiBearerAuth()
-  @Roles(Role.CUSTOMER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.CUSTOMER, ...PLATFORM_ADMIN_ROLES)
   @ApiOperation({
     summary: 'Initialize payment for a reservation (may return 3DS HTML)',
   })
@@ -62,7 +63,7 @@ export class PaymentController {
 
   @Post('refund')
   @ApiBearerAuth()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @ApiOperation({ summary: 'Refund a successful payment' })
   refund(@Body() dto: RefundPaymentDto) {
     return this.commandBus.execute(

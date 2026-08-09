@@ -20,7 +20,18 @@ export interface ApiResponse<T> {
 }
 
 export type UserRole =
-  'CUSTOMER' | 'PARTNER' | 'PARTNER_STAFF' | 'ADMIN' | 'SUPER_ADMIN';
+  | 'CUSTOMER'
+  | 'PARTNER'
+  | 'PARTNER_STAFF'
+  | 'ADMIN'
+  | 'SUPER_ADMIN'
+  | 'PLATFORM_ADMIN'
+  | 'PLATFORM_SUPER_ADMIN'
+  | 'AGENCY_OWNER'
+  | 'AGENCY_ADMIN'
+  | 'AGENCY_STAFF'
+  | 'GUIDE'
+  | 'BUS_COMPANY';
 
 /** Partner staff (PARTNER_STAFF) permission keys set in /partner/users. */
 export type StaffPermissionKey =
@@ -41,6 +52,47 @@ export type MembershipTier = 'BRONZE' | 'SILVER' | 'GOLD';
 export type PartnerStatus = 'PENDING' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED';
 
 export type AgencyStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+
+/** Marketplace satıcı acente (hedef Agency tablosu). Legacy B2B Agency ayrı. */
+export type MarketplaceAgencyStatus =
+  'PENDING' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED';
+
+export type AgencyStaffRole = 'AGENCY_OWNER' | 'AGENCY_ADMIN' | 'AGENCY_STAFF';
+
+export type SellerTier = 'BRONZE' | 'SILVER' | 'GOLD';
+
+export type AgencyCapability = 'TOURS';
+
+export interface Agency {
+  id: string;
+  name: string;
+  status: AgencyStatus;
+  userId: string;
+  email: string | null;
+  city: string | null;
+}
+
+/** Hedef tüzel satıcı — giriş yok; personel = AgencyStaff. */
+export interface MarketplaceAgency {
+  id: string;
+  companyName: string;
+  taxNumber: string;
+  legalTitle: string;
+  address: string;
+  contactEmail: string;
+  status: MarketplaceAgencyStatus;
+  sellerTier: SellerTier;
+  capabilities: AgencyCapability[];
+}
+
+export interface AgencyStaff {
+  id: string;
+  agencyId: string;
+  name: string;
+  email: string;
+  role: AgencyStaffRole;
+  status: string;
+}
 
 export interface User {
   id: string;
@@ -78,15 +130,6 @@ export interface Partner {
   membershipTier: MembershipTier;
   averageRating: string;
   reviewCount: number;
-}
-
-export interface Agency {
-  id: string;
-  name: string;
-  status: AgencyStatus;
-  userId: string;
-  email: string | null;
-  city: string | null;
 }
 
 export interface SubUser {
@@ -144,6 +187,7 @@ export interface Tour {
   averageRating: string;
   reviewCount: number;
   partnerId: string;
+  agencyId?: string;
   partner?: TourPartnerSummary;
   createdAt: string;
   updatedAt: string;
@@ -168,9 +212,11 @@ export interface Hotel {
   country: string;
   type: HotelType;
   partnerId: string;
+  agencyId?: string;
   stars: number | null;
 }
 
+/** @deprecated Room DROP — otel satışı yok. Tip wire uyumu için tutuluyor. */
 export interface Room {
   id: string;
   hotelId: string;
@@ -191,6 +237,7 @@ export interface Experience {
   price: string;
   status: ExperienceStatus;
   partnerId: string;
+  agencyId?: string;
   averageRating: string;
   reviewCount: number;
 }
@@ -217,7 +264,8 @@ export type BookingStatus =
   | 'COMPLETED'
   | 'CANCELLED'
   | 'SUSPENDED'
-  | 'PAYMENT_FAILED';
+  | 'PAYMENT_FAILED'
+  | 'EXPIRED';
 
 export interface BookingGuest {
   firstName: string;
@@ -241,6 +289,7 @@ export interface Reservation {
   experienceId: string | null;
   activityDateId: string | null;
   partnerId: string;
+  agencyId?: string;
   status: BookingStatus;
   paymentStatus?: string;
   adults: number;
@@ -282,6 +331,7 @@ export interface Review {
   reservationId: string;
   userId: string;
   partnerId: string;
+  agencyId?: string;
   rating: number;
   comment: string | null;
   photoUrls: string[];

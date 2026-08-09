@@ -44,7 +44,7 @@ export function RecentReservations({ reservations }: RecentReservationsProps) {
             Son Rezervasyonlar
           </h3>
           <Link
-            href="/partner/reservations"
+            href="/acente/reservations"
             className="text-sm font-medium text-blue-600 hover:text-blue-700"
           >
             Tümünü Gör

@@ -3,7 +3,6 @@ import { Type } from 'class-transformer';
 import {
   IsEnum,
   IsInt,
-  IsNumber,
   IsOptional,
   IsString,
   Max,
@@ -120,11 +119,13 @@ export class SearchHotelsDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   q?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   city?: string;
 
   @ApiPropertyOptional({ enum: HotelTypeDto })
@@ -146,86 +147,4 @@ export class SearchHotelsDto {
   @Min(1)
   @Max(100)
   limit?: number = 20;
-}
-
-export class CreateRoomDto {
-  @ApiProperty({ example: 'Standart Çift Kişilik' })
-  @IsString()
-  @MinLength(2)
-  @MaxLength(200)
-  name!: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  description?: string;
-
-  @ApiPropertyOptional({ example: 'DOUBLE' })
-  @IsOptional()
-  @IsString()
-  type?: string;
-
-  @ApiProperty({ example: 2 })
-  @IsInt()
-  @Min(1)
-  @Max(20)
-  capacity!: number;
-
-  @ApiProperty({ example: 2500 })
-  @IsNumber()
-  @Min(0)
-  price!: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  discount?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  bedType?: string;
-}
-
-export class UpdateRoomDto {
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @MinLength(2)
-  @MaxLength(200)
-  name?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  description?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  type?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(20)
-  capacity?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  price?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  discount?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  available?: boolean;
 }

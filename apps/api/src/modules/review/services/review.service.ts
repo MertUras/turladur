@@ -3,6 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
+import { isPlatformAdminRole } from '../../../core/auth/utils/role-access';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { Review as SharedReview } from '@turta/shared-types';
 import { DEFAULT_PAGE, DEFAULT_PAGE_LIMIT } from '@turta/shared-constants';
@@ -60,25 +62,81 @@ export class ReviewService {
       );
     }
 
-    const review = await this.prisma.review.create({
-      data: {
-        targetType: reservation.tourId
-          ? 'TOUR'
-          : reservation.experienceId
-            ? 'EXPERIENCE'
-            : reservation.hotelId
-              ? 'HOTEL'
+    let agencyId: string | null = reservation.agencyId ?? null;
+    let guideId: string | null = null;
+    let busCompanyId: string | null = null;
+
+    if (reservation.tourId) {
+      const tour = await this.prisma.tour.findFirst({
+        where: { id: reservation.tourId, deletedAt: null },
+        select: { agencyId: true },
+      });
+      if (!agencyId) agencyId = tour?.agencyId ?? null;
+    }
+
+    if (!agencyId) {
+      throw new BusinessException(
+        'AGENCY_REQUIRED',
+        'Rezervasyon için acente kimliği bulunamadı',
+      );
+    }
+
+    if (reservation.tourDateId) {
+      const tourDate = await this.prisma.tourDate.findFirst({
+        where: { id: reservation.tourDateId, deletedAt: null },
+        select: { guideId: true, busCompanyId: true },
+      });
+      guideId = tourDate?.guideId ?? null;
+      busCompanyId = tourDate?.busCompanyId ?? null;
+    }
+
+    const review = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.review.create({
+        data: {
+          targetType: reservation.tourId
+            ? 'TOUR'
+            : reservation.experienceId
+              ? 'EXPERIENCE'
               : 'PARTNER',
-        tourId: reservation.tourId,
-        experienceId: reservation.experienceId,
-        hotelId: reservation.hotelId,
-        reservationId: reservation.id,
-        userId,
-        partnerId: reservation.partnerId,
-        rating: dto.rating,
-        comment: dto.comment?.trim(),
-        photoUrls: dto.photoUrls ?? [],
-      },
+          tourId: reservation.tourId,
+          experienceId: reservation.experienceId,
+          reservationId: reservation.id,
+          userId,
+          agencyId: reservation.agencyId,
+
+          guideId,
+          busCompanyId,
+          rating: dto.rating,
+          comment: dto.comment?.trim(),
+          photoUrls: dto.photoUrls ?? [],
+          guideRating: dto.guideRating,
+          transportRating: dto.transportRating,
+          accommodationRating: dto.accommodationRating,
+          guideFeedback: dto.guideFeedback?.trim(),
+          transportFeedback: dto.transportFeedback?.trim(),
+          accommodationFeedback: dto.accommodationFeedback?.trim(),
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          aggregateType: 'Review',
+          aggregateId: created.id,
+          eventType: 'review.created',
+          payload: {
+            reviewId: created.id,
+            tourId: created.tourId,
+            experienceId: created.experienceId,
+            agencyId: created.agencyId,
+
+            rating: created.rating,
+          },
+          status: 'PENDING',
+          availableAt: new Date(),
+        },
+      });
+
+      return created;
     });
 
     this.eventEmitter.emit(
@@ -86,7 +144,7 @@ export class ReviewService {
       new ReviewCreatedEvent(
         review.id,
         review.tourId,
-        review.partnerId,
+        review.agencyId,
         review.userId,
         review.rating,
         review.experienceId,
@@ -105,15 +163,36 @@ export class ReviewService {
       });
     }
 
-    const updated = await this.prisma.review.update({
-      where: { id: reviewId },
-      data: {
-        ...(dto.rating !== undefined ? { rating: dto.rating } : {}),
-        ...(dto.comment !== undefined
-          ? { comment: dto.comment?.trim() ?? null }
-          : {}),
-        ...(dto.photoUrls !== undefined ? { photoUrls: dto.photoUrls } : {}),
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.review.update({
+        where: { id: reviewId },
+        data: {
+          ...(dto.rating !== undefined ? { rating: dto.rating } : {}),
+          ...(dto.comment !== undefined
+            ? { comment: dto.comment?.trim() ?? null }
+            : {}),
+          ...(dto.photoUrls !== undefined ? { photoUrls: dto.photoUrls } : {}),
+          version: { increment: 1 },
+        },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          aggregateType: 'Review',
+          aggregateId: row.id,
+          eventType: 'review.updated',
+          payload: {
+            reviewId: row.id,
+            tourId: row.tourId,
+            experienceId: row.experienceId,
+            agencyId: row.agencyId,
+          },
+          status: 'PENDING',
+          availableAt: new Date(),
+        },
+      });
+
+      return row;
     });
 
     this.eventEmitter.emit(
@@ -121,7 +200,7 @@ export class ReviewService {
       new ReviewUpdatedEvent(
         updated.id,
         updated.tourId,
-        updated.partnerId,
+        updated.agencyId,
         updated.experienceId,
       ),
     );
@@ -131,7 +210,7 @@ export class ReviewService {
 
   async softDelete(reviewId: string, userId: string, role: string) {
     const review = await this.findActive(reviewId);
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+    const isAdmin = isPlatformAdminRole(role);
     if (review.userId !== userId && !isAdmin) {
       throw new ForbiddenException({
         code: 'NOT_REVIEW_OWNER',
@@ -139,9 +218,27 @@ export class ReviewService {
       });
     }
 
-    await this.prisma.review.update({
-      where: { id: reviewId },
-      data: { deletedAt: new Date() },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.review.update({
+        where: { id: reviewId },
+        data: { deletedAt: new Date(), deletedBy: userId },
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          aggregateType: 'Review',
+          aggregateId: review.id,
+          eventType: 'review.deleted',
+          payload: {
+            reviewId: review.id,
+            tourId: review.tourId,
+            experienceId: review.experienceId,
+            agencyId: review.agencyId,
+          },
+          status: 'PENDING',
+          availableAt: new Date(),
+        },
+      });
     });
 
     this.eventEmitter.emit(
@@ -149,7 +246,7 @@ export class ReviewService {
       new ReviewDeletedEvent(
         review.id,
         review.tourId,
-        review.partnerId,
+        review.agencyId,
         review.experienceId,
       ),
     );
@@ -164,12 +261,12 @@ export class ReviewService {
   async reply(
     reviewId: string,
     dto: ReplyReviewDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
     const review = await this.findActive(reviewId);
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    if (!isAdmin && (!partnerId || review.partnerId !== partnerId)) {
+    const isAdmin = isPlatformAdminRole(role);
+    if (!isAdmin && (!agencyId || review.agencyId !== agencyId)) {
       throw new ForbiddenException({
         code: 'PARTNER_MISMATCH',
         message: 'Bu yoruma yanıt veremezsiniz',
@@ -181,6 +278,8 @@ export class ReviewService {
       data: {
         partnerReply: dto.reply.trim(),
         partnerRepliedAt: new Date(),
+        agencyReply: dto.reply.trim(),
+        agencyRepliedAt: new Date(),
       },
     });
 
@@ -214,8 +313,8 @@ export class ReviewService {
     };
   }
 
-  async listForPartner(partnerId: string | undefined) {
-    if (!partnerId) {
+  async listForPartner(agencyId: string | undefined) {
+    if (!agencyId) {
       throw new ForbiddenException({
         code: 'PARTNER_REQUIRED',
         message: 'Partner hesabı gerekli',
@@ -223,7 +322,7 @@ export class ReviewService {
     }
 
     const rows = await this.prisma.review.findMany({
-      where: { partnerId, deletedAt: null },
+      where: { agencyId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
       take: 200,
     });
@@ -453,7 +552,7 @@ export class ReviewService {
       hotelId?: string | null;
       reservationId: string;
       userId: string;
-      partnerId: string;
+      agencyId: string;
       rating: number;
       comment: string | null;
       photoUrls: string[];
@@ -471,7 +570,8 @@ export class ReviewService {
       hotelId: row.hotelId ?? null,
       reservationId: row.reservationId,
       userId: row.userId,
-      partnerId: row.partnerId,
+      partnerId: row.agencyId,
+      agencyId: row.agencyId,
       rating: row.rating,
       comment: row.comment,
       photoUrls: row.photoUrls,

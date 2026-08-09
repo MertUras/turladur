@@ -4,8 +4,21 @@
 
 > **Tarih:** 2026-08-01  
 > **DB:** PostgreSQL (Neon) · Prisma multi-schema  
-> **Standart:** `id` = PK (cuid) · soft delete = `deletedAt` · domain’de mümkünse `createdBy` / `updatedBy` / `deletedBy`  
+> **Standart:** `id` = PK (cuid) · soft delete = `deletedAt` · domain’de **`createdBy` / `updatedBy` / `deletedBy`** (aktör id)  
+> **Soft-delete aktörü:** Soft delete `deletedBy` yazar. Teknik/ephemeral (`RefreshToken`, `IdempotencyKey`, `OutboxEvent`) hariç.  
 > **Soft delete + UNIQUE (kritik):** Giriş/kimlik alanlarında düz `UNIQUE` **yasak** (soft-delete sonrası aynı email/VKN/TCKN tekrar kayıt patlar). Prisma/Postgres’te **partial unique**: yalnızca `WHERE "deletedAt" IS NULL`. Detay → § Soft delete & partial unique.
+
+### Yetkilendirme & arama güvenliği (şema dışı ama şemayı bağlar)
+
+| #   | Kural                                                    | Uygulama                                                                                                                      |
+| --- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| A   | **Yetki backend’de** — FE menü/route gizleme yalnızca UX | Nest `JwtAuthGuard` + `@Roles` + `StaffPermissionsGuard` + service ownership (`AgencyLinkService.assertSellerOwner`)          |
+| B   | URL değiştirmek veri sızdırmaz                           | Resource sorguları JWT `agencyId` / `userId` / `guideId` / `busCompanyId` ile; cross-tenant → **403**                         |
+| C   | Search bar SQL enjekte edilmez                           | Prisma parametreli filtre (`contains`); DTO `MaxLength` + whitelist; string concat `$queryRaw` **yasak** (health check hariç) |
+| D   | Soft-delete izi                                          | Domain tablolarda `deletedBy` (+ `createdBy` / `updatedBy`)                                                                   |
+
+**Kod:** `apps/api/src/core/auth/utils/role-access.ts` → `AGENCY_SELLER_ROLES`, `PLATFORM_ADMIN_ROLES`.  
+**Migration:** `20260809120000_domain_soft_delete_actor_audit`.
 
 ### Schema’lar
 
@@ -83,6 +96,8 @@ Soft delete satırı silmez; düz `UNIQUE(email)` → aynı email ile yeniden ka
 
 **Prisma:** `@@unique` + soft delete yetmez. Migrate’de `CREATE UNIQUE INDEX ... WHERE "deletedAt" IS NULL` (raw SQL) veya Prisma partial index desteği.  
 **Uygulama:** Yeni kayıt / restore öncesi yalnızca `deletedAt IS NULL` satırlara bak.
+
+**Domain soft-delete audit (zorunlu alanlar):** Soft-delete’li domain tablolarda `createdBy` / `updatedBy` / `deletedBy` (`String?`) bulunur. Soft delete işlemi `deletedBy` set eder. Hariç: `RefreshToken`, `IdempotencyKey`, `OutboxEvent`.
 
 ### Silinen / legacy
 

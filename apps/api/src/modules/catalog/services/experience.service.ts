@@ -3,6 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
+import { isPlatformAdminRole } from '../../../core/auth/utils/role-access';
 import {
   DEFAULT_CURRENCY,
   DEFAULT_PAGE,
@@ -93,8 +95,8 @@ export class ExperienceService {
     };
   }
 
-  async create(dto: CreateExperienceDto, partnerId: string | undefined) {
-    await this.ensurePartnerCapability(partnerId);
+  async create(dto: CreateExperienceDto, agencyId: string | undefined) {
+    await this.ensurePartnerCapability(agencyId);
 
     const slug = await this.uniqueSlug(slugify(dto.title));
     const experience = await this.prisma.experience.create({
@@ -111,7 +113,7 @@ export class ExperienceService {
         ageRestriction: dto.ageRestriction,
         imageUrl: dto.imageUrl,
         meetingPoint: dto.meetingPoint,
-        partnerId: partnerId!,
+        agencyId: agencyId!,
         status: 'PENDING_REVIEW',
       },
     });
@@ -127,10 +129,10 @@ export class ExperienceService {
   async update(
     experienceId: string,
     dto: UpdateExperienceDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
-    const experience = await this.findOwned(experienceId, partnerId, role);
+    const experience = await this.findOwned(experienceId, agencyId, role);
     const data: Prisma.ExperienceUpdateInput = {};
     if (dto.title !== undefined) {
       data.title = dto.title.trim();
@@ -161,13 +163,18 @@ export class ExperienceService {
 
   async softDelete(
     experienceId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
+    deletedBy?: string,
   ) {
-    const experience = await this.findOwned(experienceId, partnerId, role);
+    const experience = await this.findOwned(experienceId, agencyId, role);
     await this.prisma.experience.update({
       where: { id: experience.id },
-      data: { deletedAt: new Date(), status: 'ARCHIVED' },
+      data: {
+        deletedAt: new Date(),
+        status: 'ARCHIVED',
+        ...(deletedBy ? { deletedBy } : {}),
+      },
     });
     await this.cache.invalidatePattern('catalog:experiences:*');
     return {
@@ -193,10 +200,10 @@ export class ExperienceService {
   async createDate(
     experienceId: string,
     dto: CreateActivityDateDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
-    await this.findOwned(experienceId, partnerId, role);
+    await this.findOwned(experienceId, agencyId, role);
     const startDate = new Date(dto.startDate);
     const endDate = new Date(dto.endDate);
     if (endDate < startDate) {
@@ -223,10 +230,10 @@ export class ExperienceService {
     experienceId: string,
     dateId: string,
     dto: UpdateActivityDateDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
-    await this.findOwned(experienceId, partnerId, role);
+    await this.findOwned(experienceId, agencyId, role);
     const existing = await this.prisma.activityDate.findFirst({
       where: { id: dateId, experienceId, deletedAt: null },
     });
@@ -272,10 +279,11 @@ export class ExperienceService {
   async softDeleteDate(
     experienceId: string,
     dateId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
+    deletedBy?: string,
   ) {
-    await this.findOwned(experienceId, partnerId, role);
+    await this.findOwned(experienceId, agencyId, role);
     const existing = await this.prisma.activityDate.findFirst({
       where: { id: dateId, experienceId, deletedAt: null },
     });
@@ -287,7 +295,11 @@ export class ExperienceService {
     }
     await this.prisma.activityDate.update({
       where: { id: existing.id },
-      data: { deletedAt: new Date(), isActive: false },
+      data: {
+        deletedAt: new Date(),
+        isActive: false,
+        ...(deletedBy ? { deletedBy } : {}),
+      },
     });
     return {
       success: true,
@@ -296,15 +308,15 @@ export class ExperienceService {
     };
   }
 
-  async listForPartner(partnerId: string | undefined) {
-    if (!partnerId) {
+  async listForPartner(agencyId: string | undefined) {
+    if (!agencyId) {
       throw new ForbiddenException({
         code: 'PARTNER_REQUIRED',
         message: 'Partner hesabı gerekli',
       });
     }
     const rows = await this.prisma.experience.findMany({
-      where: { partnerId, deletedAt: null },
+      where: { agencyId, deletedAt: null },
       orderBy: { createdAt: 'desc' },
     });
     return {
@@ -314,15 +326,15 @@ export class ExperienceService {
     };
   }
 
-  private async ensurePartnerCapability(partnerId: string | undefined) {
-    if (!partnerId) {
+  private async ensurePartnerCapability(agencyId: string | undefined) {
+    if (!agencyId) {
       throw new ForbiddenException({
         code: 'PARTNER_REQUIRED',
         message: 'Partner hesabı gerekli',
       });
     }
-    const partner = await this.prisma.partner.findFirst({
-      where: { id: partnerId, deletedAt: null },
+    const partner = await this.prisma.agency.findFirst({
+      where: { id: agencyId, deletedAt: null },
     });
     if (!partner || partner.status !== 'VERIFIED') {
       throw new ForbiddenException({
@@ -332,7 +344,7 @@ export class ExperienceService {
     }
     if (
       partner.capabilities.length > 0 &&
-      !partner.capabilities.includes('EXPERIENCES')
+      !partner.capabilities.includes('TOURS')
     ) {
       throw new ForbiddenException({
         code: 'CAPABILITY_REQUIRED',
@@ -343,7 +355,7 @@ export class ExperienceService {
 
   private async findOwned(
     experienceId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
     const experience = await this.prisma.experience.findFirst({
@@ -355,8 +367,8 @@ export class ExperienceService {
         message: 'Deneyim bulunamadı',
       });
     }
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    if (!isAdmin && experience.partnerId !== partnerId) {
+    const isAdmin = isPlatformAdminRole(role);
+    if (!isAdmin && experience.agencyId !== agencyId) {
       throw new ForbiddenException({
         code: 'NOT_EXPERIENCE_OWNER',
         message: 'Bu deneyimi yönetemezsiniz',
@@ -405,7 +417,7 @@ export class ExperienceService {
     duration: string;
     price: Prisma.Decimal;
     status: string;
-    partnerId: string;
+    agencyId: string;
     averageRating: Prisma.Decimal;
     reviewCount: number;
   }): SharedExperience {
@@ -419,7 +431,8 @@ export class ExperienceService {
       duration: row.duration,
       price: row.price.toString(),
       status: row.status as SharedExperience['status'],
-      partnerId: row.partnerId,
+      partnerId: row.agencyId,
+      agencyId: row.agencyId,
       averageRating: row.averageRating.toString(),
       reviewCount: row.reviewCount,
     };

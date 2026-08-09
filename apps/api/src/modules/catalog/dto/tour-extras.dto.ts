@@ -81,6 +81,13 @@ export class CreateTourPickupPointDto {
   @IsInt()
   @Min(0)
   order?: number;
+
+  @ApiPropertyOptional({
+    description: 'Rota başı bilgilendirme; boarding seçimini engellemez',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isFixedOrigin?: boolean;
 }
 
 export class UpdateTourPickupPointDto {
@@ -118,4 +125,9 @@ export class UpdateTourPickupPointDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isFixedOrigin?: boolean;
 }

@@ -158,7 +158,7 @@ export function TourCard({
 
               <div className="flex items-center space-x-2">
                 <Link
-                  href={`/partner/tours/${id}`}
+                  href={`/acente/tours/${id}`}
                   className="inline-flex items-center px-2.5 py-1 border border-gray-200 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                 >
                   Detaylar
@@ -174,7 +174,7 @@ export function TourCard({
                   </button>
                 ) : (
                   <Link
-                    href={`/partner/tours/${id}/edit`}
+                    href={`/acente/tours/${id}/edit`}
                     className="inline-flex items-center p-1.5 border border-gray-200 text-xs rounded-lg text-gray-600 bg-white hover:bg-gray-50 hover:text-indigo-600 transition-colors"
                     aria-label="Düzenle"
                   >
@@ -291,7 +291,7 @@ export function TourCard({
 
         <div className="mt-4 flex justify-between">
           <Link
-            href={`/partner/tours/${id}`}
+            href={`/acente/tours/${id}`}
             className="inline-flex items-center px-3 py-1.5 border border-gray-200 text-xs font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
           >
             Detaylar
@@ -308,7 +308,7 @@ export function TourCard({
               </button>
             ) : (
               <Link
-                href={`/partner/tours/${id}/edit`}
+                href={`/acente/tours/${id}/edit`}
                 className="inline-flex items-center p-1.5 border border-gray-200 text-xs rounded-lg text-gray-600 bg-white hover:bg-gray-50 hover:text-indigo-600 transition-colors"
                 aria-label="Düzenle"
               >

@@ -1,11 +1,10 @@
 'use client';
 
-import { getPublicApiBaseUrl } from '@/services/api-client';
-
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { getExperienceById, searchExperiences } from '@/services/activity';
 import {
   Star,
   Clock,
@@ -108,27 +107,15 @@ export default function ActivityDetailClient() {
   useEffect(() => {
     const fetchActivity = async () => {
       try {
-        const response = await fetch(
-          `${getPublicApiBaseUrl()}/catalog/experiences/${params.id}`,
-          { headers: { Accept: 'application/json' } },
-        );
-        if (!response.ok) {
-          throw new Error('Activity not found');
-        }
-        const raw = await response.json();
-        const data = raw.data ?? raw;
-        setActivity(data);
+        const data = await getExperienceById(String(params.id));
+        setActivity(data as never);
         setError(null);
 
-        // Fetch related activities
-        const relatedResponse = await fetch(
-          `${getPublicApiBaseUrl()}/catalog/experiences?limit=10`,
-          { headers: { Accept: 'application/json' } },
-        );
-        if (relatedResponse.ok) {
-          const relatedRaw = await relatedResponse.json();
-          const relatedData = relatedRaw.data ?? relatedRaw;
-          setRelatedActivities(relatedData);
+        try {
+          const { data: relatedData } = await searchExperiences({ limit: 10 });
+          setRelatedActivities(relatedData as never);
+        } catch {
+          // related optional
         }
       } catch {
         setError('Failed to load activity');

@@ -59,6 +59,8 @@ export type RouteDetailResponse = {
 
 export type RouteSearchParams = {
   q?: string;
+  /** Legacy query key used by some UI pages — mapped to `q`. */
+  search?: string;
   category?: string;
   duration?: string;
   season?: string;
@@ -66,7 +68,8 @@ export type RouteSearchParams = {
 
 export async function listRoutes(params: RouteSearchParams = {}) {
   const query = new URLSearchParams();
-  if (params.q) query.set('q', params.q);
+  const q = params.q ?? params.search;
+  if (q) query.set('q', q);
   if (params.category) query.set('category', params.category);
   if (params.duration) query.set('duration', params.duration);
   if (params.season) query.set('season', params.season);
@@ -79,7 +82,9 @@ export async function listRoutes(params: RouteSearchParams = {}) {
 
 export async function getRouteById(id: string, params: RouteSearchParams = {}) {
   const query = new URLSearchParams();
-  if (params.q) query.set('q', params.q);
+  const q = params.q ?? params.search;
+  if (q) query.set('q', q);
+  if (params.category) query.set('category', params.category);
   if (params.duration) query.set('duration', params.duration);
   if (params.season) query.set('season', params.season);
   const qs = query.toString();

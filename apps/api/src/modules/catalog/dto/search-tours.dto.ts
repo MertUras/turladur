@@ -21,6 +21,7 @@ import {
 export class SearchToursDto {
   @ApiPropertyOptional({ example: 'kapadokya' })
   @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @MaxLength(100)
   q?: string;
@@ -103,4 +104,10 @@ export class SearchToursDto {
   @Min(1)
   @Max(100)
   limit?: number = DEFAULT_PAGE_LIMIT;
+
+  @ApiPropertyOptional({ description: 'Filter by marketplace agency id' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  agencyId?: string;
 }

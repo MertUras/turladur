@@ -24,7 +24,7 @@ type CatalogTour = {
   durationDays: number;
   price: Prisma.Decimal;
   averageRating: Prisma.Decimal;
-  partnerId: string;
+  agencyId: string;
 };
 
 @Injectable()
@@ -64,7 +64,7 @@ export class RouteService {
       count: routes.filter((r) => r.category === key && r.tourCount > 0).length,
     }));
 
-    const uniquePartners = new Set(allTours.map((t) => t.partnerId));
+    const uniquePartners = new Set(allTours.map((t) => t.agencyId));
     const allMatched = ROUTE_DEFINITIONS.flatMap((route) =>
       this.toursForRoute(route, allTours, filters),
     );
@@ -116,7 +116,7 @@ export class RouteService {
           durationDays: t.durationDays,
           price: t.price.toString(),
           averageRating: t.averageRating.toString(),
-          partnerId: t.partnerId,
+          agencyId: t.agencyId,
         })),
       },
       error: null,
@@ -154,7 +154,7 @@ export class RouteService {
         durationDays: true,
         price: true,
         averageRating: true,
-        partnerId: true,
+        agencyId: true,
       },
     });
   }

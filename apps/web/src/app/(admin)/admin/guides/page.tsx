@@ -1,0 +1,107 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+
+import {
+  listAdminGuides,
+  setGuideStatusAdmin,
+  type AdminGuideRow,
+} from '@/services/partner-admin';
+import { useAuth } from '@/providers/auth-provider';
+
+export default function AdminGuidesPage() {
+  const { accessToken } = useAuth();
+  const [guides, setGuides] = useState<AdminGuideRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  async function reload() {
+    if (!accessToken) return;
+    const rows = await listAdminGuides(accessToken);
+    setGuides(rows);
+  }
+
+  useEffect(() => {
+    void reload().catch((err: Error) => setError(err.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken]);
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-neutral-900">Rehberler</h1>
+      <p className="mt-2 text-sm text-neutral-600">
+        Rehber üyelik başvuruları. Onaylanan rehberler acente sefer
+        görevlendirmesinde görünür.
+      </p>
+
+      {error ? (
+        <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </p>
+      ) : null}
+
+      <ul className="mt-6 divide-y rounded-xl border bg-white">
+        {guides.length === 0 ? (
+          <li className="p-4 text-sm text-neutral-600">
+            Listelenecek rehber yok.
+          </li>
+        ) : null}
+        {guides.map((row) => (
+          <li
+            key={row.id}
+            className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 text-sm"
+          >
+            <div className="min-w-0">
+              <p className="font-medium">
+                {row.firstName} {row.lastName}
+              </p>
+              <p className="text-xs text-neutral-500">
+                {row.email} · {row.status}
+              </p>
+              <p className="mt-1 text-xs text-neutral-500">
+                TCKN: {row.identityNumber}
+                {row.city ? ` · ${row.city}` : ''}
+              </p>
+              <p className="text-xs text-neutral-500">
+                {(row.languages ?? []).join(', ') || 'Dil yok'}
+                {row.oda ? ` · Oda: ${row.oda}` : ''}
+                {row.sicilNo ? ` · Sicil: ${row.sicilNo}` : ''}
+              </p>
+              <p className="text-xs text-neutral-500">
+                {row.ruhsatNo ? `Ruhsat: ${row.ruhsatNo}` : ''}
+                {row.ruhsatExpiresAt
+                  ? ` · Geçerlilik: ${row.ruhsatExpiresAt}`
+                  : ''}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="rounded-lg bg-emerald-600 px-2 py-1 text-xs text-white"
+                onClick={() => {
+                  if (!accessToken) return;
+                  void setGuideStatusAdmin(row.id, 'VERIFIED', accessToken)
+                    .then(reload)
+                    .catch((err: Error) => setError(err.message));
+                }}
+              >
+                Onayla
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border px-2 py-1 text-xs"
+                onClick={() => {
+                  if (!accessToken) return;
+                  void setGuideStatusAdmin(row.id, 'REJECTED', accessToken)
+                    .then(reload)
+                    .catch((err: Error) => setError(err.message));
+                }}
+              >
+                Red
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

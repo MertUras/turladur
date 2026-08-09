@@ -11,7 +11,7 @@ export type CancelledTourDateInfo = {
 export class TourDatesCancelledEvent {
   constructor(
     public readonly tourId: string,
-    public readonly partnerId: string,
+    public readonly agencyId: string,
     public readonly tourTitle: string,
     public readonly dates: CancelledTourDateInfo[],
     public readonly reasonCode: string,

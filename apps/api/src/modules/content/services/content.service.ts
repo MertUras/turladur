@@ -3,6 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
+import { isPlatformAdminRole } from '../../../core/auth/utils/role-access';
 import { DEFAULT_PAGE, DEFAULT_PAGE_LIMIT } from '@turta/shared-constants';
 import type {
   Category as SharedCategory,
@@ -163,7 +165,11 @@ export class ContentService {
     this.assertPostAccess(post.authorId, actor);
     await this.prisma.post.update({
       where: { id: post.id },
-      data: { deletedAt: new Date(), published: false },
+      data: {
+        deletedAt: new Date(),
+        published: false,
+        deletedBy: actor.userId,
+      },
     });
     return {
       success: true,
@@ -225,7 +231,7 @@ export class ContentService {
     return { success: true, data: this.toCategory(updated), error: null };
   }
 
-  async softDeleteCategory(categoryId: string) {
+  async softDeleteCategory(categoryId: string, deletedBy?: string) {
     const existing = await this.prisma.category.findFirst({
       where: { id: categoryId, deletedAt: null },
     });
@@ -237,7 +243,10 @@ export class ContentService {
     }
     await this.prisma.category.update({
       where: { id: existing.id },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: new Date(),
+        ...(deletedBy ? { deletedBy } : {}),
+      },
     });
     return {
       success: true,
@@ -305,7 +314,7 @@ export class ContentService {
         message: 'Yorum bulunamadı',
       });
     }
-    const isAdmin = actor.role === 'ADMIN' || actor.role === 'SUPER_ADMIN';
+    const isAdmin = isPlatformAdminRole(actor.role);
     if (!isAdmin && comment.authorId !== actor.userId) {
       throw new ForbiddenException({
         code: 'FORBIDDEN',
@@ -342,7 +351,7 @@ export class ContentService {
         message: 'Yorum bulunamadı',
       });
     }
-    const isAdmin = actor.role === 'ADMIN' || actor.role === 'SUPER_ADMIN';
+    const isAdmin = isPlatformAdminRole(actor.role);
     if (!isAdmin && comment.authorId !== actor.userId) {
       throw new ForbiddenException({
         code: 'FORBIDDEN',
@@ -351,7 +360,7 @@ export class ContentService {
     }
     await this.prisma.comment.update({
       where: { id: comment.id },
-      data: { deletedAt: new Date() },
+      data: { deletedAt: new Date(), deletedBy: actor.userId },
     });
     return {
       success: true,
@@ -364,7 +373,7 @@ export class ContentService {
     authorId: string,
     actor: { userId: string; role: string },
   ) {
-    const isAdmin = actor.role === 'ADMIN' || actor.role === 'SUPER_ADMIN';
+    const isAdmin = isPlatformAdminRole(actor.role);
     if (!isAdmin && authorId !== actor.userId) {
       throw new ForbiddenException({
         code: 'FORBIDDEN',

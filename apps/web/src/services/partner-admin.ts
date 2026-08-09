@@ -22,6 +22,7 @@ export type PartnerReservation = {
   id: string;
   bookingNumber: string;
   tourId: string | null;
+  tourDateId?: string | null;
   tourTitle: string | null;
   status: string;
   paymentStatus?: string;
@@ -162,6 +163,42 @@ export async function setPartnerStatus(
   token: string,
 ) {
   return apiRequest(`/admin/partners/${id}/status`, {
+    method: 'PATCH',
+    body: { status },
+    token,
+  });
+}
+
+export type AdminGuideRow = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  identityNumber: string;
+  phone: string | null;
+  city: string | null;
+  languages: string[];
+  oda: string | null;
+  sicilNo: string | null;
+  ruhsatNo: string | null;
+  ruhsatExpiresAt: string | null;
+  birthDate: string | null;
+  status: string;
+  verifiedAt: string | null;
+  createdAt: string;
+};
+
+export async function listAdminGuides(token: string, status?: string) {
+  const qs = status ? `?status=${status}` : '';
+  return apiRequest<AdminGuideRow[]>(`/admin/guides${qs}`, { token });
+}
+
+export async function setGuideStatusAdmin(
+  id: string,
+  status: 'VERIFIED' | 'REJECTED' | 'SUSPENDED',
+  token: string,
+) {
+  return apiRequest(`/admin/guides/${id}/status`, {
     method: 'PATCH',
     body: { status },
     token,

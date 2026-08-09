@@ -64,7 +64,7 @@ export function PopularTours({ tours }: PopularToursProps) {
             Popüler Turlar
           </h3>
           <Link
-            href="/partner/tours"
+            href="/acente/tours"
             className="text-sm font-medium text-blue-600 hover:text-blue-700"
           >
             Tümünü Gör
@@ -75,7 +75,7 @@ export function PopularTours({ tours }: PopularToursProps) {
         {tours.map((tour) => (
           <Link
             key={tour.id}
-            href={`/partner/tours/${tour.id}/edit`}
+            href={`/acente/tours/${tour.id}/edit`}
             className="group block"
           >
             <div className="relative h-48 rounded-lg overflow-hidden">

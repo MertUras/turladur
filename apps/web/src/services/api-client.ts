@@ -1,7 +1,17 @@
 import type { ApiResponse } from '@turta/shared-types';
 
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+/**
+ * Browser: prefer same-origin `/api/v1` (Next rewrite → Nest) so HttpOnly
+ * refresh cookies work (SameSite=Lax). SSR/server: absolute Nest URL.
+ */
+function resolveApiBase(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (configured) return configured.replace(/\/$/, '');
+  if (typeof window !== 'undefined') return '/api/v1';
+  return 'http://localhost:4000/api/v1';
+}
+
+export const API_BASE = resolveApiBase();
 
 export function getPublicApiBaseUrl() {
   return API_BASE;
@@ -27,7 +37,25 @@ type RequestOptions = {
   token?: string | null;
   cache?: RequestCache;
   next?: NextFetchRequestConfig;
+  /** Skip 401 → refresh retry (used by refresh itself). */
+  skipAuthRefresh?: boolean;
+  /** Optional AbortSignal (debounce / unmount). */
+  signal?: AbortSignal;
 };
+
+type TokenHandlers = {
+  getAccessToken: () => string | null;
+  setAccessToken: (token: string | null) => void;
+  onSessionExpired?: () => void;
+};
+
+let tokenHandlers: TokenHandlers | null = null;
+let refreshInFlight: Promise<string | null> | null = null;
+
+/** AuthProvider binds memory access token for silent refresh. */
+export function bindAuthTokenHandlers(handlers: TokenHandlers | null) {
+  tokenHandlers = handlers;
+}
 
 async function parseJsonResponse<T>(
   response: Response,
@@ -53,16 +81,26 @@ function withTimeoutSignal(timeoutMs: number): AbortSignal {
 }
 
 async function fetchApi(path: string, init: RequestInit): Promise<Response> {
+  const timeoutSignal = withTimeoutSignal(REQUEST_TIMEOUT_MS);
+  const signal =
+    init.signal &&
+    typeof AbortSignal !== 'undefined' &&
+    'any' in AbortSignal &&
+    typeof AbortSignal.any === 'function'
+      ? AbortSignal.any([timeoutSignal, init.signal])
+      : (init.signal ?? timeoutSignal);
+
   try {
     return await fetch(`${API_BASE}${path}`, {
       ...init,
-      signal: withTimeoutSignal(REQUEST_TIMEOUT_MS),
+      credentials: 'include',
+      signal,
     });
   } catch (err) {
     const aborted =
       err instanceof Error &&
       (err.name === 'AbortError' || err.name === 'TimeoutError');
-    const isLocalApi = /localhost|127\.0\.0\.1/.test(API_BASE);
+    const isLocalApi = /localhost|127\.0\.0\.1|\/api\/v1/.test(API_BASE);
     throw new ApiError(
       aborted ? 'TIMEOUT' : 'NETWORK_ERROR',
       aborted
@@ -75,6 +113,37 @@ async function fetchApi(path: string, init: RequestInit): Promise<Response> {
       0,
     );
   }
+}
+
+async function trySilentRefresh(): Promise<string | null> {
+  if (!tokenHandlers) return null;
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const response = await fetchApi('/identity/refresh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        const payload = await parseJsonResponse<{ accessToken: string }>(
+          response,
+        );
+        if (!response.ok || !payload.success || !payload.data?.accessToken) {
+          tokenHandlers?.setAccessToken(null);
+          tokenHandlers?.onSessionExpired?.();
+          return null;
+        }
+        tokenHandlers.setAccessToken(payload.data.accessToken);
+        return payload.data.accessToken;
+      } catch {
+        tokenHandlers?.setAccessToken(null);
+        tokenHandlers?.onSessionExpired?.();
+        return null;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
+  }
+  return refreshInFlight;
 }
 
 /**
@@ -90,8 +159,9 @@ export async function apiRequest<T>(
     'Content-Type': 'application/json',
   };
 
-  if (options.token) {
-    headers.Authorization = `Bearer ${options.token}`;
+  const token = options.token ?? tokenHandlers?.getAccessToken() ?? null;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const response = await fetchApi(path, {
@@ -100,7 +170,25 @@ export async function apiRequest<T>(
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     cache: options.cache,
     next: options.next,
+    signal: options.signal,
   });
+
+  if (
+    response.status === 401 &&
+    !options.skipAuthRefresh &&
+    path !== '/identity/refresh' &&
+    path !== '/identity/login' &&
+    typeof window !== 'undefined'
+  ) {
+    const refreshed = await trySilentRefresh();
+    if (refreshed) {
+      return apiRequest<T>(path, {
+        ...options,
+        token: refreshed,
+        skipAuthRefresh: true,
+      });
+    }
+  }
 
   const payload = await parseJsonResponse<T>(response);
 
@@ -122,8 +210,9 @@ export async function apiRequestWithMeta<T>(
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (options.token) {
-    headers.Authorization = `Bearer ${options.token}`;
+  const token = options.token ?? tokenHandlers?.getAccessToken() ?? null;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const response = await fetchApi(path, {
@@ -132,7 +221,23 @@ export async function apiRequestWithMeta<T>(
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     cache: options.cache,
     next: options.next,
+    signal: options.signal,
   });
+
+  if (
+    response.status === 401 &&
+    !options.skipAuthRefresh &&
+    typeof window !== 'undefined'
+  ) {
+    const refreshed = await trySilentRefresh();
+    if (refreshed) {
+      return apiRequestWithMeta<T>(path, {
+        ...options,
+        token: refreshed,
+        skipAuthRefresh: true,
+      });
+    }
+  }
 
   const payload = await parseJsonResponse<T>(response);
 
@@ -145,4 +250,9 @@ export async function apiRequestWithMeta<T>(
   }
 
   return { data: payload.data as T, meta: payload.meta };
+}
+
+/** Restore access token from HttpOnly refresh cookie (F5). */
+export async function refreshAccessToken(): Promise<string | null> {
+  return trySilentRefresh();
 }

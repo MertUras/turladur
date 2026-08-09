@@ -93,6 +93,159 @@ export async function loginUser(input: { email: string; password: string }) {
   });
 }
 
+export type AgencyStaffLoginResult = {
+  accessToken: string;
+  tokenType: string;
+  expiresIn: string;
+  staff: {
+    id: string;
+    agencyId: string;
+    email: string;
+    name: string;
+    role: string;
+  };
+};
+
+export async function loginAgencyStaff(input: {
+  email: string;
+  password: string;
+}) {
+  return apiRequest<AgencyStaffLoginResult>('/identity/agency-staff/login', {
+    method: 'POST',
+    body: input,
+  });
+}
+
+export type GuideLoginResult = {
+  accessToken: string;
+  tokenType: string;
+  expiresIn: string;
+  guide: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string | null;
+    status: string;
+  };
+};
+
+export async function loginGuide(input: { email: string; password: string }) {
+  return apiRequest<GuideLoginResult>('/identity/guides/login', {
+    method: 'POST',
+    body: input,
+  });
+}
+
+export type GuideProfile = {
+  id: string;
+  identityNumber: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+  birthDate: string | null;
+  status: string;
+  languages: string[];
+  oda: string | null;
+  sicilNo: string | null;
+  ruhsatNo: string | null;
+  ruhsatExpiresAt: string | null;
+  bio: string | null;
+  photoUrl: string | null;
+  city: string | null;
+  verifiedAt: string | null;
+  createdAt: string;
+};
+
+export type RegisterGuideInput = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  identityNumber: string;
+  languages: string[];
+  oda: string;
+  sicilNo: string;
+  ruhsatNo: string;
+  ruhsatExpiresAt: string;
+  birthDate?: string;
+  phone?: string;
+  city?: string;
+};
+
+export async function registerGuide(input: RegisterGuideInput) {
+  return apiRequest<GuideLoginResult & { guide: GuideProfile }>(
+    '/identity/guides/register',
+    { method: 'POST', body: input },
+  );
+}
+
+export async function getGuideProfile(token: string) {
+  return apiRequest<GuideProfile>('/identity/guides/me', { token });
+}
+
+export async function updateGuideProfile(
+  token: string,
+  body: Partial<RegisterGuideInput> & { bio?: string | null },
+) {
+  return apiRequest<GuideProfile>('/identity/guides/me', {
+    method: 'PATCH',
+    body,
+    token,
+  });
+}
+
+export type BusCompanyLoginResult = {
+  accessToken: string;
+  tokenType: string;
+  expiresIn: string;
+  busCompany: {
+    id: string;
+    companyName: string;
+    contactEmail: string;
+    status: string;
+  };
+};
+
+export async function loginBusCompany(input: {
+  email: string;
+  password: string;
+}) {
+  return apiRequest<BusCompanyLoginResult>('/identity/bus-companies/login', {
+    method: 'POST',
+    body: input,
+  });
+}
+
+export type SessionProbe =
+  | { authenticated: false }
+  | {
+      authenticated: true;
+      role: string;
+      actorType: string;
+      userId: string;
+      partnerId?: string;
+      agencyId?: string;
+      agencyStaffId?: string;
+      email?: string;
+      name?: string;
+    };
+
+/** Cookie-based session probe (no refresh rotate). */
+export async function probeSession() {
+  return apiRequest<SessionProbe>('/identity/session', {
+    method: 'GET',
+    skipAuthRefresh: true,
+  });
+}
+
+export async function logoutSession() {
+  return apiRequest<{ loggedOut: boolean }>('/identity/logout', {
+    method: 'POST',
+    skipAuthRefresh: true,
+  });
+}
+
 export async function getProfile(token: string) {
   return apiRequest<User>('/identity/profile', { token });
 }

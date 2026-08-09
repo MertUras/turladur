@@ -10,6 +10,9 @@ import { AgeRangeController } from './controllers/age-range.controller';
 import { ExperienceController } from './controllers/experience.controller';
 import { HotelController } from './controllers/hotel.controller';
 import { RouteController } from './controllers/route.controller';
+import { TourDateAssignmentController } from './controllers/tour-date-assignment.controller';
+import { BusSeatLayoutController } from './controllers/bus-seat-layout.controller';
+import { FavoriteController } from './controllers/favorite.controller';
 import { TourExtrasController } from './controllers/tour-extras.controller';
 import { TourController } from './controllers/tour.controller';
 import { ReviewRatingListener } from './listeners/review-rating.listener';
@@ -17,9 +20,12 @@ import { GetTourHandler } from './queries/get-tour/get-tour.handler';
 import { ListTourDatesHandler } from './queries/list-tour-dates/list-tour-dates.handler';
 import { SearchToursHandler } from './queries/search-tours/search-tours.handler';
 import { AgeRangeService } from './services/age-range.service';
+import { BusSeatLayoutService } from './services/bus-seat-layout.service';
 import { ExperienceService } from './services/experience.service';
+import { FavoriteService } from './services/favorite.service';
 import { HotelService } from './services/hotel.service';
 import { RouteService } from './services/route.service';
+import { TourDateAssignmentService } from './services/tour-date-assignment.service';
 import { TourExtrasService } from './services/tour-extras.service';
 import { TourService } from './services/tour.service';
 
@@ -41,6 +47,9 @@ const QueryHandlers = [
   controllers: [
     TourController,
     TourExtrasController,
+    TourDateAssignmentController,
+    BusSeatLayoutController,
+    FavoriteController,
     HotelController,
     ExperienceController,
     RouteController,
@@ -49,6 +58,9 @@ const QueryHandlers = [
   providers: [
     TourService,
     TourExtrasService,
+    TourDateAssignmentService,
+    BusSeatLayoutService,
+    FavoriteService,
     HotelService,
     ExperienceService,
     RouteService,
@@ -57,6 +69,12 @@ const QueryHandlers = [
     ...CommandHandlers,
     ...QueryHandlers,
   ],
-  exports: [ExperienceService, HotelService, TourService],
+  exports: [
+    ExperienceService,
+    HotelService,
+    TourService,
+    BusSeatLayoutService,
+    FavoriteService,
+  ],
 })
 export class CatalogModule {}

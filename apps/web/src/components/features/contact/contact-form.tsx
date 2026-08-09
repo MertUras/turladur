@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail as EnvelopeIcon } from 'lucide-react';
+import { sendContactMessage } from '@/services/contact';
 
 export default function ContactForm() {
   const [name, setName] = useState('');
@@ -15,26 +16,13 @@ export default function ContactForm() {
     e.preventDefault();
 
     try {
-      const { getPublicApiBaseUrl } = await import('@/services/api-client');
-      const res = await fetch(`${getPublicApiBaseUrl()}/contact`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({ name, email, phone, subject, message }),
-      });
-      const result = await res.json().catch(() => ({}));
-      if (res.ok && result.success !== false) {
-        alert('Mesaj başarıyla gönderildi!');
-        setName('');
-        setEmail('');
-        setPhone('');
-        setSubject('');
-        setMessage('');
-      } else {
-        alert('Mesaj gönderilemedi. Lütfen tekrar deneyin.');
-      }
+      await sendContactMessage({ name, email, phone, subject, message });
+      alert('Mesaj başarıyla gönderildi!');
+      setName('');
+      setEmail('');
+      setPhone('');
+      setSubject('');
+      setMessage('');
     } catch {
       alert('Mesaj gönderilemedi. Lütfen tekrar deneyin.');
     }

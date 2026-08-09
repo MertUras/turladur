@@ -34,8 +34,8 @@ export class AnalyticsService {
       revenueSum,
     ] = await Promise.all([
       this.prisma.user.count({ where: { deletedAt: null } }),
-      this.prisma.partner.count({ where: { deletedAt: null } }),
-      this.prisma.partner.count({
+      this.prisma.agency.count({ where: { deletedAt: null } }),
+      this.prisma.agency.count({
         where: { deletedAt: null, status: 'PENDING' },
       }),
       this.prisma.tour.count({ where: { deletedAt: null } }),
@@ -70,15 +70,15 @@ export class AnalyticsService {
     return { success: true, data, error: null };
   }
 
-  async getPartnerOverview(partnerId: string | undefined) {
-    if (!partnerId) {
+  async getPartnerOverview(agencyId: string | undefined) {
+    if (!agencyId) {
       throw new ForbiddenException({
         code: 'PARTNER_REQUIRED',
         message: 'Partner hesabı gerekir',
       });
     }
 
-    const cacheKey = `analytics:partner:${partnerId}:overview`;
+    const cacheKey = `analytics:partner:${agencyId}:overview`;
     const cached = await this.cache.get<Record<string, unknown>>(cacheKey);
     if (cached) {
       return { success: true, data: cached, error: null };
@@ -96,27 +96,27 @@ export class AnalyticsService {
       revenue,
     ] = await Promise.all([
       this.prisma.tour.count({
-        where: { partnerId, deletedAt: null },
+        where: { agencyId, deletedAt: null },
       }),
       this.prisma.tour.count({
-        where: { partnerId, deletedAt: null, status: 'PUBLISHED' },
+        where: { agencyId, deletedAt: null, status: 'PUBLISHED' },
       }),
       this.prisma.tour.count({
-        where: { partnerId, deletedAt: null, status: 'PENDING_REVIEW' },
+        where: { agencyId, deletedAt: null, status: 'PENDING_REVIEW' },
       }),
       this.prisma.reservation.count({
-        where: { partnerId, deletedAt: null },
+        where: { agencyId, deletedAt: null },
       }),
       this.prisma.reservation.count({
         where: {
-          partnerId,
+          agencyId,
           deletedAt: null,
           createdAt: { gte: since7Days },
         },
       }),
       this.prisma.reservation.aggregate({
         where: {
-          partnerId,
+          agencyId,
           deletedAt: null,
           status: { in: ['CONFIRMED', 'COMPLETED'] },
         },
@@ -180,5 +180,13 @@ export class AnalyticsService {
     await this.cache.set(cacheKey, data, OVERVIEW_CACHE_TTL_SECONDS);
 
     return { success: true, data, error: null };
+  }
+
+  async listRecentSearches(limit = 50) {
+    const rows = await this.prisma.searchQueryLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Math.max(limit, 1), 200),
+    });
+    return { success: true, data: rows, error: null };
   }
 }

@@ -3,6 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
+import { isPlatformAdminRole } from '../../../core/auth/utils/role-access';
 import type { AgePricingType } from '@turta/shared-types';
 import { Prisma } from '../../../generated/prisma';
 
@@ -31,10 +33,10 @@ export class AgeRangeService {
     tourId: string,
     dateId: string,
     dto: CreateAgeRangeDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
-    await this.findOwnedTourDate(tourId, dateId, partnerId, role);
+    await this.findOwnedTourDate(tourId, dateId, agencyId, role);
     await this.assertNoOverlap(
       await this.prisma.tourDateAgeRange.findMany({
         where: { tourDateId: dateId, deletedAt: null },
@@ -60,10 +62,10 @@ export class AgeRangeService {
     dateId: string,
     ageRangeId: string,
     dto: UpdateAgeRangeDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
-    await this.findOwnedTourDate(tourId, dateId, partnerId, role);
+    await this.findOwnedTourDate(tourId, dateId, agencyId, role);
     const existing = await this.prisma.tourDateAgeRange.findFirst({
       where: { id: ageRangeId, tourDateId: dateId, deletedAt: null },
     });
@@ -104,10 +106,11 @@ export class AgeRangeService {
     tourId: string,
     dateId: string,
     ageRangeId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
+    deletedBy?: string,
   ) {
-    await this.findOwnedTourDate(tourId, dateId, partnerId, role);
+    await this.findOwnedTourDate(tourId, dateId, agencyId, role);
     const existing = await this.prisma.tourDateAgeRange.findFirst({
       where: { id: ageRangeId, tourDateId: dateId, deletedAt: null },
     });
@@ -119,7 +122,10 @@ export class AgeRangeService {
     }
     await this.prisma.tourDateAgeRange.update({
       where: { id: existing.id },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: new Date(),
+        ...(deletedBy ? { deletedBy } : {}),
+      },
     });
     return {
       success: true,
@@ -145,10 +151,10 @@ export class AgeRangeService {
     experienceId: string,
     dateId: string,
     dto: CreateAgeRangeDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
-    await this.findOwnedActivityDate(experienceId, dateId, partnerId, role);
+    await this.findOwnedActivityDate(experienceId, dateId, agencyId, role);
     await this.assertNoOverlap(
       await this.prisma.experienceDateAgeRange.findMany({
         where: { activityDateId: dateId, deletedAt: null },
@@ -174,10 +180,10 @@ export class AgeRangeService {
     dateId: string,
     ageRangeId: string,
     dto: UpdateAgeRangeDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
-    await this.findOwnedActivityDate(experienceId, dateId, partnerId, role);
+    await this.findOwnedActivityDate(experienceId, dateId, agencyId, role);
     const existing = await this.prisma.experienceDateAgeRange.findFirst({
       where: { id: ageRangeId, activityDateId: dateId, deletedAt: null },
     });
@@ -218,10 +224,11 @@ export class AgeRangeService {
     experienceId: string,
     dateId: string,
     ageRangeId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
+    deletedBy?: string,
   ) {
-    await this.findOwnedActivityDate(experienceId, dateId, partnerId, role);
+    await this.findOwnedActivityDate(experienceId, dateId, agencyId, role);
     const existing = await this.prisma.experienceDateAgeRange.findFirst({
       where: { id: ageRangeId, activityDateId: dateId, deletedAt: null },
     });
@@ -233,7 +240,10 @@ export class AgeRangeService {
     }
     await this.prisma.experienceDateAgeRange.update({
       where: { id: existing.id },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: new Date(),
+        ...(deletedBy ? { deletedBy } : {}),
+      },
     });
     return {
       success: true,
@@ -277,12 +287,12 @@ export class AgeRangeService {
   private async findOwnedTourDate(
     tourId: string,
     dateId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
     const date = await this.requireTourDate(tourId, dateId);
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    if (!isAdmin && date.tour.partnerId !== partnerId) {
+    const isAdmin = isPlatformAdminRole(role);
+    if (!isAdmin && date.tour.agencyId !== agencyId) {
       throw new ForbiddenException({
         code: 'FORBIDDEN',
         message: 'Bu tur tarihini yönetemezsiniz',
@@ -308,12 +318,12 @@ export class AgeRangeService {
   private async findOwnedActivityDate(
     experienceId: string,
     dateId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
     const date = await this.requireActivityDate(experienceId, dateId);
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    if (!isAdmin && date.experience.partnerId !== partnerId) {
+    const isAdmin = isPlatformAdminRole(role);
+    if (!isAdmin && date.experience.agencyId !== agencyId) {
       throw new ForbiddenException({
         code: 'FORBIDDEN',
         message: 'Bu aktivite tarihini yönetemezsiniz',

@@ -1,14 +1,13 @@
 'use client';
 
-import { getPublicApiBaseUrl } from '@/services/api-client';
-
 import React, { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { parseJsonArray } from '@/lib/utils';
 import { getOperatorDisplayName } from '@/lib/operator';
-import type { RouteWithStats } from '@/services/route';
+import { ApiError } from '@/services/api-client';
+import { getRouteById, type RouteWithStats } from '@/services/route';
 
 type TourWithOperator = {
   id: string;
@@ -80,47 +79,24 @@ export default function RouteDetailClient({ routeId }: PageProps) {
     setLoading(true);
     setNotFound(false);
     try {
-      const params = new URLSearchParams();
-      const search = searchParams.get('search');
-      const category = searchParams.get('category');
-      const duration = searchParams.get('duration');
-      const season = searchParams.get('season');
-
-      if (search) params.set('search', search);
-      if (category) params.set('category', category);
-      if (duration) params.set('duration', duration);
-      if (season) params.set('season', season);
-
-      const query = params.toString();
-      const res = await fetch(
-        `${getPublicApiBaseUrl()}/catalog/routes/${routeId}${query ? `?${query}` : ''}`,
-        { headers: { Accept: 'application/json' } },
-      );
-      if (res.status === 404) {
-        setNotFound(true);
-        setData(null);
-        return;
-      }
-      if (!res.ok) throw new Error('Rota yüklenemedi');
-      const payload = (await res.json()) as {
-        success?: boolean;
-        data?: RouteDetailResponse;
-      } & Partial<RouteDetailResponse>;
-      const body =
-        payload.data &&
-        typeof payload.data === 'object' &&
-        'route' in payload.data
-          ? payload.data
-          : (payload as RouteDetailResponse);
+      const body = await getRouteById(routeId, {
+        search: searchParams.get('search') ?? undefined,
+        category: searchParams.get('category') ?? undefined,
+        duration: searchParams.get('duration') ?? undefined,
+        season: searchParams.get('season') ?? undefined,
+      });
       if (!body?.route) {
         setNotFound(true);
         setData(null);
         return;
       }
-      const tours = body.tours ?? [];
+      const tours = (body.tours ?? []) as TourWithOperator[];
+      const fromApi = (
+        body as { toursByCategory?: Record<string, TourWithOperator[]> }
+      ).toursByCategory;
       const toursByCategory =
-        body.toursByCategory && Object.keys(body.toursByCategory).length > 0
-          ? body.toursByCategory
+        fromApi && Object.keys(fromApi).length > 0
+          ? fromApi
           : tours.reduce<Record<string, TourWithOperator[]>>((acc, tour) => {
               const key = tour.category?.trim() || 'Turlar';
               (acc[key] ??= []).push(tour);
@@ -132,6 +108,11 @@ export default function RouteDetailClient({ routeId }: PageProps) {
         toursByCategory,
       });
     } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        setNotFound(true);
+        setData(null);
+        return;
+      }
       console.error('Route detail fetch error:', error);
       setData(null);
     } finally {

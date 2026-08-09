@@ -26,7 +26,7 @@ describe('AgeRangeService', () => {
         id: 'td1',
         tourId: 't1',
         deletedAt: null,
-        tour: { partnerId: 'p1', deletedAt: null },
+        tour: { agencyId: 'p1', deletedAt: null },
       });
       (prisma.tourDateAgeRange.findMany as jest.Mock).mockResolvedValue([
         { minAge: 0, maxAge: 2 },
@@ -48,7 +48,7 @@ describe('AgeRangeService', () => {
         id: 'td1',
         tourId: 't1',
         deletedAt: null,
-        tour: { partnerId: 'p1', deletedAt: null },
+        tour: { agencyId: 'p1', deletedAt: null },
       });
       (prisma.tourDateAgeRange.findMany as jest.Mock).mockResolvedValue([
         { minAge: 0, maxAge: 2 },
@@ -104,7 +104,7 @@ describe('AgeRangeService', () => {
         id: 'td1',
         tourId: 't1',
         deletedAt: null,
-        tour: { partnerId: 'p1', deletedAt: null },
+        tour: { agencyId: 'p1', deletedAt: null },
       });
       (prisma.tourDateAgeRange.findFirst as jest.Mock).mockResolvedValue({
         id: 'ar1',
@@ -149,7 +149,7 @@ describe('AgeRangeService', () => {
         id: 'ad1',
         experienceId: 'e1',
         deletedAt: null,
-        experience: { partnerId: 'p1', deletedAt: null },
+        experience: { agencyId: 'p1', deletedAt: null },
       });
       (prisma.experienceDateAgeRange.findMany as jest.Mock).mockResolvedValue(
         [],

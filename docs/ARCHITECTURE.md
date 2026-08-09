@@ -29,17 +29,17 @@ modules/{domain}/
 ├── controllers/     # HTTP, DTO bağlama, guard
 ├── services/        # iş kuralları
 ├── dto/             # class-validator
-├── commands/        # CQRS yazma (varsa)
-├── queries/         # CQRS okuma (varsa)
+├── commands/        # CQRS yazma (opsiyonel — karmaşık akışlarda)
+├── queries/         # CQRS okuma (opsiyonel)
 ├── events/          # yayınlanan event’ler
 ├── listeners/       # başka modül event’leri (service import YOK)
 └── __tests__/
 ```
 
-İleride şişkin service’lerden Prisma ayırmak için tercih edilen ek klasör (davranış değiştirmeden, ayrı PR’larda):
+İleride şişkin service’lerden Prisma ayırmak için **hedef** klasör (zorunlu değil; davranış değiştirmeden, ayrı PR’larda):
 
 ```
-modules/{domain}/repositories/   # saf DB okuma/yazma
+modules/{domain}/repositories/   # saf DB okuma/yazma — henüz standart zorunluluk değil
 ```
 
 ## Web iskeleti
@@ -84,6 +84,18 @@ API içinde göreli import’lar (`../../../core/...`) geçerlidir; büyük taş
 - Modül A service’ini Modül B’den import etme
 - App Router `app/` ağacını `pages/` veya `ui/` altına taşıma
 - Finder kopyası klasörleri (`* 2`) commit etme — `.gitignore` ile engelli
+
+### Modül sınır kontrolü (CI)
+
+`modules/A` → `modules/B/services/**` import’ları CI’da reddedilir:
+
+```bash
+pnpm check:module-boundaries
+# scripts/check-module-boundaries.sh — .github/workflows/ci.yml adımı
+```
+
+İzinli: aynı modül içi service, `modules/*/events/**`, DTO (tercihen `packages/shared-*`), `core/`, `shared/`.  
+`__tests__` hariç tutulur. Cross-modül yazma için event (`EventEmitter2`) kullan.
 
 ## Hijyen
 

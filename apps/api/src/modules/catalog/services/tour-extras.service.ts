@@ -3,6 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
+import { isPlatformAdminRole } from '../../../core/auth/utils/role-access';
 import { Prisma } from '../../../generated/prisma';
 
 import { PrismaService } from '../../../core/database/prisma.service';
@@ -31,10 +33,10 @@ export class TourExtrasService {
   async upsertAccommodation(
     tourId: string,
     dto: UpsertTourAccommodationDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
-    await this.findOwnedTour(tourId, partnerId, role);
+    await this.findOwnedTour(tourId, agencyId, role);
     const data = {
       name: dto.name.trim(),
       image: dto.image,
@@ -61,10 +63,11 @@ export class TourExtrasService {
 
   async deleteAccommodation(
     tourId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
+    deletedBy?: string,
   ) {
-    await this.findOwnedTour(tourId, partnerId, role);
+    await this.findOwnedTour(tourId, agencyId, role);
     const existing = await this.prisma.tourAccommodation.findFirst({
       where: { tourId, deletedAt: null },
     });
@@ -76,7 +79,10 @@ export class TourExtrasService {
     }
     await this.prisma.tourAccommodation.update({
       where: { id: existing.id },
-      data: { deletedAt: new Date() },
+      data: {
+        deletedAt: new Date(),
+        ...(deletedBy ? { deletedBy } : {}),
+      },
     });
     return {
       success: true,
@@ -101,10 +107,10 @@ export class TourExtrasService {
   async createPickupPoint(
     tourId: string,
     dto: CreateTourPickupPointDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
-    await this.findOwnedTour(tourId, partnerId, role);
+    await this.findOwnedTour(tourId, agencyId, role);
     const row = await this.prisma.tourPickupPoint.create({
       data: {
         tourId,
@@ -113,6 +119,7 @@ export class TourExtrasService {
         time: dto.time.trim(),
         description: dto.description?.trim(),
         order: dto.order ?? 0,
+        isFixedOrigin: dto.isFixedOrigin ?? false,
       },
     });
     return { success: true, data: this.toPickup(row), error: null };
@@ -122,10 +129,10 @@ export class TourExtrasService {
     tourId: string,
     pointId: string,
     dto: UpdateTourPickupPointDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
-    await this.findOwnedTour(tourId, partnerId, role);
+    await this.findOwnedTour(tourId, agencyId, role);
     const existing = await this.prisma.tourPickupPoint.findFirst({
       where: { id: pointId, tourId, deletedAt: null },
     });
@@ -143,6 +150,7 @@ export class TourExtrasService {
     if (dto.description !== undefined) data.description = dto.description;
     if (dto.order !== undefined) data.order = dto.order;
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
+    if (dto.isFixedOrigin !== undefined) data.isFixedOrigin = dto.isFixedOrigin;
 
     const updated = await this.prisma.tourPickupPoint.update({
       where: { id: existing.id },
@@ -154,10 +162,11 @@ export class TourExtrasService {
   async deletePickupPoint(
     tourId: string,
     pointId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
+    deletedBy?: string,
   ) {
-    await this.findOwnedTour(tourId, partnerId, role);
+    await this.findOwnedTour(tourId, agencyId, role);
     const existing = await this.prisma.tourPickupPoint.findFirst({
       where: { id: pointId, tourId, deletedAt: null },
     });
@@ -169,7 +178,11 @@ export class TourExtrasService {
     }
     await this.prisma.tourPickupPoint.update({
       where: { id: existing.id },
-      data: { deletedAt: new Date(), isActive: false },
+      data: {
+        deletedAt: new Date(),
+        isActive: false,
+        ...(deletedBy ? { deletedBy } : {}),
+      },
     });
     return {
       success: true,
@@ -193,12 +206,12 @@ export class TourExtrasService {
 
   private async findOwnedTour(
     tourId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
     const tour = await this.requireTour(tourId);
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    if (!isAdmin && tour.partnerId !== partnerId) {
+    const isAdmin = isPlatformAdminRole(role);
+    if (!isAdmin && tour.agencyId !== agencyId) {
       throw new ForbiddenException({
         code: 'FORBIDDEN',
         message: 'Bu tura erişim yetkiniz yok',
@@ -239,6 +252,7 @@ export class TourExtrasService {
     time: string;
     description: string | null;
     order: number;
+    isFixedOrigin: boolean;
     isActive: boolean;
   }) {
     return {
@@ -249,6 +263,7 @@ export class TourExtrasService {
       time: row.time,
       description: row.description,
       order: row.order,
+      isFixedOrigin: row.isFixedOrigin,
       isActive: row.isActive,
     };
   }

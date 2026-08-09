@@ -6,12 +6,6 @@ import { CacheService } from '../../../core/cache/cache.service';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { EmailQueueService } from '../../../core/queue/email-queue.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
-import {
-  CreatePostDto,
-  SearchPostsDto,
-  UpdatePostDto,
-} from '../../content/dto/content.dto';
-import { ContentService } from '../../content/services/content.service';
 import { PartnerVerifiedEvent } from '../../identity/events/partner-verified.event';
 
 @Injectable()
@@ -19,7 +13,6 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
-    private readonly contentService: ContentService,
     private readonly emailQueue: EmailQueueService,
     private readonly config: ConfigService,
     private readonly eventEmitter: EventEmitter2,
@@ -38,8 +31,8 @@ export class AdminService {
       paymentsSuccess,
     ] = await Promise.all([
       this.prisma.user.count({ where: { deletedAt: null } }),
-      this.prisma.partner.count({ where: { deletedAt: null } }),
-      this.prisma.partner.count({
+      this.prisma.agency.count({ where: { deletedAt: null } }),
+      this.prisma.agency.count({
         where: { deletedAt: null, status: 'PENDING' },
       }),
       this.prisma.tour.count({ where: { deletedAt: null } }),
@@ -80,7 +73,6 @@ export class AdminService {
         lastName: true,
         role: true,
         isActive: true,
-        partnerId: true,
         createdAt: true,
       },
     });
@@ -136,7 +128,7 @@ export class AdminService {
   }
 
   async listPartners(status?: string) {
-    const partners = await this.prisma.partner.findMany({
+    const partners = await this.prisma.agency.findMany({
       where: {
         deletedAt: null,
         ...(status
@@ -166,11 +158,11 @@ export class AdminService {
   }
 
   async setPartnerStatus(
-    partnerId: string,
+    agencyId: string,
     status: 'VERIFIED' | 'REJECTED' | 'SUSPENDED',
   ) {
-    const partner = await this.prisma.partner.findFirst({
-      where: { id: partnerId, deletedAt: null },
+    const partner = await this.prisma.agency.findFirst({
+      where: { id: agencyId, deletedAt: null },
     });
     if (!partner) {
       throw new NotFoundException({
@@ -180,17 +172,16 @@ export class AdminService {
     }
 
     const wasVerified = partner.status === 'VERIFIED';
-    const updated = await this.prisma.partner.update({
-      where: { id: partnerId },
+    const updated = await this.prisma.agency.update({
+      where: { id: agencyId },
       data: {
         status,
         verifiedAt: status === 'VERIFIED' ? new Date() : partner.verifiedAt,
-        verificationToken:
-          status === 'VERIFIED' ? null : partner.verificationToken,
       },
     });
 
     if (status === 'VERIFIED' && !wasVerified) {
+      // Consumer: DomainAuditListener; partner-approved e-posta burada
       this.eventEmitter.emit(
         'partner.verified',
         new PartnerVerifiedEvent(updated.id, updated.contactEmail),
@@ -227,6 +218,80 @@ export class AdminService {
     };
   }
 
+  async listGuides(status?: string) {
+    const guides = await this.prisma.guide.findMany({
+      where: {
+        deletedAt: null,
+        ...(status
+          ? {
+              status: status as
+                'PENDING' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED',
+            }
+          : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+
+    return {
+      success: true,
+      data: guides.map((guide) => ({
+        id: guide.id,
+        firstName: guide.firstName,
+        lastName: guide.lastName,
+        email: guide.email,
+        identityNumber: guide.identityNumber,
+        phone: guide.phone,
+        city: guide.city,
+        languages: guide.languages,
+        oda: guide.oda,
+        sicilNo: guide.sicilNo,
+        ruhsatNo: guide.ruhsatNo,
+        ruhsatExpiresAt:
+          guide.ruhsatExpiresAt?.toISOString().slice(0, 10) ?? null,
+        birthDate: guide.birthDate?.toISOString().slice(0, 10) ?? null,
+        status: guide.status,
+        verifiedAt: guide.verifiedAt?.toISOString() ?? null,
+        createdAt: guide.createdAt.toISOString(),
+      })),
+      error: null,
+    };
+  }
+
+  async setGuideStatus(
+    guideId: string,
+    status: 'VERIFIED' | 'REJECTED' | 'SUSPENDED',
+  ) {
+    const guide = await this.prisma.guide.findFirst({
+      where: { id: guideId, deletedAt: null },
+    });
+    if (!guide) {
+      throw new NotFoundException({
+        code: 'GUIDE_NOT_FOUND',
+        message: 'Rehber bulunamadı',
+      });
+    }
+
+    const updated = await this.prisma.guide.update({
+      where: { id: guideId },
+      data: {
+        status,
+        verifiedAt: status === 'VERIFIED' ? new Date() : guide.verifiedAt,
+      },
+    });
+
+    return {
+      success: true,
+      data: {
+        id: updated.id,
+        email: updated.email,
+        status: updated.status,
+        verifiedAt: updated.verifiedAt?.toISOString() ?? null,
+      },
+      error: null,
+    };
+  }
+
   async listPendingTours() {
     const tours = await this.prisma.tour.findMany({
       where: { deletedAt: null, status: 'PENDING_REVIEW' },
@@ -239,7 +304,7 @@ export class AdminService {
       data: tours.map((t) => ({
         id: t.id,
         title: t.title,
-        partnerId: t.partnerId,
+        agencyId: t.agencyId,
         price: t.price.toString(),
         currency: t.currency,
         category: t.category,
@@ -262,7 +327,7 @@ export class AdminService {
       data: rows.map((e) => ({
         id: e.id,
         title: e.title,
-        partnerId: e.partnerId,
+        agencyId: e.agencyId,
         price: e.price.toString(),
         currency: e.currency,
         category: e.category,
@@ -330,6 +395,34 @@ export class AdminService {
       );
     }
 
+    if (status === 'PUBLISHED') {
+      if (tour.agencyId) {
+        const agency = await this.prisma.agency.findFirst({
+          where: { id: tour.agencyId, deletedAt: null },
+        });
+        if (
+          !agency?.taxNumber?.trim() ||
+          !agency.legalTitle?.trim() ||
+          !agency.address?.trim()
+        ) {
+          throw new BusinessException(
+            'AGENCY_INVOICE_FIELDS_REQUIRED',
+            'Tur yayınlamak için acente VKN, unvan ve adres zorunludur',
+          );
+        }
+      } else {
+        const partner = await this.prisma.agency.findFirst({
+          where: { id: tour.agencyId, deletedAt: null },
+        });
+        if (!partner?.taxNumber?.trim() || !partner.address?.trim()) {
+          throw new BusinessException(
+            'AGENCY_INVOICE_FIELDS_REQUIRED',
+            'Tur yayınlamak için satıcı VKN ve adres zorunludur',
+          );
+        }
+      }
+    }
+
     const updated = await this.prisma.tour.update({
       where: { id: tourId },
       data: { status },
@@ -356,7 +449,7 @@ export class AdminService {
         ...(status
           ? {
               status: status as
-                'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED',
+                'PENDING' | 'VERIFIED' | 'REJECTED' | 'SUSPENDED',
             }
           : {}),
       },
@@ -368,10 +461,10 @@ export class AdminService {
       success: true,
       data: agencies.map((a) => ({
         id: a.id,
-        name: a.name,
+        name: a.companyName,
         status: a.status,
-        userId: a.userId,
-        email: a.email,
+        userId: null,
+        email: a.contactEmail,
         city: a.city,
         createdAt: a.createdAt.toISOString(),
       })),
@@ -381,7 +474,7 @@ export class AdminService {
 
   async setAgencyStatus(
     agencyId: string,
-    status: 'APPROVED' | 'REJECTED' | 'SUSPENDED',
+    status: 'VERIFIED' | 'REJECTED' | 'SUSPENDED',
   ) {
     const agency = await this.prisma.agency.findFirst({
       where: { id: agencyId, deletedAt: null },
@@ -395,44 +488,21 @@ export class AdminService {
 
     const updated = await this.prisma.agency.update({
       where: { id: agency.id },
-      data: { status },
+      data: {
+        status,
+        verifiedAt: status === 'VERIFIED' ? new Date() : agency.verifiedAt,
+      },
     });
 
     return {
       success: true,
       data: {
         id: updated.id,
-        name: updated.name,
+        name: updated.companyName,
         status: updated.status,
       },
       error: null,
     };
-  }
-
-  async listContentPosts(dto: SearchPostsDto) {
-    return this.contentService.searchPosts(
-      { ...dto, includeDrafts: true },
-      true,
-    );
-  }
-
-  async createContentPost(dto: CreatePostDto, authorId: string) {
-    return this.contentService.createPost(dto, authorId);
-  }
-
-  async updateContentPost(
-    postId: string,
-    dto: UpdatePostDto,
-    user: { userId: string; role: string },
-  ) {
-    return this.contentService.updatePost(postId, dto, user);
-  }
-
-  async deleteContentPost(
-    postId: string,
-    user: { userId: string; role: string },
-  ) {
-    return this.contentService.softDeletePost(postId, user);
   }
 
   async listReservations() {
@@ -448,7 +518,7 @@ export class AdminService {
     const experienceIds = [
       ...new Set(rows.map((row) => row.experienceId).filter(Boolean)),
     ] as string[];
-    const partnerIds = [...new Set(rows.map((row) => row.partnerId))];
+    const partnerIds = [...new Set(rows.map((row) => row.agencyId))];
 
     const [tours, experiences, partners] = await Promise.all([
       tourIds.length
@@ -464,7 +534,7 @@ export class AdminService {
           })
         : [],
       partnerIds.length
-        ? this.prisma.partner.findMany({
+        ? this.prisma.agency.findMany({
             where: { id: { in: partnerIds } },
             select: { id: true, companyName: true },
           })
@@ -498,8 +568,8 @@ export class AdminService {
             : row.experienceId
               ? (experienceTitleById.get(row.experienceId) ?? null)
               : null,
-          partnerName: partnerNameById.get(row.partnerId) ?? null,
-          partnerId: row.partnerId,
+          partnerName: partnerNameById.get(row.agencyId) ?? null,
+          agencyId: row.agencyId,
           status: row.status,
           paymentStatus: row.paymentStatus,
           guestCount: row.adults + row.children,

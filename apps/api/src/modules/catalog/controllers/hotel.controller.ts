@@ -10,18 +10,21 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { Role } from '@turta/shared-constants';
+
+import {
+  AGENCY_SELLER_ROLES,
+  resolveActorId,
+} from '../../../core/auth/utils/role-access';
 
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
+import { RequireStaffPermissions } from '../../../core/auth/decorators/require-staff-permissions.decorator';
 import { Roles } from '../../../core/auth/decorators/roles.decorator';
 import { UserPayload } from '../../../core/auth/types/auth.types';
 import {
   CreateHotelDto,
-  CreateRoomDto,
   SearchHotelsDto,
   UpdateHotelDto,
-  UpdateRoomDto,
 } from '../dto/hotel.dto';
 import { HotelService } from '../services/hotel.service';
 
@@ -40,91 +43,53 @@ export class HotelController {
 
   @Public()
   @Get(':id')
-  @ApiOperation({ summary: 'Hotel detail with available rooms' })
+  @ApiOperation({ summary: 'Hotel detail (reference only, no sales)' })
   getById(@Param('id') id: string) {
     return this.hotelService.getById(id);
   }
 
   @Public()
   @Get(':id/rooms')
-  @ApiOperation({ summary: 'List rooms for a hotel' })
+  @ApiOperation({
+    summary: 'List rooms for a hotel (deprecated — always empty)',
+  })
   listRooms(@Param('id') id: string) {
     return this.hotelService.listRooms(id);
   }
 
   @Post()
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
+  @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Create hotel (partner with HOTELS capability)' })
   create(@Body() dto: CreateHotelDto, @CurrentUser() user: UserPayload) {
-    return this.hotelService.create(dto, user.partnerId);
+    return this.hotelService.create(dto, user.agencyId);
   }
 
   @Patch(':id')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
+  @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Update owned hotel' })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateHotelDto,
     @CurrentUser() user: UserPayload,
   ) {
-    return this.hotelService.update(id, dto, user.partnerId, user.role);
+    return this.hotelService.update(id, dto, user.agencyId, user.role);
   }
 
   @Delete(':id')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
+  @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Soft-delete owned hotel' })
   remove(@Param('id') id: string, @CurrentUser() user: UserPayload) {
-    return this.hotelService.softDelete(id, user.partnerId, user.role);
-  }
-
-  @Post(':id/rooms')
-  @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Add room to hotel' })
-  createRoom(
-    @Param('id') id: string,
-    @Body() dto: CreateRoomDto,
-    @CurrentUser() user: UserPayload,
-  ) {
-    return this.hotelService.createRoom(id, dto, user.partnerId, user.role);
-  }
-
-  @Patch(':id/rooms/:roomId')
-  @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Update room' })
-  updateRoom(
-    @Param('id') id: string,
-    @Param('roomId') roomId: string,
-    @Body() dto: UpdateRoomDto,
-    @CurrentUser() user: UserPayload,
-  ) {
-    return this.hotelService.updateRoom(
+    return this.hotelService.softDelete(
       id,
-      roomId,
-      dto,
-      user.partnerId,
+      user.agencyId,
       user.role,
-    );
-  }
-
-  @Delete(':id/rooms/:roomId')
-  @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
-  @ApiOperation({ summary: 'Soft-delete room' })
-  removeRoom(
-    @Param('id') id: string,
-    @Param('roomId') roomId: string,
-    @CurrentUser() user: UserPayload,
-  ) {
-    return this.hotelService.softDeleteRoom(
-      id,
-      roomId,
-      user.partnerId,
-      user.role,
+      resolveActorId(user),
     );
   }
 }

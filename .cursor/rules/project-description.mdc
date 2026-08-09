@@ -19,12 +19,13 @@ turta, Türkiye'nin turizm sektöründeki tüm paydaşları (küçük oteller, p
 - **Monorepo:** Nx + pnpm workspace
 - **Frontend:** Next.js 15 (App Router) — `apps/web/`
 - **Backend:** NestJS 11 (Modüler Monolit) — `apps/api/`
-- **Paylaşılan Paketler:** `packages/shared-types/`, `packages/shared-validators/`, `packages/shared-constants/`
+- **Paylaşılan Paketler:** `packages/shared-types/`, `packages/shared-validators/`, `packages/shared-constants/` (`eslint-config` paketi henüz yok)
 - **Veritabanı:** PostgreSQL 16 (multi-schema: catalog, booking, payment, identity, review, notification)
 - **ORM:** Prisma 6
 - **Cache & Queue:** Redis 7 + BullMQ
-- **Auth:** Nest identity + Passport JWT (`passport-jwt`, Bearer access token)
+- **Auth:** Nest identity + Passport JWT (`passport-jwt`, Bearer access token). Keycloak/OIDC ertelendi — şu an kullanılmıyor.
 - **Storage:** MinIO (dev) / S3 (prod)
+- **Local altyapı:** `infrastructure/docker/docker-compose.yml` (nginx klasörü repo’da yok)
 - **Deploy:** Vercel (web) + Railway/Fly.io (api)
 
 ---

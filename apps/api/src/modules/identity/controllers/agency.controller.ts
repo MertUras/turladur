@@ -12,6 +12,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Role } from '@turta/shared-constants';
 
+import { AGENCY_SELLER_ROLES } from '../../../core/auth/utils/role-access';
+
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
 import { Roles } from '../../../core/auth/decorators/roles.decorator';
@@ -41,7 +43,7 @@ export class AgencyController {
 
   @Get('me')
   @ApiBearerAuth()
-  @Roles(Role.CUSTOMER, Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.CUSTOMER, ...AGENCY_SELLER_ROLES)
   @ApiOperation({ summary: 'Get agency owned by current user' })
   me(@CurrentUser() user: UserPayload) {
     return this.agencyService.getMine(user.userId);
@@ -49,7 +51,7 @@ export class AgencyController {
 
   @Public()
   @Get(':id')
-  @ApiOperation({ summary: 'Agency detail' })
+  @ApiOperation({ summary: 'Marketplace agency (seller) public profile' })
   getById(@Param('id') id: string, @CurrentUser() user?: UserPayload) {
     return this.agencyService.getById(
       id,
@@ -59,7 +61,7 @@ export class AgencyController {
 
   @Post()
   @ApiBearerAuth()
-  @Roles(Role.CUSTOMER, Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.CUSTOMER, ...AGENCY_SELLER_ROLES)
   @ApiOperation({ summary: 'Register a new agency (pending approval)' })
   create(@Body() dto: CreateAgencyDto, @CurrentUser() user: UserPayload) {
     return this.agencyService.create(dto, user.userId);
@@ -67,7 +69,7 @@ export class AgencyController {
 
   @Patch(':id')
   @ApiBearerAuth()
-  @Roles(Role.CUSTOMER, Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.CUSTOMER, ...AGENCY_SELLER_ROLES)
   @ApiOperation({ summary: 'Update owned agency' })
   update(
     @Param('id') id: string,
@@ -82,7 +84,7 @@ export class AgencyController {
 
   @Delete(':id')
   @ApiBearerAuth()
-  @Roles(Role.CUSTOMER, Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(Role.CUSTOMER, ...AGENCY_SELLER_ROLES)
   @ApiOperation({ summary: 'Soft-delete owned agency' })
   remove(@Param('id') id: string, @CurrentUser() user: UserPayload) {
     return this.agencyService.softDelete(id, {

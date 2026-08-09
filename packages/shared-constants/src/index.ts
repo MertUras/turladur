@@ -4,14 +4,26 @@ export enum Role {
   PARTNER_STAFF = 'PARTNER_STAFF',
   ADMIN = 'ADMIN',
   SUPER_ADMIN = 'SUPER_ADMIN',
+  PLATFORM_ADMIN = 'PLATFORM_ADMIN',
+  PLATFORM_SUPER_ADMIN = 'PLATFORM_SUPER_ADMIN',
+  /** Marketplace acente personeli (AgencyStaff). */
+  AGENCY_OWNER = 'AGENCY_OWNER',
+  AGENCY_ADMIN = 'AGENCY_ADMIN',
+  AGENCY_STAFF = 'AGENCY_STAFF',
+  /** Rehber / otobüs firması aktörleri. */
+  GUIDE = 'GUIDE',
+  BUS_COMPANY = 'BUS_COMPANY',
 }
 
 export enum BookingStatus {
   PENDING = 'PENDING',
+  PENDING_PAYMENT = 'PENDING_PAYMENT',
   CONFIRMED = 'CONFIRMED',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
+  SUSPENDED = 'SUSPENDED',
   PAYMENT_FAILED = 'PAYMENT_FAILED',
+  EXPIRED = 'EXPIRED',
 }
 
 export enum PaymentStatus {

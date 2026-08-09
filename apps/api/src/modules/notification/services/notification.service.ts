@@ -53,6 +53,7 @@ export class NotificationService {
   }) {
     const row = await this.prisma.notification.create({
       data: {
+        recipientType: 'USER',
         userId: input.userId,
         type: input.type,
         title: input.title,
@@ -62,7 +63,6 @@ export class NotificationService {
     });
     const shared = this.toShared(row);
 
-    // Realtime is best-effort — never fail the write path
     try {
       this.notificationGateway.emitNotificationCreated(input.userId, shared);
     } catch (err) {
@@ -72,6 +72,117 @@ export class NotificationService {
     }
 
     return shared;
+  }
+
+  /** Multi-aktör in-app (Agency / Guide / Bus / Staff / Platform). */
+  async createForRecipient(input: {
+    recipientType:
+      'USER' | 'AGENCY' | 'AGENCY_STAFF' | 'BUS_COMPANY' | 'GUIDE' | 'PLATFORM';
+    userId?: string;
+    agencyId?: string;
+    agencyStaffId?: string;
+    busCompanyId?: string;
+    guideId?: string;
+    type: string;
+    title: string;
+    body: string;
+    data?: Record<string, unknown>;
+  }) {
+    this.assertRecipientIds(input);
+
+    const row = await this.prisma.notification.create({
+      data: {
+        recipientType: input.recipientType,
+        userId: input.userId ?? null,
+        agencyId: input.agencyId ?? null,
+        agencyStaffId: input.agencyStaffId ?? null,
+        busCompanyId: input.busCompanyId ?? null,
+        guideId: input.guideId ?? null,
+        type: input.type,
+        title: input.title,
+        body: input.body,
+        data: (input.data ?? Prisma.JsonNull) as Prisma.InputJsonValue,
+      },
+    });
+
+    if (input.recipientType === 'USER' && input.userId) {
+      const shared = this.toShared({
+        ...row,
+        userId: input.userId,
+      });
+      try {
+        this.notificationGateway.emitNotificationCreated(input.userId, shared);
+      } catch (err) {
+        this.logger.warn(
+          `WS emit failed for notification ${row.id}: ${String(err)}`,
+        );
+      }
+      return shared;
+    }
+
+    return {
+      id: row.id,
+      userId: row.userId ?? '',
+      type: row.type,
+      title: row.title,
+      body: row.body,
+      data:
+        row.data && typeof row.data === 'object' && !Array.isArray(row.data)
+          ? (row.data as Record<string, unknown>)
+          : null,
+      readAt: row.readAt?.toISOString() ?? null,
+      createdAt: row.createdAt.toISOString(),
+      recipientType: row.recipientType,
+      agencyId: row.agencyId,
+    };
+  }
+
+  async listForAgency(agencyId: string, unreadOnly = false) {
+    const rows = await this.prisma.notification.findMany({
+      where: {
+        recipientType: 'AGENCY',
+        agencyId,
+        ...(unreadOnly ? { readAt: null } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+    return {
+      success: true,
+      data: rows.map((row) => ({
+        id: row.id,
+        type: row.type,
+        title: row.title,
+        body: row.body,
+        readAt: row.readAt?.toISOString() ?? null,
+        createdAt: row.createdAt.toISOString(),
+        recipientType: row.recipientType,
+        agencyId: row.agencyId,
+      })),
+      error: null,
+    };
+  }
+
+  private assertRecipientIds(input: {
+    recipientType: string;
+    userId?: string;
+    agencyId?: string;
+    agencyStaffId?: string;
+    busCompanyId?: string;
+    guideId?: string;
+  }) {
+    const ok =
+      (input.recipientType === 'USER' && !!input.userId) ||
+      (input.recipientType === 'AGENCY' && !!input.agencyId) ||
+      (input.recipientType === 'AGENCY_STAFF' && !!input.agencyStaffId) ||
+      (input.recipientType === 'BUS_COMPANY' && !!input.busCompanyId) ||
+      (input.recipientType === 'GUIDE' && !!input.guideId) ||
+      input.recipientType === 'PLATFORM';
+    if (!ok) {
+      throw new Error(
+        `Notification recipient mismatch for ${input.recipientType}`,
+      );
+    }
   }
 
   async listForUser(userId: string, unreadOnly = false) {
@@ -148,8 +259,8 @@ export class NotificationService {
             select: { title: true },
           })
         : null,
-      this.prisma.partner.findFirst({
-        where: { id: reservation.partnerId },
+      this.prisma.agency.findFirst({
+        where: { id: reservation.agencyId },
         select: {
           companyName: true,
           contactPhone: true,
@@ -217,8 +328,22 @@ export class NotificationService {
       },
     });
 
-    // Notify partner users (in-app)
-    const partnerUsers = await this.findPartnerUserIds(reservation.partnerId);
+    if (reservation.agencyId) {
+      await this.createForRecipient({
+        recipientType: 'AGENCY',
+        agencyId: reservation.agencyId,
+        type: 'BOOKING_CONFIRMED',
+        title: 'Yeni rezervasyon',
+        body: `${tourName} — ${reservation.bookingNumber}`,
+        data: {
+          reservationId: reservation.id,
+          bookingNumber: reservation.bookingNumber,
+        },
+      });
+    }
+
+    // Notify partner users (in-app) — expand: Partner hâlâ
+    const partnerUsers = await this.findPartnerUserIds(reservation.agencyId);
     for (const userId of partnerUsers) {
       await this.createInApp({
         userId,
@@ -282,9 +407,9 @@ export class NotificationService {
           })
         : null;
     const productTitle = tour?.title ?? experience?.title ?? 'Ürün';
-    const partnerUsers = await this.findPartnerUserIds(event.partnerId);
-    const partner = await this.prisma.partner.findFirst({
-      where: { id: event.partnerId },
+    const partnerUsers = await this.findPartnerUserIds(event.agencyId);
+    const partner = await this.prisma.agency.findFirst({
+      where: { id: event.agencyId },
       select: { contactEmail: true, companyName: true },
     });
 
@@ -434,22 +559,21 @@ export class NotificationService {
     });
   }
 
-  async findPartnerUserIds(partnerId: string): Promise<string[]> {
-    const users = await this.prisma.user.findMany({
+  async findPartnerUserIds(agencyId: string): Promise<string[]> {
+    const staff = await this.prisma.agencyStaff.findMany({
       where: {
-        partnerId,
+        agencyId,
         deletedAt: null,
-        isActive: true,
-        role: { in: ['PARTNER', 'PARTNER_STAFF'] },
+        status: 'ACTIVE',
       },
       select: { id: true },
     });
-    return users.map((u) => u.id);
+    return staff.map((s) => s.id);
   }
 
   private toShared(row: {
     id: string;
-    userId: string;
+    userId: string | null;
     type: string;
     title: string;
     body: string;
@@ -459,7 +583,7 @@ export class NotificationService {
   }): AppNotification {
     return {
       id: row.id,
-      userId: row.userId,
+      userId: row.userId ?? '',
       type: row.type,
       title: row.title,
       body: row.body,

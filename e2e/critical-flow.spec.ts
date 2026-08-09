@@ -87,6 +87,9 @@ test.describe('Web smoke', () => {
 });
 
 test.describe('Critical flow (API-only)', () => {
+  // Guest + demo booking share seeded inventory; run serially to avoid capacity races.
+  test.describe.configure({ mode: 'serial' });
+
   test('register duplicate or success path', async ({ request }) => {
     const email = `e2e-${Date.now()}@turta.test`;
     const response = await request.post(`${apiBase}/identity/register`, {
@@ -178,26 +181,45 @@ test.describe('Critical flow (API-only)', () => {
     const search = await apiJson<Array<{ id: string; title?: string }>>(
       request,
       'get',
-      '/catalog/tours/search?limit=5',
+      '/catalog/tours/search?limit=10',
     );
     expect(search.body.success).toBe(true);
     const tours = search.body.data ?? [];
     test.skip(tours.length === 0, 'No tours seeded for E2E');
 
     let tourDateId: string | null = null;
+    let pickupPointId: string | null = null;
     for (const tour of tours) {
       const dates = await apiJson<
-        Array<{ id: string; remainingCapacity?: number; isActive?: boolean }>
+        Array<{
+          id: string;
+          startDate?: string;
+          remainingCapacity?: number;
+          isActive?: boolean;
+        }>
       >(request, 'get', `/catalog/tours/${tour.id}/dates`);
       const open = (dates.body.data ?? []).find(
-        (d) => d.isActive !== false && (d.remainingCapacity ?? 0) > 0,
+        (d) =>
+          d.isActive !== false &&
+          (d.remainingCapacity ?? 0) > 0 &&
+          (!d.startDate ||
+            new Date(d.startDate) >= new Date(new Date().toDateString())),
       );
-      if (open) {
-        tourDateId = open.id;
-        break;
-      }
+      if (!open) continue;
+
+      const pickups = await apiJson<Array<{ id: string }>>(
+        request,
+        'get',
+        `/catalog/tours/${tour.id}/pickup-points`,
+      );
+      const pickup = (pickups.body.data ?? [])[0];
+      if (!pickup) continue;
+
+      tourDateId = open.id;
+      pickupPointId = pickup.id;
+      break;
     }
-    test.skip(!tourDateId, 'No tour dates with capacity');
+    test.skip(!tourDateId || !pickupPointId, 'No tour with capacity + pickup');
 
     const reservation = await apiJson<{
       id: string;
@@ -207,6 +229,7 @@ test.describe('Critical flow (API-only)', () => {
       token,
       data: {
         tourDateId,
+        pickupPointId,
         adults: 1,
         children: 0,
         contactEmail: email,
@@ -229,10 +252,15 @@ test.describe('Critical flow (API-only)', () => {
         },
       },
     });
-    expect(reservation.body.success).toBe(true);
+    expect(
+      reservation.body.success,
+      reservation.body.error?.message ?? 'reservation failed',
+    ).toBe(true);
     expect(reservation.body.data?.id).toBeTruthy();
     expect(reservation.body.data?.bookingNumber).toMatch(/^TRL-/);
-    expect(reservation.body.data?.status).toBe('PENDING');
+    expect(['PENDING', 'PENDING_PAYMENT']).toContain(
+      reservation.body.data?.status,
+    );
 
     const payment = await apiJson<{
       status: string;
@@ -248,7 +276,10 @@ test.describe('Critical flow (API-only)', () => {
         cvc: '123',
       },
     });
-    expect(payment.body.success).toBe(true);
+    expect(
+      payment.body.success,
+      payment.body.error?.message ?? 'payment failed',
+    ).toBe(true);
     expect(payment.body.data?.status).toBe('SUCCESS');
     expect(payment.body.data?.requires3ds).toBeFalsy();
 
@@ -285,25 +316,44 @@ test.describe('Critical flow (API-only)', () => {
     const search = await apiJson<Array<{ id: string }>>(
       request,
       'get',
-      '/catalog/tours/search?limit=3',
+      '/catalog/tours/search?limit=10',
     );
     const tours = search.body.data ?? [];
     test.skip(tours.length === 0, 'No tours');
 
     let tourDateId: string | null = null;
+    let pickupPointId: string | null = null;
     for (const tour of tours) {
       const dates = await apiJson<
-        Array<{ id: string; remainingCapacity?: number; isActive?: boolean }>
+        Array<{
+          id: string;
+          startDate?: string;
+          remainingCapacity?: number;
+          isActive?: boolean;
+        }>
       >(request, 'get', `/catalog/tours/${tour.id}/dates`);
       const open = (dates.body.data ?? []).find(
-        (d) => d.isActive !== false && (d.remainingCapacity ?? 0) > 0,
+        (d) =>
+          d.isActive !== false &&
+          (d.remainingCapacity ?? 0) > 0 &&
+          (!d.startDate ||
+            new Date(d.startDate) >= new Date(new Date().toDateString())),
       );
-      if (open) {
-        tourDateId = open.id;
-        break;
-      }
+      if (!open) continue;
+
+      const pickups = await apiJson<Array<{ id: string }>>(
+        request,
+        'get',
+        `/catalog/tours/${tour.id}/pickup-points`,
+      );
+      const pickup = (pickups.body.data ?? [])[0];
+      if (!pickup) continue;
+
+      tourDateId = open.id;
+      pickupPointId = pickup.id;
+      break;
     }
-    test.skip(!tourDateId, 'No capacity');
+    test.skip(!tourDateId || !pickupPointId, 'No tour with capacity + pickup');
 
     const reservation = await apiJson<{ id: string; bookingNumber: string }>(
       request,
@@ -313,6 +363,7 @@ test.describe('Critical flow (API-only)', () => {
         token,
         data: {
           tourDateId,
+          pickupPointId,
           adults: 1,
           contactEmail: DEMO_CUSTOMER.email,
           contactPhone: '+905551112233',

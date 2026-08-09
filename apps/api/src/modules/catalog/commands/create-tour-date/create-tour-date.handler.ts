@@ -11,7 +11,7 @@ export class CreateTourDateHandler implements ICommandHandler<CreateTourDateComm
     return this.tourService.createTourDate(
       command.tourId,
       command.dto,
-      command.partnerId,
+      command.agencyId,
       command.role,
     );
   }

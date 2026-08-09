@@ -15,10 +15,16 @@ import {
 } from 'class-validator';
 import { Role } from '@turta/shared-constants';
 
+import {
+  AGENCY_SELLER_ROLES,
+  PLATFORM_ADMIN_ROLES,
+} from '../../../core/auth/utils/role-access';
+
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { RequireStaffPermissions } from '../../../core/auth/decorators/require-staff-permissions.decorator';
 import { Roles } from '../../../core/auth/decorators/roles.decorator';
 import { UserPayload } from '../../../core/auth/types/auth.types';
+import { AgencyLinkService } from '../../../core/agency/agency-link.service';
 import { PartnerService } from '../services/partner.service';
 
 class UpdatePartnerReservationDto {
@@ -91,14 +97,26 @@ class UpdatePartnerProfileDto {
 @ApiTags('Partner')
 @ApiBearerAuth()
 @Controller('partner')
-@Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+@Roles(...AGENCY_SELLER_ROLES)
 export class PartnerController {
-  constructor(private readonly partnerService: PartnerService) {}
+  constructor(
+    private readonly partnerService: PartnerService,
+    private readonly agencyLink: AgencyLinkService,
+  ) {}
+
+  private async sellerAgencyId(user: UserPayload): Promise<string | undefined> {
+    return this.agencyLink.resolveAgencyIdForActor({
+      agencyId: user.agencyId,
+
+      role: user.role,
+    });
+  }
 
   @Get('dashboard/stats')
   @ApiOperation({ summary: 'Partner dashboard statistics' })
-  stats(@CurrentUser() user: UserPayload) {
-    return this.partnerService.getDashboardStats(user.partnerId, {
+  async stats(@CurrentUser() user: UserPayload) {
+    const agencyId = await this.sellerAgencyId(user);
+    return this.partnerService.getDashboardStats(agencyId, {
       userId: user.userId,
       role: user.role,
     });
@@ -106,31 +124,39 @@ export class PartnerController {
 
   @Get('me')
   @ApiOperation({ summary: 'Get authenticated partner profile' })
-  me(@CurrentUser() user: UserPayload) {
-    return this.partnerService.getProfile(user.partnerId);
+  async me(@CurrentUser() user: UserPayload) {
+    const agencyId = await this.sellerAgencyId(user);
+    return this.partnerService.getProfile(agencyId);
   }
 
   @Patch('me')
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(
+    Role.PARTNER,
+    Role.AGENCY_OWNER,
+    Role.AGENCY_ADMIN,
+    ...PLATFORM_ADMIN_ROLES,
+  )
   @ApiOperation({ summary: 'Update partner company profile' })
-  updateMe(
+  async updateMe(
     @CurrentUser() user: UserPayload,
     @Body() dto: UpdatePartnerProfileDto,
   ) {
-    return this.partnerService.updateProfile(user.partnerId, dto);
+    const agencyId = await this.sellerAgencyId(user);
+    return this.partnerService.updateProfile(agencyId, dto);
   }
 
   @Get('financials')
   @RequireStaffPermissions('reports')
   @ApiOperation({ summary: 'Monthly revenue for partner charts' })
-  financials(@CurrentUser() user: UserPayload) {
-    return this.partnerService.getFinancials(user.partnerId);
+  async financials(@CurrentUser() user: UserPayload) {
+    const agencyId = await this.sellerAgencyId(user);
+    return this.partnerService.getFinancials(agencyId);
   }
 
   @Get('reports')
   @RequireStaffPermissions('reports')
   @ApiOperation({ summary: 'Partner sales/performance/customer reports' })
-  reports(
+  async reports(
     @CurrentUser() user: UserPayload,
     @Query('dateRange') dateRange?: string,
   ) {
@@ -148,14 +174,16 @@ export class PartnerController {
     const range = allowed.includes(dateRange as (typeof allowed)[number])
       ? (dateRange as (typeof allowed)[number])
       : 'thisMonth';
-    return this.partnerService.getReports(user.partnerId, range);
+    const agencyId = await this.sellerAgencyId(user);
+    return this.partnerService.getReports(agencyId, range);
   }
 
   @Get('tours')
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'List tours owned by partner (all statuses)' })
-  tours(@CurrentUser() user: UserPayload) {
-    return this.partnerService.listTours(user.partnerId);
+  async tours(@CurrentUser() user: UserPayload) {
+    const agencyId = await this.sellerAgencyId(user);
+    return this.partnerService.listTours(agencyId);
   }
 
   @Get('tours/:id')
@@ -163,8 +191,9 @@ export class PartnerController {
   @ApiOperation({
     summary: 'Get partner tour detail for editing (all statuses)',
   })
-  tourDetail(@Param('id') id: string, @CurrentUser() user: UserPayload) {
-    return this.partnerService.getTourDetail(user.partnerId, id);
+  async tourDetail(@Param('id') id: string, @CurrentUser() user: UserPayload) {
+    const agencyId = await this.sellerAgencyId(user);
+    return this.partnerService.getTourDetail(agencyId, id);
   }
 
   @Get('experiences')
@@ -172,22 +201,30 @@ export class PartnerController {
   @ApiOperation({
     summary: 'List experiences owned by partner (all statuses)',
   })
-  experiences(@CurrentUser() user: UserPayload) {
-    return this.partnerService.listExperiences(user.partnerId);
+  async experiences(@CurrentUser() user: UserPayload) {
+    const agencyId = await this.sellerAgencyId(user);
+    return this.partnerService.listExperiences(agencyId);
   }
 
   @Get('users')
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(
+    Role.PARTNER,
+    Role.AGENCY_OWNER,
+    Role.AGENCY_ADMIN,
+    ...PLATFORM_ADMIN_ROLES,
+  )
   @ApiOperation({ summary: 'List sub-users for authenticated partner' })
-  users(@CurrentUser() user: UserPayload) {
-    return this.partnerService.listSubUsers(user.partnerId);
+  async users(@CurrentUser() user: UserPayload) {
+    const agencyId = await this.sellerAgencyId(user);
+    return this.partnerService.listSubUsers(agencyId);
   }
 
   @Get('reservations')
   @RequireStaffPermissions('reservations', 'customers')
   @ApiOperation({ summary: 'List reservations for partner tours' })
-  reservations(@CurrentUser() user: UserPayload) {
-    return this.partnerService.listReservations(user.partnerId);
+  async reservations(@CurrentUser() user: UserPayload) {
+    const agencyId = await this.sellerAgencyId(user);
+    return this.partnerService.listReservations(agencyId);
   }
 
   @Patch('reservations/:id')
@@ -195,12 +232,13 @@ export class PartnerController {
   @ApiOperation({
     summary: 'Update partner reservation status and/or seat numbers',
   })
-  updateReservation(
+  async updateReservation(
     @Param('id') id: string,
     @Body() dto: UpdatePartnerReservationDto,
     @CurrentUser() user: UserPayload,
   ) {
-    return this.partnerService.updateReservation(id, user.partnerId, {
+    const agencyId = await this.sellerAgencyId(user);
+    return this.partnerService.updateReservation(id, agencyId, {
       status: dto.status,
       seatNumbers: dto.seatNumbers,
     });

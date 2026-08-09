@@ -15,32 +15,43 @@ const NAV = [
   { href: '/admin/reservations', label: 'Rezervasyonlar' },
   { href: '/admin/users', label: 'Kullanıcılar' },
   { href: '/admin/agencies', label: 'Partner / Acente' },
+  { href: '/admin/guides', label: 'Rehberler' },
   { href: '/admin/tours', label: 'Onay' },
   { href: '/admin/content', label: 'Blog' },
 ];
 
+/** Align with middleware ADMIN_ROLES — access token is memory-only until boot refresh. */
+const ADMIN_ROLES = new Set([
+  'ADMIN',
+  'SUPER_ADMIN',
+  'PLATFORM_ADMIN',
+  'PLATFORM_SUPER_ADMIN',
+]);
+
 /** Admin shell — separate from marketing. */
 export function AdminShell({ children }: { children: ReactNode }) {
-  const { isAuthenticated, user, logout, accessToken } = useAuth();
+  const { isAuthenticated, user, logout, accessToken, isBootstrapping } =
+    useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
 
   useEffect(() => {
+    if (isBootstrapping) return;
     if (!accessToken) {
       router.replace('/login');
       return;
     }
-    if (user && user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+    if (user && !ADMIN_ROLES.has(user.role)) {
       router.replace('/');
     }
-  }, [accessToken, user, router]);
+  }, [isBootstrapping, accessToken, user, router]);
 
   useEffect(() => {
     setNavOpen(false);
   }, [pathname]);
 
-  if (!isAuthenticated) {
+  if (isBootstrapping || !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center text-neutral-600">
         Yönlendiriliyor…

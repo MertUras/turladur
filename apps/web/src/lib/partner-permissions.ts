@@ -20,9 +20,31 @@ export function isStaffPermissionGranted(
   return false;
 }
 
-/** Partner owner / platform admins bypass staff permission checks. */
+/** Partner owner / Agency owner-admin / platform admins bypass staff permission checks. */
 export function hasFullPartnerAccess(role: string | undefined | null): boolean {
-  return role === 'PARTNER' || role === 'ADMIN' || role === 'SUPER_ADMIN';
+  return (
+    role === 'PARTNER' ||
+    role === 'AGENCY_OWNER' ||
+    role === 'AGENCY_ADMIN' ||
+    role === 'ADMIN' ||
+    role === 'SUPER_ADMIN' ||
+    role === 'PLATFORM_ADMIN' ||
+    role === 'PLATFORM_SUPER_ADMIN'
+  );
+}
+
+export function isSellerPanelRole(role: string | undefined | null): boolean {
+  return (
+    role === 'PARTNER' ||
+    role === 'PARTNER_STAFF' ||
+    role === 'AGENCY_OWNER' ||
+    role === 'AGENCY_ADMIN' ||
+    role === 'AGENCY_STAFF' ||
+    role === 'ADMIN' ||
+    role === 'SUPER_ADMIN' ||
+    role === 'PLATFORM_ADMIN' ||
+    role === 'PLATFORM_SUPER_ADMIN'
+  );
 }
 
 export function canAccessStaffPermission(
@@ -31,6 +53,6 @@ export function canAccessStaffPermission(
   key: StaffPermissionKey,
 ): boolean {
   if (hasFullPartnerAccess(role)) return true;
-  if (role !== 'PARTNER_STAFF') return false;
+  if (role !== 'PARTNER_STAFF' && role !== 'AGENCY_STAFF') return false;
   return isStaffPermissionGranted(permissions, key);
 }

@@ -11,6 +11,8 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@turta/shared-constants';
 
+import { AGENCY_SELLER_ROLES } from '../../../core/auth/utils/role-access';
+
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
 import { Roles } from '../../../core/auth/decorators/roles.decorator';
@@ -38,10 +40,10 @@ export class ReviewController {
 
   @ApiBearerAuth()
   @Get('partner')
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @ApiOperation({ summary: 'List reviews for authenticated partner' })
   listForPartner(@CurrentUser() user: UserPayload) {
-    return this.reviewService.listForPartner(user.partnerId);
+    return this.reviewService.listForPartner(user.agencyId);
   }
 
   @ApiBearerAuth()
@@ -87,13 +89,13 @@ export class ReviewController {
 
   @ApiBearerAuth()
   @Patch(':id/reply')
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @ApiOperation({ summary: 'Partner reply to a review' })
   reply(
     @Param('id') id: string,
     @Body() dto: ReplyReviewDto,
     @CurrentUser() user: UserPayload,
   ) {
-    return this.reviewService.reply(id, dto, user.partnerId, user.role);
+    return this.reviewService.reply(id, dto, user.agencyId, user.role);
   }
 }

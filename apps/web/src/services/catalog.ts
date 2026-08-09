@@ -16,6 +16,8 @@ export type TourSearchParams = {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
+  /** Marketplace agency (seller) filter */
+  agencyId?: string;
 };
 
 export async function searchTours(params: TourSearchParams = {}) {
@@ -35,6 +37,7 @@ export async function searchTours(params: TourSearchParams = {}) {
   if (params.sortOrder) query.set('sortOrder', params.sortOrder);
   if (params.page) query.set('page', String(params.page));
   if (params.limit) query.set('limit', String(params.limit));
+  if (params.agencyId) query.set('agencyId', params.agencyId);
 
   const qs = query.toString();
   return apiRequestWithMeta<Tour[]>(
@@ -82,4 +85,134 @@ export async function getTourPickupPoints(tourId: string) {
     `/catalog/tours/${tourId}/pickup-points`,
     { next: { revalidate: 60 } },
   );
+}
+
+export type TourAccommodation = {
+  name: string;
+  image: string;
+  location: string;
+  type: string;
+  rating?: number;
+  features?: string[];
+};
+
+export async function getTourAccommodation(tourId: string) {
+  return apiRequest<TourAccommodation | null>(
+    `/catalog/tours/${tourId}/accommodation`,
+    { cache: 'no-store' },
+  );
+}
+
+export type TourDateAgeRange = {
+  id: string;
+  minAge: number;
+  maxAge: number | null;
+  pricingType: string;
+  value: number;
+};
+
+export async function getTourDateAgeRanges(tourId: string, dateId: string) {
+  return apiRequest<TourDateAgeRange[]>(
+    `/catalog/tours/${tourId}/dates/${dateId}/age-ranges`,
+    { cache: 'no-store' },
+  );
+}
+
+/** Client-side search (supports AbortSignal for debounce). */
+export async function searchToursClient(
+  params: TourSearchParams & { signal?: AbortSignal } = {},
+) {
+  const { signal, ...rest } = params;
+  const query = new URLSearchParams();
+  if (rest.q) query.set('q', rest.q);
+  if (rest.category) query.set('category', rest.category);
+  if (rest.duration) query.set('duration', rest.duration);
+  if (rest.durationDays != null) {
+    query.set('durationDays', String(rest.durationDays));
+  }
+  if (rest.featured === true) query.set('featured', 'true');
+  if (rest.minPrice != null) query.set('minPrice', String(rest.minPrice));
+  if (rest.maxPrice != null) query.set('maxPrice', String(rest.maxPrice));
+  if (rest.minRating != null) query.set('minRating', String(rest.minRating));
+  if (rest.sortBy) query.set('sortBy', rest.sortBy);
+  if (rest.sortOrder) query.set('sortOrder', rest.sortOrder);
+  if (rest.page) query.set('page', String(rest.page));
+  if (rest.limit) query.set('limit', String(rest.limit));
+  if (rest.agencyId) query.set('agencyId', rest.agencyId);
+
+  const qs = query.toString();
+  return searchToursByQueryString(qs, signal);
+}
+
+export async function searchToursByQueryString(
+  qs: string,
+  signal?: AbortSignal,
+) {
+  return apiRequestWithMeta<Tour[]>(
+    `/catalog/tours/search${qs ? `?${qs}` : ''}`,
+    { signal, cache: 'no-store' },
+  );
+}
+
+/** Soft-fail helper for optional detail fields (accommodation may be null). */
+export async function tryGetTourDetailBundle(
+  tourId: string,
+  signal?: AbortSignal,
+) {
+  const soft = async <T>(fn: () => Promise<T>): Promise<T | null> => {
+    try {
+      return await fn();
+    } catch (err) {
+      if (
+        signal?.aborted ||
+        (err instanceof Error &&
+          (err.name === 'AbortError' || err.name === 'TimeoutError'))
+      ) {
+        return null;
+      }
+      return null;
+    }
+  };
+
+  return Promise.all([
+    soft(() =>
+      apiRequest<Tour>(`/catalog/tours/${tourId}`, {
+        signal,
+        cache: 'no-store',
+      }),
+    ),
+    soft(() =>
+      apiRequest<TourDateRow[]>(`/catalog/tours/${tourId}/dates`, {
+        signal,
+        cache: 'no-store',
+      }),
+    ),
+    soft(() =>
+      apiRequest<TourAccommodation | null>(
+        `/catalog/tours/${tourId}/accommodation`,
+        { signal, cache: 'no-store' },
+      ),
+    ),
+    soft(() =>
+      apiRequest<TourPickupPoint[]>(`/catalog/tours/${tourId}/pickup-points`, {
+        signal,
+        cache: 'no-store',
+      }),
+    ),
+  ]);
+}
+
+export async function tryGetTourDateAgeRanges(
+  tourId: string,
+  dateId: string,
+  signal?: AbortSignal,
+) {
+  try {
+    return await apiRequest<TourDateAgeRange[]>(
+      `/catalog/tours/${tourId}/dates/${dateId}/age-ranges`,
+      { signal, cache: 'no-store' },
+    );
+  } catch {
+    return null;
+  }
 }

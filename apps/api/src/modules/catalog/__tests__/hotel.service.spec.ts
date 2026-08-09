@@ -2,12 +2,12 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
 import { CacheService } from '../../../core/cache/cache.service';
+import { AgencyLinkService } from '../../../core/agency/agency-link.service';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { HotelService } from '../services/hotel.service';
 import {
   createCacheMock,
   createPrismaMock,
-  decimal,
 } from '../../__tests__/test-helpers';
 
 describe('HotelService', () => {
@@ -22,6 +22,7 @@ describe('HotelService', () => {
     const module = await Test.createTestingModule({
       providers: [
         HotelService,
+        AgencyLinkService,
         { provide: PrismaService, useValue: prisma },
         { provide: CacheService, useValue: cache },
       ],
@@ -39,7 +40,7 @@ describe('HotelService', () => {
         city: 'Nevşehir',
         country: 'Türkiye',
         type: 'HOTEL',
-        partnerId: 'p1',
+        agencyId: 'p1',
         stars: 4,
       };
       (prisma.hotel.count as jest.Mock).mockResolvedValue(1);
@@ -66,7 +67,7 @@ describe('HotelService', () => {
       );
     });
 
-    it('should return hotel with rooms', async () => {
+    it('should return hotel with empty rooms array', async () => {
       (prisma.hotel.findFirst as jest.Mock).mockResolvedValue({
         id: 'h1',
         name: 'Cave Hotel',
@@ -74,28 +75,18 @@ describe('HotelService', () => {
         city: 'Göreme',
         country: 'Türkiye',
         type: 'BOUTIQUE_HOTEL',
-        partnerId: 'p1',
+        agencyId: 'p1',
         stars: 5,
-        rooms: [
-          {
-            id: 'r1',
-            hotelId: 'h1',
-            name: 'Standart',
-            capacity: 2,
-            price: decimal(2500),
-            available: true,
-          },
-        ],
       });
 
       const result = await service.getById('h1');
-      expect(result.data.rooms).toHaveLength(1);
-      expect(result.data.rooms[0].price).toBe('2500');
+      expect(result.data.rooms).toEqual([]);
+      expect(result.data.name).toBe('Cave Hotel');
     });
   });
 
   describe('create', () => {
-    it('should reject when partnerId is missing', async () => {
+    it('should reject when agencyId is missing', async () => {
       await expect(
         service.create(
           {
@@ -107,11 +98,11 @@ describe('HotelService', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
 
-    it('should create hotel for verified partner with HOTELS capability', async () => {
-      (prisma.partner.findFirst as jest.Mock).mockResolvedValue({
+    it('should create hotel for verified partner with TOURS capability', async () => {
+      (prisma.agency.findFirst as jest.Mock).mockResolvedValue({
         id: 'p1',
         status: 'VERIFIED',
-        capabilities: ['HOTELS'],
+        capabilities: ['TOURS'],
       });
       (prisma.hotel.findFirst as jest.Mock).mockResolvedValue(null);
       (prisma.hotel.create as jest.Mock).mockResolvedValue({
@@ -121,7 +112,7 @@ describe('HotelService', () => {
         city: 'Antalya',
         country: 'Türkiye',
         type: 'HOTEL',
-        partnerId: 'p1',
+        agencyId: 'p1',
         stars: null,
       });
 
@@ -140,40 +131,12 @@ describe('HotelService', () => {
     });
   });
 
-  describe('createRoom', () => {
-    it('should create a room on owned hotel', async () => {
-      (prisma.hotel.findFirst as jest.Mock).mockResolvedValue({
-        id: 'h1',
-        partnerId: 'p1',
-        deletedAt: null,
-      });
-      (prisma.room.create as jest.Mock).mockResolvedValue({
-        id: 'r1',
-        hotelId: 'h1',
-        name: 'Deluxe',
-        capacity: 3,
-        price: decimal(3200),
-        available: true,
-      });
-
-      const result = await service.createRoom(
-        'h1',
-        { name: 'Deluxe', capacity: 3, price: 3200 },
-        'p1',
-        'PARTNER',
-      );
-
-      expect(result.data.name).toBe('Deluxe');
-      expect(result.data.price).toBe('3200');
-    });
-  });
-
-  describe('update / softDelete / rooms', () => {
+  describe('update / softDelete', () => {
     it('should update owned hotel', async () => {
       (prisma.hotel.findFirst as jest.Mock)
         .mockResolvedValueOnce({
           id: 'h1',
-          partnerId: 'p1',
+          agencyId: 'p1',
           deletedAt: null,
         })
         .mockResolvedValueOnce(null);
@@ -184,7 +147,7 @@ describe('HotelService', () => {
         city: 'Antalya',
         country: 'Türkiye',
         type: 'HOTEL',
-        partnerId: 'p1',
+        agencyId: 'p1',
         stars: 4,
       });
 
@@ -200,7 +163,7 @@ describe('HotelService', () => {
     it('should soft-delete hotel', async () => {
       (prisma.hotel.findFirst as jest.Mock).mockResolvedValue({
         id: 'h1',
-        partnerId: 'p1',
+        agencyId: 'p1',
         deletedAt: null,
       });
       (prisma.hotel.update as jest.Mock).mockResolvedValue({});
@@ -209,68 +172,36 @@ describe('HotelService', () => {
       expect(result.data.deleted).toBe(true);
     });
 
-    it('should list rooms', async () => {
-      (prisma.hotel.findFirst as jest.Mock).mockResolvedValue({
-        id: 'h1',
-        deletedAt: null,
-      });
-      (prisma.room.findMany as jest.Mock).mockResolvedValue([
-        {
-          id: 'r1',
-          hotelId: 'h1',
-          name: 'Standart',
-          capacity: 2,
-          price: decimal(1000),
-          available: true,
-        },
-      ]);
-
-      const result = await service.listRooms('h1');
-      expect(result.data).toHaveLength(1);
-    });
-
-    it('should update and soft-delete room', async () => {
-      (prisma.hotel.findFirst as jest.Mock).mockResolvedValue({
-        id: 'h1',
-        partnerId: 'p1',
-        deletedAt: null,
-      });
-      (prisma.room.findFirst as jest.Mock).mockResolvedValue({
-        id: 'r1',
-        hotelId: 'h1',
-        deletedAt: null,
-      });
-      (prisma.room.update as jest.Mock).mockResolvedValue({
-        id: 'r1',
-        hotelId: 'h1',
-        name: 'Updated',
-        capacity: 2,
-        price: decimal(1100),
-        available: false,
-      });
-
-      const updated = await service.updateRoom(
-        'h1',
-        'r1',
-        { name: 'Updated', available: false },
-        'p1',
-        'PARTNER',
-      );
-      expect(updated.data.name).toBe('Updated');
-
-      const deleted = await service.softDeleteRoom('h1', 'r1', 'p1', 'PARTNER');
-      expect(deleted.data.deleted).toBe(true);
-    });
-
     it('should forbid non-owner hotel update', async () => {
       (prisma.hotel.findFirst as jest.Mock).mockResolvedValue({
         id: 'h1',
-        partnerId: 'p1',
+        agencyId: 'p1',
         deletedAt: null,
       });
       await expect(
         service.update('h1', { city: 'X' }, 'other', 'PARTNER'),
       ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+  });
+
+  describe('listRooms', () => {
+    it('should return empty rooms list for existing hotel', async () => {
+      (prisma.hotel.findFirst as jest.Mock).mockResolvedValue({
+        id: 'h1',
+        deletedAt: null,
+      });
+
+      const result = await service.listRooms('h1');
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual([]);
+      expect(result.error).toBeNull();
+    });
+
+    it('should throw when hotel is missing', async () => {
+      (prisma.hotel.findFirst as jest.Mock).mockResolvedValue(null);
+      await expect(service.listRooms('missing')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 });

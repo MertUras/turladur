@@ -54,9 +54,40 @@ export class StaffPermissionsGuard implements CanActivate {
 
     if (
       user.role === Role.PARTNER ||
+      user.role === Role.AGENCY_OWNER ||
+      user.role === Role.AGENCY_ADMIN ||
       user.role === Role.ADMIN ||
-      user.role === Role.SUPER_ADMIN
+      user.role === Role.SUPER_ADMIN ||
+      user.role === Role.PLATFORM_ADMIN ||
+      user.role === Role.PLATFORM_SUPER_ADMIN
     ) {
+      return true;
+    }
+
+    if (user.role === Role.AGENCY_STAFF) {
+      const staff = await this.prisma.agencyStaff.findFirst({
+        where: {
+          id: user.agencyStaffId ?? user.userId,
+          deletedAt: null,
+          status: 'ACTIVE',
+        },
+        select: { permissions: true },
+      });
+      if (!staff) {
+        throw new ForbiddenException({
+          code: 'FORBIDDEN',
+          message: 'Bu işlem için yetkiniz yok.',
+        });
+      }
+      const allowed = required.some((key) =>
+        isPermissionGranted(staff.permissions, key),
+      );
+      if (!allowed) {
+        throw new ForbiddenException({
+          code: 'FORBIDDEN',
+          message: 'Bu işlem için yetkiniz yok.',
+        });
+      }
       return true;
     }
 

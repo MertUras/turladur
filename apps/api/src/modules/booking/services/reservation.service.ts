@@ -11,12 +11,15 @@ import type {
 } from '@turta/shared-types';
 import { Prisma } from '../../../generated/prisma';
 
+import { AgencyLinkService } from '../../../core/agency/agency-link.service';
+import { AuditService } from '../../../core/audit/audit.service';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
 import { CreateReservationDto } from '../dto/create-reservation.dto';
 import { BookingCancelledEvent } from '../events/booking-cancelled.event';
 import { BookingCompletedEvent } from '../events/booking-completed.event';
 import { BookingCreatedEvent } from '../events/booking-created.event';
+import { PaymentCompletedEvent } from '../../payment/events/payment-completed.event';
 import { isValidTckn } from '../../../shared/utils/tckn';
 
 @Injectable()
@@ -24,6 +27,8 @@ export class ReservationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly auditService: AuditService,
+    private readonly agencyLink: AgencyLinkService,
   ) {}
 
   async create(dto: CreateReservationDto, userId: string) {
@@ -76,23 +81,18 @@ export class ReservationService {
       );
     }
 
-    const productCount = [
-      dto.tourDateId,
-      dto.roomId,
-      dto.activityDateId,
-    ].filter(Boolean).length;
+    const productCount = [dto.tourDateId, dto.activityDateId].filter(
+      Boolean,
+    ).length;
     if (productCount !== 1) {
       throw new BusinessException(
         'INVALID_BOOKING_PRODUCT',
-        'Tam olarak bir ürün seçilmeli: tourDateId, roomId veya activityDateId',
+        'Tam olarak bir ürün seçilmeli: tourDateId veya activityDateId',
       );
     }
 
     if (dto.tourDateId) {
       return this.createTourReservation(dto, userId, partySize);
-    }
-    if (dto.roomId) {
-      return this.createHotelReservation(dto, userId, partySize);
     }
     return this.createExperienceReservation(dto, userId, partySize);
   }
@@ -101,7 +101,7 @@ export class ReservationService {
     reservationId: string,
     userId: string,
     role: string,
-    partnerId?: string,
+    agencyId?: string,
   ) {
     const reservation = await this.prisma.reservation.findFirst({
       where: { id: reservationId, deletedAt: null },
@@ -114,7 +114,7 @@ export class ReservationService {
       });
     }
 
-    this.assertAccess(reservation, userId, role, partnerId);
+    this.assertAccess(reservation, userId, role, agencyId);
 
     return {
       success: true,
@@ -313,15 +313,98 @@ export class ReservationService {
   }
 
   async markConfirmed(reservationId: string) {
-    return this.transition(
+    const reservation = await this.transition(
       reservationId,
-      ['PENDING', 'PAYMENT_FAILED'],
+      ['PENDING', 'PENDING_PAYMENT', 'PAYMENT_FAILED'],
       'CONFIRMED',
     );
+
+    if (reservation.status === 'CONFIRMED') {
+      await this.ensureVoucherRow(reservationId, reservation.bookingNumber);
+      this.eventEmitter.emit('booking.confirmed', {
+        reservationId,
+        userId: reservation.userId,
+        agencyId: reservation.agencyId,
+      });
+      await this.auditService.record({
+        actorType: 'USER',
+        actorId: reservation.userId,
+        action: 'BOOKING_CONFIRMED',
+        entityType: 'Reservation',
+        entityId: reservationId,
+        meta: {
+          agencyId: reservation.agencyId,
+        },
+      });
+    }
+
+    return reservation;
   }
 
   async markPaymentFailed(reservationId: string) {
-    return this.transition(reservationId, ['PENDING'], 'PAYMENT_FAILED');
+    return this.transition(
+      reservationId,
+      ['PENDING', 'PENDING_PAYMENT'],
+      'PAYMENT_FAILED',
+    );
+  }
+
+  /** payment.refunded → yalnızca paymentStatus; rezervasyon status’una dokunma. */
+  async markPaymentRefunded(reservationId: string) {
+    const reservation = await this.prisma.reservation.findFirst({
+      where: { id: reservationId, deletedAt: null },
+    });
+
+    if (!reservation) {
+      throw new NotFoundException({
+        code: 'RESERVATION_NOT_FOUND',
+        message: 'Rezervasyon bulunamadı',
+      });
+    }
+
+    if (reservation.paymentStatus === 'REFUNDED') {
+      return reservation;
+    }
+
+    return this.prisma.reservation.update({
+      where: { id: reservationId },
+      data: { paymentStatus: 'REFUNDED' },
+    });
+  }
+
+  /** Hold süresi dolan PENDING_PAYMENT → EXPIRED + kontenjan iade. */
+  async releaseExpiredHolds(): Promise<number> {
+    const now = new Date();
+    const expired = await this.prisma.reservation.findMany({
+      where: {
+        status: 'PENDING_PAYMENT',
+        holdExpiresAt: { lt: now },
+        deletedAt: null,
+      },
+      take: 100,
+    });
+
+    let released = 0;
+    for (const reservation of expired) {
+      const partySize =
+        reservation.heldPartySize ?? reservation.adults + reservation.children;
+      await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.reservation.updateMany({
+          where: {
+            id: reservation.id,
+            status: 'PENDING_PAYMENT',
+          },
+          data: {
+            status: 'EXPIRED',
+            cancelledAt: now,
+          },
+        });
+        if (updated.count === 0) return;
+        await this.restoreCapacity(tx, reservation, partySize);
+      });
+      released += 1;
+    }
+    return released;
   }
 
   /**
@@ -333,7 +416,7 @@ export class ReservationService {
     actor?: {
       userId: string;
       role: string;
-      partnerId?: string;
+      agencyId?: string;
     },
   ) {
     const reservation = await this.prisma.reservation.findFirst({
@@ -348,7 +431,7 @@ export class ReservationService {
     }
 
     if (actor) {
-      this.assertAccess(reservation, actor.userId, actor.role, actor.partnerId);
+      this.assertAccess(reservation, actor.userId, actor.role, actor.agencyId);
     }
 
     if (reservation.status === 'COMPLETED') {
@@ -377,7 +460,7 @@ export class ReservationService {
         updated.id,
         updated.userId,
         updated.tourId,
-        updated.partnerId,
+        updated.agencyId,
         updated.contactEmail,
       ),
     );
@@ -389,11 +472,144 @@ export class ReservationService {
     };
   }
 
+  /**
+   * Agency panel status writes (Faz 3). Partner tetikler; booking yazar.
+   */
+  async agencyUpdateStatus(
+    reservationId: string,
+    agencyId: string,
+    status: 'CONFIRMED' | 'CANCELLED' | 'COMPLETED',
+  ) {
+    const reservation = await this.prisma.reservation.findFirst({
+      where: { id: reservationId, agencyId, deletedAt: null },
+    });
+
+    if (!reservation) {
+      throw new NotFoundException({
+        code: 'RESERVATION_NOT_FOUND',
+        message: 'Rezervasyon bulunamadı',
+      });
+    }
+
+    if (
+      reservation.status === 'COMPLETED' ||
+      reservation.status === 'CANCELLED'
+    ) {
+      throw new BusinessException(
+        'INVALID_STATUS_TRANSITION',
+        'Bu rezervasyon güncellenemez',
+      );
+    }
+
+    if (status === 'COMPLETED') {
+      return this.markCompleted(reservationId, {
+        userId: reservation.userId,
+        role: 'AGENCY_OWNER',
+        agencyId,
+      });
+    }
+
+    if (status === 'CANCELLED') {
+      const partySize = reservation.adults + reservation.children;
+      const updated = await this.prisma.$transaction(async (tx) => {
+        await this.restoreCapacity(tx, reservation, partySize);
+        return tx.reservation.update({
+          where: { id: reservation.id },
+          data: { status: 'CANCELLED', cancelledAt: new Date() },
+        });
+      });
+
+      this.eventEmitter.emit(
+        'booking.cancelled',
+        new BookingCancelledEvent(
+          updated.id,
+          updated.userId,
+          'RESERVATION',
+          'PARTNER_CANCELLED',
+          'Tur firması tarafından iptal edildi',
+        ),
+      );
+
+      return {
+        success: true,
+        data: this.toShared(updated),
+        error: null,
+      };
+    }
+
+    const updated = await this.prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        status: 'CONFIRMED',
+        paymentStatus: 'PAID',
+        paymentMethod: reservation.paymentMethod ?? 'BANK_TRANSFER',
+        holdExpiresAt: null,
+      },
+    });
+
+    // Aynı post-payment bildirimleri (kart ile aynı yol)
+    this.eventEmitter.emit(
+      'payment.completed',
+      new PaymentCompletedEvent(
+        `manual-${updated.id}`,
+        updated.id,
+        updated.totalAmount.toString(),
+      ),
+    );
+
+    return {
+      success: true,
+      data: this.toShared(updated),
+      error: null,
+    };
+  }
+
+  async agencyUpdateSeatNumbers(
+    reservationId: string,
+    agencyId: string,
+    seatNumbers: string,
+  ) {
+    const reservation = await this.prisma.reservation.findFirst({
+      where: { id: reservationId, agencyId, deletedAt: null },
+    });
+
+    if (!reservation) {
+      throw new NotFoundException({
+        code: 'RESERVATION_NOT_FOUND',
+        message: 'Rezervasyon bulunamadı',
+      });
+    }
+
+    const base =
+      reservation.metadata &&
+      typeof reservation.metadata === 'object' &&
+      !Array.isArray(reservation.metadata)
+        ? { ...(reservation.metadata as Record<string, unknown>) }
+        : {};
+
+    return this.prisma.reservation.update({
+      where: { id: reservation.id },
+      data: {
+        metadata: {
+          ...base,
+          seatNumbers: seatNumbers.trim(),
+        } as Prisma.InputJsonValue,
+      },
+    });
+  }
+
   private async createTourReservation(
     dto: CreateReservationDto,
     userId: string,
     partySize: number,
   ) {
+    if (!dto.pickupPointId?.trim()) {
+      throw new BusinessException(
+        'BOARDING_PICKUP_REQUIRED',
+        'Tur rezervasyonunda biniş noktası zorunludur',
+      );
+    }
+
     const tourDate = await this.prisma.tourDate.findFirst({
       where: { id: dto.tourDateId, deletedAt: null, isActive: true },
       include: { tour: true },
@@ -417,19 +633,77 @@ export class ReservationService {
       );
     }
 
+    const boarding = await this.prisma.tourPickupPoint.findFirst({
+      where: {
+        id: dto.pickupPointId,
+        tourId: tourDate.tourId,
+        deletedAt: null,
+        isActive: true,
+      },
+    });
+    if (!boarding) {
+      throw new BusinessException(
+        'PICKUP_POINT_NOT_FOUND',
+        'Seçilen kalkış noktası bulunamadı',
+      );
+    }
+
     const unitPrice = tourDate.priceOverride ?? tourDate.tour.price;
-    const totalAmount = new Prisma.Decimal(unitPrice).mul(partySize);
+    let extrasTotal = new Prisma.Decimal(0);
+    const extraRows: Array<{
+      tourExtraId: string;
+      quantity: number;
+      unitPrice: Prisma.Decimal;
+      currency: string;
+    }> = [];
+
+    if (dto.extras?.length) {
+      for (const item of dto.extras) {
+        const tourExtra = await this.prisma.tourExtra.findFirst({
+          where: {
+            id: item.tourExtraId,
+            tourId: tourDate.tourId,
+            isActive: true,
+            deletedAt: null,
+          },
+        });
+        if (!tourExtra) {
+          throw new BusinessException(
+            'TOUR_EXTRA_NOT_FOUND',
+            'Seçilen tur ekstrası bulunamadı',
+          );
+        }
+        const line = new Prisma.Decimal(tourExtra.price).mul(item.quantity);
+        extrasTotal = extrasTotal.add(line);
+        extraRows.push({
+          tourExtraId: tourExtra.id,
+          quantity: item.quantity,
+          unitPrice: tourExtra.price,
+          currency: tourExtra.currency,
+        });
+      }
+    }
+
+    const totalAmount = new Prisma.Decimal(unitPrice)
+      .mul(partySize)
+      .add(extrasTotal);
     const bookingNumber = await this.nextBookingNumber();
     const metadata = await this.buildReservationMetadata(dto, tourDate.tourId);
+    const holdExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const childMaxAge = tourDate.tour.childMaxAge ?? 12;
 
     const reservation = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.tourDate.updateMany({
         where: {
           id: tourDate.id,
+          version: tourDate.version,
           remainingCapacity: { gte: partySize },
           deletedAt: null,
         },
-        data: { remainingCapacity: { decrement: partySize } },
+        data: {
+          remainingCapacity: { decrement: partySize },
+          version: { increment: 1 },
+        },
       });
 
       if (updated.count === 0) {
@@ -439,116 +713,68 @@ export class ReservationService {
         );
       }
 
-      return tx.reservation.create({
+      const created = await tx.reservation.create({
         data: {
           bookingNumber,
           userId,
           tourId: tourDate.tourId,
           tourDateId: tourDate.id,
-          partnerId: tourDate.tour.partnerId,
-          status: 'PENDING',
+          agencyId: tourDate.tour.agencyId,
+          ...(tourDate.tour.agencyId
+            ? { agencyId: tourDate.tour.agencyId }
+            : {}),
+          status: 'PENDING_PAYMENT',
           paymentStatus: 'UNPAID',
-          paymentMethod: 'pending',
+          paymentMethod: null,
           adults: dto.adults,
           children: dto.children ?? 0,
           totalAmount,
           currency: tourDate.tour.currency,
+          boardingPickupPointId: boarding.id,
           contactEmail: dto.contactEmail.toLowerCase().trim(),
           contactPhone: dto.contactPhone,
           guests: dto.guests as unknown as Prisma.InputJsonValue,
           specialRequests: dto.specialRequests ?? null,
           startDate: tourDate.startDate,
           endDate: tourDate.endDate,
+          holdExpiresAt,
+          heldPartySize: partySize,
           metadata,
         },
       });
-    });
 
-    this.emitCreated(reservation);
-    return {
-      success: true,
-      data: this.toShared(reservation),
-      error: null,
-    };
-  }
-
-  private async createHotelReservation(
-    dto: CreateReservationDto,
-    userId: string,
-    partySize: number,
-  ) {
-    if (!dto.startDate || !dto.endDate) {
-      throw new BusinessException(
-        'HOTEL_DATES_REQUIRED',
-        'Otel rezervasyonu için check-in ve check-out tarihi zorunlu',
-      );
-    }
-
-    const startDate = new Date(dto.startDate);
-    const endDate = new Date(dto.endDate);
-    if (endDate <= startDate) {
-      throw new BusinessException(
-        'INVALID_DATE_RANGE',
-        'Check-out tarihi check-in sonrasında olmalı',
-      );
-    }
-
-    const room = await this.prisma.room.findFirst({
-      where: {
-        id: dto.roomId,
-        deletedAt: null,
-        available: true,
-        ...(dto.hotelId ? { hotelId: dto.hotelId } : {}),
-      },
-      include: { hotel: true },
-    });
-
-    if (!room || room.hotel.deletedAt) {
-      throw new NotFoundException({
-        code: 'ROOM_NOT_FOUND',
-        message: 'Oda bulunamadı veya müsait değil',
+      await tx.reservationGuest.createMany({
+        data: dto.guests.map((guest, index) => {
+          const fullName = `${guest.firstName} ${guest.lastName}`.trim();
+          const isChild = guest.birthDate
+            ? this.isChildByBirthDate(guest.birthDate, childMaxAge)
+            : index > 0 && (dto.children ?? 0) > 0
+              ? index >= dto.adults
+              : false;
+          return {
+            reservationId: created.id,
+            fullName,
+            identityNumber: guest.identityNumber,
+            birthDate: guest.birthDate ? new Date(guest.birthDate) : null,
+            isChild,
+            sortOrder: index,
+          };
+        }),
       });
-    }
 
-    if (partySize > room.capacity) {
-      throw new BusinessException(
-        'ROOM_CAPACITY_EXCEEDED',
-        `Oda kapasitesi ${room.capacity} kişi`,
-      );
-    }
+      if (extraRows.length > 0) {
+        await tx.reservationExtra.createMany({
+          data: extraRows.map((row) => ({
+            reservationId: created.id,
+            tourExtraId: row.tourExtraId,
+            quantity: row.quantity,
+            unitPrice: row.unitPrice,
+            currency: row.currency,
+          })),
+        });
+      }
 
-    const nights = Math.max(
-      1,
-      Math.round(
-        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
-      ),
-    );
-    const nightPrice = room.discount ?? room.price;
-    const totalAmount = new Prisma.Decimal(nightPrice).mul(nights);
-    const bookingNumber = await this.nextBookingNumber();
-    const metadata = await this.buildReservationMetadata(dto, null);
-
-    const reservation = await this.prisma.reservation.create({
-      data: {
-        bookingNumber,
-        userId,
-        hotelId: room.hotelId,
-        roomId: room.id,
-        partnerId: room.hotel.partnerId,
-        status: 'PENDING',
-        paymentStatus: 'UNPAID',
-        adults: dto.adults,
-        children: dto.children ?? 0,
-        totalAmount,
-        currency: 'TRY',
-        contactEmail: dto.contactEmail.toLowerCase().trim(),
-        contactPhone: dto.contactPhone,
-        guests: dto.guests as unknown as Prisma.InputJsonValue,
-        startDate,
-        endDate,
-        specialRequests: dto.specialRequests ?? null,
-        metadata,
-      },
+      return created;
     });
 
     this.emitCreated(reservation);
@@ -625,10 +851,10 @@ export class ReservationService {
           userId,
           experienceId: activityDate.experienceId,
           activityDateId: activityDate.id,
-          partnerId: activityDate.experience.partnerId,
-          status: 'PENDING',
+          agencyId: activityDate.experience.agencyId,
+          status: 'PENDING_PAYMENT',
           paymentStatus: 'UNPAID',
-          paymentMethod: 'pending',
+          paymentMethod: null,
           adults: dto.adults,
           children: dto.children ?? 0,
           totalAmount,
@@ -638,6 +864,8 @@ export class ReservationService {
           guests: dto.guests as unknown as Prisma.InputJsonValue,
           startDate: activityDate.startDate,
           endDate: activityDate.endDate,
+          holdExpiresAt: new Date(Date.now() + 10 * 60 * 1000),
+          heldPartySize: partySize,
           specialRequests: dto.specialRequests ?? null,
           metadata,
         },
@@ -656,19 +884,32 @@ export class ReservationService {
     id: string;
     userId: string;
     tourDateId: string | null;
-    partnerId: string;
+    agencyId: string;
     totalAmount: Prisma.Decimal;
   }) {
+    // booking.created: bilinçli no-op consumer (Faz 1) — audit burada; event gelecek modüller için tutuluyor
     this.eventEmitter.emit(
       'booking.created',
       new BookingCreatedEvent(
         reservation.id,
         reservation.userId,
         reservation.tourDateId,
-        reservation.partnerId,
+        reservation.agencyId,
         reservation.totalAmount.toString(),
       ),
     );
+    void this.auditService.record({
+      actorType: 'USER',
+      actorId: reservation.userId,
+      action: 'BOOKING_CREATE',
+      entityType: 'Reservation',
+      entityId: reservation.id,
+      meta: {
+        agencyId: reservation.agencyId,
+        tourDateId: reservation.tourDateId,
+        totalAmount: reservation.totalAmount.toString(),
+      },
+    });
   }
 
   private async restoreCapacity(
@@ -695,7 +936,7 @@ export class ReservationService {
 
   private async transition(
     reservationId: string,
-    from: Array<'PENDING' | 'PAYMENT_FAILED' | 'CONFIRMED'>,
+    from: Array<'PENDING' | 'PENDING_PAYMENT' | 'PAYMENT_FAILED' | 'CONFIRMED'>,
     to: 'CONFIRMED' | 'PAYMENT_FAILED',
   ) {
     const reservation = await this.prisma.reservation.findFirst({
@@ -718,10 +959,44 @@ export class ReservationService {
       data: {
         status: to,
         ...(to === 'CONFIRMED'
-          ? { paymentStatus: 'PAID' as const }
+          ? {
+              paymentStatus: 'PAID' as const,
+              paymentMethod: 'CARD' as const,
+              holdExpiresAt: null,
+            }
           : to === 'PAYMENT_FAILED'
             ? { paymentStatus: 'UNPAID' as const }
             : {}),
+      },
+    });
+  }
+
+  private isChildByBirthDate(birthDate: string, childMaxAge: number): boolean {
+    const born = new Date(birthDate);
+    if (Number.isNaN(born.getTime())) return false;
+    const now = new Date();
+    let age = now.getFullYear() - born.getFullYear();
+    const monthDiff = now.getMonth() - born.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < born.getDate())) {
+      age -= 1;
+    }
+    return age <= childMaxAge;
+  }
+
+  private async ensureVoucherRow(
+    reservationId: string,
+    bookingNumber: string,
+  ): Promise<void> {
+    const existing = await this.prisma.voucher.findFirst({
+      where: { reservationId, deletedAt: null },
+    });
+    if (existing) return;
+    await this.prisma.voucher.create({
+      data: {
+        reservationId,
+        code: bookingNumber,
+        qrPayload: bookingNumber,
+        issuedAt: new Date(),
       },
     });
   }
@@ -773,26 +1048,21 @@ export class ReservationService {
   }
 
   private assertAccess(
-    reservation: { userId: string; partnerId: string },
+    reservation: { userId: string; agencyId: string },
     userId: string,
     role: string,
-    partnerId?: string,
+    agencyId?: string,
   ) {
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
     const isOwner = reservation.userId === userId;
-    const isPartnerOwner =
-      (role === 'PARTNER' || role === 'PARTNER_STAFF') &&
-      Boolean(partnerId) &&
-      reservation.partnerId === partnerId;
-
-    if (isAdmin || isOwner || isPartnerOwner) {
+    if (isOwner) {
       return;
     }
 
-    throw new ForbiddenException({
-      code: 'FORBIDDEN',
-      message: 'Bu rezervasyona erişim yetkiniz yok',
-    });
+    this.agencyLink.assertSellerOwner(
+      { agencyId: reservation.agencyId },
+      { agencyId, role },
+      'Bu rezervasyona erişim yetkiniz yok',
+    );
   }
 
   private async nextBookingNumber(): Promise<string> {
@@ -815,11 +1085,9 @@ export class ReservationService {
     userId: string;
     tourId: string | null;
     tourDateId: string | null;
-    hotelId?: string | null;
-    roomId?: string | null;
     experienceId?: string | null;
     activityDateId?: string | null;
-    partnerId: string;
+    agencyId: string;
     status: string;
     paymentStatus?: string;
     adults: number;
@@ -828,7 +1096,7 @@ export class ReservationService {
     currency: string;
     contactEmail: string;
     contactPhone: string | null;
-    guests: Prisma.JsonValue;
+    guests: Prisma.JsonValue | null;
     metadata?: Prisma.JsonValue | null;
     startDate?: Date | null;
     endDate?: Date | null;
@@ -841,11 +1109,12 @@ export class ReservationService {
       userId: row.userId,
       tourId: row.tourId,
       tourDateId: row.tourDateId,
-      hotelId: row.hotelId ?? null,
-      roomId: row.roomId ?? null,
+      hotelId: null,
+      roomId: null,
       experienceId: row.experienceId ?? null,
       activityDateId: row.activityDateId ?? null,
-      partnerId: row.partnerId,
+      partnerId: row.agencyId,
+      agencyId: row.agencyId,
       status: row.status as SharedBookingStatus,
       paymentStatus: row.paymentStatus ?? 'UNPAID',
       adults: row.adults,
@@ -854,7 +1123,7 @@ export class ReservationService {
       currency: row.currency,
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
-      guests: row.guests as unknown as BookingGuest[],
+      guests: (row.guests as unknown as BookingGuest[]) ?? [],
       metadata: (row.metadata as Record<string, unknown> | null) ?? null,
       startDate: row.startDate?.toISOString() ?? null,
       endDate: row.endDate?.toISOString() ?? null,

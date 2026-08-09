@@ -191,8 +191,8 @@ export function ReviewCard({
           <a
             href={
               productType === 'experience'
-                ? `/partner/experiences/${tourId}/edit`
-                : `/partner/tours/${tourId}/edit`
+                ? `/acente/experiences/${tourId}/edit`
+                : `/acente/tours/${tourId}/edit`
             }
             className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
           >

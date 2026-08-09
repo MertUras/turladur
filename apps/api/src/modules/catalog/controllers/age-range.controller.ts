@@ -8,7 +8,11 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@turta/shared-constants';
+
+import {
+  AGENCY_SELLER_ROLES,
+  resolveActorId,
+} from '../../../core/auth/utils/role-access';
 
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
@@ -32,7 +36,7 @@ export class AgeRangeController {
 
   @Post('catalog/tours/:tourId/dates/:dateId/age-ranges')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Create age range for tour date' })
   createTour(
@@ -45,14 +49,14 @@ export class AgeRangeController {
       tourId,
       dateId,
       dto,
-      user.partnerId,
+      user.agencyId,
       user.role,
     );
   }
 
   @Patch('catalog/tours/:tourId/dates/:dateId/age-ranges/:ageRangeId')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Update tour date age range' })
   updateTour(
@@ -67,14 +71,14 @@ export class AgeRangeController {
       dateId,
       ageRangeId,
       dto,
-      user.partnerId,
+      user.agencyId,
       user.role,
     );
   }
 
   @Delete('catalog/tours/:tourId/dates/:dateId/age-ranges/:ageRangeId')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Soft-delete tour date age range' })
   deleteTour(
@@ -87,8 +91,9 @@ export class AgeRangeController {
       tourId,
       dateId,
       ageRangeId,
-      user.partnerId,
+      user.agencyId,
       user.role,
+      resolveActorId(user),
     );
   }
 
@@ -107,7 +112,7 @@ export class AgeRangeController {
 
   @Post('catalog/experiences/:experienceId/dates/:dateId/age-ranges')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Create age range for activity date' })
   createExperience(
@@ -120,7 +125,7 @@ export class AgeRangeController {
       experienceId,
       dateId,
       dto,
-      user.partnerId,
+      user.agencyId,
       user.role,
     );
   }
@@ -129,7 +134,7 @@ export class AgeRangeController {
     'catalog/experiences/:experienceId/dates/:dateId/age-ranges/:ageRangeId',
   )
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Update activity date age range' })
   updateExperience(
@@ -144,7 +149,7 @@ export class AgeRangeController {
       dateId,
       ageRangeId,
       dto,
-      user.partnerId,
+      user.agencyId,
       user.role,
     );
   }
@@ -153,7 +158,7 @@ export class AgeRangeController {
     'catalog/experiences/:experienceId/dates/:dateId/age-ranges/:ageRangeId',
   )
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Soft-delete activity date age range' })
   deleteExperience(
@@ -166,8 +171,9 @@ export class AgeRangeController {
       experienceId,
       dateId,
       ageRangeId,
-      user.partnerId,
+      user.agencyId,
       user.role,
+      resolveActorId(user),
     );
   }
 }

@@ -11,7 +11,7 @@ export class UpdateTourHandler implements ICommandHandler<UpdateTourCommand> {
     return this.tourService.update(
       command.tourId,
       command.dto,
-      command.partnerId,
+      command.agencyId,
       command.role,
     );
   }

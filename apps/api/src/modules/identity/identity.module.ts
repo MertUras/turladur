@@ -10,13 +10,17 @@ import { RegisterUserHandler } from './commands/register-user/register-user.hand
 import { UpdateProfileHandler } from './commands/update-profile/update-profile.handler';
 import { VerifyPartnerHandler } from './commands/verify-partner/verify-partner.handler';
 import { AgencyController } from './controllers/agency.controller';
+import { AvailabilityController } from './controllers/availability.controller';
 import { IdentityController } from './controllers/identity.controller';
 import { SubUserController } from './controllers/sub-user.controller';
 import { GetProfileHandler } from './queries/get-profile/get-profile.handler';
 import { AgencyService } from './services/agency.service';
+import { AvailabilityService } from './services/availability.service';
+import { GuideService } from './services/guide.service';
 import { IdentityService } from './services/identity.service';
 import { OtpService } from './services/otp.service';
 import { SubUserService } from './services/sub-user.service';
+import { VehicleService } from './services/vehicle.service';
 
 const CommandHandlers = [
   RegisterUserHandler,
@@ -31,15 +35,31 @@ const QueryHandlers = [GetProfileHandler];
 
 @Module({
   imports: [CqrsModule, AuthModule, QueueModule],
-  controllers: [IdentityController, SubUserController, AgencyController],
+  controllers: [
+    IdentityController,
+    SubUserController,
+    AgencyController,
+    AvailabilityController,
+  ],
   providers: [
     IdentityService,
     OtpService,
     SubUserService,
     AgencyService,
+    AvailabilityService,
+    GuideService,
+    VehicleService,
     ...CommandHandlers,
     ...QueryHandlers,
   ],
-  exports: [IdentityService, OtpService, SubUserService, AgencyService],
+  exports: [
+    IdentityService,
+    OtpService,
+    SubUserService,
+    AgencyService,
+    AvailabilityService,
+    GuideService,
+    VehicleService,
+  ],
 })
 export class IdentityModule {}

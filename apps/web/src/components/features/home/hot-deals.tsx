@@ -9,7 +9,8 @@ import { MapPin, Star, ArrowRight } from 'lucide-react';
 import MembershipBadge from '@/components/features/tour/membership-badge';
 import { IMAGE_PLACEHOLDER } from '@/lib/image-placeholder';
 import type { MembershipTier } from '@/lib/tours/legacy-tour';
-import { getPublicApiBaseUrl } from '@/services/api-client';
+import { searchToursClient } from '@/services/catalog';
+import { searchExperiences } from '@/services/activity';
 
 type Deal = {
   id: string;
@@ -53,28 +54,25 @@ const activityCategories = [
 ];
 
 async function loadDeals(kind: 'tour' | 'activity'): Promise<Deal[]> {
-  const base = getPublicApiBaseUrl();
-  const path =
-    kind === 'tour'
-      ? '/catalog/tours/search?limit=8&featured=true'
-      : '/catalog/experiences?limit=8';
-
   try {
-    const res = await fetch(`${base}${path}`, {
-      headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) return [];
-    const json = (await res.json()) as {
-      data?: Array<Record<string, unknown>>;
-      success?: boolean;
-    };
-    const rows = Array.isArray(json.data) ? json.data : [];
-    return rows.map((row) => {
-      const price = Number(row.price ?? row.salePrice ?? 0);
+    const rows =
+      kind === 'tour'
+        ? (
+            await searchToursClient({
+              limit: 8,
+              featured: true,
+            })
+          ).data
+        : (await searchExperiences({ limit: 8 })).data;
+
+    const list = Array.isArray(rows) ? rows : [];
+    return list.map((row) => {
+      const record = row as unknown as Record<string, unknown>;
+      const price = Number(record.price ?? record.salePrice ?? 0);
       const tierRaw = String(
-        (row.partner as { membershipTier?: string } | undefined)
+        (record.partner as { membershipTier?: string } | undefined)
           ?.membershipTier ??
-          row.membershipTier ??
+          record.membershipTier ??
           '',
       ).toUpperCase();
       const partnerTier =
@@ -82,17 +80,17 @@ async function loadDeals(kind: 'tour' | 'activity'): Promise<Deal[]> {
           ? (tierRaw as MembershipTier)
           : null;
       return {
-        id: String(row.id),
-        title: String(row.title ?? ''),
-        description: String(row.description ?? ''),
+        id: String(record.id),
+        title: String(record.title ?? ''),
+        description: String(record.description ?? ''),
         salePrice: price,
         originalPrice: null,
-        image: (row.coverUrl as string | null) ?? null,
-        location: String(row.location ?? row.city ?? 'Türkiye'),
+        image: (record.coverUrl as string | null) ?? null,
+        location: String(record.location ?? record.city ?? 'Türkiye'),
         type: kind,
         partnerName: null,
         partnerTier,
-        operatorRating: Number(row.averageRating ?? 0),
+        operatorRating: Number(record.averageRating ?? 0),
       };
     });
   } catch {

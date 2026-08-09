@@ -8,6 +8,9 @@ import { AuthController } from './auth.controller';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { StaffPermissionsGuard } from './guards/staff-permissions.guard';
+import { AuthSessionService } from './services/auth-session.service';
+import { RefreshCookieService } from './services/refresh-cookie.service';
+import { RefreshTokenService } from './services/refresh-token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -31,6 +34,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   controllers: [AuthController],
   providers: [
     JwtStrategy,
+    RefreshTokenService,
+    RefreshCookieService,
+    AuthSessionService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
@@ -44,6 +50,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       useClass: StaffPermissionsGuard,
     },
   ],
-  exports: [JwtModule],
+  exports: [
+    JwtModule,
+    RefreshTokenService,
+    RefreshCookieService,
+    AuthSessionService,
+  ],
 })
 export class AuthModule {}

@@ -16,6 +16,19 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+export class ReservationExtraItemDto {
+  @ApiProperty({ description: 'TourExtra id' })
+  @IsString()
+  @MinLength(1)
+  tourExtraId!: string;
+
+  @ApiProperty({ example: 2, description: 'Kişi sayısı (≥1)' })
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  quantity!: number;
+}
+
 export class BookingGuestDto {
   @ApiProperty({ example: 'Ahmet' })
   @IsString()
@@ -130,56 +143,38 @@ export class ReservationBillingDto {
 /**
  * Exactly one product path must be provided:
  * - tour: tourDateId
- * - hotel: roomId (+ optional hotelId, startDate/endDate required)
  * - experience: activityDateId
  */
 export class CreateReservationDto {
   @ApiPropertyOptional({ description: 'Tour booking' })
-  @ValidateIf((o: CreateReservationDto) => !o.roomId && !o.activityDateId)
+  @ValidateIf((o: CreateReservationDto) => !o.activityDateId)
   @IsString()
   @MinLength(1)
   tourDateId?: string;
 
-  @ApiPropertyOptional({ description: 'Hotel booking — room id' })
-  @ValidateIf((o: CreateReservationDto) => !o.tourDateId && !o.activityDateId)
-  @IsString()
-  @MinLength(1)
-  roomId?: string;
-
-  @ApiPropertyOptional({ description: 'Hotel id (optional if roomId given)' })
-  @IsOptional()
-  @IsString()
-  hotelId?: string;
-
-  @ApiPropertyOptional({
-    example: '2026-08-10',
-    description: 'Hotel check-in (required for hotel bookings)',
-  })
-  @ValidateIf((o: CreateReservationDto) => Boolean(o.roomId))
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  startDate?: string;
-
-  @ApiPropertyOptional({
-    example: '2026-08-12',
-    description: 'Hotel check-out (required for hotel bookings)',
-  })
-  @ValidateIf((o: CreateReservationDto) => Boolean(o.roomId))
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  endDate?: string;
-
   @ApiPropertyOptional({ description: 'Experience booking' })
-  @ValidateIf((o: CreateReservationDto) => !o.tourDateId && !o.roomId)
+  @ValidateIf((o: CreateReservationDto) => !o.tourDateId)
   @IsString()
   @MinLength(1)
   activityDateId?: string;
 
   @ApiPropertyOptional({
-    description: 'Selected TourPickupPoint id (tour bookings)',
+    description: 'Selected TourPickupPoint id — tur rezervasyonunda zorunlu',
   })
-  @IsOptional()
+  @ValidateIf((o: CreateReservationDto) => Boolean(o.tourDateId))
   @IsString()
   @MinLength(1)
   pickupPointId?: string;
+
+  @ApiPropertyOptional({
+    type: [ReservationExtraItemDto],
+    description: 'Tur ekstra seçimleri (quantity = kişi)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ReservationExtraItemDto)
+  extras?: ReservationExtraItemDto[];
 
   @ApiProperty({ example: 2 })
   @IsInt()

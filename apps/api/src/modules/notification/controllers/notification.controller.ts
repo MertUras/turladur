@@ -34,6 +34,18 @@ export class NotificationController {
     );
   }
 
+  @Get('agency/:agencyId')
+  @ApiOperation({ summary: 'List agency inbox notifications' })
+  listAgency(
+    @Param('agencyId') agencyId: string,
+    @Query() query: ListNotificationsQueryDto,
+  ) {
+    return this.notificationService.listForAgency(
+      agencyId,
+      Boolean(query.unreadOnly),
+    );
+  }
+
   @Get('unread-count')
   @ApiOperation({ summary: 'Unread notification count' })
   unreadCount(@CurrentUser() user: UserPayload) {

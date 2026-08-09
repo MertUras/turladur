@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
 import { CacheService } from '../../../core/cache/cache.service';
+import { AgencyLinkService } from '../../../core/agency/agency-link.service';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
 import { ExperienceService } from '../services/experience.service';
@@ -22,6 +23,7 @@ describe('ExperienceService', () => {
     const module = await Test.createTestingModule({
       providers: [
         ExperienceService,
+        AgencyLinkService,
         { provide: PrismaService, useValue: prisma },
         { provide: CacheService, useValue: cache },
       ],
@@ -44,7 +46,7 @@ describe('ExperienceService', () => {
           duration: '2 saat',
           price: decimal(890),
           status: 'PUBLISHED',
-          partnerId: 'p1',
+          agencyId: 'p1',
           averageRating: decimal('4.5'),
           reviewCount: 12,
         },
@@ -62,11 +64,11 @@ describe('ExperienceService', () => {
   });
 
   describe('create', () => {
-    it('should require EXPERIENCES capability', async () => {
-      (prisma.partner.findFirst as jest.Mock).mockResolvedValue({
+    it('should require TOURS capability for experiences', async () => {
+      (prisma.agency.findFirst as jest.Mock).mockResolvedValue({
         id: 'p1',
         status: 'VERIFIED',
-        capabilities: ['TOURS'],
+        capabilities: ['HOTELS'],
       });
 
       await expect(
@@ -90,7 +92,7 @@ describe('ExperienceService', () => {
     it('should reject invalid date range', async () => {
       (prisma.experience.findFirst as jest.Mock).mockResolvedValue({
         id: 'e1',
-        partnerId: 'p1',
+        agencyId: 'p1',
         deletedAt: null,
       });
 
@@ -112,7 +114,7 @@ describe('ExperienceService', () => {
     it('should create activity date for owner', async () => {
       (prisma.experience.findFirst as jest.Mock).mockResolvedValue({
         id: 'e1',
-        partnerId: 'p1',
+        agencyId: 'p1',
         deletedAt: null,
       });
       (prisma.activityDate.create as jest.Mock).mockResolvedValue({
@@ -156,7 +158,7 @@ describe('ExperienceService', () => {
       (prisma.experience.findFirst as jest.Mock)
         .mockResolvedValueOnce({
           id: 'e1',
-          partnerId: 'p1',
+          agencyId: 'p1',
           deletedAt: null,
         })
         .mockResolvedValueOnce(null);
@@ -170,7 +172,7 @@ describe('ExperienceService', () => {
         duration: '2 saat',
         price: decimal(900),
         status: 'PUBLISHED',
-        partnerId: 'p1',
+        agencyId: 'p1',
         averageRating: decimal(0),
         reviewCount: 0,
       });
@@ -187,7 +189,7 @@ describe('ExperienceService', () => {
     it('should soft-delete experience', async () => {
       (prisma.experience.findFirst as jest.Mock).mockResolvedValue({
         id: 'e1',
-        partnerId: 'p1',
+        agencyId: 'p1',
         deletedAt: null,
       });
       (prisma.experience.update as jest.Mock).mockResolvedValue({});
@@ -198,7 +200,7 @@ describe('ExperienceService', () => {
     it('should list dates and update/delete them', async () => {
       (prisma.experience.findFirst as jest.Mock).mockResolvedValue({
         id: 'e1',
-        partnerId: 'p1',
+        agencyId: 'p1',
         deletedAt: null,
       });
       (prisma.activityDate.findMany as jest.Mock).mockResolvedValue([

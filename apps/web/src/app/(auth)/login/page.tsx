@@ -58,10 +58,15 @@ function LoginForm() {
     setPending(true);
     try {
       const user = await login(email, password);
-      if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+      if (
+        user.role === 'ADMIN' ||
+        user.role === 'SUPER_ADMIN' ||
+        user.role === 'PLATFORM_ADMIN' ||
+        user.role === 'PLATFORM_SUPER_ADMIN'
+      ) {
         router.push('/admin/dashboard');
       } else if (user.role === 'PARTNER' || user.role === 'PARTNER_STAFF') {
-        router.push('/partner/dashboard');
+        router.push('/acente/dashboard');
       } else {
         router.push('/tours');
       }
@@ -245,7 +250,7 @@ function LoginForm() {
 
           <div className="mt-6">
             <Link
-              href="/partner-login"
+              href="/acente/giris"
               className="flex items-center justify-center rounded-md bg-neutral-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-neutral-800"
             >
               Partner Portalına Git

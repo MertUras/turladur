@@ -9,7 +9,7 @@ interface PartnerForbiddenProps {
 }
 
 export function PartnerForbidden({
-  fallbackHref = '/partner/dashboard',
+  fallbackHref = '/acente/dashboard',
 }: PartnerForbiddenProps) {
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center px-4 text-center">

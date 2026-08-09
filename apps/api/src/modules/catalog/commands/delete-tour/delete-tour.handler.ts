@@ -10,8 +10,9 @@ export class DeleteTourHandler implements ICommandHandler<DeleteTourCommand> {
   execute(command: DeleteTourCommand) {
     return this.tourService.softDelete(
       command.tourId,
-      command.partnerId,
+      command.agencyId,
       command.role,
+      command.deletedBy,
     );
   }
 }

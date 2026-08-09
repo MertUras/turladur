@@ -10,10 +10,15 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { Role } from '@turta/shared-constants';
+
+import {
+  AGENCY_SELLER_ROLES,
+  resolveActorId,
+} from '../../../core/auth/utils/role-access';
 
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
+import { RequireStaffPermissions } from '../../../core/auth/decorators/require-staff-permissions.decorator';
 import { Roles } from '../../../core/auth/decorators/roles.decorator';
 import { UserPayload } from '../../../core/auth/types/auth.types';
 import {
@@ -54,54 +59,59 @@ export class ExperienceController {
 
   @Post()
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
+  @RequireStaffPermissions('tours')
   @ApiOperation({
     summary: 'Create experience (partner with EXPERIENCES capability)',
   })
   create(@Body() dto: CreateExperienceDto, @CurrentUser() user: UserPayload) {
-    return this.experienceService.create(dto, user.partnerId);
+    return this.experienceService.create(dto, user.agencyId);
   }
 
   @Patch(':id')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
+  @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Update owned experience' })
   update(
     @Param('id') id: string,
     @Body() dto: UpdateExperienceDto,
     @CurrentUser() user: UserPayload,
   ) {
-    return this.experienceService.update(id, dto, user.partnerId, user.role);
+    return this.experienceService.update(id, dto, user.agencyId, user.role);
   }
 
   @Delete(':id')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
+  @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Soft-delete experience' })
   remove(@Param('id') id: string, @CurrentUser() user: UserPayload) {
-    return this.experienceService.softDelete(id, user.partnerId, user.role);
+    return this.experienceService.softDelete(
+      id,
+      user.agencyId,
+      user.role,
+      resolveActorId(user),
+    );
   }
 
   @Post(':id/dates')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
+  @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Add activity date / capacity window' })
   createDate(
     @Param('id') id: string,
     @Body() dto: CreateActivityDateDto,
     @CurrentUser() user: UserPayload,
   ) {
-    return this.experienceService.createDate(
-      id,
-      dto,
-      user.partnerId,
-      user.role,
-    );
+    return this.experienceService.createDate(id, dto, user.agencyId, user.role);
   }
 
   @Patch(':id/dates/:dateId')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
+  @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Update activity date' })
   updateDate(
     @Param('id') id: string,
@@ -113,14 +123,15 @@ export class ExperienceController {
       id,
       dateId,
       dto,
-      user.partnerId,
+      user.agencyId,
       user.role,
     );
   }
 
   @Delete(':id/dates/:dateId')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
+  @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Soft-delete activity date' })
   removeDate(
     @Param('id') id: string,
@@ -130,8 +141,9 @@ export class ExperienceController {
     return this.experienceService.softDeleteDate(
       id,
       dateId,
-      user.partnerId,
+      user.agencyId,
       user.role,
+      resolveActorId(user),
     );
   }
 }

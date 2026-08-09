@@ -1,5 +1,8 @@
 import type { NextConfig } from 'next';
 
+const apiUpstream =
+  process.env.API_PROXY_TARGET?.trim() || 'http://localhost:4000';
+
 const nextConfig: NextConfig = {
   // Sprint 25.8 — lint + typecheck both enforced on build.
   eslint: {
@@ -7,6 +10,35 @@ const nextConfig: NextConfig = {
   },
   typescript: {
     ignoreBuildErrors: false,
+  },
+  async redirects() {
+    // P0-B: legacy partner URLs → acente
+    return [
+      {
+        source: '/partner-login',
+        destination: '/acente/giris',
+        permanent: false,
+      },
+      {
+        source: '/partner',
+        destination: '/acente/dashboard',
+        permanent: false,
+      },
+      {
+        source: '/partner/:path*',
+        destination: '/acente/:path*',
+        permanent: false,
+      },
+    ];
+  },
+  async rewrites() {
+    // Same-origin /api/v1 → Nest — HttpOnly refresh cookie (SameSite=Lax) works.
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${apiUpstream.replace(/\/$/, '')}/api/v1/:path*`,
+      },
+    ];
   },
   images: {
     formats: ['image/webp'],

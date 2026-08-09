@@ -53,11 +53,23 @@ export class PaymentService {
 
     if (
       reservation.status !== 'PENDING' &&
+      reservation.status !== 'PENDING_PAYMENT' &&
       reservation.status !== 'PAYMENT_FAILED'
     ) {
       throw new BusinessException(
         'INVALID_RESERVATION_STATUS',
         'Bu rezervasyon için ödeme başlatılamaz',
+      );
+    }
+
+    if (
+      reservation.holdExpiresAt &&
+      reservation.holdExpiresAt.getTime() < Date.now() &&
+      reservation.status === 'PENDING_PAYMENT'
+    ) {
+      throw new BusinessException(
+        'HOLD_EXPIRED',
+        'Rezervasyon süresi doldu; yeni rezervasyon oluşturun',
       );
     }
 
@@ -82,6 +94,7 @@ export class PaymentService {
         amount: reservation.totalAmount,
         currency: reservation.currency,
         status: 'PENDING',
+        method: 'CARD',
         provider: this.gateway.providerName,
         conversationId,
       },
@@ -424,11 +437,7 @@ export class PaymentService {
       },
     });
 
-    await this.prisma.reservation.updateMany({
-      where: { id: transaction.reservationId, deletedAt: null },
-      data: { paymentStatus: 'REFUNDED' },
-    });
-
+    // Reservation.paymentStatus booking listener üzerinden (Faz 2)
     this.eventEmitter.emit(
       'payment.refunded',
       new PaymentRefundedEvent(

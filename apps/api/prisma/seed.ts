@@ -2,12 +2,69 @@
  * Minimal Nest catalog + content seed
  * Çalıştır: pnpm --filter api prisma:seed
  */
-import { PrismaClient } from '../src/generated/prisma';
+import { Prisma, PrismaClient } from '../src/generated/prisma';
 import * as bcrypt from 'bcrypt';
 
 import { BLOG_SEED_CATEGORIES, BLOG_SEED_POSTS } from './data/blog-posts';
+import { buildSystemBusLayoutDefs } from '../src/shared/utils/bus-seat-layout';
 
 const prisma = new PrismaClient();
+
+/** Soft-delete uyumlu: email artık Prisma @unique değil (partial unique SQL). */
+async function upsertUserByEmail(
+  email: string,
+  data: {
+    update: Record<string, unknown>;
+    create: {
+      email: string;
+      passwordHash: string;
+      firstName?: string;
+      lastName?: string;
+      role: string;
+    };
+  },
+) {
+  const existing = await prisma.user.findFirst({
+    where: { email, deletedAt: null },
+  });
+  if (existing) {
+    return prisma.user.update({
+      where: { id: existing.id },
+      data: data.update,
+    });
+  }
+  return prisma.user.create({ data: data.create as never });
+}
+
+async function seedBusSeatLayouts() {
+  const defs = buildSystemBusLayoutDefs();
+  for (const def of defs) {
+    const layoutJson = def.layoutJson as unknown as Prisma.InputJsonValue;
+    await prisma.busSeatLayout.upsert({
+      where: { kind: def.kind },
+      update: {
+        name: def.name,
+        passengerSeats: def.passengerSeats,
+        crewSeats: def.crewSeats,
+        rows: def.rows,
+        cols: def.cols,
+        layoutJson,
+        isSystem: true,
+        deletedAt: null,
+      },
+      create: {
+        kind: def.kind,
+        name: def.name,
+        passengerSeats: def.passengerSeats,
+        crewSeats: def.crewSeats,
+        rows: def.rows,
+        cols: def.cols,
+        layoutJson,
+        isSystem: true,
+      },
+    });
+  }
+}
 
 async function seedBlog(authorId: string) {
   const categoryIds = new Map<string, string>();
@@ -68,41 +125,7 @@ async function seedBlog(authorId: string) {
 async function main() {
   const passwordHash = await bcrypt.hash('Demo1234!', 12);
 
-  const partner = await prisma.partner.upsert({
-    where: { id: 'seed-partner-demo' },
-    update: {
-      capabilities: ['TOURS', 'EXPERIENCES'],
-      membershipTier: 'SILVER',
-      status: 'VERIFIED',
-    },
-    create: {
-      id: 'seed-partner-demo',
-      companyName: 'Demo Tur & Aktivite',
-      contactEmail: 'partner@demo.turta.com',
-      contactPhone: '+90 312 555 0000',
-      status: 'VERIFIED',
-      capabilities: ['TOURS', 'EXPERIENCES'],
-      membershipTier: 'SILVER',
-      city: 'Ankara',
-      country: 'Türkiye',
-    },
-  });
-
-  await prisma.user.upsert({
-    where: { email: 'partner@demo.turta.com' },
-    update: {},
-    create: {
-      email: 'partner@demo.turta.com',
-      passwordHash,
-      firstName: 'Demo',
-      lastName: 'Partner',
-      role: 'PARTNER',
-      partnerId: partner.id,
-    },
-  });
-
-  await prisma.user.upsert({
-    where: { email: 'demo@turta.com' },
+  await upsertUserByEmail('demo@turta.com', {
     update: {},
     create: {
       email: 'demo@turta.com',
@@ -113,8 +136,7 @@ async function main() {
     },
   });
 
-  const admin = await prisma.user.upsert({
-    where: { email: 'editor@turta.com' },
+  const admin = await upsertUserByEmail('editor@turta.com', {
     update: {
       firstName: 'Turta',
       lastName: 'Editör',
@@ -129,9 +151,102 @@ async function main() {
     },
   });
 
+  await upsertUserByEmail('platform-admin@turta.com', {
+    update: {
+      role: 'PLATFORM_ADMIN',
+      firstName: 'Platform',
+      lastName: 'Admin',
+    },
+    create: {
+      email: 'platform-admin@turta.com',
+      passwordHash,
+      firstName: 'Platform',
+      lastName: 'Admin',
+      role: 'PLATFORM_ADMIN',
+    },
+  });
+
+  await upsertUserByEmail('superadmin@turta.com', {
+    update: {
+      role: 'PLATFORM_SUPER_ADMIN',
+      firstName: 'Platform',
+      lastName: 'Super',
+    },
+    create: {
+      email: 'superadmin@turta.com',
+      passwordHash,
+      firstName: 'Platform',
+      lastName: 'Super',
+      role: 'PLATFORM_SUPER_ADMIN',
+    },
+  });
+
+  const agency = await prisma.agency.upsert({
+    where: { id: 'seed-agency-demo' },
+    update: {
+      companyName: 'Demo Satıcı Acente',
+      taxNumber: '1234567890',
+      legalTitle: 'Demo Satıcı Acente A.Ş.',
+      address: 'Atatürk Cad. No:1 Çankaya/Ankara',
+      contactEmail: 'agency-owner@demo.turta.com',
+      status: 'VERIFIED',
+      sellerTier: 'SILVER',
+      capabilities: ['TOURS'],
+      verifiedAt: new Date(),
+    },
+    create: {
+      id: 'seed-agency-demo',
+      companyName: 'Demo Satıcı Acente',
+      taxNumber: '1234567890',
+      legalTitle: 'Demo Satıcı Acente A.Ş.',
+      address: 'Atatürk Cad. No:1 Çankaya/Ankara',
+      city: 'Ankara',
+      country: 'Türkiye',
+      contactEmail: 'agency-owner@demo.turta.com',
+      contactPhone: '+90 312 555 1111',
+      status: 'VERIFIED',
+      sellerTier: 'SILVER',
+      capabilities: ['TOURS'],
+      verifiedAt: new Date(),
+    },
+  });
+
+  const existingOwner = await prisma.agencyStaff.findFirst({
+    where: {
+      agencyId: agency.id,
+      role: 'AGENCY_OWNER',
+      deletedAt: null,
+    },
+  });
+  if (!existingOwner) {
+    await prisma.agencyStaff.create({
+      data: {
+        agencyId: agency.id,
+        name: 'Demo Acente Sahibi',
+        email: 'agency-owner@demo.turta.com',
+        passwordHash,
+        role: 'AGENCY_OWNER',
+        status: 'ACTIVE',
+      },
+    });
+  } else {
+    await prisma.agencyStaff.update({
+      where: { id: existingOwner.id },
+      data: {
+        passwordHash,
+        status: 'ACTIVE',
+        email: 'agency-owner@demo.turta.com',
+      },
+    });
+  }
+
   const tour = await prisma.tour.upsert({
     where: { slug: 'ankara-kapadokya-demo' },
-    update: { featured: true },
+    update: {
+      featured: true,
+      agencyId: agency.id,
+      status: 'PUBLISHED',
+    },
     create: {
       title: 'Ankara — Kapadokya Demo Turu',
       slug: 'ankara-kapadokya-demo',
@@ -141,7 +256,7 @@ async function main() {
       status: 'PUBLISHED',
       durationDays: 3,
       featured: true,
-      partnerId: partner.id,
+      agencyId: agency.id,
     },
   });
 
@@ -209,7 +324,7 @@ async function main() {
       city: 'Nevşehir',
       country: 'Türkiye',
       type: 'BOUTIQUE_HOTEL',
-      partnerId: partner.id,
+      agencyId: agency.id,
       stars: 4,
     },
   });
@@ -227,19 +342,110 @@ async function main() {
       duration: '2 saat',
       price: 890,
       status: 'PUBLISHED',
-      partnerId: partner.id,
+      agencyId: agency.id,
     },
   });
 
   await seedBlog(admin.id);
+  await seedBusSeatLayouts();
+
+  const existingGuide = await prisma.guide.findFirst({
+    where: { email: 'guide@demo.turta.com', deletedAt: null },
+  });
+  if (!existingGuide) {
+    await prisma.guide.create({
+      data: {
+        identityNumber: '10000000146',
+        firstName: 'Demo',
+        lastName: 'Rehber',
+        email: 'guide@demo.turta.com',
+        passwordHash,
+        phone: '+90 532 555 2222',
+        birthDate: new Date('1990-05-15T00:00:00.000Z'),
+        status: 'VERIFIED',
+        languages: ['tr', 'en'],
+        oda: 'Ankara',
+        sicilNo: 'SIC-DEMO-001',
+        ruhsatNo: 'RH-DEMO-001',
+        ruhsatExpiresAt: new Date('2027-12-31T00:00:00.000Z'),
+        city: 'Ankara',
+        verifiedAt: new Date(),
+      },
+    });
+  } else {
+    await prisma.guide.update({
+      where: { id: existingGuide.id },
+      data: {
+        oda: existingGuide.oda ?? 'Ankara',
+        sicilNo: existingGuide.sicilNo ?? 'SIC-DEMO-001',
+        ruhsatNo: existingGuide.ruhsatNo ?? 'RH-DEMO-001',
+        ruhsatExpiresAt:
+          existingGuide.ruhsatExpiresAt ?? new Date('2027-12-31T00:00:00.000Z'),
+        birthDate:
+          existingGuide.birthDate ?? new Date('1990-05-15T00:00:00.000Z'),
+        languages:
+          existingGuide.languages.length > 0
+            ? existingGuide.languages
+            : ['tr', 'en'],
+        status: 'VERIFIED',
+        verifiedAt: existingGuide.verifiedAt ?? new Date(),
+      },
+    });
+  }
+
+  const existingBus = await prisma.busCompany.findFirst({
+    where: { contactEmail: 'bus@demo.turta.com', deletedAt: null },
+  });
+  let busCompany = existingBus;
+  if (!existingBus) {
+    busCompany = await prisma.busCompany.create({
+      data: {
+        companyName: 'Demo Otobüs',
+        contactEmail: 'bus@demo.turta.com',
+        passwordHash,
+        contactPhone: '+90 312 555 3333',
+        status: 'VERIFIED',
+        city: 'Ankara',
+        country: 'Türkiye',
+        verifiedAt: new Date(),
+      },
+    });
+  }
+
+  if (busCompany) {
+    const existingVehicle = await prisma.vehicle.findFirst({
+      where: {
+        busCompanyId: busCompany.id,
+        plateNumber: '06 DEMO 46',
+        deletedAt: null,
+      },
+    });
+    if (!existingVehicle) {
+      await prisma.vehicle.create({
+        data: {
+          busCompanyId: busCompany.id,
+          plateNumber: '06 DEMO 46',
+          modelYear: 2022,
+          seatLayoutKind: 'BUS_46_PLUS_1',
+          capacity: 46,
+          isActive: true,
+          notes: 'Seed demo araç — müsaitlik takvimi',
+        },
+      });
+    }
+  }
 
   console.log(
-    'Seed OK — partner:',
-    partner.id,
+    'Seed OK — agency:',
+    agency.id,
     'tour:',
     tour.slug,
     'blog posts:',
     BLOG_SEED_POSTS.length,
+    'busLayouts: 5',
+    'agency-owner@demo.turta.com / Demo1234!',
+    'guide: guide@demo.turta.com',
+    'bus: bus@demo.turta.com',
   );
 }
 

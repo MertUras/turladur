@@ -36,6 +36,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Module boundary check (API)
+        run: pnpm check:module-boundaries
+
+      - name: API unit tests (critical)
+        run: pnpm --filter api test -- --runInBand --forceExit
+
       - name: Format check (monorepo apps & packages)
         run: >
           pnpm exec prettier --check

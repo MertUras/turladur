@@ -1,11 +1,11 @@
 'use client';
 
-import { getPublicApiBaseUrl } from '@/services/api-client';
 import React, { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Hero } from '@/components/features/home/hero';
+import { listRoutes, type RoutesListResponse } from '@/services/route';
 import {
   Clock as ClockIcon,
   Calendar as CalendarIcon,
@@ -61,25 +61,13 @@ export default function RoutesPageClient() {
   const fetchRoutes = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      const search = searchParams.get('search');
-      const category = searchParams.get('category');
-      const duration = searchParams.get('duration');
-      const season = searchParams.get('season');
-
-      if (search) params.set('search', search);
-      if (category) params.set('category', category);
-      if (duration) params.set('duration', duration);
-      if (season) params.set('season', season);
-
-      const query = params.toString();
-      const res = await fetch(
-        `${getPublicApiBaseUrl()}/catalog/routes${query ? `?${query}` : ''}`,
-        { headers: { Accept: 'application/json' } },
-      );
-      if (!res.ok) throw new Error('Rotalar yüklenemedi');
-      const json = await res.json();
-      setData(json.data ?? json);
+      const body = await listRoutes({
+        search: searchParams.get('search') ?? undefined,
+        category: searchParams.get('category') ?? undefined,
+        duration: searchParams.get('duration') ?? undefined,
+        season: searchParams.get('season') ?? undefined,
+      });
+      setData(body as RoutesListResponse);
     } catch (error) {
       console.error('Routes fetch error:', error);
       setData(null);

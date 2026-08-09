@@ -18,6 +18,7 @@ import type {
 import { Prisma } from '../../../generated/prisma';
 
 import { CacheService } from '../../../core/cache/cache.service';
+import { AgencyLinkService } from '../../../core/agency/agency-link.service';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { StorageService } from '../../../core/storage/storage.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
@@ -51,17 +52,18 @@ export class TourService {
     private readonly cache: CacheService,
     private readonly eventEmitter: EventEmitter2,
     private readonly storage: StorageService,
+    private readonly agencyLink: AgencyLinkService,
   ) {}
 
-  async create(dto: CreateTourDto, partnerId: string | undefined) {
-    if (!partnerId) {
+  async create(dto: CreateTourDto, agencyId: string | undefined) {
+    if (!agencyId) {
       throw new ForbiddenException({
         code: 'PARTNER_REQUIRED',
         message: 'Tur oluşturmak için partner hesabı gerekir',
       });
     }
 
-    await this.ensurePartnerCanPublish(partnerId);
+    await this.ensurePartnerCanPublish(agencyId);
 
     const baseSlug = slugify(dto.title);
     const slug = await this.uniqueSlug(baseSlug);
@@ -78,7 +80,8 @@ export class TourService {
         coverUrl: dto.coverUrl,
         galleryUrls: dto.galleryUrls ?? [],
         extras: (dto.extras ?? {}) as Prisma.InputJsonValue,
-        partnerId,
+        agencyId,
+
         // Partner tours await admin review (Sprint 16); keeps public catalog clean
         status: 'PENDING_REVIEW',
       },
@@ -86,9 +89,10 @@ export class TourService {
 
     await this.cache.invalidatePattern('catalog:tours:search:*');
 
+    // Consumer: DomainAuditListener
     this.eventEmitter.emit(
       'tour.created',
-      new TourCreatedEvent(tour.id, partnerId),
+      new TourCreatedEvent(tour.id, agencyId),
     );
 
     return {
@@ -101,10 +105,10 @@ export class TourService {
   async update(
     tourId: string,
     dto: UpdateTourDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
-    const tour = await this.findOwnedTour(tourId, partnerId, role);
+    const tour = await this.findOwnedTour(tourId, agencyId, role);
 
     const data: Prisma.TourUpdateInput = {};
     if (dto.title !== undefined) {
@@ -124,6 +128,10 @@ export class TourService {
       data.extras = dto.extras as Prisma.InputJsonValue;
     }
 
+    if (dto.status === 'PUBLISHED') {
+      await this.ensureTourCanBePublished(tour);
+    }
+
     const updated = await this.prisma.tour.update({
       where: { id: tour.id },
       data,
@@ -141,16 +149,21 @@ export class TourService {
 
   async softDelete(
     tourId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
+    deletedBy?: string,
   ) {
     // Prefer cancelWithReason for published tours with bookings.
     // Soft-delete without reason still archives; no mass-cancel email.
-    const tour = await this.findOwnedTour(tourId, partnerId, role);
+    const tour = await this.findOwnedTour(tourId, agencyId, role);
 
     await this.prisma.tour.update({
       where: { id: tour.id },
-      data: { deletedAt: new Date(), status: 'ARCHIVED' },
+      data: {
+        deletedAt: new Date(),
+        status: 'ARCHIVED',
+        ...(deletedBy ? { deletedBy } : {}),
+      },
     });
 
     await this.cache.del(`catalog:tour:${tourId}`);
@@ -169,12 +182,12 @@ export class TourService {
    */
   async cancelWithReason(
     tourId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
     reason: TourCancelReason,
     note?: string,
   ) {
-    const tour = await this.findOwnedTour(tourId, partnerId, role);
+    const tour = await this.findOwnedTour(tourId, agencyId, role);
     const reasonLabel = TOUR_CANCEL_REASON_LABELS[reason];
 
     const extras =
@@ -206,7 +219,7 @@ export class TourService {
       'tour.cancelled',
       new TourCancelledEvent(
         tour.id,
-        tour.partnerId,
+        tour.agencyId,
         tour.title,
         reason,
         reasonLabel,
@@ -231,13 +244,13 @@ export class TourService {
    */
   async cancelDates(
     tourId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
     dateIds: string[],
     reason: TourCancelReason,
     note?: string,
   ) {
-    const tour = await this.findOwnedTour(tourId, partnerId, role);
+    const tour = await this.findOwnedTour(tourId, agencyId, role);
     const uniqueIds = [...new Set(dateIds)];
     const reasonLabel = TOUR_CANCEL_REASON_LABELS[reason];
 
@@ -333,7 +346,7 @@ export class TourService {
       'tour.dates.cancelled',
       new TourDatesCancelledEvent(
         tour.id,
-        tour.partnerId,
+        tour.agencyId,
         tour.title,
         cancelledInfos,
         reason,
@@ -370,12 +383,12 @@ export class TourService {
         status: 'PUBLISHED',
       },
       include: {
-        partner: {
+        agency: {
           select: {
             id: true,
             companyName: true,
             logo: true,
-            membershipTier: true,
+            sellerTier: true,
             averageRating: true,
             reviewCount: true,
           },
@@ -405,8 +418,9 @@ export class TourService {
     const durationRange = this.resolveDurationFilter(dto);
 
     const cacheKey = [
-      'catalog:tours:search:v2',
+      'catalog:tours:search:v3',
       q,
+      dto.agencyId ?? '',
       dto.category ?? '',
       dto.featured === true ? '1' : '0',
       durationRange?.min ?? '',
@@ -441,6 +455,7 @@ export class TourService {
     const where: Prisma.TourWhereInput = {
       deletedAt: null,
       status: 'PUBLISHED',
+      ...(dto.agencyId ? { agencyId: dto.agencyId } : {}),
       ...(dto.category ? { category: dto.category } : {}),
       ...(dto.featured === true ? { featured: true } : {}),
       ...(durationRange
@@ -494,12 +509,12 @@ export class TourService {
         skip: (page - 1) * limit,
         take: limit,
         include: {
-          partner: {
+          agency: {
             select: {
               id: true,
               companyName: true,
               logo: true,
-              membershipTier: true,
+              sellerTier: true,
               averageRating: true,
               reviewCount: true,
             },
@@ -526,13 +541,76 @@ export class TourService {
     };
   }
 
+  /** Shared Tag → related published tours (Post/Tag RelatedTours hikâyesi). */
+  async listRelatedTours(tourId: string, limit = 6) {
+    const tags = await this.prisma.tourTag.findMany({
+      where: { tourId },
+      select: { tagId: true },
+    });
+
+    if (tags.length === 0) {
+      return { success: true, data: [], error: null };
+    }
+
+    const tagIds = tags.map((row) => row.tagId);
+    const relatedLinks = await this.prisma.tourTag.findMany({
+      where: {
+        tagId: { in: tagIds },
+        tourId: { not: tourId },
+        tour: { status: 'PUBLISHED', deletedAt: null },
+      },
+      select: { tourId: true },
+    });
+
+    const counts = new Map<string, number>();
+    for (const link of relatedLinks) {
+      counts.set(link.tourId, (counts.get(link.tourId) ?? 0) + 1);
+    }
+
+    const ranked = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, Math.min(Math.max(limit, 1), 20))
+      .map(([id]) => id);
+
+    if (ranked.length === 0) {
+      return { success: true, data: [], error: null };
+    }
+
+    const tours = await this.prisma.tour.findMany({
+      where: { id: { in: ranked }, deletedAt: null },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        coverUrl: true,
+        price: true,
+        currency: true,
+        averageRating: true,
+        reviewCount: true,
+        category: true,
+      },
+    });
+
+    const byId = new Map(tours.map((tour) => [tour.id, tour]));
+    const data = ranked
+      .map((id) => byId.get(id))
+      .filter((tour): tour is NonNullable<typeof tour> => !!tour)
+      .map((tour) => ({
+        ...tour,
+        price: tour.price.toString(),
+        averageRating: tour.averageRating.toString(),
+      }));
+
+    return { success: true, data, error: null };
+  }
+
   async createTourDate(
     tourId: string,
     dto: CreateTourDateDto,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
-    await this.findOwnedTour(tourId, partnerId, role);
+    await this.findOwnedTour(tourId, agencyId, role);
 
     const startDate = new Date(dto.startDate);
     const endDate = new Date(dto.endDate);
@@ -669,9 +747,9 @@ export class TourService {
     return date.toISOString().slice(0, 10);
   }
 
-  private async ensurePartnerCanPublish(partnerId: string): Promise<void> {
-    const partner = await this.prisma.partner.findFirst({
-      where: { id: partnerId, deletedAt: null },
+  private async ensurePartnerCanPublish(agencyId: string): Promise<void> {
+    const partner = await this.prisma.agency.findFirst({
+      where: { id: agencyId, deletedAt: null },
     });
 
     if (!partner) {
@@ -689,9 +767,32 @@ export class TourService {
     }
   }
 
+  /**
+   * PUBLISHED gate: marketplace Agency VKN + unvan + adres zorunlu.
+   * Expand: agencyId yoksa Partner taxNumber + address ile geçici kontrol.
+   */
+  private async ensureTourCanBePublished(tour: {
+    agencyId: string;
+  }): Promise<void> {
+    const agency = await this.prisma.agency.findFirst({
+      where: { id: tour.agencyId, deletedAt: null },
+    });
+    if (
+      !agency ||
+      !agency.taxNumber?.trim() ||
+      !agency.legalTitle?.trim() ||
+      !agency.address?.trim()
+    ) {
+      throw new ForbiddenException({
+        code: 'AGENCY_INVOICE_FIELDS_REQUIRED',
+        message: 'Tur yayınlamak için acente VKN, unvan ve adres zorunludur',
+      });
+    }
+  }
+
   private async findOwnedTour(
     tourId: string,
-    partnerId: string | undefined,
+    agencyId: string | undefined,
     role: string,
   ) {
     const tour = await this.prisma.tour.findFirst({
@@ -705,13 +806,11 @@ export class TourService {
       });
     }
 
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    if (!isAdmin && tour.partnerId !== partnerId) {
-      throw new ForbiddenException({
-        code: 'FORBIDDEN',
-        message: 'Bu tura erişim yetkiniz yok',
-      });
-    }
+    this.agencyLink.assertSellerOwner(
+      { agencyId: tour.agencyId },
+      { agencyId, role },
+      'Bu tura erişim yetkiniz yok',
+    );
 
     return tour;
   }
@@ -769,20 +868,20 @@ export class TourService {
     extras?: Prisma.JsonValue;
     price: Prisma.Decimal;
     currency: string;
-    category: SharedTour['category'];
-    status: SharedTour['status'];
+    category: string;
+    status: string;
     durationDays: number;
-    featured?: boolean;
-    averageRating?: Prisma.Decimal;
-    reviewCount?: number;
-    partnerId: string;
+    featured?: boolean | null;
+    averageRating?: Prisma.Decimal | null;
+    reviewCount?: number | null;
+    agencyId: string;
     createdAt: Date;
     updatedAt: Date;
-    partner?: {
+    agency?: {
       id: string;
       companyName: string;
       logo: string | null;
-      membershipTier: 'BRONZE' | 'SILVER' | 'GOLD';
+      sellerTier: string;
       averageRating: Prisma.Decimal;
       reviewCount: number;
     } | null;
@@ -802,21 +901,23 @@ export class TourService {
           : {},
       price: tour.price.toString(),
       currency: tour.currency,
-      category: tour.category,
-      status: tour.status,
+      category: tour.category as SharedTour['category'],
+      status: tour.status as SharedTour['status'],
       durationDays: tour.durationDays,
       featured: tour.featured ?? false,
       averageRating: (tour.averageRating ?? new Prisma.Decimal(0)).toString(),
       reviewCount: tour.reviewCount ?? 0,
-      partnerId: tour.partnerId,
-      partner: tour.partner
+      partnerId: tour.agencyId,
+      agencyId: tour.agencyId,
+      partner: tour.agency
         ? {
-            id: tour.partner.id,
-            companyName: tour.partner.companyName,
-            logo: this.storage.resolvePublicUrl(tour.partner.logo),
-            membershipTier: tour.partner.membershipTier,
-            averageRating: tour.partner.averageRating.toString(),
-            reviewCount: tour.partner.reviewCount,
+            id: tour.agency.id,
+            companyName: tour.agency.companyName,
+            logo: this.storage.resolvePublicUrl(tour.agency.logo),
+            membershipTier: tour.agency.sellerTier as
+              'BRONZE' | 'SILVER' | 'GOLD',
+            averageRating: tour.agency.averageRating.toString(),
+            reviewCount: tour.agency.reviewCount,
           }
         : undefined,
       createdAt: tour.createdAt.toISOString(),

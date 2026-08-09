@@ -7,13 +7,14 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { JwtService } from '@nestjs/jwt';
 import { Role } from '@turta/shared-constants';
 import type { User as SharedUser } from '@turta/shared-types';
 import * as bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
 
-import { JwtPayload } from '../../../core/auth/types/auth.types';
+import { AuthSessionService } from '../../../core/auth/services/auth-session.service';
+import { AgencyLinkService } from '../../../core/agency/agency-link.service';
+import { AuditService } from '../../../core/audit/audit.service';
 import { PrismaService } from '../../../core/database/prisma.service';
 import { EmailQueueService } from '../../../core/queue/email-queue.service';
 import { UserRole, Prisma, OtpPurpose } from '../../../generated/prisma';
@@ -30,15 +31,24 @@ import { OtpService } from './otp.service';
 
 const BCRYPT_ROUNDS = 12;
 
+export type AuthSuccessWithRefresh<T> = {
+  success: true;
+  data: T;
+  error: null;
+  refresh?: { raw: string; expiresAt: Date };
+};
+
 @Injectable()
 export class IdentityService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly eventEmitter: EventEmitter2,
     private readonly emailQueue: EmailQueueService,
     private readonly otpService: OtpService,
+    private readonly auditService: AuditService,
+    private readonly authSession: AuthSessionService,
+    private readonly agencyLink: AgencyLinkService,
   ) {}
 
   async register(dto: RegisterUserDto) {
@@ -70,6 +80,7 @@ export class IdentityService {
       },
     });
 
+    // Consumer: DomainAuditListener; welcome e-posta burada (çift gönderim yok)
     this.eventEmitter.emit(
       'user.registered',
       new UserRegisteredEvent(user.id, user.email, user.role),
@@ -81,19 +92,18 @@ export class IdentityService {
       data: { name: user.firstName ?? user.email },
     });
 
-    const tokens = await this.issueTokens({
-      sub: user.id,
+    const tokens = await this.authSession.issueForUser({
+      userId: user.id,
       role: Role.CUSTOMER,
     });
 
-    return {
-      success: true,
-      data: {
-        ...tokens,
+    return this.withRefresh(
+      {
+        ...this.publicTokens(tokens),
         user: this.toSharedUser(user),
       },
-      error: null,
-    };
+      tokens,
+    );
   }
 
   async login(dto: LoginUserDto) {
@@ -122,20 +132,27 @@ export class IdentityService {
     await this.assertPartnerCanLogin(user);
 
     const role = this.mapRole(user.role);
-    const tokens = await this.issueTokens({
-      sub: user.id,
+    const tokens = await this.authSession.issueForUser({
+      userId: user.id,
       role,
-      partnerId: user.partnerId ?? undefined,
     });
 
-    return {
-      success: true,
-      data: {
-        ...tokens,
+    await this.auditService.record({
+      actorType: 'USER',
+      actorId: user.id,
+      action: 'LOGIN',
+      entityType: 'User',
+      entityId: user.id,
+      meta: { role: user.role },
+    });
+
+    return this.withRefresh(
+      {
+        ...this.publicTokens(tokens),
         user: this.toSharedUser(user),
       },
-      error: null,
-    };
+      tokens,
+    );
   }
 
   async resetPassword(dto: {
@@ -225,24 +242,24 @@ export class IdentityService {
       },
     });
 
+    // Consumer: DomainAuditListener (welcome e-posta bu register yolunda yok)
     this.eventEmitter.emit(
       'user.registered',
       new UserRegisteredEvent(user.id, user.email, user.role),
     );
 
-    const tokens = await this.issueTokens({
-      sub: user.id,
+    const tokens = await this.authSession.issueForUser({
+      userId: user.id,
       role: Role.CUSTOMER,
     });
 
-    return {
-      success: true,
-      data: {
-        ...tokens,
+    return this.withRefresh(
+      {
+        ...this.publicTokens(tokens),
         user: this.toSharedUser(user),
       },
-      error: null,
-    };
+      tokens,
+    );
   }
 
   async getProfile(userId: string) {
@@ -369,119 +386,78 @@ export class IdentityService {
   async registerPartner(dto: RegisterPartnerDto) {
     await this.ensureEmailAvailable(dto.contactEmail, 'partner');
 
-    const verificationToken = randomUUID();
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const email = dto.contactEmail.toLowerCase().trim();
+    const companyName = dto.companyName.trim();
+    const taxNumber =
+      dto.taxNumber?.replace(/\D/g, '').slice(0, 11) ||
+      `9${Date.now().toString().slice(-9)}`;
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const partner = await tx.partner.create({
-        data: {
-          companyName: dto.companyName.trim(),
-          taxNumber: dto.taxNumber,
-          contactEmail: dto.contactEmail.toLowerCase().trim(),
-          contactPhone: dto.contactPhone,
-          verificationToken,
-        },
-      });
-
-      const user = await tx.user.create({
-        data: {
-          email: partner.contactEmail,
-          passwordHash,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          phone: dto.contactPhone,
-          role: UserRole.PARTNER,
-          partnerId: partner.id,
-        },
-      });
-
-      return { partner, user };
+    const staffExists = await this.prisma.agencyStaff.findFirst({
+      where: { email, deletedAt: null },
     });
+    if (staffExists) {
+      throw new ConflictException({
+        code: 'EMAIL_ALREADY_PARTNER',
+        message:
+          'Bu e-posta ile acente hesabı zaten var. Partner girişinden devam edin.',
+      });
+    }
 
-    this.eventEmitter.emit(
-      'partner.registered',
-      new PartnerRegisteredEvent(
-        result.partner.id,
-        result.user.id,
-        result.partner.contactEmail,
-        verificationToken,
-      ),
-    );
-
-    this.eventEmitter.emit(
-      'user.registered',
-      new UserRegisteredEvent(
-        result.user.id,
-        result.user.email,
-        result.user.role,
-      ),
-    );
-
-    const webBase = this.partnerWebBaseUrl();
-
-    await this.emailQueue.enqueue({
-      to: result.partner.contactEmail,
-      template: 'partner-verify',
+    const agency = await this.prisma.agency.create({
       data: {
-        companyName: result.partner.companyName,
-        verifyUrl: `${webBase}/partner-verification/verify?token=${verificationToken}`,
-        token: verificationToken,
+        companyName,
+        taxNumber,
+        legalTitle: companyName,
+        address: 'Adres girilecek',
+        contactEmail: email,
+        contactPhone: dto.contactPhone,
+        status: 'PENDING',
+        capabilities: ['TOURS'],
       },
     });
 
-    // Do not issue dashboard session until editor approves (status VERIFIED).
+    const staff = await this.prisma.agencyStaff.create({
+      data: {
+        agencyId: agency.id,
+        name:
+          [dto.firstName, dto.lastName].filter(Boolean).join(' ').trim() ||
+          companyName,
+        email,
+        passwordHash,
+        role: 'AGENCY_OWNER',
+        status: 'ACTIVE',
+      },
+    });
+
+    // Consumer: DomainAuditListener — onay e-postası partner.verified’da
+    this.eventEmitter.emit(
+      'partner.registered',
+      new PartnerRegisteredEvent(agency.id, staff.id, email, ''),
+    );
+
     return {
       success: true,
       data: {
-        partner: {
-          id: result.partner.id,
-          companyName: result.partner.companyName,
-          status: result.partner.status,
-          contactEmail: result.partner.contactEmail,
+        agency: {
+          id: agency.id,
+          companyName: agency.companyName,
+          status: agency.status,
+          contactEmail: agency.contactEmail,
         },
-        user: this.toSharedUser(result.user),
         message:
-          'Partner kaydı oluşturuldu. E-posta doğrulamasından sonra editör onayı beklenir.',
+          'Acente kaydı oluşturuldu. Onay sonrası agency-staff girişi ile panele erişin.',
       },
       error: null,
     };
   }
 
-  async verifyPartner(token: string) {
-    const partner = await this.prisma.partner.findFirst({
-      where: {
-        verificationToken: token,
-        deletedAt: null,
-      },
+  async verifyPartner(_token: string) {
+    throw new NotFoundException({
+      code: 'LEGACY_PARTNER_VERIFY_DROPPED',
+      message:
+        'Eski partner doğrulama kaldırıldı. Acente kaydı AgencyStaff girişi ile çalışır.',
     });
-
-    if (!partner) {
-      throw new NotFoundException({
-        code: 'INVALID_VERIFICATION_TOKEN',
-        message: 'Doğrulama tokenı geçersiz veya süresi dolmuş',
-      });
-    }
-
-    // Email confirm only — stay PENDING until admin/editor sets VERIFIED.
-    const updated = await this.prisma.partner.update({
-      where: { id: partner.id },
-      data: {
-        verificationToken: null,
-      },
-    });
-
-    return {
-      success: true,
-      data: {
-        id: updated.id,
-        companyName: updated.companyName,
-        status: updated.status,
-        verifiedAt: updated.verifiedAt?.toISOString() ?? null,
-        message:
-          'E-posta doğrulandı. Hesabınız editör onayına alındı; onay maili geldikten sonra giriş yapabilirsiniz.',
-      },
-      error: null,
-    };
   }
 
   private partnerWebBaseUrl(): string {
@@ -495,68 +471,14 @@ export class IdentityService {
       .replace(/\/$/, '');
   }
 
-  private async assertPartnerCanLogin(user: {
-    role: UserRole;
-    partnerId: string | null;
-  }): Promise<void> {
+  private async assertPartnerCanLogin(user: { role: UserRole }): Promise<void> {
     if (
-      user.role !== UserRole.PARTNER &&
-      user.role !== UserRole.PARTNER_STAFF
+      user.role === UserRole.PARTNER ||
+      user.role === UserRole.PARTNER_STAFF
     ) {
-      return;
-    }
-    if (!user.partnerId) {
       throw new BusinessException(
-        'PARTNER_NOT_LINKED',
-        'Partner hesabı bulunamadı. Destek ile iletişime geçin.',
-        403,
-      );
-    }
-
-    const partner = await this.prisma.partner.findFirst({
-      where: { id: user.partnerId, deletedAt: null },
-      select: {
-        status: true,
-        verificationToken: true,
-      },
-    });
-
-    if (!partner) {
-      throw new BusinessException(
-        'PARTNER_NOT_FOUND',
-        'Partner hesabı bulunamadı.',
-        403,
-      );
-    }
-
-    if (partner.verificationToken) {
-      throw new BusinessException(
-        'PARTNER_EMAIL_NOT_VERIFIED',
-        'E-posta adresiniz henüz doğrulanmamış. Lütfen gelen kutunuzdaki bağlantıyı kullanın.',
-        403,
-      );
-    }
-
-    if (partner.status === 'PENDING') {
-      throw new BusinessException(
-        'PARTNER_PENDING_APPROVAL',
-        'Hesabınız henüz onaylanmamış. Editör onayını bekleyin; onay maili geldikten sonra giriş yapabilirsiniz.',
-        403,
-      );
-    }
-
-    if (partner.status === 'REJECTED') {
-      throw new BusinessException(
-        'PARTNER_REJECTED',
-        'Hesabınız reddedilmiş. Daha fazla bilgi için bizimle iletişime geçin.',
-        403,
-      );
-    }
-
-    if (partner.status === 'SUSPENDED') {
-      throw new BusinessException(
-        'PARTNER_SUSPENDED',
-        'Hesabınız askıya alınmış. Daha fazla bilgi için bizimle iletişime geçin.',
+        'USE_AGENCY_STAFF_LOGIN',
+        'Partner girişi kaldırıldı. /partner-login üzerinden acente personeli girişi kullanın.',
         403,
       );
     }
@@ -570,7 +492,7 @@ export class IdentityService {
 
     const existingUser = await this.prisma.user.findFirst({
       where: { email: normalized, deletedAt: null },
-      select: { id: true, role: true, partnerId: true },
+      select: { id: true, role: true },
     });
 
     if (existingUser) {
@@ -610,7 +532,7 @@ export class IdentityService {
     }
 
     if (context === 'partner') {
-      const existingPartner = await this.prisma.partner.findFirst({
+      const existingPartner = await this.prisma.agency.findFirst({
         where: { contactEmail: normalized, deletedAt: null },
         select: { id: true },
       });
@@ -637,12 +559,37 @@ export class IdentityService {
     return user;
   }
 
-  private async issueTokens(payload: JwtPayload) {
-    const accessToken = await this.jwtService.signAsync(payload);
+  private withRefresh<T>(
+    data: T,
+    tokens: {
+      refreshTokenRaw?: string;
+      refreshExpiresAt?: Date;
+    },
+  ): AuthSuccessWithRefresh<T> {
     return {
-      accessToken,
-      tokenType: 'Bearer' as const,
-      expiresIn: this.config.get<string>('JWT_EXPIRES_IN', '15m'),
+      success: true,
+      data,
+      error: null,
+      ...(tokens.refreshTokenRaw && tokens.refreshExpiresAt
+        ? {
+            refresh: {
+              raw: tokens.refreshTokenRaw,
+              expiresAt: tokens.refreshExpiresAt,
+            },
+          }
+        : {}),
+    };
+  }
+
+  private publicTokens(tokens: {
+    accessToken: string;
+    tokenType: 'Bearer';
+    expiresIn: string;
+  }) {
+    return {
+      accessToken: tokens.accessToken,
+      tokenType: tokens.tokenType,
+      expiresIn: tokens.expiresIn,
     };
   }
 
@@ -666,7 +613,6 @@ export class IdentityService {
     billingPostalCode?: string | null;
     billingCountry?: string | null;
     role: UserRole;
-    partnerId: string | null;
     permissions?: Prisma.JsonValue | null;
     isActive: boolean;
     createdAt: Date;
@@ -696,8 +642,8 @@ export class IdentityService {
       billingState: user.billingState ?? null,
       billingPostalCode: user.billingPostalCode ?? null,
       billingCountry: user.billingCountry ?? null,
-      role: user.role,
-      partnerId: user.partnerId,
+      role: user.role as SharedUser['role'],
+      partnerId: null,
       permissions,
       isActive: user.isActive,
       createdAt: user.createdAt.toISOString(),

@@ -1,33 +1,13 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { format } from 'date-fns';
-import { tr } from 'date-fns/locale';
-import {
-  AlertCircle,
-  Building2,
-  CalendarDays,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  CreditCard,
-  MapPin,
-  Users,
-} from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import type { Experience, Tour } from '@turta/shared-types';
+import type { ActivityDate, User } from '@turta/shared-types';
 
 import { BookingSteps } from '@/components/booking/booking-steps';
-import { EmailOtpPanel } from '@/components/features/auth/email-otp-panel';
-import {
-  PhoneInput,
-  formatFullPhone,
-  parsePhoneValue,
-} from '@/components/ui/phone-input';
-import { SHARED_ADULT_KEY, SHARED_CHILD_KEY } from '@/lib/booking-utils';
-import { BANK_TRANSFER_DETAILS } from '@/lib/constants/bank-transfer';
 import { getPhoneValidationError, isValidFullPhone } from '@/lib/phone-rules';
 import { isValidTckn } from '@/lib/tckn';
 import { ApiError } from '@/services/api-client';
@@ -42,173 +22,28 @@ import {
 import { checkoutPayment, createReservation } from '@/services/booking';
 import { guestBootstrap, getProfile } from '@/services/identity';
 import { useAuth } from '@/providers/auth-provider';
-import type { ActivityDate, User } from '@turta/shared-types';
-
-type CardBrand = 'visa' | 'mastercard' | 'amex' | 'unknown';
-
-function digitsOnly(value: string): string {
-  return value.replace(/\D/g, '');
-}
-
-function detectCardBrand(cardNumber: string): CardBrand {
-  const digits = digitsOnly(cardNumber);
-  if (/^4/.test(digits)) return 'visa';
-  if (/^3[47]/.test(digits)) return 'amex';
-  if (/^5[1-5]/.test(digits) || /^2(2[2-9]|[3-6]\d|7[01])/.test(digits)) {
-    return 'mastercard';
-  }
-  return 'unknown';
-}
-
-function formatCardNumberInput(value: string, brand: CardBrand): string {
-  const maxLen = brand === 'amex' ? 15 : 16;
-  const digits = digitsOnly(value).slice(0, maxLen);
-  if (brand === 'amex') {
-    // 4-6-5 grouping
-    const parts = [
-      digits.slice(0, 4),
-      digits.slice(4, 10),
-      digits.slice(10, 15),
-    ].filter(Boolean);
-    return parts.join(' ');
-  }
-  return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
-}
-
-function formatExpiryInput(value: string): string {
-  const digits = digitsOnly(value).slice(0, 4);
-  if (digits.length <= 2) return digits;
-  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-}
-
-function formatCvcInput(value: string, brand: CardBrand): string {
-  const maxLen = brand === 'amex' ? 4 : 3;
-  return digitsOnly(value).slice(0, maxLen);
-}
-
-const CARD_BRAND_LABEL: Record<CardBrand, string> = {
-  visa: 'Visa',
-  mastercard: 'Mastercard',
-  amex: 'Amex',
-  unknown: '',
-};
-
-type GuestForm = {
-  firstName: string;
-  lastName: string;
-  birthDate: string;
-  identityNumber: string;
-  phoneDial: string;
-  phoneLocal: string;
-  email: string;
-  address: string;
-  role: 'primary' | 'adult' | 'child';
-};
-
-type PaymentMethod = 'bank_transfer' | 'card';
-
-const STEPS = [
-  { id: '01', name: 'Özet', description: 'Rezervasyon detaylarını inceleyin' },
-  { id: '02', name: 'Bilgiler', description: 'Katılımcı ve fatura bilgileri' },
-  { id: '03', name: 'Ödeme', description: 'Ödeme yöntemini seçin' },
-  { id: '04', name: 'Onay', description: 'Rezervasyonu tamamlayın' },
-];
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat('tr-TR', {
-    style: 'currency',
-    currency: 'TRY',
-  }).format(price);
-}
-
-function emptyGuest(role: GuestForm['role']): GuestForm {
-  return {
-    firstName: '',
-    lastName: '',
-    birthDate: '',
-    identityNumber: '',
-    phoneDial: '+90',
-    phoneLocal: '',
-    email: '',
-    address: '',
-    role,
-  };
-}
-
-function parsePartySize(searchParams: URLSearchParams): {
-  adults: number;
-  children: number;
-} {
-  const adultsParam = Number(searchParams.get('adults') || '');
-  const childrenParam = Number(searchParams.get('children') || '');
-  if (Number.isFinite(adultsParam) && adultsParam >= 1) {
-    return {
-      adults: adultsParam,
-      children:
-        Number.isFinite(childrenParam) && childrenParam >= 0
-          ? childrenParam
-          : 0,
-    };
-  }
-
-  const raw = searchParams.get('participants');
-  if (!raw) return { adults: 1, children: 0 };
-  try {
-    const parsed = JSON.parse(raw) as Record<string, number>;
-    if (SHARED_ADULT_KEY in parsed || SHARED_CHILD_KEY in parsed) {
-      return {
-        adults: Number(parsed[SHARED_ADULT_KEY] || 0) || 1,
-        children: Number(parsed[SHARED_CHILD_KEY] || 0) || 0,
-      };
-    }
-    if (typeof parsed.total === 'number' && parsed.total >= 1) {
-      return { adults: parsed.total, children: 0 };
-    }
-    const sum = Object.values(parsed).reduce(
-      (acc, value) => acc + (Number(value) || 0),
-      0,
-    );
-    return { adults: Math.max(1, sum), children: 0 };
-  } catch {
-    return { adults: 1, children: 0 };
-  }
-}
-
-function toDateInputValue(value: string | null | undefined): string {
-  if (!value?.trim()) return '';
-  // Profile API returns YYYY-MM-DD; tolerate ISO datetime. Clamp year to 4 digits.
-  const match = value.trim().match(/^(\d+)-(\d{2})-(\d{2})/);
-  if (!match) return '';
-  return `${match[1].slice(0, 4)}-${match[2]}-${match[3]}`;
-}
-
-function clampBirthDateInput(raw: string): string {
-  if (!raw) return '';
-  const match = /^(\d+)-(\d{1,2})-(\d{1,2})$/.exec(raw);
-  if (!match) return raw.slice(0, 10);
-  const year = match[1].slice(0, 4);
-  const month = match[2].padStart(2, '0').slice(0, 2);
-  const day = match[3].padStart(2, '0').slice(0, 2);
-  return `${year}-${month}-${day}`;
-}
-
-function applyProfileToPrimaryGuest(
-  primary: GuestForm,
-  profile: User,
-): GuestForm {
-  const parsedPhone = parsePhoneValue(profile.phone ?? '');
-  return {
-    ...primary,
-    firstName: profile.firstName ?? '',
-    lastName: profile.lastName ?? '',
-    email: profile.email ?? '',
-    phoneDial: parsedPhone.countryCode,
-    phoneLocal: parsedPhone.localNumber,
-    identityNumber: profile.identityNumber ?? '',
-    birthDate: toDateInputValue(profile.birthDate),
-    address: profile.address ?? '',
-  };
-}
+import { SHARED_ADULT_KEY, SHARED_CHILD_KEY } from '@/lib/booking-utils';
+import { formatFullPhone } from '@/components/ui/phone-input';
+import {
+  applyProfileToPrimaryGuest,
+  detectCardBrand,
+  digitsOnly,
+  emptyGuest,
+  parsePartySize,
+  STEPS,
+  CARD_BRAND_LABEL,
+  type GuestForm,
+  type PaymentMethod,
+} from './checkout/checkout.helpers';
+import {
+  CheckoutUiProvider,
+  type CheckoutUiContextValue,
+} from './checkout/checkout-context';
+import { CheckoutStepSummary } from './checkout/checkout-step-summary';
+import { CheckoutStepGuests } from './checkout/checkout-step-guests';
+import { CheckoutStepPayment } from './checkout/checkout-step-payment';
+import { CheckoutStepConfirm } from './checkout/checkout-step-confirm';
+import { CheckoutSidebar } from './checkout/checkout-sidebar';
 
 export function CheckoutClient() {
   const router = useRouter();
@@ -687,680 +522,109 @@ export function CheckoutClient() {
     );
   }
 
+  const ui: CheckoutUiContextValue = {
+    currentStep,
+    setCurrentStep,
+    isGuest,
+    isTour,
+    title,
+    image,
+    startDate,
+    endDate,
+    party,
+    unitPrice,
+    totalPrice,
+    guests,
+    updateGuest,
+    pickupPoints,
+    pickupPointId,
+    setPickupPointId,
+    billingFullName,
+    setBillingFullName,
+    billingLine1,
+    setBillingLine1,
+    billingCity,
+    setBillingCity,
+    billingCountry,
+    setBillingCountry,
+    taxId,
+    setTaxId,
+    companyName,
+    setCompanyName,
+    specialRequests,
+    setSpecialRequests,
+    handleStep2Next,
+    paymentMethod,
+    setPaymentMethod,
+    bankTransferAck,
+    setBankTransferAck,
+    cardName,
+    setCardName,
+    cardNumber,
+    setCardNumber,
+    cardExpiry,
+    setCardExpiry,
+    cardCvc,
+    setCardCvc,
+    cardBrand,
+    cardBrandLabel,
+    expectedCvcLength,
+    primaryEmail,
+    emailOtpVerified,
+    setEmailOtpVerified,
+    canProceedPayment,
+    submitting,
+    handleSubmit,
+  };
+
   return (
-    <div className="min-h-screen bg-neutral-50 pb-14 pt-8 sm:pt-10">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-8 text-center">
-            <h1 className="mb-2 text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl">
-              Rezervasyonunu Tamamla
-            </h1>
-            <p className="text-lg text-neutral-600">
-              Bilgilerini kontrol et, katılımcı detaylarını ekle ve
-              rezervasyonunu güvenle tamamla.
-            </p>
-          </div>
-
-          {isGuest ? (
-            <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              Üye olmadan devam ediyorsunuz. Fatura ve tüm katılımcı bilgileri
-              alınacaktır.{' '}
-              <Link href={loginCallback} className="font-semibold underline">
-                Giriş yap
-              </Link>
-            </div>
-          ) : null}
-
-          <div className="mb-8">
-            <BookingSteps steps={activeSteps} />
-          </div>
-
-          {error ? (
-            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          ) : null}
-
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-            <div className="space-y-6 lg:col-span-2">
-              {currentStep === 0 ? (
-                <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm sm:p-8">
-                  <h2 className="mb-6 text-xl font-bold text-neutral-900">
-                    Rezervasyon Özeti
-                  </h2>
-                  <div className="space-y-4">
-                    <div className="flex gap-4 rounded-lg border border-neutral-100 bg-neutral-50 p-4">
-                      <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-neutral-950" />
-                      <div>
-                        <p className="text-sm font-medium text-neutral-700">
-                          Tarih
-                        </p>
-                        <p className="font-semibold text-neutral-900">
-                          {startDate
-                            ? format(new Date(startDate), 'd MMMM yyyy', {
-                                locale: tr,
-                              })
-                            : '—'}
-                          {endDate
-                            ? ` – ${format(new Date(endDate), 'd MMMM yyyy', { locale: tr })}`
-                            : ''}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4 rounded-lg border border-neutral-100 bg-neutral-50 p-4">
-                      <Users className="mt-0.5 h-5 w-5 shrink-0 text-neutral-950" />
-                      <div>
-                        <p className="text-sm font-medium text-neutral-700">
-                          Katılımcılar
-                        </p>
-                        <p className="font-semibold text-neutral-900">
-                          {party.adults} yetişkin
-                          {party.children > 0
-                            ? `, ${party.children} çocuk`
-                            : ''}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4 rounded-lg border border-neutral-100 bg-neutral-50 p-4">
-                      <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-neutral-950" />
-                      <div>
-                        <p className="text-sm font-medium text-neutral-700">
-                          Ürün
-                        </p>
-                        <p className="font-semibold text-neutral-900">
-                          {title}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-8 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentStep(1)}
-                      className="inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
-                    >
-                      Devam et
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              {currentStep === 1 ? (
-                <div className="space-y-6">
-                  {guests.map((guest, index) => {
-                    const heading =
-                      guest.role === 'primary'
-                        ? isGuest
-                          ? 'Birincil katılımcı / iletişim'
-                          : 'Üye bilgileri'
-                        : guest.role === 'child'
-                          ? `Çocuk ${guests.filter((g, i) => g.role === 'child' && i <= index).length}`
-                          : `Ek yetişkin ${index}`;
-                    return (
-                      <div
-                        key={`${guest.role}-${index}`}
-                        className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm sm:p-8"
-                      >
-                        <h2 className="mb-4 text-lg font-bold text-neutral-900">
-                          {heading}
-                        </h2>
-                        {!isGuest &&
-                        guest.role === 'primary' &&
-                        party.adults > 1 ? (
-                          <p className="mb-4 text-xs text-neutral-500">
-                            Üyelik bilgileriniz birincil katılımcı olarak
-                            kullanılır. Diğer kişiler için ayrı form doldurun.
-                          </p>
-                        ) : null}
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <div>
-                            <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-                              Ad <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              value={guest.firstName}
-                              onChange={(e) =>
-                                updateGuest(index, {
-                                  firstName: e.target.value,
-                                })
-                              }
-                              placeholder="Ad"
-                              className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-                              Soyad <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              value={guest.lastName}
-                              onChange={(e) =>
-                                updateGuest(index, { lastName: e.target.value })
-                              }
-                              placeholder="Soyad"
-                              className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-                              TC Kimlik No{' '}
-                              <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              value={guest.identityNumber}
-                              onChange={(e) =>
-                                updateGuest(index, {
-                                  identityNumber: e.target.value
-                                    .replace(/\D/g, '')
-                                    .slice(0, 11),
-                                })
-                              }
-                              placeholder="11 haneli TC kimlik no"
-                              inputMode="numeric"
-                              maxLength={11}
-                              className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-                              Doğum Tarihi
-                            </label>
-                            <input
-                              type="date"
-                              value={guest.birthDate}
-                              min="1900-01-01"
-                              max={new Date().toISOString().slice(0, 10)}
-                              onChange={(e) =>
-                                updateGuest(index, {
-                                  birthDate: clampBirthDateInput(
-                                    e.target.value,
-                                  ),
-                                })
-                              }
-                              className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                            />
-                          </div>
-                          {guest.role === 'primary' ? (
-                            <>
-                              <PhoneInput
-                                countryCode={guest.phoneDial}
-                                onCountryCodeChange={(dial) =>
-                                  updateGuest(index, { phoneDial: dial })
-                                }
-                                value={guest.phoneLocal}
-                                onChange={(local) =>
-                                  updateGuest(index, { phoneLocal: local })
-                                }
-                                required
-                              />
-                              <div className="sm:col-span-2">
-                                <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-                                  E-posta{' '}
-                                  <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  value={guest.email}
-                                  onChange={(e) =>
-                                    updateGuest(index, {
-                                      email: e.target.value,
-                                    })
-                                  }
-                                  type="email"
-                                  placeholder="E-posta"
-                                  className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                                  required
-                                />
-                              </div>
-                              <div className="sm:col-span-2">
-                                <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-                                  Adres
-                                  <span className="text-red-500"> *</span>
-                                </label>
-                                <input
-                                  value={guest.address}
-                                  onChange={(e) =>
-                                    updateGuest(index, {
-                                      address: e.target.value,
-                                    })
-                                  }
-                                  placeholder="Açık adres"
-                                  className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                                  required
-                                />
-                              </div>
-                            </>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {isTour && pickupPoints.length > 0 ? (
-                    <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm sm:p-8">
-                      <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-neutral-900">
-                        <MapPin className="h-5 w-5" />
-                        Kalkış noktası
-                      </h2>
-                      <select
-                        value={pickupPointId}
-                        onChange={(e) => setPickupPointId(e.target.value)}
-                        className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                      >
-                        {pickupPoints.map((point) => (
-                          <option key={point.id} value={point.id}>
-                            {point.city} — {point.location} ({point.time})
-                          </option>
-                        ))}
-                      </select>
-                      <p className="mt-2 text-xs text-neutral-500">
-                        Koltuk numarası partner tarafından atanacaktır.
-                      </p>
-                    </div>
-                  ) : null}
-
-                  <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm sm:p-8">
-                    <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-neutral-900">
-                      <Building2 className="h-5 w-5" />
-                      Fatura bilgileri
-                      <span className="text-xs font-normal text-neutral-500">
-                        (zorunlu)
-                      </span>
-                    </h2>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      <div className="sm:col-span-2">
-                        <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-                          Ödeme / fatura sahibi{' '}
-                          <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          value={billingFullName}
-                          onChange={(e) => setBillingFullName(e.target.value)}
-                          placeholder="Ad Soyad"
-                          className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                          required
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-                          Fatura adresi <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          value={billingLine1}
-                          onChange={(e) => setBillingLine1(e.target.value)}
-                          placeholder="Fatura adresi"
-                          className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-                          Şehir <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          value={billingCity}
-                          onChange={(e) => setBillingCity(e.target.value)}
-                          placeholder="Şehir"
-                          className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1.5 block text-sm font-medium text-neutral-700">
-                          Ülke <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          value={billingCountry}
-                          onChange={(e) => setBillingCountry(e.target.value)}
-                          placeholder="Ülke"
-                          className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                          required
-                        />
-                      </div>
-                      <input
-                        value={taxId}
-                        onChange={(e) =>
-                          setTaxId(
-                            e.target.value.replace(/\D/g, '').slice(0, 11),
-                          )
-                        }
-                        placeholder="Vergi / TC No (opsiyonel)"
-                        className="h-11 rounded-lg border border-neutral-300 px-3 text-sm"
-                        inputMode="numeric"
-                        maxLength={11}
-                      />
-                      <input
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        placeholder="Firma unvanı (opsiyonel)"
-                        className="h-11 rounded-lg border border-neutral-300 px-3 text-sm"
-                      />
-                    </div>
-                    <textarea
-                      value={specialRequests}
-                      onChange={(e) => setSpecialRequests(e.target.value)}
-                      placeholder="Özel istekler / notlar (opsiyonel)"
-                      className="mt-3 min-h-[88px] w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
-                    />
-                  </div>
-
-                  <div className="flex justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentStep(0)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-medium text-neutral-800 hover:bg-neutral-50"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Geri
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleStep2Next}
-                      className="inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800"
-                    >
-                      Devam et
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              {currentStep === 2 ? (
-                <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm sm:p-8">
-                  <h2 className="mb-6 text-xl font-bold text-neutral-900">
-                    Ödeme Yöntemi
-                  </h2>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPaymentMethod('bank_transfer');
-                        setBankTransferAck(false);
-                      }}
-                      className={`rounded-xl border p-4 text-left ${
-                        paymentMethod === 'bank_transfer'
-                          ? 'border-neutral-950 bg-neutral-50'
-                          : 'border-neutral-200'
-                      }`}
-                    >
-                      <Building2 className="mb-2 h-5 w-5" />
-                      <p className="font-semibold">Havale / EFT</p>
-                      <p className="text-xs text-neutral-500">
-                        IBAN bilgilerini görüp onaylayın
-                      </p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPaymentMethod('card');
-                        setBankTransferAck(false);
-                      }}
-                      className={`rounded-xl border p-4 text-left ${
-                        paymentMethod === 'card'
-                          ? 'border-neutral-950 bg-neutral-50'
-                          : 'border-neutral-200'
-                      }`}
-                    >
-                      <CreditCard className="mb-2 h-5 w-5" />
-                      <p className="font-semibold">Kredi / Banka Kartı</p>
-                      <p className="text-xs text-neutral-500">
-                        Kart (3DS): …0008 mock 3DS · …0000 red · İyzico key
-                        varsa sandbox test kartı
-                      </p>
-                    </button>
-                  </div>
-
-                  {paymentMethod === 'bank_transfer' ? (
-                    <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-                      <p className="font-semibold">Havale / EFT bilgileri</p>
-                      <dl className="mt-3 space-y-2 text-sm">
-                        <div className="flex justify-between gap-3">
-                          <dt className="text-amber-800/80">Banka</dt>
-                          <dd className="font-medium text-right">
-                            {BANK_TRANSFER_DETAILS.bankName}
-                          </dd>
-                        </div>
-                        <div className="flex justify-between gap-3">
-                          <dt className="text-amber-800/80">Hesap sahibi</dt>
-                          <dd className="font-medium text-right">
-                            {BANK_TRANSFER_DETAILS.accountHolder}
-                          </dd>
-                        </div>
-                        <div className="flex justify-between gap-3">
-                          <dt className="text-amber-800/80">Şube</dt>
-                          <dd className="font-medium text-right">
-                            {BANK_TRANSFER_DETAILS.branch}
-                          </dd>
-                        </div>
-                        <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-3">
-                          <dt className="text-amber-800/80">IBAN</dt>
-                          <dd className="font-mono text-sm font-semibold tracking-wide sm:text-right">
-                            {BANK_TRANSFER_DETAILS.iban}
-                          </dd>
-                        </div>
-                      </dl>
-                      <p className="mt-3 text-xs text-amber-800">
-                        {BANK_TRANSFER_DETAILS.descriptionHint}. Partner ödemeyi
-                        onayladıktan sonra rezervasyon kesinleşir.
-                      </p>
-                      <label className="mt-4 flex cursor-pointer items-start gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={bankTransferAck}
-                          onChange={(e) => setBankTransferAck(e.target.checked)}
-                          className="mt-1 h-4 w-4 rounded border-amber-400"
-                        />
-                        <span>
-                          IBAN ve havale bilgilerini okudum, ödemeyi bu hesaba
-                          yapacağımı onaylıyorum.
-                        </span>
-                      </label>
-                    </div>
-                  ) : null}
-
-                  {paymentMethod === 'card' ? (
-                    <div className="mt-6 space-y-3">
-                      <input
-                        value={cardName}
-                        onChange={(e) => setCardName(e.target.value)}
-                        placeholder="Kart üzerindeki isim"
-                        autoComplete="cc-name"
-                        className="h-11 w-full rounded-lg border border-neutral-300 px-3 text-sm"
-                      />
-                      <div className="relative">
-                        <input
-                          value={cardNumber}
-                          onChange={(e) => {
-                            const nextBrand = detectCardBrand(e.target.value);
-                            setCardNumber(
-                              formatCardNumberInput(e.target.value, nextBrand),
-                            );
-                            setCardCvc((prev) =>
-                              formatCvcInput(prev, nextBrand),
-                            );
-                          }}
-                          placeholder="5528 7900 0000 0008"
-                          inputMode="numeric"
-                          autoComplete="cc-number"
-                          maxLength={19}
-                          className="h-11 w-full rounded-lg border border-neutral-300 px-3 pr-28 text-sm tracking-wide"
-                        />
-                        {cardBrandLabel ? (
-                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-semibold uppercase tracking-wide text-neutral-600">
-                            {cardBrandLabel}
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          value={cardExpiry}
-                          onChange={(e) =>
-                            setCardExpiry(formatExpiryInput(e.target.value))
-                          }
-                          placeholder="AA/YY"
-                          inputMode="numeric"
-                          autoComplete="cc-exp"
-                          maxLength={5}
-                          className="h-11 rounded-lg border border-neutral-300 px-3 text-sm"
-                        />
-                        <input
-                          value={cardCvc}
-                          onChange={(e) =>
-                            setCardCvc(
-                              formatCvcInput(e.target.value, cardBrand),
-                            )
-                          }
-                          placeholder={cardBrand === 'amex' ? 'CVC (4)' : 'CVC'}
-                          inputMode="numeric"
-                          autoComplete="cc-csc"
-                          maxLength={expectedCvcLength}
-                          className="h-11 rounded-lg border border-neutral-300 px-3 text-sm"
-                        />
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="mt-6">
-                    <EmailOtpPanel
-                      email={primaryEmail}
-                      purpose="CHECKOUT"
-                      firstName={guests[0]?.firstName}
-                      verifyOnSubmit
-                      onVerified={() => setEmailOtpVerified(true)}
-                    />
-                    {!primaryEmail ? (
-                      <p className="mt-2 text-xs text-amber-700">
-                        Önce katılımcı formunda e-posta girin.
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-8 flex justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentStep(1)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-medium"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Geri
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!canProceedPayment}
-                      onClick={() => setCurrentStep(3)}
-                      className="inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-50"
-                    >
-                      Devam et
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-
-              {currentStep === 3 ? (
-                <div className="rounded-xl border border-neutral-200/70 bg-white p-6 shadow-sm sm:p-8">
-                  <h2 className="mb-6 text-xl font-bold text-neutral-900">
-                    Onay
-                  </h2>
-                  <ul className="space-y-2 text-sm text-neutral-700">
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
-                      {title}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
-                      {party.adults} yetişkin
-                      {party.children > 0 ? `, ${party.children} çocuk` : ''}
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
-                      {guests.length} katılımcı formu tamamlandı
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
-                      Ödeme:{' '}
-                      {paymentMethod === 'card' ? 'Kart' : 'Havale / EFT'}
-                    </li>
-                    {paymentMethod === 'bank_transfer' ? (
-                      <li className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-                        <p className="font-semibold">IBAN</p>
-                        <p className="mt-1 font-mono text-xs tracking-wide">
-                          {BANK_TRANSFER_DETAILS.iban}
-                        </p>
-                        <p className="mt-1 text-xs">
-                          {BANK_TRANSFER_DETAILS.bankName} ·{' '}
-                          {BANK_TRANSFER_DETAILS.accountHolder}
-                        </p>
-                      </li>
-                    ) : null}
-                    <li className="flex items-start gap-2 font-semibold">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
-                      Toplam: {formatPrice(totalPrice)}
-                    </li>
-                  </ul>
-                  <div className="mt-8 flex justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentStep(2)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-neutral-300 px-4 py-2.5 text-sm font-medium"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      Geri
-                    </button>
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      onClick={() => void handleSubmit()}
-                      className="inline-flex items-center gap-2 rounded-lg bg-neutral-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-60"
-                    >
-                      {submitting ? 'İşleniyor…' : 'Rezervasyonu tamamla'}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
+    <CheckoutUiProvider value={ui}>
+      <div className="min-h-screen bg-neutral-50 pb-14 pt-8 sm:pt-10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-5xl">
+            <div className="mb-8 text-center">
+              <h1 className="mb-2 text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl">
+                Rezervasyonunu Tamamla
+              </h1>
+              <p className="text-lg text-neutral-600">
+                Bilgilerini kontrol et, katılımcı detaylarını ekle ve
+                rezervasyonunu güvenle tamamla.
+              </p>
             </div>
 
-            <aside className="lg:col-span-1">
-              <div className="sticky top-24 overflow-hidden rounded-xl border border-neutral-200/70 bg-white shadow-sm">
-                <div className="relative aspect-[16/10] bg-neutral-200">
-                  {image ? (
-                    <Image
-                      src={image}
-                      alt={title}
-                      fill
-                      className="object-cover"
-                      sizes="320px"
-                    />
-                  ) : null}
-                </div>
-                <div className="space-y-3 p-5">
-                  <h3 className="text-lg font-bold text-neutral-900">
-                    {title}
-                  </h3>
-                  <p className="text-sm text-neutral-600">
-                    {party.adults} yetişkin
-                    {party.children > 0 ? ` · ${party.children} çocuk` : ''}
-                  </p>
-                  <div className="border-t border-neutral-100 pt-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-neutral-600">Birim</span>
-                      <span>{formatPrice(unitPrice)}</span>
-                    </div>
-                    <div className="mt-2 flex justify-between text-base font-bold">
-                      <span>Toplam</span>
-                      <span>{formatPrice(totalPrice)}</span>
-                    </div>
-                  </div>
-                </div>
+            {isGuest ? (
+              <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Üye olmadan devam ediyorsunuz. Fatura ve tüm katılımcı bilgileri
+                alınacaktır.{' '}
+                <Link href={loginCallback} className="font-semibold underline">
+                  Giriş yap
+                </Link>
               </div>
-            </aside>
+            ) : null}
+
+            <div className="mb-8">
+              <BookingSteps steps={activeSteps} />
+            </div>
+
+            {error ? (
+              <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                {error}
+              </div>
+            ) : null}
+
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              <div className="space-y-6 lg:col-span-2">
+                {currentStep === 0 ? <CheckoutStepSummary /> : null}
+                {currentStep === 1 ? <CheckoutStepGuests /> : null}
+                {currentStep === 2 ? <CheckoutStepPayment /> : null}
+                {currentStep === 3 ? <CheckoutStepConfirm /> : null}
+              </div>
+              <CheckoutSidebar />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </CheckoutUiProvider>
   );
 }
 

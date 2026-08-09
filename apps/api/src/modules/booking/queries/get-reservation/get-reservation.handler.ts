@@ -12,7 +12,7 @@ export class GetReservationHandler implements IQueryHandler<GetReservationQuery>
       query.reservationId,
       query.userId,
       query.role,
-      query.partnerId,
+      query.agencyId,
     );
   }
 }

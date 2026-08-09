@@ -6,6 +6,12 @@ import { SubUserService } from '../services/sub-user.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
 import { createPrismaMock } from '../../__tests__/test-helpers';
 
+const ownerActor = {
+  userId: 'staff-owner',
+  role: 'AGENCY_OWNER',
+  agencyId: 'a1',
+};
+
 describe('SubUserService', () => {
   let service: SubUserService;
   let prisma: ReturnType<typeof createPrismaMock>;
@@ -18,153 +24,112 @@ describe('SubUserService', () => {
     service = module.get(SubUserService);
   });
 
-  it('should list sub-users for partner owner', async () => {
-    (prisma.subUser.findMany as jest.Mock).mockResolvedValue([
+  it('should list AgencyStaff for agency owner', async () => {
+    (prisma.agencyStaff.findMany as jest.Mock).mockResolvedValue([
       {
         id: 's1',
-        partnerId: 'p1',
+        agencyId: 'a1',
         name: 'Ayşe',
         email: 'ayse@acme.com',
-        role: 'MANAGER',
+        role: 'AGENCY_STAFF',
         status: 'ACTIVE',
         permissions: { tours: ['read'] },
       },
     ]);
 
-    const result = await service.list('p1', {
-      userId: 'u1',
-      role: 'PARTNER',
-      partnerId: 'p1',
-    });
+    const result = await service.list('a1', ownerActor);
 
     expect(result.data).toHaveLength(1);
     expect(result.data[0].email).toBe('ayse@acme.com');
+    expect(result.data[0].partnerId).toBe('a1');
   });
 
-  it('should forbid listing another partner users', async () => {
+  it('should forbid listing another agency users', async () => {
     await expect(
-      service.list('p1', {
-        userId: 'u2',
-        role: 'PARTNER',
-        partnerId: 'p2',
+      service.list('a1', {
+        userId: 'staff-other',
+        role: 'AGENCY_OWNER',
+        agencyId: 'a2',
       }),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('should reject duplicate email', async () => {
-    (prisma.partner.findFirst as jest.Mock).mockResolvedValue({ id: 'p1' });
-    (prisma.subUser.findFirst as jest.Mock).mockResolvedValue({ id: 's1' });
+    (prisma.agency.findFirst as jest.Mock).mockResolvedValue({ id: 'a1' });
+    (prisma.agencyStaff.findFirst as jest.Mock).mockResolvedValue({ id: 's1' });
 
     await expect(
       service.create(
-        'p1',
+        'a1',
         { name: 'X', email: 'ayse@acme.com', password: 'StaffPass1' },
-        { userId: 'u1', role: 'PARTNER', partnerId: 'p1' },
+        ownerActor,
       ),
     ).rejects.toBeInstanceOf(BusinessException);
   });
 
-  it('should reject existing CUSTOMER email (one email one role)', async () => {
-    (prisma.partner.findFirst as jest.Mock).mockResolvedValue({ id: 'p1' });
-    (prisma.subUser.findFirst as jest.Mock).mockResolvedValue(null);
-    (prisma.user.findFirst as jest.Mock).mockResolvedValue({
-      id: 'u9',
-      email: 'musteri@acme.com',
-      role: 'CUSTOMER',
-      partnerId: null,
-    });
-
-    await expect(
-      service.create(
-        'p1',
-        {
-          name: 'Mehmet',
-          email: 'musteri@acme.com',
-          password: 'StaffPass1',
-        },
-        { userId: 'u1', role: 'PARTNER', partnerId: 'p1' },
-      ),
-    ).rejects.toBeInstanceOf(BusinessException);
-  });
-
-  it('should create new PARTNER_STAFF user with password', async () => {
-    (prisma.partner.findFirst as jest.Mock).mockResolvedValue({ id: 'p1' });
-    (prisma.subUser.findFirst as jest.Mock).mockResolvedValue(null);
-    (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
-    (prisma.user.create as jest.Mock).mockResolvedValue({
-      id: 'u-staff',
-      email: 'staff@acme.com',
-      role: 'PARTNER_STAFF',
-      partnerId: 'p1',
-    });
-    (prisma.subUser.create as jest.Mock).mockResolvedValue({
+  it('should create AgencyStaff with password (no User row)', async () => {
+    (prisma.agency.findFirst as jest.Mock).mockResolvedValue({ id: 'a1' });
+    (prisma.agencyStaff.findFirst as jest.Mock).mockResolvedValue(null);
+    (prisma.agencyStaff.create as jest.Mock).mockResolvedValue({
       id: 's2',
-      partnerId: 'p1',
-      userId: 'u-staff',
+      agencyId: 'a1',
       name: 'Staff',
       email: 'staff@acme.com',
-      role: 'USER',
+      role: 'AGENCY_STAFF',
       status: 'ACTIVE',
       permissions: {},
     });
 
     const result = await service.create(
-      'p1',
+      'a1',
       {
         name: 'Staff',
         email: 'staff@acme.com',
         password: 'StaffPass1',
       },
-      { userId: 'u1', role: 'PARTNER', partnerId: 'p1' },
+      ownerActor,
     );
 
     expect(result.data.id).toBe('s2');
-    expect(prisma.user.create).toHaveBeenCalled();
+    expect(prisma.agencyStaff.create).toHaveBeenCalled();
+    expect(prisma.user.create).not.toHaveBeenCalled();
   });
 
-  it('should update and soft-delete sub-user', async () => {
-    (prisma.subUser.findFirst as jest.Mock).mockResolvedValue({
+  it('should update and soft-delete AgencyStaff', async () => {
+    (prisma.agencyStaff.findFirst as jest.Mock).mockResolvedValue({
       id: 's1',
-      partnerId: 'p1',
-      userId: 'u9',
+      agencyId: 'a1',
       email: 'ayse@acme.com',
       deletedAt: null,
     });
-    (prisma.subUser.update as jest.Mock).mockResolvedValue({
+    (prisma.agencyStaff.update as jest.Mock).mockResolvedValue({
       id: 's1',
-      partnerId: 'p1',
-      userId: 'u9',
+      agencyId: 'a1',
       name: 'Ayşe Y.',
       email: 'ayse@acme.com',
-      role: 'MANAGER',
+      role: 'AGENCY_STAFF',
       status: 'ACTIVE',
       permissions: {},
     });
-    (prisma.user.findFirst as jest.Mock).mockResolvedValue({
-      id: 'u9',
-      role: 'PARTNER_STAFF',
-    });
-    (prisma.user.update as jest.Mock).mockResolvedValue({});
 
     const updated = await service.update(
-      'p1',
+      'a1',
       's1',
-      { name: 'Ayşe Y.', role: 'MANAGER' },
-      { userId: 'u1', role: 'PARTNER', partnerId: 'p1' },
+      { name: 'Ayşe Y.' },
+      ownerActor,
     );
     expect(updated.data.name).toBe('Ayşe Y.');
 
-    (prisma.subUser.findFirst as jest.Mock).mockResolvedValue({
+    (prisma.agencyStaff.findFirst as jest.Mock).mockResolvedValue({
       id: 's1',
-      partnerId: 'p1',
-      userId: 'u9',
+      agencyId: 'a1',
       deletedAt: null,
     });
-    (prisma.subUser.update as jest.Mock).mockResolvedValue({});
-    const deleted = await service.softDelete('p1', 's1', {
-      userId: 'u1',
+    (prisma.agencyStaff.update as jest.Mock).mockResolvedValue({});
+    const deleted = await service.softDelete('a1', 's1', {
+      userId: 'admin',
       role: 'ADMIN',
-      partnerId: undefined,
+      agencyId: undefined,
     });
     expect(deleted.data.deleted).toBe(true);
   });

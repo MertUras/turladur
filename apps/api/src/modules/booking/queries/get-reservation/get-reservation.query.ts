@@ -3,6 +3,6 @@ export class GetReservationQuery {
     public readonly reservationId: string,
     public readonly userId: string,
     public readonly role: string,
-    public readonly partnerId?: string,
+    public readonly agencyId?: string,
   ) {}
 }

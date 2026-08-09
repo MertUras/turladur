@@ -20,12 +20,11 @@ turta/
 ├── packages/
 │   ├── shared-types/       → Frontend + Backend ortak TypeScript tipleri
 │   ├── shared-validators/  → Zod şemaları (her iki tarafta aynı validation)
-│   ├── shared-constants/   → Enum, roller, status değerleri
-│   └── eslint-config/      → Paylaşılan lint kuralları
+│   └── shared-constants/   → Enum, roller, status değerleri
+│   # (eslint-config paketi henüz yok — root eslint.config.mjs; Faz 5’te eklenebilir)
 ├── infrastructure/
-│   ├── docker/             → docker-compose, Dockerfile'lar
-│   ├── nginx/              → Reverse proxy config
-│   └── scripts/            → Setup, migration, seed scriptleri
+│   └── docker/             → docker-compose (postgres, redis, minio, mailhog)
+│   # nginx: prod opsiyonel — bu repo’da klasör yok
 ├── nx.json
 ├── pnpm-workspace.yaml
 └── tsconfig.base.json
@@ -45,7 +44,7 @@ turta/
 | DB | PostgreSQL 16 |
 | Cache | Redis 7 |
 | Queue | BullMQ |
-| Auth | Nest identity + Passport JWT (`passport-jwt`) |
+| Auth | Nest identity + Passport JWT (`passport-jwt`) — Keycloak/OIDC **ertelendi** (zorunlu değil) |
 | Storage | MinIO (dev) / S3 (prod) |
 | Email | Resend |
 | Logging | Pino |
@@ -66,10 +65,11 @@ turta/
 - Modüller arası iletişim SADECE event (EventEmitter2 / BullMQ) ile olur.
 - Bir modül, başka modülün repository/service'ini import edemez.
 
-### 3. CQRS Deseni Uygulanır
-- Yazma işlemleri → Commands (CreateBookingCommand, UpdateTourCommand)
-- Okuma işlemleri → Queries (SearchHotelsQuery, GetTourDetailQuery)
-- Her command/query'nin kendi handler'ı vardır.
+### 3. CQRS Deseni (opsiyonel — karmaşık yazma akışlarında)
+- Zorunlu iskelet değil: her domain’e boş command/query klasörü eklenmez.
+- Karmaşık yazma → Commands (CreateBookingCommand, UpdateTourCommand) + handler
+- Karmaşık okuma → Queries (SearchHotelsQuery, GetTourDetailQuery) + handler
+- Basit CRUD service metodları yeterli olabilir; mevcut CQRS kullanımı korunur.
 
 ### 4. Event-Driven İletişim
 ```

@@ -31,7 +31,7 @@ alwaysApply: true
 - Access token: `Authorization: Bearer` — frontend memory state (`AuthProvider`); localStorage’a yazılmaz.
 - Tek e-posta → tek rol (CUSTOMER veya PARTNER); aynı e-posta ile çapraz kayıt engellenir.
 - MFA (2FA): henüz yok; ileride TOTP eklenebilir (kritik işlemler için).
-- Not: Harici IdP (Keycloak/OIDC) kullanılmıyor; gerekirse ayrı ürün kararı + migration gerekir.
+- Not: Harici IdP (Keycloak/OIDC) **kullanılmıyor ve local zorunluluk değil**; ertelenmiş ürün kararı + migration gerekir.
 
 ---
 

@@ -3,7 +3,7 @@ export class BookingCompletedEvent {
     public readonly reservationId: string,
     public readonly userId: string,
     public readonly tourId: string | null,
-    public readonly partnerId: string,
+    public readonly agencyId: string,
     public readonly contactEmail: string,
   ) {}
 }

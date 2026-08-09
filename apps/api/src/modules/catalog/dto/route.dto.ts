@@ -1,10 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class SearchRoutesDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   q?: string;
 
   @ApiPropertyOptional({
@@ -12,6 +13,7 @@ export class SearchRoutesDto {
   })
   @IsOptional()
   @IsString()
+  @IsIn(['historical', 'nature', 'beach', 'gastronomy', 'family'])
   category?: string;
 
   @ApiPropertyOptional({
@@ -19,6 +21,7 @@ export class SearchRoutesDto {
   })
   @IsOptional()
   @IsString()
+  @IsIn(['1-day', '2-3-days', '4-7-days', '7-plus-days'])
   duration?: string;
 
   @ApiPropertyOptional({
@@ -26,5 +29,6 @@ export class SearchRoutesDto {
   })
   @IsOptional()
   @IsString()
+  @IsIn(['spring', 'summer', 'autumn', 'winter'])
   season?: string;
 }

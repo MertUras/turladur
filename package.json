@@ -25,6 +25,8 @@
     "prepare": "husky",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "check:module-boundaries": "bash scripts/check-module-boundaries.sh",
+    "test:api": "pnpm --filter api test -- --runInBand --forceExit",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium"
   },

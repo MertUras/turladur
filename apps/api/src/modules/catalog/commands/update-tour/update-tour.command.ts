@@ -4,7 +4,7 @@ export class UpdateTourCommand {
   constructor(
     public readonly tourId: string,
     public readonly dto: UpdateTourDto,
-    public readonly partnerId: string | undefined,
+    public readonly agencyId: string | undefined,
     public readonly role: string,
   ) {}
 }

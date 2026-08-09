@@ -8,6 +8,6 @@ export class CreateTourHandler implements ICommandHandler<CreateTourCommand> {
   constructor(private readonly tourService: TourService) {}
 
   execute(command: CreateTourCommand) {
-    return this.tourService.create(command.dto, command.partnerId);
+    return this.tourService.create(command.dto, command.agencyId);
   }
 }

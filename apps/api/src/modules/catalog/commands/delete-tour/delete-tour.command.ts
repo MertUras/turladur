@@ -1,7 +1,8 @@
 export class DeleteTourCommand {
   constructor(
     public readonly tourId: string,
-    public readonly partnerId: string | undefined,
+    public readonly agencyId: string | undefined,
     public readonly role: string,
+    public readonly deletedBy?: string,
   ) {}
 }

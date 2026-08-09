@@ -1,11 +1,11 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
-import { Role } from '@turta/shared-constants';
 
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
 import { Roles } from '../../../core/auth/decorators/roles.decorator';
+import { PLATFORM_ADMIN_ROLES } from '../../../core/auth/utils/role-access';
 import { UserPayload } from '../../../core/auth/types/auth.types';
 import { SearchRoutesDto } from '../dto/route.dto';
 import { RouteService } from '../services/route.service';
@@ -25,7 +25,7 @@ export class RouteController {
 
   @Get('definitions')
   @ApiBearerAuth()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @ApiOperation({
     summary: 'Admin: list static route definitions (curated catalog)',
   })

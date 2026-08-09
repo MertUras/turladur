@@ -167,7 +167,7 @@ export function Header() {
   };
 
   const handlePartnerPortalClick = () => {
-    router.push('/partner-login');
+    router.push('/acente/giris');
   };
 
   // Açık zeminli sayfalar: şeffaf + beyaz link (hero stili) kullanılmaz
@@ -178,7 +178,7 @@ export function Header() {
     '/bookings',
     '/login',
     '/register',
-    '/partner-login',
+    '/acente/giris',
     '/partner-register',
     '/blog',
     '/tours',

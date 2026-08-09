@@ -15,6 +15,10 @@ import { Role } from '@turta/shared-constants';
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
 import { Roles } from '../../../core/auth/decorators/roles.decorator';
+import {
+  isPlatformAdminRole,
+  PLATFORM_ADMIN_ROLES,
+} from '../../../core/auth/utils/role-access';
 import { UserPayload } from '../../../core/auth/types/auth.types';
 import {
   CreateCommentDto,
@@ -35,7 +39,7 @@ export class PostController {
   @Get()
   @ApiOperation({ summary: 'List published posts' })
   search(@Query() dto: SearchPostsDto, @CurrentUser() user?: UserPayload) {
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+    const isAdmin = isPlatformAdminRole(user?.role);
     return this.contentService.searchPosts(dto, isAdmin);
   }
 
@@ -114,13 +118,13 @@ export class PostController {
     @Param('slugOrId') slugOrId: string,
     @CurrentUser() user?: UserPayload,
   ) {
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+    const isAdmin = isPlatformAdminRole(user?.role);
     return this.contentService.getPostBySlugOrId(slugOrId, isAdmin);
   }
 
   @Post()
   @ApiBearerAuth()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @ApiOperation({ summary: 'Create post (admin)' })
   create(@Body() dto: CreatePostDto, @CurrentUser() user: UserPayload) {
     return this.contentService.createPost(dto, user.userId);
@@ -128,7 +132,7 @@ export class PostController {
 
   @Patch(':id')
   @ApiBearerAuth()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @ApiOperation({ summary: 'Update post' })
   update(
     @Param('id') id: string,
@@ -143,7 +147,7 @@ export class PostController {
 
   @Delete(':id')
   @ApiBearerAuth()
-  @Roles(Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...PLATFORM_ADMIN_ROLES)
   @ApiOperation({ summary: 'Soft-delete post' })
   remove(@Param('id') id: string, @CurrentUser() user: UserPayload) {
     return this.contentService.softDeletePost(id, {

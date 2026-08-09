@@ -3,7 +3,7 @@ export class BookingCreatedEvent {
     public readonly reservationId: string,
     public readonly userId: string,
     public readonly tourDateId: string | null,
-    public readonly partnerId: string,
+    public readonly agencyId: string,
     public readonly totalAmount: string,
   ) {}
 }

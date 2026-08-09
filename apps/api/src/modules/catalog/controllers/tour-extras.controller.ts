@@ -9,7 +9,11 @@ import {
   Put,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Role } from '@turta/shared-constants';
+
+import {
+  AGENCY_SELLER_ROLES,
+  resolveActorId,
+} from '../../../core/auth/utils/role-access';
 
 import { CurrentUser } from '../../../core/auth/decorators/current-user.decorator';
 import { Public } from '../../../core/auth/decorators/public.decorator';
@@ -37,7 +41,7 @@ export class TourExtrasController {
 
   @Put('accommodation')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Create or update tour accommodation (1:1)' })
   upsertAccommodation(
@@ -48,14 +52,14 @@ export class TourExtrasController {
     return this.tourExtrasService.upsertAccommodation(
       tourId,
       dto,
-      user.partnerId,
+      user.agencyId,
       user.role,
     );
   }
 
   @Delete('accommodation')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Soft-delete tour accommodation' })
   deleteAccommodation(
@@ -64,8 +68,9 @@ export class TourExtrasController {
   ) {
     return this.tourExtrasService.deleteAccommodation(
       tourId,
-      user.partnerId,
+      user.agencyId,
       user.role,
+      resolveActorId(user),
     );
   }
 
@@ -78,7 +83,7 @@ export class TourExtrasController {
 
   @Post('pickup-points')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Add pickup point' })
   createPickupPoint(
@@ -89,14 +94,14 @@ export class TourExtrasController {
     return this.tourExtrasService.createPickupPoint(
       tourId,
       dto,
-      user.partnerId,
+      user.agencyId,
       user.role,
     );
   }
 
   @Patch('pickup-points/:pointId')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Update pickup point' })
   updatePickupPoint(
@@ -109,14 +114,14 @@ export class TourExtrasController {
       tourId,
       pointId,
       dto,
-      user.partnerId,
+      user.agencyId,
       user.role,
     );
   }
 
   @Delete('pickup-points/:pointId')
   @ApiBearerAuth()
-  @Roles(Role.PARTNER, Role.PARTNER_STAFF, Role.ADMIN, Role.SUPER_ADMIN)
+  @Roles(...AGENCY_SELLER_ROLES)
   @RequireStaffPermissions('tours')
   @ApiOperation({ summary: 'Soft-delete pickup point' })
   deletePickupPoint(
@@ -127,8 +132,9 @@ export class TourExtrasController {
     return this.tourExtrasService.deletePickupPoint(
       tourId,
       pointId,
-      user.partnerId,
+      user.agencyId,
       user.role,
+      resolveActorId(user),
     );
   }
 }

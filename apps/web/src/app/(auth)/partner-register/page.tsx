@@ -548,7 +548,7 @@ export default function PartnerRegisterPage() {
                 </button>
               ) : (
                 <Link
-                  href="/partner-login"
+                  href="/acente/giris"
                   className="inline-flex items-center justify-center rounded-lg border border-neutral-300 bg-white px-4 py-2 text-xs font-medium text-neutral-700 shadow-sm transition-colors duration-200 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
                 >
                   Giriş Yap
