@@ -1,17 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import {
-  Calendar,
-  ChevronDown,
-  Clock,
-  Filter,
-  MapPin,
-  Search,
-  SlidersHorizontal,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { Search, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useActivitiesPageUi } from './activities-page-context';
 

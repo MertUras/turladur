@@ -13,7 +13,6 @@ import {
   buildDepartureFacets,
   buildRegionFacets,
   countActiveFilters,
-  formatDateParam,
   mapTourFromApi,
   matchesClientExtrasFilters,
   normalizeFilterText,

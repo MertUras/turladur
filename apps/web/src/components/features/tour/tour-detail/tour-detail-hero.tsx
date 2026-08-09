@@ -34,7 +34,6 @@ export function TourDetailHero() {
     displayRating,
     displayReviewCount,
     nights,
-    itinerary,
     promptDateSelection,
   } = useTourDetailUi();
 

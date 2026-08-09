@@ -9,7 +9,7 @@ import type { LegacyTourCard as Tour } from '@/lib/tours/legacy-tour';
 import MembershipBadge from '@/components/features/tour/membership-badge';
 import StarRating from '@/components/features/tour/star-rating';
 import { resolveMediaUrl, shouldUnoptimizeMedia } from '@/lib/media';
-import { MapPin, Calendar, Clock, Heart, Zap, ArrowRight } from 'lucide-react';
+import { Calendar, Clock, Heart, Zap, ArrowRight } from 'lucide-react';
 import { formatPrice } from './tours-page.helpers';
 import { parseJsonString } from '@/lib/tours/parse';
 import type { TourDateWithPromotions } from './tours-page.types';

@@ -1,7 +1,7 @@
 'use client';
 
 import { Building2, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
-import { PhoneInput, parsePhoneValue } from '@/components/ui/phone-input';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 import { useCheckoutUi } from './checkout-context';
 import { clampBirthDateInput } from './checkout.helpers';

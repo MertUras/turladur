@@ -22,7 +22,6 @@ import {
 import { checkoutPayment, createReservation } from '@/services/booking';
 import { guestBootstrap, getProfile } from '@/services/identity';
 import { useAuth } from '@/providers/auth-provider';
-import { SHARED_ADULT_KEY, SHARED_CHILD_KEY } from '@/lib/booking-utils';
 import { formatFullPhone } from '@/components/ui/phone-input';
 import {
   applyProfileToPrimaryGuest,

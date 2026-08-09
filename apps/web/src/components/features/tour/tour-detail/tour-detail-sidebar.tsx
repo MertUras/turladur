@@ -16,7 +16,6 @@ import {
   Users as UserGroupIcon,
   XCircle as XCircleIcon,
 } from 'lucide-react';
-import { shouldUnoptimizeMedia } from '@/lib/media';
 import MembershipBadge from '@/components/features/tour/membership-badge';
 import { useTourDetailUi } from './tour-detail-context';
 import { renderStars } from './render-stars';
@@ -33,7 +32,6 @@ export function TourDetailSidebar() {
     inclusions,
     exclusions,
     healthPrivileges,
-    destinations,
     handleDateSelect,
     containerRef,
   } = useTourDetailUi();

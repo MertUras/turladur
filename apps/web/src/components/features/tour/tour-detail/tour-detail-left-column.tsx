@@ -13,7 +13,6 @@ import {
   ShieldCheck as ShieldCheckIcon,
   Users as UserGroupIcon,
 } from 'lucide-react';
-import { shouldUnoptimizeMedia } from '@/lib/media';
 import OperatorReviewsSection from '@/components/features/tour-operator/OperatorReviewsSection';
 import TourItineraryMobile from '@/components/features/tour/itinerary/tour-itinerary-mobile';
 import { stripDayPrefixFromTitle } from '@/components/features/tour/itinerary/normalize-itinerary';

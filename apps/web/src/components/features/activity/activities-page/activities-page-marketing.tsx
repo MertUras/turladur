@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   Calendar,
   ChevronRight,
-  Clock,
   MapPin,
   Star,
   Timer,

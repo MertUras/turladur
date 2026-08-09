@@ -20,8 +20,6 @@ export function ToursPageResults() {
     totalTours,
     currentPage,
     totalPages,
-    startIndex,
-    endIndex,
     resetFilters,
     handlePageChange,
     fetchError,

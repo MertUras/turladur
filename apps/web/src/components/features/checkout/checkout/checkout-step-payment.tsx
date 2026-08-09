@@ -32,7 +32,6 @@ export function CheckoutStepPayment() {
     expectedCvcLength,
     primaryEmail,
     guests,
-    emailOtpVerified,
     setEmailOtpVerified,
     canProceedPayment,
     setCurrentStep,

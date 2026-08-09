@@ -11,7 +11,6 @@ import {
   Plus,
   Star,
   Trash2,
-  Users,
   X,
 } from 'lucide-react';
 import MembershipBadge from '@/components/features/tour/membership-badge';
