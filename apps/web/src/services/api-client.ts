@@ -1,13 +1,19 @@
 import type { ApiResponse } from '@turta/shared-types';
 
 /**
- * Browser: prefer same-origin `/api/v1` (Next rewrite → Nest) so HttpOnly
- * refresh cookies work (SameSite=Lax). SSR/server: absolute Nest URL.
+ * Browser: always same-origin `/api/v1` (Next rewrite → Nest) so HttpOnly
+ * refresh cookies work (SameSite=Lax). Cross-origin NEXT_PUBLIC_API_URL breaks
+ * preview login (cookie on API host, middleware on web host → bounce to /login).
+ * SSR/server: absolute Nest URL via NEXT_PUBLIC_API_URL or localhost.
  */
 function resolveApiBase(): string {
-  const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (configured) return configured.replace(/\/$/, '');
   if (typeof window !== 'undefined') return '/api/v1';
+  const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (configured) {
+    // Allow relative for edge/middleware-compatible server fetches on Vercel
+    if (configured.startsWith('/')) return configured.replace(/\/$/, '');
+    return configured.replace(/\/$/, '');
+  }
   return 'http://localhost:4000/api/v1';
 }
 
