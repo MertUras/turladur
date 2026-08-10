@@ -25,6 +25,22 @@ export const ACENTE_ROUTES = {
     `/acente/tours/${tourId}/dates/${tourDateId}/seats`,
 } as const;
 
+/** Public site header “Panele Dön” — mirrors agency “Siteye Dön”. */
+export function getAcentePanelHrefForRole(
+  role: string | null | undefined,
+): string | null {
+  if (
+    role === 'PARTNER' ||
+    role === 'PARTNER_STAFF' ||
+    role === 'AGENCY_OWNER' ||
+    role === 'AGENCY_ADMIN' ||
+    role === 'AGENCY_STAFF'
+  ) {
+    return ACENTE_DASHBOARD;
+  }
+  return null;
+}
+
 export const REHBER_BASE = '/rehber';
 export const REHBER_LOGIN = '/rehber/giris';
 export const REHBER_REGISTER = '/rehber/kayit';

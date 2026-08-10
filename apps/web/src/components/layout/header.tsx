@@ -16,6 +16,7 @@ import {
 import { BrandLogo } from '@/components/brand/brand-logo';
 import DealsPopup from '@/components/layout/deals-popup';
 import { useAuth } from '@/providers/auth-provider';
+import { getAcentePanelHrefForRole } from '@/lib/panel-routes';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -32,6 +33,7 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
+  const panelHref = getAcentePanelHrefForRole(user?.role);
   const authStatus = isSigningOut
     ? 'unauthenticated'
     : isAuthenticated
@@ -476,6 +478,14 @@ export function Header() {
                     >
                       Rezervasyonlarım
                     </Link>
+                    {panelHref ? (
+                      <Link
+                        href={panelHref}
+                        className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 rounded transition-colors duration-150"
+                      >
+                        Panele Dön
+                      </Link>
+                    ) : null}
                     <div className="border-t border-neutral-100 my-1"></div>
                     <button
                       type="button"
@@ -606,37 +616,48 @@ export function Header() {
               ) : authStatus === 'authenticated' &&
                 !!sessionUser &&
                 sessionUser.provider !== 'partner-credentials' ? (
-                <Link
-                  href="/profile"
-                  className="flex items-center space-x-3 p-3 mb-3 rounded-lg hover:bg-neutral-100 transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  {sessionUser?.image ? (
-                    <Image
-                      src={sessionUser?.image}
-                      alt={sessionUser?.name || 'Profil'}
-                      width={36}
-                      height={36}
-                      className="rounded-full"
-                    />
-                  ) : (
-                    <span className="flex items-center justify-center h-9 w-9 rounded-full bg-neutral-200 text-neutral-800 text-sm font-medium">
-                      {(
-                        sessionUser?.name?.[0] ||
-                        sessionUser?.email?.[0] ||
-                        'U'
-                      ).toUpperCase()}
-                    </span>
-                  )}
-                  <div>
-                    <p className="font-medium text-sm text-neutral-800">
-                      {sessionUser?.name}
-                    </p>
-                    <p className="text-xs text-neutral-500">
-                      Profili Görüntüle
-                    </p>
-                  </div>
-                </Link>
+                <>
+                  <Link
+                    href="/profile"
+                    className="flex items-center space-x-3 p-3 mb-3 rounded-lg hover:bg-neutral-100 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {sessionUser?.image ? (
+                      <Image
+                        src={sessionUser?.image}
+                        alt={sessionUser?.name || 'Profil'}
+                        width={36}
+                        height={36}
+                        className="rounded-full"
+                      />
+                    ) : (
+                      <span className="flex items-center justify-center h-9 w-9 rounded-full bg-neutral-200 text-neutral-800 text-sm font-medium">
+                        {(
+                          sessionUser?.name?.[0] ||
+                          sessionUser?.email?.[0] ||
+                          'U'
+                        ).toUpperCase()}
+                      </span>
+                    )}
+                    <div>
+                      <p className="font-medium text-sm text-neutral-800">
+                        {sessionUser?.name}
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        Profili Görüntüle
+                      </p>
+                    </div>
+                  </Link>
+                  {panelHref ? (
+                    <Link
+                      href={panelHref}
+                      className="mb-3 block rounded-md px-3 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Panele Dön
+                    </Link>
+                  ) : null}
+                </>
               ) : (
                 <div className="grid grid-cols-2 gap-2 mb-4 px-2 pt-1">
                   <Link
