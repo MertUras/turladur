@@ -13,8 +13,8 @@ export default function RoutesPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center">
-          Yükleniyor...
+        <div className="flex min-h-[50vh] items-center justify-center bg-white text-sm text-neutral-500">
+          Rotalar yükleniyor…
         </div>
       }
     >
