@@ -13,11 +13,13 @@ import { Calendar, Clock, Heart, Zap, ArrowRight } from 'lucide-react';
 import { formatPrice } from './tours-page.helpers';
 import { parseJsonString } from '@/lib/tours/parse';
 import type { TourDateWithPromotions } from './tours-page.types';
+import { useFavorites } from '@/hooks/use-favorites';
 
 /** Split from tours-page-client.tsx (Faz 7) — tour card; UI unchanged. */
 export function ModernTourCard({ tour }: { tour: Tour }) {
-  const [isFavorite, setIsFavorite] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const { isTourFavorite, toggleTourFavorite, isMutating } = useFavorites();
+  const isFavorite = isTourFavorite(tour.id);
 
   const getDepartureSuffix = (city: string): string => {
     if (!city) return "'dan";
@@ -272,10 +274,13 @@ export function ModernTourCard({ tour }: { tour: Tour }) {
 
           {/* Favori Butonu */}
           <button
+            type="button"
+            aria-label={isFavorite ? 'Favorilerden kaldır' : 'Favorilere ekle'}
+            disabled={isMutating}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              setIsFavorite(!isFavorite);
+              void toggleTourFavorite(tour.id, `/tours/${tour.id}`);
             }}
             className={`absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
               isFavorite ? 'text-red-500' : 'text-gray-600 hover:text-red-500'

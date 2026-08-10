@@ -25,6 +25,8 @@ import {
 } from './tour-detail-button-classes';
 import { useTourDetailUi } from './tour-detail-context';
 import { renderStars } from './render-stars';
+import { useFavorites } from '@/hooks/use-favorites';
+import { cn } from '@/lib/utils';
 
 /** Split from tour-detail-client.tsx (Faz 7) — mobile + desktop hero; UI unchanged. */
 export function TourDetailHero() {
@@ -36,6 +38,8 @@ export function TourDetailHero() {
     nights,
     promptDateSelection,
   } = useTourDetailUi();
+  const { isTourFavorite, toggleTourFavorite, isMutating } = useFavorites();
+  const isFavorite = isTourFavorite(tour.id);
 
   const primaryButtonClasses = PRIMARY_BUTTON_CLASSES;
   const iconButtonDarkBgClasses = ICON_BUTTON_DARK_BG_CLASSES;
@@ -77,10 +81,19 @@ export function TourDetailHero() {
               className={`flex items-center gap-2 ${!(tour.isPopular || tour.featured) ? 'ml-auto' : ''}`}
             >
               <button
+                type="button"
                 className={iconButtonDarkBgClasses}
-                aria-label="Favorilere Ekle"
+                aria-label={
+                  isFavorite ? 'Favorilerden kaldır' : 'Favorilere Ekle'
+                }
+                disabled={isMutating}
+                onClick={() =>
+                  void toggleTourFavorite(tour.id, `/tours/${tour.id}`)
+                }
               >
-                <HeartIcon className="h-5 w-5" />
+                <HeartIcon
+                  className={cn('h-5 w-5', isFavorite && 'fill-current')}
+                />
               </button>
               <button className={iconButtonDarkBgClasses} aria-label="Paylaş">
                 <ShareIcon className="h-5 w-5" />
@@ -345,10 +358,19 @@ export function TourDetailHero() {
 
               <div className="flex items-center space-x-2 ml-auto">
                 <button
+                  type="button"
                   className={iconButtonDarkBgClasses}
-                  aria-label="Favorilere Ekle"
+                  aria-label={
+                    isFavorite ? 'Favorilerden kaldır' : 'Favorilere Ekle'
+                  }
+                  disabled={isMutating}
+                  onClick={() =>
+                    void toggleTourFavorite(tour.id, `/tours/${tour.id}`)
+                  }
                 >
-                  <HeartIcon className="h-5 w-5" />
+                  <HeartIcon
+                    className={cn('h-5 w-5', isFavorite && 'fill-current')}
+                  />
                 </button>
                 <button className={iconButtonDarkBgClasses} aria-label="Paylaş">
                   <ShareIcon className="h-5 w-5" />

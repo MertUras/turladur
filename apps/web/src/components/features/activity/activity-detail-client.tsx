@@ -26,6 +26,8 @@ import BottomBookingBar, {
 } from '@/components/booking/bottom-booking-bar';
 import MembershipBadge from '@/components/features/tour/membership-badge';
 import type { MembershipTier } from '@/lib/tours/legacy-tour';
+import { useFavorites } from '@/hooks/use-favorites';
+import { cn } from '@/lib/utils';
 
 interface ActivityOperator {
   id: string;
@@ -86,6 +88,8 @@ interface RelatedActivity {
 
 export default function ActivityDetailClient() {
   const params = useParams();
+  const { isExperienceFavorite, toggleExperienceFavorite, isMutating } =
+    useFavorites();
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -161,6 +165,8 @@ export default function ActivityDetailClient() {
       </div>
     );
   }
+
+  const isFavorite = isExperienceFavorite(activity.id);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -325,13 +331,26 @@ export default function ActivityDetailClient() {
               {/* Action Icons */}
               <div className="flex items-center space-x-2 ml-auto">
                 <button
-                  className="p-2.5 rounded-lg text-white bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/50 focus:ring-white/50"
-                  aria-label="Favorilere Ekle"
+                  type="button"
+                  className="p-2.5 rounded-lg text-white bg-white/10 hover:bg-white/20 transition-colors duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-black/50 focus:ring-white/50 disabled:opacity-50"
+                  aria-label={
+                    isFavorite ? 'Favorilerden kaldır' : 'Favorilere Ekle'
+                  }
+                  disabled={isMutating}
+                  onClick={() =>
+                    void toggleExperienceFavorite(
+                      activity.id,
+                      `/activities/${activity.id}`,
+                    )
+                  }
                 >
                   <Heart
-                    className="h-5 w-5 text-white"
+                    className={cn(
+                      'h-5 w-5 text-white',
+                      isFavorite && 'fill-current',
+                    )}
                     strokeWidth={2.2}
-                    fill="none"
+                    fill={isFavorite ? 'currentColor' : 'none'}
                   />
                 </button>
                 <button

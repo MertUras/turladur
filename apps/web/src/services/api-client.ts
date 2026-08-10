@@ -4,17 +4,21 @@ import type { ApiResponse } from '@turta/shared-types';
  * Browser: always same-origin `/api/v1` (Next rewrite → Nest) so HttpOnly
  * refresh cookies work (SameSite=Lax). Cross-origin NEXT_PUBLIC_API_URL breaks
  * preview login (cookie on API host, middleware on web host → bounce to /login).
- * SSR/server: absolute Nest URL via NEXT_PUBLIC_API_URL or localhost.
+ *
+ * SSR/server: Node fetch cannot use relative `/api/v1` — must hit Nest with an
+ * absolute URL (`API_PROXY_TARGET` or absolute `NEXT_PUBLIC_API_URL`).
  */
 function resolveApiBase(): string {
   if (typeof window !== 'undefined') return '/api/v1';
+
   const configured = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (configured) {
-    // Allow relative for edge/middleware-compatible server fetches on Vercel
-    if (configured.startsWith('/')) return configured.replace(/\/$/, '');
+  if (configured && !configured.startsWith('/')) {
     return configured.replace(/\/$/, '');
   }
-  return 'http://localhost:4000/api/v1';
+
+  const upstream =
+    process.env.API_PROXY_TARGET?.trim() || 'http://localhost:4000';
+  return `${upstream.replace(/\/$/, '')}/api/v1`;
 }
 
 export const API_BASE = resolveApiBase();
@@ -106,7 +110,7 @@ async function fetchApi(path: string, init: RequestInit): Promise<Response> {
     const aborted =
       err instanceof Error &&
       (err.name === 'AbortError' || err.name === 'TimeoutError');
-    const isLocalApi = /localhost|127\.0\.0\.1|\/api\/v1/.test(API_BASE);
+    const isLocalApi = /localhost|127\.0\.0\.1/.test(API_BASE);
     throw new ApiError(
       aborted ? 'TIMEOUT' : 'NETWORK_ERROR',
       aborted

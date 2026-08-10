@@ -13,9 +13,45 @@ export class FavoriteService {
 
   async list(userId: string) {
     const rows = await this.prisma.favorite.findMany({
-      where: { userId, deletedAt: null },
+      where: {
+        userId,
+        deletedAt: null,
+        OR: [
+          { tourId: { not: null }, tour: { deletedAt: null } },
+          { experienceId: { not: null }, experience: { deletedAt: null } },
+        ],
+      },
       orderBy: { createdAt: 'desc' },
       take: 100,
+      include: {
+        tour: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            coverUrl: true,
+            price: true,
+            currency: true,
+            averageRating: true,
+            reviewCount: true,
+            durationDays: true,
+          },
+        },
+        experience: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            imageUrl: true,
+            location: true,
+            price: true,
+            currency: true,
+            averageRating: true,
+            reviewCount: true,
+            duration: true,
+          },
+        },
+      },
     });
     return { success: true, data: rows, error: null };
   }

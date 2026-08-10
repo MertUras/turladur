@@ -6,6 +6,7 @@ import type { Reservation, Review, User } from '@turta/shared-types';
 import {
   CreditCard,
   FileDown,
+  Heart,
   KeyRound,
   MessageSquare,
   Ticket,
@@ -26,14 +27,17 @@ import { listMyReviews } from '@/services/review';
 import { ApiError } from '@/services/api-client';
 import { useAuth } from '@/providers/auth-provider';
 import { cn } from '@/lib/utils';
+import { FavoritesTab } from '@/components/features/profile/favorites-tab';
 
-type TabId = 'personal' | 'billing' | 'security' | 'bookings' | 'reviews';
+type TabId =
+  'personal' | 'billing' | 'security' | 'bookings' | 'reviews' | 'favorites';
 
 const TABS: Array<{ id: TabId; label: string; icon: typeof UserRound }> = [
   { id: 'personal', label: 'Kişisel', icon: UserRound },
   { id: 'billing', label: 'Fatura', icon: CreditCard },
   { id: 'security', label: 'Güvenlik', icon: KeyRound },
   { id: 'bookings', label: 'Rezervasyonlar', icon: Ticket },
+  { id: 'favorites', label: 'Favorilerim', icon: Heart },
   { id: 'reviews', label: 'Yorumlarım', icon: MessageSquare },
 ];
 
@@ -205,6 +209,7 @@ export function ProfileShell() {
             />
           ) : null}
           {tab === 'bookings' ? <BookingsTab token={accessToken!} /> : null}
+          {tab === 'favorites' ? <FavoritesTab /> : null}
           {tab === 'reviews' ? <ReviewsTab token={accessToken!} /> : null}
         </section>
       </div>

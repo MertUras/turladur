@@ -58,7 +58,17 @@ function LoginForm() {
     setPending(true);
     try {
       const user = await login(email, password);
-      if (
+      const rawCallback = searchParams.get('callbackUrl');
+      const safeCallback =
+        rawCallback &&
+        rawCallback.startsWith('/') &&
+        !rawCallback.startsWith('//')
+          ? rawCallback
+          : null;
+
+      if (safeCallback) {
+        router.push(safeCallback);
+      } else if (
         user.role === 'ADMIN' ||
         user.role === 'SUPER_ADMIN' ||
         user.role === 'PLATFORM_ADMIN' ||
