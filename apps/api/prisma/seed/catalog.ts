@@ -1,7 +1,6 @@
 import type { Prisma, PrismaClient } from '../../src/generated/prisma';
 import { buildSystemBusLayoutDefs } from '../../src/shared/utils/bus-seat-layout';
 import {
-  COVER_IMAGES,
   EXPERIENCE_TEMPLATES,
   EXPERIENCES_PER_AGENCY,
   TOUR_TEMPLATES,
@@ -112,7 +111,7 @@ export async function seedCatalog(
           type: 'BOUTIQUE_HOTEL',
           stars: 3 + h,
           agencyId: agency.id,
-          images: [COVER_IMAGES[h % COVER_IMAGES.length]],
+          images: [TOUR_TEMPLATES[a % TOUR_TEMPLATES.length].coverUrl],
         },
       });
       hotels.push({ id: hotel.id, agencyId: agency.id });
@@ -123,14 +122,15 @@ export async function seedCatalog(
       const slug = `seed-tour-a${a + 1}-t${t + 1}-${tmpl.city
         .toLowerCase()
         .replace(/[^a-z0-9]+/gi, '-')}`;
-      const cover = COVER_IMAGES[t % COVER_IMAGES.length];
+      const cover = tmpl.coverUrl;
+      const gallery = [...tmpl.galleryUrls];
       const tour = await prisma.tour.create({
         data: {
           title: `${tmpl.title} — ${agency.companyName}`,
           slug,
           description: `${tmpl.title} demo turu. ${tmpl.city} kalkışlı, ${tmpl.days} gün. Seed verisi — checkout için pickup ve yaş aralıkları dolu.`,
           coverUrl: cover,
-          galleryUrls: [cover, COVER_IMAGES[(t + 1) % COVER_IMAGES.length]],
+          galleryUrls: gallery,
           price: tmpl.price + a * 100,
           category: tmpl.category,
           status: 'PUBLISHED',
@@ -307,7 +307,8 @@ export async function seedCatalog(
     for (let e = 0; e < EXPERIENCES_PER_AGENCY; e++) {
       const tmpl = EXPERIENCE_TEMPLATES[e];
       const slug = `seed-exp-a${a + 1}-e${e + 1}`;
-      const image = COVER_IMAGES[e % COVER_IMAGES.length];
+      const image = tmpl.imageUrl;
+      const gallery = [...tmpl.gallery];
       const experience = await prisma.experience.create({
         data: {
           title: `${tmpl.title} — ${agency.companyName}`,
@@ -319,7 +320,7 @@ export async function seedCatalog(
           duration: tmpl.duration,
           price: tmpl.price + a * 50,
           imageUrl: image,
-          gallery: [image],
+          gallery,
           included: ['Rehber', 'Malzeme'],
           notIncluded: ['Ulaşım'],
           highlights: ['Yerel deneyim', 'Küçük grup'],
