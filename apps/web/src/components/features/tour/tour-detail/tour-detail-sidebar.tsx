@@ -37,9 +37,10 @@ export function TourDetailSidebar() {
     containerRef,
   } = useTourDetailUi();
 
-  const operatorLogoUrl =
-    resolveMediaUrl(tourOperator.logo) ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(tourOperator.companyName || 'Operator')}&background=0EA5E9&color=fff`;
+  const operatorLogoUrl = tourOperator
+    ? resolveMediaUrl(tourOperator.logo) ||
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(tourOperator.companyName || 'Operator')}&background=0EA5E9&color=fff`
+    : '';
 
   return (
     <aside className="flex w-full flex-col space-y-8 self-start lg:sticky lg:top-24 lg:col-span-1">
