@@ -70,7 +70,8 @@ export function resolveMediaUrl(
   const base = getCdnBaseUrl();
 
   if (!/^https?:\/\//i.test(value)) {
-    return `${base}/${value.replace(/^\/+/, '')}`;
+    const key = extractStorageKey(value);
+    return key ? `${base}/${key}` : null;
   }
 
   try {

@@ -25,6 +25,8 @@ interface PhoneInputProps {
   className?: string;
   /** Compact height for denser auth forms */
   size?: 'default' | 'compact';
+  /** sky = müşteri kayıt; neutral = acente siyah-beyaz */
+  tone?: 'sky' | 'neutral';
 }
 
 export function formatFullPhone(
@@ -78,10 +80,12 @@ export function PhoneInput({
   label = 'Telefon',
   className,
   size = 'default',
+  tone = 'sky',
 }: PhoneInputProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const isCompact = size === 'compact';
+  const isNeutral = tone === 'neutral';
 
   const selectedCountry = getPhoneCountry(countryCode);
   const digits = value.replace(/\D/g, '');
@@ -131,7 +135,11 @@ export function PhoneInput({
         ref={containerRef}
         className={`flex rounded-lg border ${
           error ? 'border-red-300' : 'border-neutral-300'
-        } focus-within:border-sky-500 focus-within:ring-1 focus-within:ring-sky-500`}
+        } ${
+          isNeutral
+            ? 'focus-within:border-neutral-950 focus-within:ring-1 focus-within:ring-neutral-300'
+            : 'focus-within:border-sky-500 focus-within:ring-1 focus-within:ring-sky-500'
+        }`}
       >
         <div className="relative flex-shrink-0">
           <button
@@ -163,9 +171,13 @@ export function PhoneInput({
                   key={country.code}
                   type="button"
                   onClick={() => handleCountrySelect(country.dial)}
-                  className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-sky-50 ${
+                  className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors ${
+                    isNeutral ? 'hover:bg-neutral-100' : 'hover:bg-sky-50'
+                  } ${
                     country.dial === countryCode
-                      ? 'bg-sky-50/60 text-sky-800'
+                      ? isNeutral
+                        ? 'bg-neutral-100 text-neutral-950'
+                        : 'bg-sky-50/60 text-sky-800'
                       : 'text-neutral-700'
                   }`}
                 >

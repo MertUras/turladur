@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { isValidGeoCoordinate } from '@turta/shared-constants';
+
 import { isPlatformAdminRole } from '../../../core/auth/utils/role-access';
 import { Prisma } from '../../../generated/prisma';
 
@@ -111,6 +113,7 @@ export class TourExtrasService {
     role: string,
   ) {
     await this.findOwnedTour(tourId, agencyId, role);
+    const geo = this.normalizePickupGeo(dto.latitude, dto.longitude);
     const row = await this.prisma.tourPickupPoint.create({
       data: {
         tourId,
@@ -118,6 +121,8 @@ export class TourExtrasService {
         location: dto.location.trim(),
         time: dto.time.trim(),
         description: dto.description?.trim(),
+        latitude: geo.latitude,
+        longitude: geo.longitude,
         order: dto.order ?? 0,
         isFixedOrigin: dto.isFixedOrigin ?? false,
       },
@@ -148,6 +153,11 @@ export class TourExtrasService {
     if (dto.location !== undefined) data.location = dto.location.trim();
     if (dto.time !== undefined) data.time = dto.time.trim();
     if (dto.description !== undefined) data.description = dto.description;
+    if (dto.latitude !== undefined || dto.longitude !== undefined) {
+      const geo = this.normalizePickupGeo(dto.latitude, dto.longitude);
+      data.latitude = geo.latitude;
+      data.longitude = geo.longitude;
+    }
     if (dto.order !== undefined) data.order = dto.order;
     if (dto.isActive !== undefined) data.isActive = dto.isActive;
     if (dto.isFixedOrigin !== undefined) data.isFixedOrigin = dto.isFixedOrigin;
@@ -244,6 +254,19 @@ export class TourExtrasService {
     };
   }
 
+  private normalizePickupGeo(
+    latitude?: number,
+    longitude?: number,
+  ): { latitude: number | null; longitude: number | null } {
+    if (
+      isValidGeoCoordinate(latitude, longitude) &&
+      typeof longitude === 'number'
+    ) {
+      return { latitude, longitude };
+    }
+    return { latitude: null, longitude: null };
+  }
+
   private toPickup(row: {
     id: string;
     tourId: string;
@@ -251,6 +274,8 @@ export class TourExtrasService {
     location: string;
     time: string;
     description: string | null;
+    latitude: number | null;
+    longitude: number | null;
     order: number;
     isFixedOrigin: boolean;
     isActive: boolean;
@@ -262,6 +287,8 @@ export class TourExtrasService {
       location: row.location,
       time: row.time,
       description: row.description,
+      latitude: row.latitude,
+      longitude: row.longitude,
       order: row.order,
       isFixedOrigin: row.isFixedOrigin,
       isActive: row.isActive,

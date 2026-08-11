@@ -16,6 +16,9 @@ export type PartnerTour = {
   status: string;
   coverUrl: string | null;
   durationDays: number;
+  stayKind?: 'DAY_TRIP' | 'OVERNIGHT';
+  destinationScope?: 'DOMESTIC' | 'INTERNATIONAL';
+  departureCities?: string[];
 };
 
 export type PartnerReservation = {
@@ -238,6 +241,9 @@ export async function createPartnerTour(
     price: number;
     category: string;
     durationDays?: number;
+    stayKind?: 'DAY_TRIP' | 'OVERNIGHT';
+    destinationScope?: 'DOMESTIC' | 'INTERNATIONAL';
+    departureCities?: string[];
     coverUrl?: string;
     galleryUrls?: string[];
     extras?: Record<string, unknown>;
@@ -263,6 +269,9 @@ export async function updatePartnerTour(
     price?: number;
     category?: string;
     durationDays?: number;
+    stayKind?: 'DAY_TRIP' | 'OVERNIGHT';
+    destinationScope?: 'DOMESTIC' | 'INTERNATIONAL';
+    departureCities?: string[];
     galleryUrls?: string[];
     extras?: Record<string, unknown>;
   },
@@ -661,6 +670,8 @@ export async function listTourPickupPoints(tourId: string, token: string) {
       location: string;
       time: string;
       description: string | null;
+      latitude: number | null;
+      longitude: number | null;
       order: number;
     }>
   >(`/catalog/tours/${tourId}/pickup-points`, { token });
@@ -673,6 +684,8 @@ export async function createTourPickupPoint(
     location: string;
     time: string;
     description?: string;
+    latitude?: number | null;
+    longitude?: number | null;
     order?: number;
   },
   token: string,
@@ -684,6 +697,8 @@ export async function createTourPickupPoint(
       location: body.location,
       time: body.time,
       description: body.description,
+      latitude: body.latitude ?? undefined,
+      longitude: body.longitude ?? undefined,
       order: body.order,
     },
     token,

@@ -2,6 +2,7 @@ import { GoneException, Injectable, NotFoundException } from '@nestjs/common';
 
 import { isPlatformAdminRole } from '../../../core/auth/utils/role-access';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { StorageService } from '../../../core/storage/storage.service';
 import {
   CreateAgencyDto,
   SearchAgenciesDto,
@@ -19,7 +20,10 @@ type ActorContext = {
  */
 @Injectable()
 export class AgencyService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   private gone(): never {
     throw new GoneException({
@@ -85,7 +89,7 @@ export class AgencyService {
       data: {
         id: row.id,
         companyName: row.companyName,
-        logo: row.logo,
+        logo: this.storage.resolvePublicUrl(row.logo),
         city: row.city,
         country: row.country,
         website: row.website,

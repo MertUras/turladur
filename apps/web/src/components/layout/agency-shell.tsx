@@ -28,6 +28,7 @@ import {
   type MembershipTier,
 } from '@/components/features/partner-dashboard/membership-badge';
 import { PartnerForbidden } from '@/components/features/partner-dashboard/partner-forbidden';
+import { resolveMediaUrl } from '@/lib/media';
 import { getPartnerProfile } from '@/services/partner-admin';
 import { useAuth } from '@/providers/auth-provider';
 import {
@@ -153,6 +154,35 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+function AgencyAvatar({
+  name,
+  logoUrl,
+  className,
+}: {
+  name: string;
+  logoUrl: string | null;
+  className: string;
+}) {
+  const [hasFailed, setHasFailed] = useState(false);
+  const src = !hasFailed ? resolveMediaUrl(logoUrl) : null;
+
+  if (src) {
+    return (
+      <div className={`${className} overflow-hidden`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setHasFailed(true)}
+        />
+      </div>
+    );
+  }
+
+  return <div className={className}>{initials(name)}</div>;
+}
+
 /**
  * Agency shell — PartnerShell parity; Nest auth + /acente/* routes (P0-B).
  */
@@ -172,6 +202,7 @@ export function AgencyShell({ children }: { children: ReactNode }) {
   const [membershipTier, setMembershipTier] = useState<MembershipTier | null>(
     null,
   );
+  const [agencyLogo, setAgencyLogo] = useState<string | null>(null);
   const [gate, setGate] = useState<'checking' | 'allowed' | 'denied'>(
     'checking',
   );
@@ -247,6 +278,7 @@ export function AgencyShell({ children }: { children: ReactNode }) {
         const tier = (profile as { membershipTier?: MembershipTier | null })
           .membershipTier;
         setMembershipTier(tier ?? null);
+        setAgencyLogo(resolveMediaUrl(profile.logo));
 
         // Legacy Partner users must be VERIFIED; AgencyStaff uses Agency status via API.
         if (user?.role === 'PARTNER' || user?.role === 'PARTNER_STAFF') {
@@ -257,7 +289,10 @@ export function AgencyShell({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {
-        if (!cancelled) setMembershipTier(null);
+        if (!cancelled) {
+          setMembershipTier(null);
+          setAgencyLogo(null);
+        }
       });
     return () => {
       cancelled = true;
@@ -412,9 +447,11 @@ export function AgencyShell({ children }: { children: ReactNode }) {
         <div className="flex flex-1 flex-col overflow-y-auto pb-4 pt-5">
           <div className="mb-6 px-4">
             <div className="flex items-center rounded-lg bg-blue-50 p-3">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-semibold">
-                {initials(name)}
-              </div>
+              <AgencyAvatar
+                name={name}
+                logoUrl={agencyLogo}
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-semibold"
+              />
               <div className="ml-3 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <p className="truncate text-sm font-medium text-gray-900">
@@ -523,9 +560,11 @@ export function AgencyShell({ children }: { children: ReactNode }) {
                     setShowProfileMenu(!showProfileMenu);
                   }}
                 >
-                  <div className="mr-1 flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-700">
-                    {initials(name)}
-                  </div>
+                  <AgencyAvatar
+                    name={name}
+                    logoUrl={agencyLogo}
+                    className="mr-1 flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-700"
+                  />
                   <span className="hidden items-center gap-1.5 text-sm font-medium md:flex">
                     {name}
                     <MembershipBadge tier={membershipTier} />

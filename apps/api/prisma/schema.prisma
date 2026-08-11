@@ -572,6 +572,9 @@ model Tour {
   category        TourCategory
   status          TourStatus          @default(DRAFT)
   durationDays    Int                 @default(1)
+  stayKind        TourStayKind        @default(OVERNIGHT)
+  destinationScope TourDestinationScope @default(DOMESTIC)
+  departureCities String[]            @default([])
   childMaxAge     Int?
   minParticipants Int?
   /// Optimistic lock.
@@ -601,7 +604,23 @@ model Tour {
   @@index([category, status])
   @@index([slug])
   @@index([featured, status])
+  @@index([stayKind, status])
+  @@index([destinationScope, status])
   @@index([deletedAt])
+  @@schema("catalog")
+}
+
+enum TourStayKind {
+  DAY_TRIP
+  OVERNIGHT
+
+  @@schema("catalog")
+}
+
+enum TourDestinationScope {
+  DOMESTIC
+  INTERNATIONAL
+
   @@schema("catalog")
 }
 
@@ -844,6 +863,8 @@ model TourPickupPoint {
   location             String        @db.VarChar(200)
   time                 String        @db.VarChar(20)
   description          String?
+  latitude             Float?
+  longitude            Float?
   order                Int           @default(0)
   /// Bilgilendirme (rota başı); boarding seçimini engellemez.
   isFixedOrigin        Boolean       @default(false)

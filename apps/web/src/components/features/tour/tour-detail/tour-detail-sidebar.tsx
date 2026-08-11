@@ -17,6 +17,7 @@ import {
   XCircle as XCircleIcon,
 } from 'lucide-react';
 import MembershipBadge from '@/components/features/tour/membership-badge';
+import { resolveMediaUrl, shouldUnoptimizeMedia } from '@/lib/media';
 import { useTourDetailUi } from './tour-detail-context';
 import { renderStars } from './render-stars';
 
@@ -35,6 +36,10 @@ export function TourDetailSidebar() {
     handleDateSelect,
     containerRef,
   } = useTourDetailUi();
+
+  const operatorLogoUrl =
+    resolveMediaUrl(tourOperator.logo) ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(tourOperator.companyName || 'Operator')}&background=0EA5E9&color=fff`;
 
   return (
     <aside className="flex w-full flex-col space-y-8 self-start lg:sticky lg:top-24 lg:col-span-1">
@@ -220,13 +225,11 @@ export function TourDetailSidebar() {
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md">
                 <Image
-                  src={
-                    tourOperator.logo ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(tourOperator.companyName || 'Operator')}&background=0EA5E9&color=fff`
-                  }
+                  src={operatorLogoUrl}
                   alt={tourOperator.companyName || 'Tur Operatörü'}
                   width={48}
                   height={48}
+                  unoptimized={shouldUnoptimizeMedia(operatorLogoUrl)}
                   className="object-cover"
                 />
               </div>

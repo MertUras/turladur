@@ -47,6 +47,58 @@ export function TourFormBasicStep() {
   return (
     <div className="space-y-6 bg-white shadow rounded-lg p-6">
       <h2 className="text-lg font-medium text-gray-900">Temel Bilgiler</h2>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div>
+          <label
+            htmlFor="stayKind"
+            className="mb-2 block text-sm font-medium text-gray-900"
+          >
+            Turun türü <span className="text-red-500">*</span>
+          </label>
+          <select
+            id="stayKind"
+            name="stayKind"
+            value={formData.stayKind}
+            onChange={handleChange}
+            className={`block w-full rounded-lg border ${errors.stayKind ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
+          >
+            <option value="">Seçiniz</option>
+            <option value="DAY_TRIP">Günübirlik</option>
+            <option value="OVERNIGHT">Konaklamalı</option>
+          </select>
+          {errors.stayKind && (
+            <p className="mt-2 text-sm text-red-600">{errors.stayKind}</p>
+          )}
+        </div>
+        {formData.stayKind ? (
+          <div>
+            <label
+              htmlFor="destinationScope"
+              className="mb-2 block text-sm font-medium text-gray-900"
+            >
+              Rota <span className="text-red-500">*</span>
+            </label>
+            <select
+              id="destinationScope"
+              name="destinationScope"
+              value={formData.destinationScope}
+              onChange={handleChange}
+              className={`block w-full rounded-lg border ${errors.destinationScope ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
+            >
+              <option value="">Seçiniz</option>
+              <option value="DOMESTIC">Yurtiçi</option>
+              <option value="INTERNATIONAL">Yurtdışı</option>
+            </select>
+            {errors.destinationScope && (
+              <p className="mt-2 text-sm text-red-600">
+                {errors.destinationScope}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div />
+        )}
+      </div>
       <div>
         <label
           htmlFor="title"
@@ -381,7 +433,10 @@ export function TourFormBasicStep() {
             htmlFor="nights"
             className="mb-2 block text-sm font-medium text-gray-900"
           >
-            Gece <span className="text-red-500">*</span>
+            Gece{' '}
+            {formData.stayKind !== 'DAY_TRIP' && (
+              <span className="text-red-500">*</span>
+            )}
           </label>
           <input
             type="number"
@@ -389,9 +444,10 @@ export function TourFormBasicStep() {
             name="nights"
             value={formData.nights}
             onChange={handleChange}
-            className={`block w-full rounded-lg border ${errors.nights ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900`}
+            disabled={formData.stayKind === 'DAY_TRIP'}
+            className={`block w-full rounded-lg border ${errors.nights ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 ${formData.stayKind === 'DAY_TRIP' ? 'bg-gray-100' : ''}`}
             placeholder="Örn: 3"
-            min="1"
+            min={formData.stayKind === 'DAY_TRIP' ? 0 : 1}
           />
           {errors.nights && (
             <p className="mt-2 text-sm text-red-600">{errors.nights}</p>
@@ -573,17 +629,21 @@ export function TourFormBasicStep() {
               className="mb-2 block text-sm font-medium text-gray-900"
             >
               Konaklama Tipi{' '}
-              {formData.tourType !== 'Günübirlik Tur' && (
-                <span className="text-red-500">*</span>
-              )}
+              {formData.stayKind !== 'DAY_TRIP' &&
+                formData.tourType !== 'Günübirlik Tur' && (
+                  <span className="text-red-500">*</span>
+                )}
             </label>
             <select
               id="accommodationType"
               name="accommodationType"
               value={formData.accommodationType}
               onChange={handleChange}
-              disabled={formData.tourType === 'Günübirlik Tur'}
-              className={`block w-full rounded-lg border ${errors.accommodationType ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 ${formData.tourType === 'Günübirlik Tur' ? 'bg-gray-100' : ''}`}
+              disabled={
+                formData.stayKind === 'DAY_TRIP' ||
+                formData.tourType === 'Günübirlik Tur'
+              }
+              className={`block w-full rounded-lg border ${errors.accommodationType ? 'border-red-500' : 'border-gray-300'} px-4 py-3 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-gray-900 ${formData.stayKind === 'DAY_TRIP' || formData.tourType === 'Günübirlik Tur' ? 'bg-gray-100' : ''}`}
             >
               <option value="">Seçiniz</option>
               <option value="Otel">Otel</option>

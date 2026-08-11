@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { TourCategory } from '@turta/shared-constants';
+import {
+  TourCategory,
+  TourDestinationScope,
+  TourStayKind,
+} from '@turta/shared-constants';
 import {
   IsArray,
   IsEnum,
@@ -46,6 +50,22 @@ export class CreateTourDto {
   @IsInt()
   @Min(1)
   durationDays?: number;
+
+  @ApiPropertyOptional({ enum: TourStayKind })
+  @IsOptional()
+  @IsEnum(TourStayKind)
+  stayKind?: TourStayKind;
+
+  @ApiPropertyOptional({ enum: TourDestinationScope })
+  @IsOptional()
+  @IsEnum(TourDestinationScope)
+  destinationScope?: TourDestinationScope;
+
+  @ApiPropertyOptional({ type: [String], example: ['Ankara'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  departureCities?: string[];
 
   @ApiPropertyOptional({ example: 'https://cdn.example.com/kapadokya.jpg' })
   @IsOptional()

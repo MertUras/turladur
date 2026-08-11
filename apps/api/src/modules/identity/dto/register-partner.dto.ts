@@ -25,11 +25,35 @@ export class RegisterPartnerDto {
   @IsEmail()
   contactEmail!: string;
 
-  @ApiPropertyOptional({ example: '+903322221100' })
+  @ApiPropertyOptional({ example: '+905551112233' })
   @IsOptional()
   @IsString()
   @MaxLength(20)
   contactPhone?: string;
+
+  @ApiPropertyOptional({ example: 'Atatürk Cad. No:1' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  address?: string;
+
+  @ApiPropertyOptional({ example: 'Ankara' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  city?: string;
+
+  @ApiPropertyOptional({ example: 'Türkiye' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  country?: string;
+
+  @ApiPropertyOptional({ example: 'https://www.ornek.com' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  website?: string;
 
   @ApiProperty({ example: 'Partner123!' })
   @IsString()

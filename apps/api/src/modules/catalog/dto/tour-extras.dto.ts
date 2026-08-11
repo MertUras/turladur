@@ -75,6 +75,22 @@ export class CreateTourPickupPointDto {
   @IsString()
   description?: string;
 
+  @ApiPropertyOptional({ example: 41.0082 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude?: number;
+
+  @ApiPropertyOptional({ example: 28.9784 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude?: number;
+
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @Type(() => Number)
@@ -113,6 +129,22 @@ export class UpdateTourPickupPointDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  latitude?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  longitude?: number;
 
   @ApiPropertyOptional()
   @IsOptional()

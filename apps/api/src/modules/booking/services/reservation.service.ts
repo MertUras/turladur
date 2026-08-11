@@ -1038,6 +1038,8 @@ export class ReservationService {
         city: point.city,
         time: point.time,
         description: point.description,
+        latitude: point.latitude,
+        longitude: point.longitude,
       };
     }
 

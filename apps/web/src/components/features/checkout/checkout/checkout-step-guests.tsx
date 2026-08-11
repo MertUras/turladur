@@ -1,7 +1,10 @@
 'use client';
 
 import { Building2, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { isValidGeoCoordinate } from '@turta/shared-constants';
+
 import { PhoneInput } from '@/components/ui/phone-input';
+import { PickupLocationMap } from '@/components/ui/pickup-location-map-loader';
 
 import { useCheckoutUi } from './checkout-context';
 import { clampBirthDateInput } from './checkout.helpers';
@@ -34,6 +37,14 @@ export function CheckoutStepGuests() {
     setCurrentStep,
     party,
   } = useCheckoutUi();
+
+  const selectedPickup = pickupPoints.find(
+    (point) => point.id === pickupPointId,
+  );
+  const hasSelectedPickupGeo = isValidGeoCoordinate(
+    selectedPickup?.latitude,
+    selectedPickup?.longitude,
+  );
 
   return (
     <div className="space-y-6">
@@ -199,6 +210,15 @@ export function CheckoutStepGuests() {
               </option>
             ))}
           </select>
+          {hasSelectedPickupGeo && selectedPickup ? (
+            <div className="mt-3">
+              <PickupLocationMap
+                latitude={selectedPickup.latitude}
+                longitude={selectedPickup.longitude}
+                interactive={false}
+              />
+            </div>
+          ) : null}
           <p className="mt-2 text-xs text-neutral-500">
             Koltuk numarası partner tarafından atanacaktır.
           </p>

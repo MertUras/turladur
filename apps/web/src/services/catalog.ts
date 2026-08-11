@@ -18,6 +18,9 @@ export type TourSearchParams = {
   limit?: number;
   /** Marketplace agency (seller) filter */
   agencyId?: string;
+  stayKind?: 'DAY_TRIP' | 'OVERNIGHT';
+  destinationScope?: 'DOMESTIC' | 'INTERNATIONAL';
+  departureCity?: string;
 };
 
 export async function searchTours(params: TourSearchParams = {}) {
@@ -38,6 +41,11 @@ export async function searchTours(params: TourSearchParams = {}) {
   if (params.page) query.set('page', String(params.page));
   if (params.limit) query.set('limit', String(params.limit));
   if (params.agencyId) query.set('agencyId', params.agencyId);
+  if (params.stayKind) query.set('stayKind', params.stayKind);
+  if (params.destinationScope) {
+    query.set('destinationScope', params.destinationScope);
+  }
+  if (params.departureCity) query.set('departureCity', params.departureCity);
 
   const qs = query.toString();
   return apiRequestWithMeta<Tour[]>(
@@ -76,6 +84,8 @@ export type TourPickupPoint = {
   location: string;
   time: string;
   description: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   order: number;
   isActive: boolean;
 };
@@ -139,6 +149,11 @@ export async function searchToursClient(
   if (rest.page) query.set('page', String(rest.page));
   if (rest.limit) query.set('limit', String(rest.limit));
   if (rest.agencyId) query.set('agencyId', rest.agencyId);
+  if (rest.stayKind) query.set('stayKind', rest.stayKind);
+  if (rest.destinationScope) {
+    query.set('destinationScope', rest.destinationScope);
+  }
+  if (rest.departureCity) query.set('departureCity', rest.departureCity);
 
   const qs = query.toString();
   return searchToursByQueryString(qs, signal);

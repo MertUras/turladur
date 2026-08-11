@@ -95,6 +95,8 @@ export function TourForm({
         region: initialData.region || '',
         transportation: initialData.transportation || '',
         period: initialData.period || '',
+        stayKind: initialData.stayKind || '',
+        destinationScope: initialData.destinationScope || '',
         tourType: initialData.tourType || '',
         accommodationType: initialData.accommodationType || '',
         ageRestriction: initialData.ageRestriction || '',
@@ -270,7 +272,20 @@ export function TourForm({
       if (newValue === '') newValue = '';
     }
 
-    if (name === 'nights') {
+    if (name === 'stayKind') {
+      setFormData((prev) => ({
+        ...prev,
+        stayKind: newValue as TourFormData['stayKind'],
+        ...(newValue === 'DAY_TRIP'
+          ? {
+              nights: '0',
+              duration: '1',
+              accommodationType: '',
+              accommodationName: '',
+            }
+          : {}),
+      }));
+    } else if (name === 'nights') {
       // Gece sayısına göre gün sayısını hesapla (gece + 1)
       const days = newValue ? parseInt(newValue) + 1 : '';
       setFormData((prev) => ({
@@ -516,11 +531,19 @@ export function TourForm({
       }
     }
 
-    if (!formData.nights?.trim()) newErrors.nights = 'Gece sayısı gerekli';
+    if (formData.stayKind !== 'DAY_TRIP' && !formData.nights?.trim()) {
+      newErrors.nights = 'Gece sayısı gerekli';
+    }
     if (!formData.maxParticipants || formData.maxParticipants <= 0)
       newErrors.maxParticipants = 'Maksimum katılımcı sayısı gerekli';
     if (!formData.transportation?.trim())
       newErrors.transportation = 'Ulaşım tipi gerekli';
+    if (!formData.stayKind) {
+      newErrors.stayKind = 'Turun türünü seçmelisiniz';
+    }
+    if (!formData.destinationScope) {
+      newErrors.destinationScope = 'Yurtiçi / yurtdışı seçmelisiniz';
+    }
     if (!formData.tourType?.trim()) newErrors.tourType = 'Tur tipi gerekli';
 
     // Destinasyonlar kontrolü
@@ -538,7 +561,7 @@ export function TourForm({
 
     // Konaklama tipi sadece günübirlik tur değilse zorunlu
     if (
-      formData.tourType &&
+      formData.stayKind !== 'DAY_TRIP' &&
       formData.tourType !== 'Günübirlik Tur' &&
       !formData.accommodationType?.trim()
     ) {
@@ -805,13 +828,17 @@ export function TourForm({
               point.location &&
               point.location.trim() &&
               point.time &&
-              point.time.trim(),
+              point.time.trim() &&
+              point.description &&
+              point.description.trim(),
           )
           .map((point, index) => ({
             city: point.city.trim(),
             location: point.location.trim(),
             time: point.time.trim(),
             description: point.description?.trim() || '',
+            latitude: point.latitude ?? null,
+            longitude: point.longitude ?? null,
             order: index,
           })),
         startDate: formData.startDate,

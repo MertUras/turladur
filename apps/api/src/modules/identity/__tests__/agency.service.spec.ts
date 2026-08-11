@@ -2,6 +2,7 @@ import { GoneException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
 import { PrismaService } from '../../../core/database/prisma.service';
+import { StorageService } from '../../../core/storage/storage.service';
 import { AgencyService } from '../services/agency.service';
 import { createPrismaMock } from '../../__tests__/test-helpers';
 
@@ -12,7 +13,16 @@ describe('AgencyService', () => {
   beforeEach(async () => {
     prisma = createPrismaMock();
     const module = await Test.createTestingModule({
-      providers: [AgencyService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        AgencyService,
+        { provide: PrismaService, useValue: prisma },
+        {
+          provide: StorageService,
+          useValue: {
+            resolvePublicUrl: (value: string | null) => value,
+          },
+        },
+      ],
     }).compile();
     service = module.get(AgencyService);
   });

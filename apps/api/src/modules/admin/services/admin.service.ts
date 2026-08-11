@@ -1,10 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { CacheService } from '../../../core/cache/cache.service';
 import { PrismaService } from '../../../core/database/prisma.service';
-import { EmailQueueService } from '../../../core/queue/email-queue.service';
 import { BusinessException } from '../../../shared/exceptions/business.exception';
 import { PartnerVerifiedEvent } from '../../identity/events/partner-verified.event';
 
@@ -13,8 +11,6 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
-    private readonly emailQueue: EmailQueueService,
-    private readonly config: ConfigService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -181,29 +177,7 @@ export class AdminService {
     });
 
     if (status === 'VERIFIED' && !wasVerified) {
-      // Consumer: DomainAuditListener; partner-approved e-posta burada
-      this.eventEmitter.emit(
-        'partner.verified',
-        new PartnerVerifiedEvent(updated.id, updated.contactEmail),
-      );
-
-      const webBase = (
-        this.config.get<string>('EMAIL_BRAND_URL') ??
-        this.config.get<string>('FRONTEND_URL') ??
-        'https://turladur-zjyf.vercel.app'
-      )
-        .split(',')[0]
-        .trim()
-        .replace(/\/$/, '');
-
-      await this.emailQueue.enqueue({
-        to: updated.contactEmail,
-        template: 'partner-approved',
-        data: {
-          companyName: updated.companyName,
-          loginUrl: `${webBase}/partner-login`,
-        },
-      });
+      this.emitPartnerVerified(updated);
     }
 
     return {
@@ -486,6 +460,7 @@ export class AdminService {
       });
     }
 
+    const wasVerified = agency.status === 'VERIFIED';
     const updated = await this.prisma.agency.update({
       where: { id: agency.id },
       data: {
@@ -493,6 +468,10 @@ export class AdminService {
         verifiedAt: status === 'VERIFIED' ? new Date() : agency.verifiedAt,
       },
     });
+
+    if (status === 'VERIFIED' && !wasVerified) {
+      this.emitPartnerVerified(updated);
+    }
 
     return {
       success: true,
@@ -503,6 +482,21 @@ export class AdminService {
       },
       error: null,
     };
+  }
+
+  private emitPartnerVerified(agency: {
+    id: string;
+    contactEmail: string;
+    companyName: string;
+  }): void {
+    this.eventEmitter.emit(
+      'partner.verified',
+      new PartnerVerifiedEvent(
+        agency.id,
+        agency.contactEmail,
+        agency.companyName,
+      ),
+    );
   }
 
   async listReservations() {

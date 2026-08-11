@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getExperienceById, searchExperiences } from '@/services/activity';
+import { resolveMediaUrl, shouldUnoptimizeMedia } from '@/lib/media';
 import {
   Star,
   Clock,
@@ -813,7 +814,7 @@ export default function ActivityDetailClient() {
                       <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md">
                         <Image
                           src={
-                            activity.operator.logo ||
+                            resolveMediaUrl(activity.operator.logo) ||
                             'https://ui-avatars.com/api/?name=Operator&background=0EA5E9&color=fff'
                           }
                           alt={
@@ -822,6 +823,9 @@ export default function ActivityDetailClient() {
                           }
                           width={48}
                           height={48}
+                          unoptimized={shouldUnoptimizeMedia(
+                            resolveMediaUrl(activity.operator.logo),
+                          )}
                           className="object-cover"
                         />
                       </div>

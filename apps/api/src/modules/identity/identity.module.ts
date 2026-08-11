@@ -3,6 +3,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 
 import { AuthModule } from '../../core/auth/auth.module';
 import { QueueModule } from '../../core/queue/queue.module';
+import { StorageModule } from '../../core/storage/storage.module';
 import { ChangePasswordHandler } from './commands/change-password/change-password.handler';
 import { LoginUserHandler } from './commands/login-user/login-user.handler';
 import { RegisterPartnerHandler } from './commands/register-partner/register-partner.handler';
@@ -34,7 +35,7 @@ const CommandHandlers = [
 const QueryHandlers = [GetProfileHandler];
 
 @Module({
-  imports: [CqrsModule, AuthModule, QueueModule],
+  imports: [CqrsModule, AuthModule, QueueModule, StorageModule],
   controllers: [
     IdentityController,
     SubUserController,

@@ -1,6 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   TourCategory,
+  TourDestinationScope,
+  TourStayKind,
   DEFAULT_PAGE,
   DEFAULT_PAGE_LIMIT,
 } from '@turta/shared-constants';
@@ -30,6 +32,23 @@ export class SearchToursDto {
   @IsOptional()
   @IsEnum(TourCategory)
   category?: TourCategory;
+
+  @ApiPropertyOptional({ enum: TourStayKind })
+  @IsOptional()
+  @IsEnum(TourStayKind)
+  stayKind?: TourStayKind;
+
+  @ApiPropertyOptional({ enum: TourDestinationScope })
+  @IsOptional()
+  @IsEnum(TourDestinationScope)
+  destinationScope?: TourDestinationScope;
+
+  @ApiPropertyOptional({ example: 'Ankara' })
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MaxLength(80)
+  departureCity?: string;
 
   /** Exact duration in days (legacy `duration=1`). */
   @ApiPropertyOptional({ example: 3 })

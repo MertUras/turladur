@@ -3,6 +3,8 @@
 import type { LegacyTourCard as Tour } from '@/lib/tours/legacy-tour';
 
 export interface FilterOptions {
+  stayKind: 'DAY_TRIP' | 'OVERNIGHT' | null;
+  destinationScope: 'DOMESTIC' | 'INTERNATIONAL' | null;
   departureCity: string | null;
   region: string | null;
   transportation: string | null;

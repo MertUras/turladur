@@ -44,16 +44,7 @@ export class MailService {
       .replace(/\s+/g, '');
     this.useAuthenticatedSmtp = Boolean(this.smtpUser && this.smtpPass);
 
-    this.from = (
-      config.get<string>('MAIL_FROM') ??
-      (this.smtpUser
-        ? `turta <${this.smtpUser}>`
-        : this.resendApiKey
-          ? 'turta <beth.t@example.com>'
-          : 'turta <noreply@turta.com>')
-    )
-      .trim()
-      .replace(/^["']|["']$/g, '');
+    this.from = this.resolveFromAddress(config.get<string>('MAIL_FROM'));
 
     // Email CTA / logo links — not local CORS FRONTEND_URL list
     this.webBaseUrl = (
@@ -112,7 +103,9 @@ export class MailService {
         },
       });
       this.logger.log(
-        `Mail provider: SMTP auth (${this.smtpUser}) host=${isGmail ? 'smtp.gmail.com' : config.get('SMTP_HOST')} port=${port} secure=${secure}`,
+        this.resendApiKey
+          ? `Mail provider: Resend (from=${this.from}); SMTP leftover ignored`
+          : `Mail provider: SMTP auth (${this.smtpUser}) host=${isGmail ? 'smtp.gmail.com' : config.get('SMTP_HOST')} port=${port} secure=${secure}`,
       );
     } else {
       this.transporter = nodemailer.createTransport({
@@ -124,31 +117,37 @@ export class MailService {
         socketTimeout: 5_000,
       });
       if (this.resendApiKey) {
-        this.logger.log(
-          'Mail provider: Resend (FROM must be verified domain; Gmail SMTP preferred for learnedfromai@)',
-        );
+        this.logger.log(`Mail provider: Resend (from=${this.from})`);
       } else {
         this.logger.log('Mail provider: SMTP/Mailhog (local)');
       }
     }
   }
 
-  /** True when mail leaves the machine (Gmail SMTP or Resend). */
+  /** True when mail leaves the machine (Resend or authenticated SMTP). */
   get usesRealInbox(): boolean {
-    return this.useAuthenticatedSmtp || Boolean(this.resendApiKey);
+    return Boolean(this.resendApiKey) || this.useAuthenticatedSmtp;
   }
 
   async send(payload: MailPayload): Promise<void> {
-    // Prefer Gmail/SMTP so FROM=learnedfromai@gmail.com can reach any registrant
-    if (this.useAuthenticatedSmtp) {
-      await this.sendViaSmtp(payload);
-      return;
-    }
     if (this.resendApiKey) {
       await this.sendViaResend(payload);
       return;
     }
     await this.sendViaSmtp(payload);
+  }
+
+  private resolveFromAddress(rawFrom: string | undefined): string {
+    const configured = (rawFrom ?? '').trim().replace(/^["']|["']$/g, '');
+    if (this.resendApiKey) {
+      if (configured && /@turta\.xyz\b/i.test(configured)) {
+        return configured;
+      }
+      return 'turta <noreply@turta.xyz>';
+    }
+    if (configured) return configured;
+    if (this.smtpUser) return `turta <${this.smtpUser}>`;
+    return 'turta <noreply@turta.xyz>';
   }
 
   private async sendViaSmtp(payload: MailPayload): Promise<void> {
@@ -374,13 +373,13 @@ export class MailService {
         const company = escapeHtml(String(data.companyName ?? ''));
         const loginUrl = String(data.loginUrl ?? '#');
         return {
-          subject: 'Partner hesabınız onaylandı — turta',
+          subject: 'Hesabınız onaylanmıştır — turta',
           html: this.layout(
-            'Hesabınız onaylandı',
-            `${company} partner hesabınız onaylandı. Giriş yapabilirsiniz.`,
+            'Hesabınız onaylanmıştır',
+            `${company} partner hesabınız onaylanmıştır. Giriş yapabilirsiniz.`,
             `<p style="margin:0 0 12px;color:#404040;">
-               Merhaba, <strong>${company}</strong> partner başvurunuz editör tarafından
-               <strong>onaylanmıştır</strong>. Artık partner paneline giriş yapabilirsiniz.
+               Merhaba, <strong>${company}</strong> başvurunuz
+               <strong>onaylanmıştır</strong>. Acente paneline giriş yapabilirsiniz.
              </p>
              ${primaryButton(loginUrl, 'Giriş yap')}`,
           ),

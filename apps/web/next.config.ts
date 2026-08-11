@@ -85,6 +85,7 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**.amazonaws.com' },
     ],
   },
+  transpilePackages: ['react-leaflet', 'leaflet'],
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },

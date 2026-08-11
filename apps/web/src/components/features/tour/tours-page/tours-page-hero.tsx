@@ -3,9 +3,24 @@
 import { Search, X } from 'lucide-react';
 import { useToursPageUi } from './tours-page-context';
 
+const TOURS_RESULTS_ANCHOR_ID = 'tours-results';
+
+function scrollToToursResults() {
+  document.getElementById(TOURS_RESULTS_ANCHOR_ID)?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  });
+}
+
 /** Split from tours-page-client.tsx (Faz 7) — hero; UI unchanged. */
 export function ToursPageHero() {
   const { searchTerm, setSearchTerm, setLoading } = useToursPageUi();
+
+  function handleSearch() {
+    setLoading(true);
+    scrollToToursResults();
+    setTimeout(() => setLoading(false), 500);
+  }
 
   return (
     <div className="relative bg-gradient-to-r from-neutral-900 to-neutral-950 pt-28 pb-12 md:pb-20">
@@ -43,6 +58,12 @@ export function ToursPageHero() {
                   className="w-full py-3 px-2 outline-none text-gray-700 bg-transparent"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSearch();
+                    }
+                  }}
                 />
                 {searchTerm && (
                   <button
@@ -55,11 +76,7 @@ export function ToursPageHero() {
               </div>
               <button
                 className="bg-neutral-950 hover:bg-neutral-800 text-white font-medium rounded-lg px-5 py-3 transition-colors flex items-center"
-                onClick={() => {
-                  // Zaten sayfadayız, sadece filtreleri uygula
-                  setLoading(true);
-                  setTimeout(() => setLoading(false), 500);
-                }}
+                onClick={handleSearch}
               >
                 <Search className="h-4 w-4 mr-2" />
                 Ara

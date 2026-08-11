@@ -296,6 +296,10 @@ export type RegisterPartnerInput = {
   taxNumber?: string;
   firstName?: string;
   lastName?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  website?: string;
 };
 
 export type RegisterPartnerResult = {

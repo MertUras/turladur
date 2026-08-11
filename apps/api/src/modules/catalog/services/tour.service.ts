@@ -8,6 +8,7 @@ import {
   DEFAULT_CURRENCY,
   DEFAULT_PAGE,
   DEFAULT_PAGE_LIMIT,
+  normalizeDepartureCity,
   TOUR_CANCEL_REASON_LABELS,
   TourCancelReason,
 } from '@turta/shared-constants';
@@ -30,6 +31,7 @@ import { TourCancelledEvent } from '../events/tour-cancelled.event';
 import { TourDatesCancelledEvent } from '../events/tour-dates-cancelled.event';
 import { TourCreatedEvent } from '../events/tour-created.event';
 import { TourSearchPerformedEvent } from '../events/tour-search-performed.event';
+import { resolveTourTaxonomy } from '../utils/tour-taxonomy';
 import { slugify } from '../utils/slugify';
 
 function formatTourDateLabel(start: Date, end: Date): string {
@@ -67,6 +69,13 @@ export class TourService {
 
     const baseSlug = slugify(dto.title);
     const slug = await this.uniqueSlug(baseSlug);
+    const taxonomy = resolveTourTaxonomy({
+      stayKind: dto.stayKind,
+      destinationScope: dto.destinationScope,
+      departureCities: dto.departureCities,
+      durationDays: dto.durationDays,
+      extras: dto.extras,
+    });
 
     const tour = await this.prisma.tour.create({
       data: {
@@ -76,7 +85,10 @@ export class TourService {
         price: new Prisma.Decimal(dto.price),
         currency: dto.currency ?? DEFAULT_CURRENCY,
         category: dto.category,
-        durationDays: dto.durationDays ?? 1,
+        durationDays: taxonomy.durationDays,
+        stayKind: taxonomy.stayKind,
+        destinationScope: taxonomy.destinationScope,
+        departureCities: taxonomy.departureCities,
         coverUrl: dto.coverUrl,
         galleryUrls: dto.galleryUrls ?? [],
         extras: (dto.extras ?? {}) as Prisma.InputJsonValue,
@@ -121,7 +133,25 @@ export class TourService {
     if (dto.currency !== undefined) data.currency = dto.currency;
     if (dto.category !== undefined) data.category = dto.category;
     if (dto.status !== undefined) data.status = dto.status;
-    if (dto.durationDays !== undefined) data.durationDays = dto.durationDays;
+    if (
+      dto.stayKind !== undefined ||
+      dto.destinationScope !== undefined ||
+      dto.departureCities !== undefined ||
+      dto.durationDays !== undefined ||
+      dto.extras !== undefined
+    ) {
+      const taxonomy = resolveTourTaxonomy({
+        stayKind: dto.stayKind ?? tour.stayKind,
+        destinationScope: dto.destinationScope ?? tour.destinationScope,
+        departureCities: dto.departureCities ?? tour.departureCities,
+        durationDays: dto.durationDays ?? tour.durationDays,
+        extras: dto.extras ?? tour.extras,
+      });
+      data.stayKind = taxonomy.stayKind;
+      data.destinationScope = taxonomy.destinationScope;
+      data.departureCities = taxonomy.departureCities;
+      data.durationDays = taxonomy.durationDays;
+    }
     if (dto.coverUrl !== undefined) data.coverUrl = dto.coverUrl;
     if (dto.galleryUrls !== undefined) data.galleryUrls = dto.galleryUrls;
     if (dto.extras !== undefined) {
@@ -417,11 +447,18 @@ export class TourService {
     const sortOrder = dto.sortOrder ?? 'desc';
     const durationRange = this.resolveDurationFilter(dto);
 
+    const departureCity = dto.departureCity
+      ? normalizeDepartureCity(dto.departureCity)
+      : null;
+
     const cacheKey = [
-      'catalog:tours:search:v3',
+      'catalog:tours:search:v4',
       q,
       dto.agencyId ?? '',
       dto.category ?? '',
+      dto.stayKind ?? '',
+      dto.destinationScope ?? '',
+      departureCity ?? '',
       dto.featured === true ? '1' : '0',
       durationRange?.min ?? '',
       durationRange?.max ?? '',
@@ -457,6 +494,11 @@ export class TourService {
       status: 'PUBLISHED',
       ...(dto.agencyId ? { agencyId: dto.agencyId } : {}),
       ...(dto.category ? { category: dto.category } : {}),
+      ...(dto.stayKind ? { stayKind: dto.stayKind } : {}),
+      ...(dto.destinationScope
+        ? { destinationScope: dto.destinationScope }
+        : {}),
+      ...(departureCity ? { departureCities: { has: departureCity } } : {}),
       ...(dto.featured === true ? { featured: true } : {}),
       ...(durationRange
         ? {
@@ -871,6 +913,9 @@ export class TourService {
     category: string;
     status: string;
     durationDays: number;
+    stayKind?: string;
+    destinationScope?: string;
+    departureCities?: string[];
     featured?: boolean | null;
     averageRating?: Prisma.Decimal | null;
     reviewCount?: number | null;
@@ -904,6 +949,10 @@ export class TourService {
       category: tour.category as SharedTour['category'],
       status: tour.status as SharedTour['status'],
       durationDays: tour.durationDays,
+      stayKind: (tour.stayKind as SharedTour['stayKind']) ?? 'OVERNIGHT',
+      destinationScope:
+        (tour.destinationScope as SharedTour['destinationScope']) ?? 'DOMESTIC',
+      departureCities: tour.departureCities ?? [],
       featured: tour.featured ?? false,
       averageRating: (tour.averageRating ?? new Prisma.Decimal(0)).toString(),
       reviewCount: tour.reviewCount ?? 0,

@@ -5,6 +5,7 @@ import { BookingCancelledEvent } from '../../booking/events/booking-cancelled.ev
 import { BookingCompletedEvent } from '../../booking/events/booking-completed.event';
 import { PaymentCompletedEvent } from '../../payment/events/payment-completed.event';
 import { PaymentRefundedEvent } from '../../payment/events/payment-refunded.event';
+import { PartnerVerifiedEvent } from '../../identity/events/partner-verified.event';
 import { ReviewCreatedEvent } from '../../review/events/review-created.event';
 import { NotificationService } from '../services/notification.service';
 
@@ -15,6 +16,15 @@ export class NotificationEventsListener {
   private readonly logger = new Logger(NotificationEventsListener.name);
 
   constructor(private readonly notifications: NotificationService) {}
+
+  @OnEvent('partner.verified')
+  async onPartnerVerified(event: PartnerVerifiedEvent) {
+    try {
+      await this.notifications.notifyPartnerApproved(event);
+    } catch (err) {
+      this.logger.warn(`partner.verified notify failed: ${String(err)}`);
+    }
+  }
 
   @OnEvent('payment.completed')
   async onPaymentCompleted(event: PaymentCompletedEvent) {

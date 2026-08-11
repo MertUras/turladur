@@ -102,6 +102,8 @@ export default function PartnerNewTourPage() {
               location: string;
               time: string;
               description?: string;
+              latitude?: number | null;
+              longitude?: number | null;
             }>) ?? [],
           accommodationName: String(
             data.accommodationName ?? data.formData.accommodationName ?? '',

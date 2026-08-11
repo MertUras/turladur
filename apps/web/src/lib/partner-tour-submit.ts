@@ -1,5 +1,10 @@
 import type { TourFormData } from '@/components/features/partner-dashboard/tour-form';
 import {
+  inferDestinationScope,
+  inferStayKind,
+  normalizeDepartureCities,
+} from '@turta/shared-constants';
+import {
   buildTourExtrasFromForm,
   mapAgePricingType,
   mapAgePricingValue,
@@ -41,6 +46,8 @@ type SubmitPayload = {
     location: string;
     time: string;
     description?: string;
+    latitude?: number | null;
+    longitude?: number | null;
     order?: number;
   }>;
   accommodationName?: string;
@@ -111,6 +118,17 @@ export async function persistNewPartnerTour(
   );
 
   const extras = buildTourExtrasFromForm(formData);
+  const stayKind = inferStayKind({
+    stayKind: formData.stayKind,
+    durationDays: payload.duration,
+    tourType: formData.tourType,
+  });
+  const destinationScope = inferDestinationScope({
+    destinationScope: formData.destinationScope,
+    tourType: formData.tourType,
+    region: formData.region,
+  });
+  const departureCities = normalizeDepartureCities(formData.departureCity);
 
   const tour = await createPartnerTour(
     {
@@ -118,7 +136,10 @@ export async function persistNewPartnerTour(
       description: payload.description,
       price: payload.price,
       category,
-      durationDays: payload.duration || 1,
+      durationDays: stayKind === 'DAY_TRIP' ? 1 : payload.duration || 1,
+      stayKind,
+      destinationScope,
+      departureCities,
       coverUrl,
       galleryUrls,
       extras,
@@ -169,6 +190,8 @@ export async function persistNewPartnerTour(
         location: point.location,
         time: point.time,
         description: point.description,
+        latitude: point.latitude,
+        longitude: point.longitude,
         order: index,
       },
       token,
@@ -243,6 +266,19 @@ export async function persistPartnerTourUpdate(
     payload.features ?? formData.features,
   );
 
+  const extras = buildTourExtrasFromForm(formData);
+  const stayKind = inferStayKind({
+    stayKind: formData.stayKind,
+    durationDays: payload.duration,
+    tourType: formData.tourType,
+  });
+  const destinationScope = inferDestinationScope({
+    destinationScope: formData.destinationScope,
+    tourType: formData.tourType,
+    region: formData.region,
+  });
+  const departureCities = normalizeDepartureCities(formData.departureCity);
+
   await updatePartnerTour(
     tourId,
     {
@@ -250,10 +286,13 @@ export async function persistPartnerTourUpdate(
       description: payload.description,
       price: payload.price,
       category,
-      durationDays: payload.duration || 1,
+      durationDays: stayKind === 'DAY_TRIP' ? 1 : payload.duration || 1,
+      stayKind,
+      destinationScope,
+      departureCities,
       coverUrl,
       galleryUrls: dedupedGalleryUrls.length ? dedupedGalleryUrls : undefined,
-      extras: buildTourExtrasFromForm(formData),
+      extras,
     },
     token,
   );
@@ -322,6 +361,8 @@ export async function persistPartnerTourUpdate(
         location: point.location,
         time: point.time,
         description: point.description,
+        latitude: point.latitude,
+        longitude: point.longitude,
         order: index,
       },
       token,

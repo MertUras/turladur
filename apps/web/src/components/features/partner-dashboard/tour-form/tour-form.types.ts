@@ -43,6 +43,8 @@ export interface PickupPoint {
   location: string;
   time: string;
   description?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   order: number;
   isActive: boolean;
 }
@@ -81,6 +83,8 @@ export interface TourFormData {
   region: string;
   transportation: string;
   period: string;
+  stayKind: '' | 'DAY_TRIP' | 'OVERNIGHT';
+  destinationScope: '' | 'DOMESTIC' | 'INTERNATIONAL';
   tourType: string;
   accommodationType: string;
   ageRestriction: string;

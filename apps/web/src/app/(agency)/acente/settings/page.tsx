@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   Bell,
   Check,
@@ -11,13 +11,28 @@ import {
   UserCircle,
 } from 'lucide-react';
 
-import { ImageUploadField } from '@/components/features/partner/image-upload-field';
+import { resolveMediaUrl } from '@/lib/media';
 import {
   getPartnerProfile,
+  getPresignedUpload,
   updatePartnerProfile,
 } from '@/services/partner-admin';
 import { changePassword, updateProfile } from '@/services/identity';
 import { useAuth } from '@/providers/auth-provider';
+
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+const LOGO_CONTENT_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+] as const;
+
+type LogoContentType = (typeof LOGO_CONTENT_TYPES)[number];
+
+function isLogoContentType(value: string): value is LogoContentType {
+  return (LOGO_CONTENT_TYPES as readonly string[]).includes(value);
+}
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -87,11 +102,15 @@ export default function SettingsPage() {
 
 function ProfileSettings() {
   const { user, accessToken, refreshProfile } = useAuth();
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [logoPending, setLogoPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [about, setAbout] = useState('');
+  const [partnerId, setPartnerId] = useState('');
+  const [logo, setLogo] = useState<string | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
@@ -103,6 +122,8 @@ function ProfileSettings() {
     }
     void getPartnerProfile(accessToken)
       .then((data) => {
+        setPartnerId(data.id);
+        setLogo(resolveMediaUrl(data.logo));
         setAbout(data.address ?? '');
       })
       .catch(() => setError('Şirket bilgileri yüklenemedi.'))
@@ -139,6 +160,49 @@ function ProfileSettings() {
     }
   }
 
+  async function handleLogoFile(file: File | null) {
+    if (!file || !accessToken || !partnerId) return;
+    if (file.size > LOGO_MAX_BYTES) {
+      setError('Dosya boyutu 2MB sınırını aşıyor.');
+      return;
+    }
+    if (!isLogoContentType(file.type)) {
+      setError('Sadece JPG, PNG, GIF veya WebP yükleyin.');
+      return;
+    }
+    setLogoPending(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const presigned = await getPresignedUpload(
+        {
+          folder: 'operators',
+          entityId: partnerId,
+          filename: safeName,
+          contentType: file.type,
+        },
+        accessToken,
+      );
+      const uploadRes = await fetch(presigned.uploadUrl, {
+        method: 'PUT',
+        headers:
+          presigned.uploadHeaders ??
+          ({ 'Content-Type': file.type } satisfies Record<string, string>),
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error('Yükleme başarısız');
+      await updatePartnerProfile({ logo: presigned.publicUrl }, accessToken);
+      setLogo(resolveMediaUrl(presigned.publicUrl) ?? presigned.publicUrl);
+      setMessage('Logo güncellendi.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Yükleme hatası');
+    } finally {
+      setLogoPending(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
+  }
+
   if (loading) return <div>Yükleniyor...</div>;
   if (error && !user) return <div className="text-gray-900">{error}</div>;
 
@@ -160,15 +224,33 @@ function ProfileSettings() {
       <form className="space-y-8" onSubmit={handleSave}>
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 p-6 bg-gray-50 rounded-lg border border-gray-200">
           <div className="h-28 w-28 bg-white rounded-full flex items-center justify-center overflow-hidden shadow-sm border border-gray-200">
-            <UserCircle className="h-24 w-24 text-gray-400" />
+            {logo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={resolveMediaUrl(logo) ?? logo}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <UserCircle className="h-24 w-24 text-gray-400" />
+            )}
           </div>
           <div>
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => void handleLogoFile(e.target.files?.[0] ?? null)}
+            />
             <button
               type="button"
-              className="px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition shadow-sm flex items-center"
+              disabled={logoPending || !accessToken || !partnerId}
+              onClick={() => logoInputRef.current?.click()}
+              className="px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-md hover:bg-indigo-700 transition shadow-sm flex items-center disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Upload className="h-5 w-5 mr-2" />
-              Fotoğraf değiştir
+              {logoPending ? 'Yükleniyor…' : 'Fotoğraf değiştir'}
             </button>
             <p className="text-sm text-gray-500 mt-2">
               JPG, GIF veya PNG. Max 2MB.
@@ -804,7 +886,7 @@ function CompanySettings() {
           address: data.address ?? '',
           city: data.city ?? '',
           country: data.country ?? 'Türkiye',
-          logo: data.logo,
+          logo: resolveMediaUrl(data.logo),
           about: data.address ?? '',
         });
       })
@@ -871,28 +953,13 @@ function CompanySettings() {
               {form.logo ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={form.logo}
+                  src={resolveMediaUrl(form.logo) ?? form.logo}
                   alt=""
                   className="h-full w-full object-contain"
                 />
               ) : (
                 <Globe className="h-20 w-20 text-gray-400" />
               )}
-            </div>
-            <div className="flex-1">
-              {accessToken && partnerId ? (
-                <ImageUploadField
-                  token={accessToken}
-                  folder="partners"
-                  entityId={partnerId}
-                  currentUrl={form.logo}
-                  onUploaded={(url) => setForm((f) => ({ ...f, logo: url }))}
-                  label="Logo Yükle"
-                />
-              ) : null}
-              <p className="text-sm text-gray-500 mt-2">
-                SVG, PNG, veya JPG (ideal boyut 160x160px).
-              </p>
             </div>
           </div>
 

@@ -52,7 +52,7 @@ export const TOUR_TEMPLATES = [
     title: 'İstanbul Boğaz & Tarih',
     city: 'İstanbul',
     category: 'CITY' as const,
-    days: 2,
+    days: 1,
     price: 3490,
     coverUrl:
       'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?auto=format&fit=crop&w=1200&q=80',
@@ -80,7 +80,7 @@ export const TOUR_TEMPLATES = [
     title: 'Karadeniz Yayla Escape',
     city: 'Trabzon',
     category: 'ADVENTURE' as const,
-    days: 5,
+    days: 8,
     price: 7450,
     coverUrl:
       'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80',

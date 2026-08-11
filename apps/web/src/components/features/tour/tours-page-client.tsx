@@ -36,6 +36,8 @@ function ToursPageContent() {
   const featuredParam = searchParams.get('featured');
   const urlSearch = searchParams.get('search') || searchParams.get('q');
   const urlDepartureCity = searchParams.get('departureCity');
+  const urlStayKind = searchParams.get('stayKind');
+  const urlDestinationScope = searchParams.get('destinationScope');
   const urlStartDate = searchParams.get('startDate');
   const urlEndDate = searchParams.get('endDate');
 
@@ -50,6 +52,8 @@ function ToursPageContent() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [filterOptions, setFilterOptions] = useState<FilterOptions>({
+    stayKind: null,
+    destinationScope: null,
     departureCity: null,
     region: null,
     transportation: null,
@@ -154,6 +158,15 @@ function ToursPageContent() {
           : prev.dateRange;
 
       const nextDepartureCity = urlDepartureCity ?? prev.departureCity;
+      const nextStayKind =
+        urlStayKind === 'DAY_TRIP' || urlStayKind === 'OVERNIGHT'
+          ? urlStayKind
+          : prev.stayKind;
+      const nextDestinationScope =
+        urlDestinationScope === 'DOMESTIC' ||
+        urlDestinationScope === 'INTERNATIONAL'
+          ? urlDestinationScope
+          : prev.destinationScope;
       const nextDuration = durationParam ?? prev.duration;
       const nextFeatured = featuredParam === 'true' ? true : prev.featured;
 
@@ -165,6 +178,8 @@ function ToursPageContent() {
 
       if (
         prev.departureCity === nextDepartureCity &&
+        prev.stayKind === nextStayKind &&
+        prev.destinationScope === nextDestinationScope &&
         prev.duration === nextDuration &&
         prev.featured === nextFeatured &&
         dateUnchanged
@@ -175,6 +190,8 @@ function ToursPageContent() {
       return {
         ...prev,
         departureCity: nextDepartureCity,
+        stayKind: nextStayKind,
+        destinationScope: nextDestinationScope,
         duration: nextDuration,
         featured: nextFeatured,
         dateRange: nextDateRange,
@@ -185,6 +202,8 @@ function ToursPageContent() {
     urlDepartureCity,
     urlStartDate,
     urlEndDate,
+    urlStayKind,
+    urlDestinationScope,
     durationParam,
     featuredParam,
   ]);
@@ -251,13 +270,16 @@ function ToursPageContent() {
     }, 1000);
   }, []);
 
-  // Nest’e giden parametreler — extras (bölge/kalkış) her değişimde istek atmaz.
+  // Nest’e giden parametreler — bölge hâlâ client-side extras.
   const serverMinPrice = filterOptions.minPrice;
   const serverMaxPrice = filterOptions.maxPrice;
   const serverFeatured = filterOptions.featured;
   const serverRating = filterOptions.rating;
   const serverDuration = filterOptions.duration;
   const serverTourType = filterOptions.tourType;
+  const serverStayKind = filterOptions.stayKind;
+  const serverDestinationScope = filterOptions.destinationScope;
+  const serverDepartureCity = filterOptions.departureCity;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -296,15 +318,26 @@ function ToursPageContent() {
         if (serverRating != null) {
           params.set('minRating', String(serverRating));
         }
+        if (serverStayKind) {
+          params.set('stayKind', serverStayKind);
+        }
+        if (serverDestinationScope) {
+          params.set('destinationScope', serverDestinationScope);
+        }
+        if (serverDepartureCity) {
+          params.set('departureCity', serverDepartureCity);
+        }
         if (serverDuration) {
           const allowedDurations = new Set(['1', '2-3', '4-6', '7+']);
           if (allowedDurations.has(serverDuration)) {
             params.set('duration', serverDuration);
-          } else {
+          } else if (serverDuration !== '7') {
             const days = Number(serverDuration);
             if (Number.isFinite(days) && days >= 1) {
               params.set('durationDays', String(Math.floor(days)));
             }
+          } else {
+            params.set('duration', '7+');
           }
         }
         if (serverTourType) {
@@ -381,6 +414,9 @@ function ToursPageContent() {
     serverRating,
     serverDuration,
     serverTourType,
+    serverStayKind,
+    serverDestinationScope,
+    serverDepartureCity,
   ]);
 
   const filteredTours = useMemo(() => {
@@ -401,6 +437,8 @@ function ToursPageContent() {
   const resetFilters = () => {
     setSearchTerm('');
     setFilterOptions({
+      stayKind: null,
+      destinationScope: null,
       departureCity: null,
       region: null,
       transportation: null,
@@ -505,7 +543,10 @@ function ToursPageContent() {
       <div className="bg-gray-50 min-h-screen">
         <ToursPageHero />
 
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-20 py-10">
+        <div
+          id="tours-results"
+          className="container mx-auto scroll-mt-28 px-4 sm:px-6 lg:px-8 xl:px-20 py-10"
+        >
           <div className="flex flex-col lg:flex-row gap-6">
             <ToursPageFilters />
             <ToursPageResults />

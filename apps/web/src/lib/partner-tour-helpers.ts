@@ -1,3 +1,8 @@
+import {
+  inferDestinationScope,
+  inferStayKind,
+  normalizeDepartureCities,
+} from '@turta/shared-constants';
 import type { TourFormData } from '@/components/features/partner-dashboard/tour-form';
 
 export const IMAGE_PLACEHOLDER = '/brand/mark-on-light.png';
@@ -56,6 +61,8 @@ export function buildTourExtrasFromForm(
     region: data.region,
     transportation: data.transportation,
     period: data.period,
+    stayKind: data.stayKind || undefined,
+    destinationScope: data.destinationScope || undefined,
     tourType: data.tourType,
     accommodationType: data.accommodationType,
     nights: data.nights,
@@ -141,6 +148,9 @@ export function transformNestTourToFormData(input: {
   description: string;
   price: string;
   durationDays: number;
+  stayKind?: string;
+  destinationScope?: string;
+  departureCities?: string[];
   coverUrl: string | null;
   galleryUrls?: string[];
   extras?: Record<string, unknown>;
@@ -163,6 +173,8 @@ export function transformNestTourToFormData(input: {
     location: string;
     time: string;
     description: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
     order: number;
   }>;
 }): TourFormData {
@@ -195,12 +207,26 @@ export function transformNestTourToFormData(input: {
       ? (extras.itinerary as TourFormData['itinerary'])
       : [],
     status: 'draft',
-    departureCity: Array.isArray(extras.departureCity)
-      ? (extras.departureCity as string[])
-      : [''],
+    departureCity: (() => {
+      const fromColumn = normalizeDepartureCities(input.departureCities);
+      if (fromColumn.length > 0) return fromColumn;
+      return Array.isArray(extras.departureCity)
+        ? (extras.departureCity as string[])
+        : [''];
+    })(),
     region: str('region'),
     transportation: str('transportation'),
     period: str('period'),
+    stayKind: inferStayKind({
+      stayKind: input.stayKind,
+      durationDays: input.durationDays,
+      tourType: str('tourType'),
+    }),
+    destinationScope: inferDestinationScope({
+      destinationScope: input.destinationScope,
+      tourType: str('tourType'),
+      region: str('region'),
+    }),
     tourType: str('tourType'),
     accommodationType: str('accommodationType'),
     ageRestriction: str('ageRestriction'),
@@ -259,6 +285,8 @@ export function transformNestTourToFormData(input: {
       location: point.location,
       time: point.time,
       description: point.description ?? '',
+      latitude: point.latitude ?? null,
+      longitude: point.longitude ?? null,
       order: point.order,
       isActive: true,
     })),

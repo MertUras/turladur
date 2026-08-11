@@ -1,3 +1,5 @@
+import { buildOsmMapsUrl, isValidGeoCoordinate } from '@turta/shared-constants';
+
 import { escapeHtml } from './mail-layout';
 
 export type VoucherGuestLine = {
@@ -23,6 +25,7 @@ export type VoucherTemplateData = {
   guests: VoucherGuestLine[];
   pickupLocation: string | null;
   pickupTime: string | null;
+  pickupMapsUrl: string | null;
   seatLabel: string;
   payerName: string;
   totalAmount: string;
@@ -64,6 +67,22 @@ function tourDateRange(start: Date | null, end: Date | null): string {
     return `${formatDateTr(start)} - ${formatDateTr(end)}`;
   }
   return formatDateTr(start ?? end);
+}
+
+export function resolvePickupMapsUrl(
+  pickup?: {
+    latitude?: number | null;
+    longitude?: number | null;
+  } | null,
+): string | null {
+  if (
+    !pickup ||
+    !isValidGeoCoordinate(pickup.latitude, pickup.longitude) ||
+    typeof pickup.longitude !== 'number'
+  ) {
+    return null;
+  }
+  return buildOsmMapsUrl(pickup.latitude, pickup.longitude);
 }
 
 export function resolveVoucherBrandLogos(webBaseUrl: string): {
@@ -157,6 +176,14 @@ export function renderVoucherHtml(data: VoucherTemplateData): string {
             <td style="padding:4px 0;font-size:13px;text-align:right;">${escapeHtml(data.pickupLocation || '—')}</td></tr>
         <tr><td style="padding:4px 0;font-size:13px;color:#525252;">Kalkış Saati</td>
             <td style="padding:4px 0;font-size:13px;text-align:right;">${escapeHtml(data.pickupTime || '—')}</td></tr>
+        ${
+          data.pickupMapsUrl
+            ? `<tr><td style="padding:4px 0;font-size:13px;color:#525252;">Harita</td>
+            <td style="padding:4px 0;font-size:13px;text-align:right;">
+              <a href="${escapeHtml(data.pickupMapsUrl)}" style="color:#0a0a0a;font-weight:600;text-decoration:underline;">Haritada aç</a>
+            </td></tr>`
+            : ''
+        }
         <tr><td style="padding:4px 0;font-size:13px;color:#525252;">Koltuk No</td>
             <td style="padding:4px 0;font-size:13px;text-align:right;">${escapeHtml(data.seatLabel)}</td></tr>
       </table>

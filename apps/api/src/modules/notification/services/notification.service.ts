@@ -6,6 +6,7 @@ import { Prisma } from '../../../generated/prisma';
 import { PrismaService } from '../../../core/database/prisma.service';
 import {
   renderVoucherHtml,
+  resolvePickupMapsUrl,
   resolveVoucherBrandLogos,
 } from '../../../core/mail/voucher-template';
 import { EmailQueueService } from '../../../core/queue/email-queue.service';
@@ -16,7 +17,13 @@ import { ReviewCreatedEvent } from '../../review/events/review-created.event';
 
 type ReservationMeta = {
   billing?: { fullName?: string };
-  pickup?: { location?: string; city?: string; time?: string };
+  pickup?: {
+    location?: string;
+    city?: string;
+    time?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  };
   seatNumbers?: string | string[] | null;
 };
 
@@ -240,6 +247,18 @@ export class NotificationService {
     await this.emailQueue.enqueue({ to, template, data }, { delayMs });
   }
 
+  async notifyPartnerApproved(event: {
+    contactEmail: string;
+    companyName: string;
+  }): Promise<void> {
+    const to = event.contactEmail.trim();
+    if (!to) return;
+    await this.enqueueEmail(to, 'partner-approved', {
+      companyName: event.companyName,
+      loginUrl: `${this.brandBaseUrl}/acente/giris`,
+    });
+  }
+
   async notifyBookingConfirmed(reservationId: string) {
     const reservation = await this.prisma.reservation.findFirst({
       where: { id: reservationId, deletedAt: null },
@@ -310,6 +329,7 @@ export class NotificationService {
       })),
       pickupLocation,
       pickupTime: meta.pickup?.time ?? null,
+      pickupMapsUrl: resolvePickupMapsUrl(meta.pickup),
       seatLabel,
       payerName: guestName,
       totalAmount: reservation.totalAmount.toString(),

@@ -23,6 +23,8 @@ export const MOBILE_PRICE_INPUT =
 
 export function countActiveFilters(options: FilterOptions): number {
   let count = 0;
+  if (options.stayKind) count++;
+  if (options.destinationScope) count++;
   if (options.departureCity) count++;
   if (options.region) count++;
   if (options.minPrice != null) count++;
@@ -86,7 +88,8 @@ export const mapTourFromApi = (tour: Record<string, unknown>): Tour => {
       ? tour.images
       : '[]';
 
-  const departureCity = extras.departureCity ?? tour.departureCity ?? null;
+  const departureCity =
+    extras.departureCity ?? tour.departureCities ?? tour.departureCity ?? null;
   const destinations = extras.destinations ?? tour.destinations ?? [];
   const partner =
     readPartnerRecord(tour.partner) ?? readPartnerRecord(tour.tourOperator);
@@ -180,18 +183,6 @@ export function matchesClientExtrasFilters(
 ): boolean {
   const extras = getTourExtrasRecord(tour);
 
-  if (filterOptions.departureCity) {
-    const needle = normalizeFilterText(filterOptions.departureCity);
-    const dep = extras.departureCity ?? tour.departureCity;
-    const cities = (
-      Array.isArray(dep) ? dep : dep != null && dep !== '' ? [dep] : []
-    )
-      .map((city) => normalizeFilterText(String(city)))
-      .filter(Boolean);
-    if (!cities.some((city) => city === needle || city.includes(needle))) {
-      return false;
-    }
-  }
   if (filterOptions.region) {
     const needle = normalizeFilterText(filterOptions.region);
     const region = normalizeFilterText(
@@ -241,7 +232,8 @@ export function buildDepartureFacets(
   const counts = new Map<string, number>();
   for (const tour of rows) {
     const extras = getTourExtrasRecord(tour);
-    const dep = extras.departureCity ?? tour.departureCity;
+    const dep =
+      extras.departureCity ?? tour.departureCities ?? tour.departureCity;
     const cities = Array.isArray(dep)
       ? dep
       : dep != null && dep !== ''

@@ -294,6 +294,9 @@ export class PartnerService {
       category: string;
       status: string;
       durationDays: number;
+      stayKind?: string;
+      destinationScope?: string;
+      departureCities?: string[];
       agencyId: string;
       createdAt: Date;
       updatedAt: Date;
@@ -313,6 +316,9 @@ export class PartnerService {
           ...baseSelect,
           galleryUrls: true,
           extras: true,
+          stayKind: true,
+          destinationScope: true,
+          departureCities: true,
         },
       });
     } catch {
@@ -352,6 +358,9 @@ export class PartnerService {
         category: tour.category,
         status: tour.status,
         durationDays: tour.durationDays,
+        stayKind: tour.stayKind,
+        destinationScope: tour.destinationScope,
+        departureCities: tour.departureCities ?? [],
         agencyId: tour.agencyId,
         agency: tour.agency,
         createdAt: tour.createdAt.toISOString(),
@@ -417,7 +426,7 @@ export class PartnerService {
         city: agency.city,
         country: agency.country,
         website: agency.website,
-        logo: agency.logo,
+        logo: this.storage.resolvePublicUrl(agency.logo),
         averageRating: agency.averageRating.toString(),
         reviewCount: agency.reviewCount,
       },
@@ -477,7 +486,7 @@ export class PartnerService {
         city: updated.city,
         country: updated.country,
         website: updated.website,
-        logo: updated.logo,
+        logo: this.storage.resolvePublicUrl(updated.logo),
         taxNumber: updated.taxNumber,
       },
       error: null,

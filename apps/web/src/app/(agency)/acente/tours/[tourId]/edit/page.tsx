@@ -93,6 +93,9 @@ export default function PartnerTourEditPage() {
           description: tour.description,
           price: tour.price,
           durationDays: tour.durationDays,
+          stayKind: tour.stayKind,
+          destinationScope: tour.destinationScope,
+          departureCities: tour.departureCities,
           coverUrl: tour.coverUrl,
           galleryUrls: tour.galleryUrls,
           extras: tour.extras,
@@ -151,6 +154,8 @@ export default function PartnerTourEditPage() {
               location: string;
               time: string;
               description?: string;
+              latitude?: number | null;
+              longitude?: number | null;
             }>) ?? [],
           tourType: String(data.tourType ?? data.formData.tourType ?? ''),
           region: String(data.region ?? data.formData.region ?? ''),

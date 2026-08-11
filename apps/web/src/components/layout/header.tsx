@@ -318,13 +318,13 @@ export function Header() {
                     Tur Operatörleri
                   </Link>
                   <Link
-                    href="/tours?duration=1"
+                    href="/tours?stayKind=DAY_TRIP"
                     className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 rounded transition-colors duration-150"
                   >
                     Günübirlik Turlar
                   </Link>
                   <Link
-                    href="/tours?duration=7"
+                    href="/tours?duration=7+"
                     className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 rounded transition-colors duration-150"
                   >
                     Haftalık Turlar
@@ -719,14 +719,14 @@ export function Header() {
                         Tur Operatörleri
                       </Link>
                       <Link
-                        href="/tours?duration=1"
+                        href="/tours?stayKind=DAY_TRIP"
                         className="block py-1.5 px-2 text-sm text-neutral-600 hover:text-neutral-950 rounded-md hover:bg-neutral-100"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         Günübirlik
                       </Link>
                       <Link
-                        href="/tours?duration=7"
+                        href="/tours?duration=7+"
                         className="block py-1.5 px-2 text-sm text-neutral-600 hover:text-neutral-950 rounded-md hover:bg-neutral-100"
                         onClick={() => setIsMenuOpen(false)}
                       >

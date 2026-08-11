@@ -102,6 +102,77 @@ export function ToursPageFilters() {
           {/* Scrollable filter content */}
           <div className="flex-1 overflow-y-auto p-4 lg:p-6 pb-28 lg:pb-6">
             <div className="space-y-4 lg:space-y-6">
+              <div className={MOBILE_FILTER_SECTION}>
+                <h4 className="font-semibold text-neutral-900 mb-3 text-sm lg:font-medium">
+                  Tur Türü
+                </h4>
+                <div className="flex flex-wrap gap-2 lg:flex-col lg:space-y-2 lg:gap-0">
+                  {(
+                    [
+                      { value: 'DAY_TRIP', label: 'Günübirlik' },
+                      { value: 'OVERNIGHT', label: 'Konaklamalı' },
+                    ] as const
+                  ).map((item) => {
+                    const isSelected = filterOptions.stayKind === item.value;
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() =>
+                          setFilterOptions({
+                            ...filterOptions,
+                            stayKind: isSelected ? null : item.value,
+                          })
+                        }
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-colors lg:w-full lg:justify-start lg:rounded-lg lg:px-3 lg:py-2 lg:font-normal ${
+                          isSelected
+                            ? 'bg-neutral-950 text-white shadow-sm lg:bg-neutral-950'
+                            : 'bg-neutral-100 text-neutral-700 border border-neutral-200/80 hover:bg-neutral-200 lg:border-0 lg:bg-gray-100 lg:hover:bg-gray-200'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className={MOBILE_FILTER_SECTION}>
+                <h4 className="font-semibold text-neutral-900 mb-3 text-sm lg:font-medium">
+                  Rota
+                </h4>
+                <div className="flex flex-wrap gap-2 lg:flex-col lg:space-y-2 lg:gap-0">
+                  {(
+                    [
+                      { value: 'DOMESTIC', label: 'Yurtiçi' },
+                      { value: 'INTERNATIONAL', label: 'Yurtdışı' },
+                    ] as const
+                  ).map((item) => {
+                    const isSelected =
+                      filterOptions.destinationScope === item.value;
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() =>
+                          setFilterOptions({
+                            ...filterOptions,
+                            destinationScope: isSelected ? null : item.value,
+                          })
+                        }
+                        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-medium transition-colors lg:w-full lg:justify-start lg:rounded-lg lg:px-3 lg:py-2 lg:font-normal ${
+                          isSelected
+                            ? 'bg-neutral-950 text-white shadow-sm lg:bg-neutral-950'
+                            : 'bg-neutral-100 text-neutral-700 border border-neutral-200/80 hover:bg-neutral-200 lg:border-0 lg:bg-gray-100 lg:hover:bg-gray-200'
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Kalkış Noktası */}
               <div className={MOBILE_FILTER_SECTION}>
                 <h4 className="font-semibold text-neutral-900 mb-3 flex items-center gap-2 text-sm lg:font-medium">

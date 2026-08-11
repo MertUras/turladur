@@ -147,6 +147,10 @@ export type TourCategory =
 
 export type TourStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
 
+export type TourStayKind = 'DAY_TRIP' | 'OVERNIGHT';
+
+export type TourDestinationScope = 'DOMESTIC' | 'INTERNATIONAL';
+
 export type ExperienceStatus =
   'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'ARCHIVED';
 
@@ -183,6 +187,9 @@ export interface Tour {
   category: TourCategory;
   status: TourStatus;
   durationDays: number;
+  stayKind?: TourStayKind;
+  destinationScope?: TourDestinationScope;
+  departureCities?: string[];
   featured: boolean;
   averageRating: string;
   reviewCount: number;

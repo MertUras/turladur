@@ -27,8 +27,15 @@ export function resolveMediaUrl(
   }
 
   // Relative storage key: tours/{id}/file.webp
+  // Also accept already-proxied paths: /api/v1/storage/media/operators/...
   if (!/^https?:\/\//i.test(value)) {
-    return `${base}/${value.replace(/^\/+/, '')}`;
+    const marker = 'storage/media/';
+    const markerIndex = value.indexOf(marker);
+    const key =
+      markerIndex >= 0
+        ? value.slice(markerIndex + marker.length).replace(/^\/+/, '')
+        : value.replace(/^\/+/, '');
+    return key ? `${base}/${key}` : null;
   }
 
   try {

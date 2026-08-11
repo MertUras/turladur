@@ -13,6 +13,7 @@ import {
 } from '../../../core/auth/utils/role-access';
 import {
   renderVoucherHtml,
+  resolvePickupMapsUrl,
   resolveVoucherBrandLogos,
   wrapVoucherDocument,
   type VoucherTemplateData,
@@ -25,6 +26,8 @@ type ReservationMeta = {
     location?: string;
     city?: string;
     time?: string;
+    latitude?: number | null;
+    longitude?: number | null;
   };
   seatNumbers?: string | string[] | null;
 };
@@ -163,6 +166,7 @@ export class VoucherService {
       })),
       pickupLocation,
       pickupTime: meta.pickup?.time ?? null,
+      pickupMapsUrl: resolvePickupMapsUrl(meta.pickup),
       seatLabel,
       payerName,
       totalAmount: reservation.totalAmount.toString(),

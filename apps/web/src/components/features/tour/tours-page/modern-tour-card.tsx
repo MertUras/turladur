@@ -309,7 +309,7 @@ export function ModernTourCard({ tour }: { tour: Tour }) {
               <div className="w-6 h-6 rounded-full overflow-hidden border border-white">
                 <Image
                   src={
-                    tour.tourOperator?.logo ||
+                    resolveMediaUrl(tour.tourOperator?.logo) ||
                     `https://ui-avatars.com/api/?name=${encodeURIComponent(
                       tour.tourOperator?.companyName || 'Partner',
                     )}&background=0EA5E9&color=fff`
@@ -317,6 +317,9 @@ export function ModernTourCard({ tour }: { tour: Tour }) {
                   alt={tour.tourOperator?.companyName || 'Tur Operatörü'}
                   width={24}
                   height={24}
+                  unoptimized={shouldUnoptimizeMedia(
+                    resolveMediaUrl(tour.tourOperator?.logo),
+                  )}
                   className="object-cover w-full h-full"
                 />
               </div>

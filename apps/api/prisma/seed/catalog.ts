@@ -29,6 +29,17 @@ export type SeedCatalog = {
   hotels: { id: string; agencyId: string }[];
 };
 
+const SEED_CITY_COORDS: Record<
+  string,
+  { latitude: number; longitude: number }
+> = {
+  Nevşehir: { latitude: 38.6244, longitude: 34.7239 },
+  Antalya: { latitude: 36.8969, longitude: 30.7133 },
+  İstanbul: { latitude: 41.0082, longitude: 28.9784 },
+  İzmir: { latitude: 38.4237, longitude: 27.1428 },
+  Trabzon: { latitude: 41.0027, longitude: 39.7168 },
+};
+
 function addDays(base: Date, days: number) {
   const d = new Date(base);
   d.setUTCHours(0, 0, 0, 0);
@@ -135,6 +146,13 @@ export async function seedCatalog(
           category: tmpl.category,
           status: 'PUBLISHED',
           durationDays: tmpl.days,
+          stayKind: tmpl.days === 1 ? 'DAY_TRIP' : 'OVERNIGHT',
+          destinationScope: 'DOMESTIC',
+          departureCities: [tmpl.city],
+          extras: {
+            departureCity: [tmpl.city],
+            tourType: tmpl.days === 1 ? 'Günübirlik Tur' : 'Kültür Turu',
+          },
           childMaxAge: 12,
           minParticipants: 2,
           featured: t === 0,
@@ -165,6 +183,7 @@ export async function seedCatalog(
         },
       });
 
+      const pickupGeo = SEED_CITY_COORDS[tmpl.city];
       const pickupA = await prisma.tourPickupPoint.create({
         data: {
           tourId: tour.id,
@@ -174,6 +193,8 @@ export async function seedCatalog(
           description: 'Ana biniş',
           order: 0,
           isFixedOrigin: true,
+          latitude: pickupGeo?.latitude,
+          longitude: pickupGeo?.longitude,
         },
       });
       await prisma.tourPickupPoint.create({
@@ -184,6 +205,12 @@ export async function seedCatalog(
           time: '07:30',
           description: 'İkinci durak',
           order: 1,
+          latitude: pickupGeo?.latitude
+            ? pickupGeo.latitude + 0.008
+            : undefined,
+          longitude: pickupGeo?.longitude
+            ? pickupGeo.longitude + 0.006
+            : undefined,
         },
       });
 
