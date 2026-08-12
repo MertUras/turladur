@@ -195,6 +195,9 @@ export const TOUR_CANCEL_REASON_LABELS: Record<TourCancelReason, string> = {
 
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_PAGE_LIMIT = 20;
+
+/** Public /activities listing cover — admin toggle. Missing row = off. */
+export const ACTIVITIES_LISTING_COVER_KEY = 'activities_listing';
 export const MAX_PAGE_LIMIT = 100;
 export const DEFAULT_CURRENCY = 'TRY';
 

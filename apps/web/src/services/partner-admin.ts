@@ -823,6 +823,82 @@ export async function deleteAdminContentPost(id: string, token: string) {
   });
 }
 
+export async function getAdminPageCover(key: string, token: string) {
+  return apiRequest<{
+    key: string;
+    enabled: boolean;
+    headline: string | null;
+    subtitle: string | null;
+  }>(`/admin/content/page-covers/${key}`, { token });
+}
+
+export async function updateAdminPageCover(
+  key: string,
+  body: {
+    enabled: boolean;
+    headline?: string | null;
+    subtitle?: string | null;
+  },
+  token: string,
+) {
+  return apiRequest<{
+    key: string;
+    enabled: boolean;
+    headline: string | null;
+    subtitle: string | null;
+  }>(`/admin/content/page-covers/${key}`, {
+    method: 'PATCH',
+    body,
+    token,
+  });
+}
+
+export async function listAdminRouteDefinitions(token: string) {
+  return apiRequest<
+    Array<{
+      id: string;
+      name: string;
+      description: string;
+      longDescription: string;
+    }>
+  >('/catalog/routes/definitions', { token });
+}
+
+export async function getAdminRoutePage(routeKey: string, token: string) {
+  return apiRequest<{
+    routeKey: string;
+    exists: boolean;
+    seoTitle: string | null;
+    seoDescription: string | null;
+    summary: string | null;
+    body: string | null;
+  }>(`/admin/content/route-pages/${routeKey}`, { token });
+}
+
+export async function updateAdminRoutePage(
+  routeKey: string,
+  body: {
+    seoTitle?: string | null;
+    seoDescription?: string | null;
+    summary?: string | null;
+    body?: string | null;
+  },
+  token: string,
+) {
+  return apiRequest<{
+    routeKey: string;
+    exists: boolean;
+    seoTitle: string | null;
+    seoDescription: string | null;
+    summary: string | null;
+    body: string | null;
+  }>(`/admin/content/route-pages/${routeKey}`, {
+    method: 'PATCH',
+    body,
+    token,
+  });
+}
+
 export type PartnerReviewItem = {
   id: string;
   customerName: string;

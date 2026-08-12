@@ -5,14 +5,22 @@ import {
 } from '@nestjs/common';
 
 import { isPlatformAdminRole } from '../../../core/auth/utils/role-access';
-import { DEFAULT_PAGE, DEFAULT_PAGE_LIMIT } from '@turta/shared-constants';
+import {
+  ACTIVITIES_LISTING_COVER_KEY,
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_LIMIT,
+} from '@turta/shared-constants';
 import type {
   Category as SharedCategory,
   Post as SharedPost,
+  RoutePageOverlay as SharedRoutePageOverlay,
+  SitePageCover as SharedSitePageCover,
 } from '@turta/shared-types';
 import { Prisma } from '../../../generated/prisma';
 
+import { CacheService } from '../../../core/cache/cache.service';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { BusinessException } from '../../../shared/exceptions/business.exception';
 import {
   CreateCategoryDto,
   CreateCommentDto,
@@ -20,13 +28,24 @@ import {
   SearchPostsDto,
   UpdateCategoryDto,
   UpdateCommentDto,
+  UpdatePageCoverDto,
   UpdatePostDto,
+  UpdateRoutePageDto,
 } from '../dto/content.dto';
 import { slugify } from '../utils/slugify';
+import { ROUTE_DEFINITIONS } from '../../catalog/data/route-definitions';
+
+const PAGE_COVER_CACHE_TTL_SECONDS = 60;
+const ROUTE_PAGE_CACHE_TTL_SECONDS = 60;
+const ALLOWED_PAGE_COVER_KEYS = new Set([ACTIVITIES_LISTING_COVER_KEY]);
+const ALLOWED_ROUTE_KEYS = new Set(ROUTE_DEFINITIONS.map((route) => route.id));
 
 @Injectable()
 export class ContentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   // ─── Posts ────────────────────────────────────────────
 
@@ -487,5 +506,265 @@ export class ContentService {
     slug: string;
   }): SharedCategory {
     return { id: row.id, name: row.name, slug: row.slug };
+  }
+
+  // ─── Page covers ──────────────────────────────────────
+
+  async getPageCover(key: string) {
+    this.assertPageCoverKey(key);
+    const cacheKey = this.pageCoverCacheKey(key);
+
+    try {
+      const cached = await this.cache.get<SharedSitePageCover>(cacheKey);
+      if (cached) {
+        return { success: true as const, data: cached, error: null };
+      }
+    } catch {
+      // Redis down must not 500 the public listing.
+    }
+
+    const data = await this.loadPageCover(key);
+    try {
+      await this.cache.set(cacheKey, data, PAGE_COVER_CACHE_TTL_SECONDS);
+    } catch {
+      // ignore cache write failures
+    }
+
+    return { success: true as const, data, error: null };
+  }
+
+  async updatePageCover(key: string, dto: UpdatePageCoverDto, actorId: string) {
+    this.assertPageCoverKey(key);
+
+    const row = await this.prisma.sitePageCover.upsert({
+      where: { key },
+      create: {
+        key,
+        enabled: dto.enabled,
+        headline: dto.headline ?? null,
+        subtitle: dto.subtitle ?? null,
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
+      update: {
+        enabled: dto.enabled,
+        ...(dto.headline !== undefined ? { headline: dto.headline } : {}),
+        ...(dto.subtitle !== undefined ? { subtitle: dto.subtitle } : {}),
+        updatedBy: actorId,
+        deletedAt: null,
+        deletedBy: null,
+      },
+    });
+
+    const data = this.toPageCover(row);
+    await this.cache.del(this.pageCoverCacheKey(key));
+    return { success: true as const, data, error: null };
+  }
+
+  private assertPageCoverKey(key: string) {
+    if (!ALLOWED_PAGE_COVER_KEYS.has(key)) {
+      throw new BusinessException(
+        'UNKNOWN_PAGE_COVER',
+        'Bilinmeyen sayfa kapağı',
+        400,
+      );
+    }
+  }
+
+  private pageCoverCacheKey(key: string) {
+    return `content:page-cover:${key}`;
+  }
+
+  private disabledCover(key: string): SharedSitePageCover {
+    return { key, enabled: false, headline: null, subtitle: null };
+  }
+
+  private async loadPageCover(key: string): Promise<SharedSitePageCover> {
+    try {
+      const row = await this.prisma.sitePageCover.findFirst({
+        where: { key, deletedAt: null },
+      });
+      if (!row) {
+        return this.disabledCover(key);
+      }
+      return this.toPageCover(row);
+    } catch {
+      return this.disabledCover(key);
+    }
+  }
+
+  private toPageCover(row: {
+    key: string;
+    enabled: boolean;
+    headline: string | null;
+    subtitle: string | null;
+  }): SharedSitePageCover {
+    return {
+      key: row.key,
+      enabled: row.enabled,
+      headline: row.headline,
+      subtitle: row.subtitle,
+    };
+  }
+
+  // ─── Route pages (SEO + copy overlay) ─────────────────
+
+  async listRoutePages() {
+    const cacheKey = 'content:route-pages:all';
+
+    try {
+      const cached = await this.cache.get<SharedRoutePageOverlay[]>(cacheKey);
+      if (cached) {
+        return { success: true as const, data: cached, error: null };
+      }
+    } catch {
+      // Redis down must not 500 public pages.
+    }
+
+    const data = await this.loadAllRoutePages();
+    try {
+      await this.cache.set(cacheKey, data, ROUTE_PAGE_CACHE_TTL_SECONDS);
+    } catch {
+      // ignore cache write failures
+    }
+
+    return { success: true as const, data, error: null };
+  }
+
+  async getRoutePage(routeKey: string) {
+    this.assertRouteKey(routeKey);
+    const cacheKey = this.routePageCacheKey(routeKey);
+
+    try {
+      const cached = await this.cache.get<SharedRoutePageOverlay>(cacheKey);
+      if (cached) {
+        return { success: true as const, data: cached, error: null };
+      }
+    } catch {
+      // Redis down must not 500 public pages.
+    }
+
+    const data = await this.loadRoutePage(routeKey);
+    try {
+      await this.cache.set(cacheKey, data, ROUTE_PAGE_CACHE_TTL_SECONDS);
+    } catch {
+      // ignore cache write failures
+    }
+
+    return { success: true as const, data, error: null };
+  }
+
+  async updateRoutePage(
+    routeKey: string,
+    dto: UpdateRoutePageDto,
+    actorId: string,
+  ) {
+    this.assertRouteKey(routeKey);
+
+    const row = await this.prisma.routePage.upsert({
+      where: { routeKey },
+      create: {
+        routeKey,
+        seoTitle: dto.seoTitle ?? null,
+        seoDescription: dto.seoDescription ?? null,
+        summary: dto.summary ?? null,
+        body: dto.body ?? null,
+        createdBy: actorId,
+        updatedBy: actorId,
+      },
+      update: {
+        ...(dto.seoTitle !== undefined ? { seoTitle: dto.seoTitle } : {}),
+        ...(dto.seoDescription !== undefined
+          ? { seoDescription: dto.seoDescription }
+          : {}),
+        ...(dto.summary !== undefined ? { summary: dto.summary } : {}),
+        ...(dto.body !== undefined ? { body: dto.body } : {}),
+        updatedBy: actorId,
+        deletedAt: null,
+        deletedBy: null,
+      },
+    });
+
+    const data = this.toRoutePage(row, true);
+    await this.invalidateRoutePageCache(routeKey);
+    return { success: true as const, data, error: null };
+  }
+
+  private assertRouteKey(routeKey: string) {
+    if (!ALLOWED_ROUTE_KEYS.has(routeKey)) {
+      throw new BusinessException(
+        'UNKNOWN_ROUTE_KEY',
+        'Bilinmeyen rota anahtarı',
+        400,
+      );
+    }
+  }
+
+  private routePageCacheKey(routeKey: string) {
+    return `content:route-page:${routeKey}`;
+  }
+
+  private missingRoutePage(routeKey: string): SharedRoutePageOverlay {
+    return {
+      routeKey,
+      exists: false,
+      seoTitle: null,
+      seoDescription: null,
+      summary: null,
+      body: null,
+    };
+  }
+
+  private async loadRoutePage(
+    routeKey: string,
+  ): Promise<SharedRoutePageOverlay> {
+    try {
+      const row = await this.prisma.routePage.findFirst({
+        where: { routeKey, deletedAt: null },
+      });
+      if (!row) {
+        return this.missingRoutePage(routeKey);
+      }
+      return this.toRoutePage(row, true);
+    } catch {
+      return this.missingRoutePage(routeKey);
+    }
+  }
+
+  private async loadAllRoutePages(): Promise<SharedRoutePageOverlay[]> {
+    try {
+      const rows = await this.prisma.routePage.findMany({
+        where: { deletedAt: null },
+        orderBy: { routeKey: 'asc' },
+      });
+      return rows.map((row) => this.toRoutePage(row, true));
+    } catch {
+      return [];
+    }
+  }
+
+  private async invalidateRoutePageCache(routeKey: string) {
+    await this.cache.del(this.routePageCacheKey(routeKey));
+    await this.cache.del('content:route-pages:all');
+  }
+
+  private toRoutePage(
+    row: {
+      routeKey: string;
+      seoTitle: string | null;
+      seoDescription: string | null;
+      summary: string | null;
+      body: string | null;
+    },
+    exists: boolean,
+  ): SharedRoutePageOverlay {
+    return {
+      routeKey: row.routeKey,
+      exists,
+      seoTitle: row.seoTitle,
+      seoDescription: row.seoDescription,
+      summary: row.summary,
+      body: row.body,
+    };
   }
 }

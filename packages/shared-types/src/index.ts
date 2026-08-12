@@ -371,6 +371,23 @@ export interface Category {
   slug: string;
 }
 
+export interface SitePageCover {
+  key: string;
+  enabled: boolean;
+  headline: string | null;
+  subtitle: string | null;
+}
+
+/** Admin-editable SEO/copy overlay for a curated catalog route. */
+export interface RoutePageOverlay {
+  routeKey: string;
+  exists: boolean;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  summary: string | null;
+  body: string | null;
+}
+
 export type NotificationType =
   | 'BOOKING_CONFIRMED'
   | 'BOOKING_COMPLETED'

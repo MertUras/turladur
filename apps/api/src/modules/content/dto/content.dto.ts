@@ -159,3 +159,49 @@ export class UpdateCommentDto {
   @MaxLength(2000)
   content!: string;
 }
+
+export class UpdatePageCoverDto {
+  @ApiProperty({ example: false })
+  @IsBoolean()
+  enabled!: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  headline?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  subtitle?: string | null;
+}
+
+export class UpdateRoutePageDto {
+  @ApiPropertyOptional({ example: 'Kapadokya Balon Turları | turta' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  seoTitle?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(320)
+  seoDescription?: string | null;
+
+  @ApiPropertyOptional({
+    description: 'Hero subtitle + listing card description',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  summary?: string | null;
+
+  @ApiPropertyOptional({ description: 'Hakkında section body' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10000)
+  body?: string | null;
+}

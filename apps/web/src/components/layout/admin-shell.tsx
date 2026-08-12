@@ -17,7 +17,7 @@ const NAV = [
   { href: '/admin/agencies', label: 'Partner / Acente' },
   { href: '/admin/guides', label: 'Rehberler' },
   { href: '/admin/tours', label: 'Onay' },
-  { href: '/admin/content', label: 'Blog' },
+  { href: '/admin/content', label: 'İçerik Yönetimi' },
 ];
 
 /** Align with middleware ADMIN_ROLES — access token is memory-only until boot refresh. */

@@ -1,18 +1,29 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
+import { CacheService } from '../../../core/cache/cache.service';
 import { PrismaService } from '../../../core/database/prisma.service';
+import { BusinessException } from '../../../shared/exceptions/business.exception';
 import { ContentService } from '../services/content.service';
-import { createPrismaMock } from '../../__tests__/test-helpers';
+import {
+  createCacheMock,
+  createPrismaMock,
+} from '../../__tests__/test-helpers';
 
 describe('ContentService', () => {
   let service: ContentService;
   let prisma: ReturnType<typeof createPrismaMock>;
+  let cache: ReturnType<typeof createCacheMock>;
 
   beforeEach(async () => {
     prisma = createPrismaMock();
+    cache = createCacheMock();
     const module = await Test.createTestingModule({
-      providers: [ContentService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        ContentService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: CacheService, useValue: cache },
+      ],
     }).compile();
     service = module.get(ContentService);
   });
@@ -252,6 +263,125 @@ describe('ContentService', () => {
       });
       const result = await service.getPostBySlugOrId('t');
       expect(result.data.slug).toBe('t');
+    });
+  });
+
+  describe('getPageCover', () => {
+    it('returns disabled when row is missing', async () => {
+      (prisma.sitePageCover.findFirst as jest.Mock).mockResolvedValue(null);
+      const result = await service.getPageCover('activities_listing');
+      expect(result.data.enabled).toBe(false);
+      expect(result.data.key).toBe('activities_listing');
+    });
+
+    it('returns disabled when table is missing', async () => {
+      (prisma.sitePageCover.findFirst as jest.Mock).mockRejectedValue(
+        new Error('table does not exist'),
+      );
+      const result = await service.getPageCover('activities_listing');
+      expect(result.data.enabled).toBe(false);
+    });
+
+    it('returns cached cover without hitting prisma', async () => {
+      cache.get.mockResolvedValue({
+        key: 'activities_listing',
+        enabled: true,
+        headline: 'Yeniliyoruz',
+        subtitle: null,
+      });
+      const result = await service.getPageCover('activities_listing');
+      expect(result.data.enabled).toBe(true);
+      expect(prisma.sitePageCover.findFirst).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getRoutePage', () => {
+    it('returns exists:false when row is missing', async () => {
+      (prisma.routePage.findFirst as jest.Mock).mockResolvedValue(null);
+      const result = await service.getRoutePage('kapadokya');
+      expect(result.data.exists).toBe(false);
+      expect(result.data.routeKey).toBe('kapadokya');
+    });
+
+    it('returns exists:false when table is missing', async () => {
+      (prisma.routePage.findFirst as jest.Mock).mockRejectedValue(
+        new Error('table does not exist'),
+      );
+      const result = await service.getRoutePage('kapadokya');
+      expect(result.data.exists).toBe(false);
+    });
+
+    it('returns cached overlay without hitting prisma', async () => {
+      cache.get.mockResolvedValue({
+        routeKey: 'kapadokya',
+        exists: true,
+        seoTitle: 'Kapadokya SEO',
+        seoDescription: null,
+        summary: 'Özel özet',
+        body: null,
+      });
+      const result = await service.getRoutePage('kapadokya');
+      expect(result.data.seoTitle).toBe('Kapadokya SEO');
+      expect(prisma.routePage.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('rejects unknown route keys', async () => {
+      await expect(
+        service.getRoutePage('unknown-route'),
+      ).rejects.toBeInstanceOf(BusinessException);
+    });
+  });
+
+  describe('listRoutePages', () => {
+    it('returns empty array when table is missing', async () => {
+      (prisma.routePage.findMany as jest.Mock).mockRejectedValue(
+        new Error('table does not exist'),
+      );
+      const result = await service.listRoutePages();
+      expect(result.data).toEqual([]);
+    });
+
+    it('returns overlays from database', async () => {
+      (prisma.routePage.findMany as jest.Mock).mockResolvedValue([
+        {
+          routeKey: 'kapadokya',
+          seoTitle: 'Kapadokya',
+          seoDescription: 'Meta',
+          summary: 'Özet',
+          body: 'Gövde',
+        },
+      ]);
+      const result = await service.listRoutePages();
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].exists).toBe(true);
+    });
+  });
+
+  describe('updateRoutePage', () => {
+    it('upserts overlay and clears cache', async () => {
+      (prisma.routePage.upsert as jest.Mock).mockResolvedValue({
+        routeKey: 'kapadokya',
+        seoTitle: 'Kapadokya SEO',
+        seoDescription: 'Meta açıklama',
+        summary: 'Özet',
+        body: 'Gövde metni',
+      });
+
+      const result = await service.updateRoutePage(
+        'kapadokya',
+        {
+          seoTitle: 'Kapadokya SEO',
+          seoDescription: 'Meta açıklama',
+          summary: 'Özet',
+          body: 'Gövde metni',
+        },
+        'admin1',
+      );
+
+      expect(result.data.exists).toBe(true);
+      expect(result.data.seoTitle).toBe('Kapadokya SEO');
+      expect(cache.del).toHaveBeenCalledWith('content:route-page:kapadokya');
+      expect(cache.del).toHaveBeenCalledWith('content:route-pages:all');
     });
   });
 });

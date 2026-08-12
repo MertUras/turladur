@@ -17,7 +17,9 @@ import { UserPayload } from '../../../core/auth/types/auth.types';
 import {
   CreatePostDto,
   SearchPostsDto,
+  UpdatePageCoverDto,
   UpdatePostDto,
+  UpdateRoutePageDto,
 } from '../dto/content.dto';
 import { ContentService } from '../services/content.service';
 
@@ -61,5 +63,43 @@ export class AdminContentController {
   @ApiOperation({ summary: 'Admin soft-delete post' })
   deletePost(@Param('id') id: string, @CurrentUser() user: UserPayload) {
     return this.contentService.softDeletePost(id, user);
+  }
+
+  @Get('page-covers/:key')
+  @ApiOperation({ summary: 'Admin get page cover flag' })
+  getPageCover(@Param('key') key: string) {
+    return this.contentService.getPageCover(key);
+  }
+
+  @Patch('page-covers/:key')
+  @ApiOperation({ summary: 'Admin toggle page cover' })
+  updatePageCover(
+    @Param('key') key: string,
+    @Body() dto: UpdatePageCoverDto,
+    @CurrentUser() user: UserPayload,
+  ) {
+    return this.contentService.updatePageCover(key, dto, user.userId);
+  }
+
+  @Get('route-pages')
+  @ApiOperation({ summary: 'Admin list route page overlays' })
+  listRoutePages() {
+    return this.contentService.listRoutePages();
+  }
+
+  @Get('route-pages/:routeKey')
+  @ApiOperation({ summary: 'Admin get route page overlay' })
+  getRoutePage(@Param('routeKey') routeKey: string) {
+    return this.contentService.getRoutePage(routeKey);
+  }
+
+  @Patch('route-pages/:routeKey')
+  @ApiOperation({ summary: 'Admin update route SEO/copy overlay' })
+  updateRoutePage(
+    @Param('routeKey') routeKey: string,
+    @Body() dto: UpdateRoutePageDto,
+    @CurrentUser() user: UserPayload,
+  ) {
+    return this.contentService.updateRoutePage(routeKey, dto, user.userId);
   }
 }

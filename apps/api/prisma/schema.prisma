@@ -1682,6 +1682,43 @@ model Comment {
   @@schema("content")
 }
 
+/// Public marketing page cover (e.g. /activities listing). Missing row = disabled.
+model SitePageCover {
+  id        String    @id @default(cuid())
+  key       String    @unique @db.VarChar(64)
+  enabled   Boolean   @default(false)
+  headline  String?   @db.VarChar(200)
+  subtitle  String?   @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?
+  updatedBy String?
+  deletedBy String?
+  deletedAt DateTime?
+
+  @@index([deletedAt])
+  @@schema("content")
+}
+
+/// SEO + copy overlay for curated catalog routes (keyed by catalog route id).
+model RoutePage {
+  id             String    @id @default(cuid())
+  routeKey       String    @unique @db.VarChar(64)
+  seoTitle       String?   @db.VarChar(120)
+  seoDescription String?   @db.VarChar(320)
+  summary        String?   @db.VarChar(500)
+  body           String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedBy      String?
+  deletedAt      DateTime?
+
+  @@index([deletedAt])
+  @@schema("content")
+}
+
 // ─── outbox ─────────────────────────────────────────────
 
 enum OutboxStatus {

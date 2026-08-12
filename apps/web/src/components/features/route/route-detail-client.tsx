@@ -5,8 +5,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { parseJsonArray } from '@/lib/utils';
+import { mergeRouteWithOverlay } from '@/lib/route-page-overlay';
 import { getOperatorDisplayName } from '@/lib/operator';
 import { ApiError } from '@/services/api-client';
+import { getRoutePageOverlay } from '@/services/content';
 import { getRouteById, type RouteWithStats } from '@/services/route';
 
 type TourWithOperator = {
@@ -79,17 +81,21 @@ export default function RouteDetailClient({ routeId }: PageProps) {
     setLoading(true);
     setNotFound(false);
     try {
-      const body = await getRouteById(routeId, {
-        search: searchParams.get('search') ?? undefined,
-        category: searchParams.get('category') ?? undefined,
-        duration: searchParams.get('duration') ?? undefined,
-        season: searchParams.get('season') ?? undefined,
-      });
+      const [body, overlay] = await Promise.all([
+        getRouteById(routeId, {
+          search: searchParams.get('search') ?? undefined,
+          category: searchParams.get('category') ?? undefined,
+          duration: searchParams.get('duration') ?? undefined,
+          season: searchParams.get('season') ?? undefined,
+        }),
+        getRoutePageOverlay(routeId).catch(() => null),
+      ]);
       if (!body?.route) {
         setNotFound(true);
         setData(null);
         return;
       }
+      const mergedRoute = mergeRouteWithOverlay(body.route, overlay);
       const tours = (body.tours ?? []) as TourWithOperator[];
       const fromApi = (
         body as { toursByCategory?: Record<string, TourWithOperator[]> }
@@ -103,7 +109,7 @@ export default function RouteDetailClient({ routeId }: PageProps) {
               return acc;
             }, {});
       setData({
-        route: body.route,
+        route: mergedRoute,
         tours,
         toursByCategory,
       });

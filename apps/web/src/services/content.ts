@@ -1,4 +1,9 @@
-import type { Category, Post } from '@turta/shared-types';
+import type {
+  Category,
+  Post,
+  RoutePageOverlay,
+  SitePageCover,
+} from '@turta/shared-types';
 
 import { apiRequest, apiRequestWithMeta } from './api-client';
 
@@ -30,6 +35,24 @@ export async function searchPosts(
 
 export async function getPostBySlug(slug: string) {
   return apiRequest<PostDetail>(`/content/posts/${slug}`, {
+    next: { revalidate: 120 },
+  });
+}
+
+export async function getPageCover(key: string) {
+  return apiRequest<SitePageCover>(`/content/page-covers/${key}`, {
+    cache: 'no-store',
+  });
+}
+
+export async function listRoutePageOverlays() {
+  return apiRequest<RoutePageOverlay[]>('/content/route-pages', {
+    next: { revalidate: 120 },
+  });
+}
+
+export async function getRoutePageOverlay(routeKey: string) {
+  return apiRequest<RoutePageOverlay>(`/content/route-pages/${routeKey}`, {
     next: { revalidate: 120 },
   });
 }

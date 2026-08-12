@@ -333,47 +333,12 @@ export function Header() {
               )}
             </div>
 
-            {/* Aktiviteler Dropdown */}
-            <div className="relative group dropdown-container">
-              <button
-                onClick={() => toggleDropdown('activities')}
-                className={`flex items-center px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${linkColor} ${linkHoverColor} ${linkBgHoverColor}`}
-              >
-                Aktiviteler
-                <ChevronDownIcon
-                  className={`w-4 h-4 ml-1 transition-transform duration-200 ${activeDropdown === 'activities' ? 'rotate-180' : ''}`}
-                />
-              </button>
-              {activeDropdown === 'activities' && (
-                <div className="absolute left-0 mt-2 w-56 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 p-1.5 z-50 animate-fadeIn">
-                  <Link
-                    href="/activities"
-                    className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 rounded transition-colors duration-150"
-                  >
-                    Tüm Aktiviteler
-                  </Link>
-                  <div className="border-t border-neutral-100 my-1"></div>
-                  <Link
-                    href="/gastronomi"
-                    className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 rounded transition-colors duration-150"
-                  >
-                    Gastronomi
-                  </Link>
-                  <Link
-                    href="/kultur-turlari"
-                    className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 rounded transition-colors duration-150"
-                  >
-                    Kültür Turları
-                  </Link>
-                  <Link
-                    href="/macera-aktiviteleri"
-                    className="block px-3 py-1.5 text-sm text-neutral-700 hover:text-neutral-950 hover:bg-neutral-100 rounded transition-colors duration-150"
-                  >
-                    Macera Aktiviteleri
-                  </Link>
-                </div>
-              )}
-            </div>
+            <Link
+              href="/routes"
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors duration-200 ${linkColor} ${linkHoverColor} ${linkBgHoverColor}`}
+            >
+              Rotalar
+            </Link>
 
             {/* Blog */}
             <Link
@@ -743,58 +708,13 @@ export function Header() {
                   </div>
                 </div>
 
-                {/* Mobil Aktiviteler Dropdown */}
-                <div className="dropdown-container">
-                  <button
-                    className={`w-full flex justify-between items-center py-2.5 px-3 rounded-md text-left ${activeDropdown === 'activities-mobile' ? 'bg-neutral-100' : ''} text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 transition-colors`}
-                    onClick={() => toggleDropdown('activities-mobile')}
-                  >
-                    <span className="font-medium text-sm">Aktiviteler</span>
-                    <ChevronDownIcon
-                      className={`w-4 h-4 transition-transform duration-200 ${activeDropdown === 'activities-mobile' ? 'rotate-180 text-neutral-950' : 'text-neutral-400'}`}
-                    />
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${activeDropdown === 'activities-mobile' ? 'max-h-96' : 'max-h-0'}`}
-                    style={{
-                      maxHeight:
-                        activeDropdown === 'activities-mobile'
-                          ? '500px'
-                          : '0px',
-                    }}
-                  >
-                    <div className="py-1 pl-6 mt-1 space-y-0.5 border-l border-neutral-200 ml-3">
-                      <Link
-                        href="/activities"
-                        className="block py-1.5 px-2 text-sm text-neutral-600 hover:text-neutral-950 rounded-md hover:bg-neutral-100"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Tüm Aktiviteler
-                      </Link>
-                      <Link
-                        href="/gastronomi"
-                        className="block py-1.5 px-2 text-sm text-neutral-600 hover:text-neutral-950 rounded-md hover:bg-neutral-100"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Gastronomi
-                      </Link>
-                      <Link
-                        href="/kultur-turlari"
-                        className="block py-1.5 px-2 text-sm text-neutral-600 hover:text-neutral-950 rounded-md hover:bg-neutral-100"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Kültür Turları
-                      </Link>
-                      <Link
-                        href="/macera-aktiviteleri"
-                        className="block py-1.5 px-2 text-sm text-neutral-600 hover:text-neutral-950 rounded-md hover:bg-neutral-100"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Macera
-                      </Link>
-                    </div>
-                  </div>
-                </div>
+                <Link
+                  href="/routes"
+                  className="block py-2.5 px-3 text-sm font-medium text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950 rounded-md transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Rotalar
+                </Link>
 
                 {/* Mobil Blog */}
                 <Link

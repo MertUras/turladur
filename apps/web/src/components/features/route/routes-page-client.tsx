@@ -17,6 +17,11 @@ import {
 import { Hero } from '@/components/features/home/hero';
 import { RouteCard } from '@/components/features/route/route-card';
 import {
+  mergeRouteWithOverlay,
+  routeOverlaysByKey,
+} from '@/lib/route-page-overlay';
+import { listRoutePageOverlays } from '@/services/content';
+import {
   listRoutes,
   type RouteWithStats,
   type RoutesListResponse,
@@ -77,13 +82,23 @@ export default function RoutesPageClient() {
   const fetchRoutes = useCallback(async () => {
     setLoading(true);
     try {
-      const body = await listRoutes({
-        search: searchParams.get('search') ?? undefined,
-        category: searchParams.get('category') ?? undefined,
-        duration: searchParams.get('duration') ?? undefined,
-        season: searchParams.get('season') ?? undefined,
-      });
-      setData(body as RoutesListResponse);
+      const [body, overlays] = await Promise.all([
+        listRoutes({
+          search: searchParams.get('search') ?? undefined,
+          category: searchParams.get('category') ?? undefined,
+          duration: searchParams.get('duration') ?? undefined,
+          season: searchParams.get('season') ?? undefined,
+        }),
+        listRoutePageOverlays().catch(() => []),
+      ]);
+      const overlayMap = routeOverlaysByKey(overlays);
+      const mergedBody = {
+        ...(body as RoutesListResponse),
+        routes: (body as RoutesListResponse).routes.map((route) =>
+          mergeRouteWithOverlay(route, overlayMap.get(route.id)),
+        ),
+      };
+      setData(mergedBody as RoutesListResponse);
     } catch (error) {
       console.error('Routes fetch error:', error);
       setData(null);

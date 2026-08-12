@@ -57,6 +57,8 @@ export function createPrismaMock() {
     'post',
     'category',
     'comment',
+    'sitePageCover',
+    'routePage',
     'subUser',
     'review',
     'agencyCommissionRate',

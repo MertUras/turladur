@@ -6,6 +6,7 @@ import {
 import { Prisma } from '../../../generated/prisma';
 
 import { PrismaService } from '../../../core/database/prisma.service';
+import { isPlatformAdminRole } from '../../../core/auth/utils/role-access';
 import {
   ROUTE_CATEGORY_LABELS,
   ROUTE_DEFINITIONS,
@@ -134,7 +135,7 @@ export class RouteService {
   }
 
   private assertAdmin(role: string) {
-    if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+    if (!isPlatformAdminRole(role)) {
       throw new ForbiddenException({
         code: 'FORBIDDEN',
         message: 'Bu işlem için admin yetkisi gerekli',
