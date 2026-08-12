@@ -536,25 +536,34 @@ export class ContentService {
   async updatePageCover(key: string, dto: UpdatePageCoverDto, actorId: string) {
     this.assertPageCoverKey(key);
 
-    const row = await this.prisma.sitePageCover.upsert({
-      where: { key },
-      create: {
-        key,
-        enabled: dto.enabled,
-        headline: dto.headline ?? null,
-        subtitle: dto.subtitle ?? null,
-        createdBy: actorId,
-        updatedBy: actorId,
-      },
-      update: {
-        enabled: dto.enabled,
-        ...(dto.headline !== undefined ? { headline: dto.headline } : {}),
-        ...(dto.subtitle !== undefined ? { subtitle: dto.subtitle } : {}),
-        updatedBy: actorId,
-        deletedAt: null,
-        deletedBy: null,
-      },
-    });
+    let row;
+    try {
+      row = await this.prisma.sitePageCover.upsert({
+        where: { key },
+        create: {
+          key,
+          enabled: dto.enabled,
+          headline: dto.headline ?? null,
+          subtitle: dto.subtitle ?? null,
+          createdBy: actorId,
+          updatedBy: actorId,
+        },
+        update: {
+          enabled: dto.enabled,
+          ...(dto.headline !== undefined ? { headline: dto.headline } : {}),
+          ...(dto.subtitle !== undefined ? { subtitle: dto.subtitle } : {}),
+          updatedBy: actorId,
+          deletedAt: null,
+          deletedBy: null,
+        },
+      });
+    } catch {
+      throw new BusinessException(
+        'CONTENT_STORAGE_UNAVAILABLE',
+        'Sayfa kapağı kaydedilemedi: veritabanı migration gerekli (pnpm --filter api prisma migrate deploy).',
+        503,
+      );
+    }
 
     const data = this.toPageCover(row);
     await this.cache.del(this.pageCoverCacheKey(key));
@@ -661,29 +670,38 @@ export class ContentService {
   ) {
     this.assertRouteKey(routeKey);
 
-    const row = await this.prisma.routePage.upsert({
-      where: { routeKey },
-      create: {
-        routeKey,
-        seoTitle: dto.seoTitle ?? null,
-        seoDescription: dto.seoDescription ?? null,
-        summary: dto.summary ?? null,
-        body: dto.body ?? null,
-        createdBy: actorId,
-        updatedBy: actorId,
-      },
-      update: {
-        ...(dto.seoTitle !== undefined ? { seoTitle: dto.seoTitle } : {}),
-        ...(dto.seoDescription !== undefined
-          ? { seoDescription: dto.seoDescription }
-          : {}),
-        ...(dto.summary !== undefined ? { summary: dto.summary } : {}),
-        ...(dto.body !== undefined ? { body: dto.body } : {}),
-        updatedBy: actorId,
-        deletedAt: null,
-        deletedBy: null,
-      },
-    });
+    let row;
+    try {
+      row = await this.prisma.routePage.upsert({
+        where: { routeKey },
+        create: {
+          routeKey,
+          seoTitle: dto.seoTitle ?? null,
+          seoDescription: dto.seoDescription ?? null,
+          summary: dto.summary ?? null,
+          body: dto.body ?? null,
+          createdBy: actorId,
+          updatedBy: actorId,
+        },
+        update: {
+          ...(dto.seoTitle !== undefined ? { seoTitle: dto.seoTitle } : {}),
+          ...(dto.seoDescription !== undefined
+            ? { seoDescription: dto.seoDescription }
+            : {}),
+          ...(dto.summary !== undefined ? { summary: dto.summary } : {}),
+          ...(dto.body !== undefined ? { body: dto.body } : {}),
+          updatedBy: actorId,
+          deletedAt: null,
+          deletedBy: null,
+        },
+      });
+    } catch {
+      throw new BusinessException(
+        'CONTENT_STORAGE_UNAVAILABLE',
+        'Rota içeriği kaydedilemedi: veritabanı migration gerekli (pnpm --filter api prisma migrate deploy).',
+        503,
+      );
+    }
 
     const data = this.toRoutePage(row, true);
     await this.invalidateRoutePageCache(routeKey);

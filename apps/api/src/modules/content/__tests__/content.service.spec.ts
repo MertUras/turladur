@@ -383,5 +383,18 @@ describe('ContentService', () => {
       expect(cache.del).toHaveBeenCalledWith('content:route-page:kapadokya');
       expect(cache.del).toHaveBeenCalledWith('content:route-pages:all');
     });
+
+    it('returns 503 when storage table is missing', async () => {
+      (prisma.routePage.upsert as jest.Mock).mockRejectedValue(
+        new Error('table does not exist'),
+      );
+
+      await expect(
+        service.updateRoutePage('kapadokya', { seoTitle: 'Test' }, 'admin1'),
+      ).rejects.toMatchObject({
+        code: 'CONTENT_STORAGE_UNAVAILABLE',
+        statusCode: 503,
+      });
+    });
   });
 });
