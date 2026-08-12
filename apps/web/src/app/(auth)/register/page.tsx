@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   CreditCard,
@@ -16,6 +16,11 @@ import {
   X,
 } from 'lucide-react';
 
+import {
+  CUSTOMER_PASSWORD_HINT,
+  getCustomerPasswordError,
+} from '@turta/shared-validators';
+
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { formatFullPhone, PhoneInput } from '@/components/ui/phone-input';
 import { getPhoneValidationError, isValidFullPhone } from '@/lib/phone-rules';
@@ -27,9 +32,27 @@ import { useAuth } from '@/providers/auth-provider';
 const REGISTER_VISUAL =
   'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80';
 
+const OTP_API_ERROR_CODES = new Set([
+  'OTP_INVALID',
+  'OTP_EXPIRED',
+  'OTP_NOT_FOUND',
+  'OTP_MAX_ATTEMPTS',
+]);
+
+function isOtpRelatedApiError(err: ApiError): boolean {
+  if (OTP_API_ERROR_CODES.has(err.code)) return true;
+  const message = err.message.toLowerCase();
+  return (
+    message.includes('doğrulama kodu') ||
+    message.includes('kodun süresi') ||
+    message.includes('yeni kod isteyin')
+  );
+}
+
 export default function RegisterPage() {
   const { register } = useAuth();
   const router = useRouter();
+  const passwordInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -95,13 +118,31 @@ export default function RegisterPage() {
     if (formData.password !== formData.confirmPassword) {
       return 'Şifreler eşleşmiyor.';
     }
-    if (passwordStrength < 3) {
-      return 'Şifre en az 8 karakter, 1 büyük harf ve 1 rakam içermelidir.';
+    const passwordError = getCustomerPasswordError(formData.password);
+    if (passwordError) {
+      return passwordError;
     }
     if (!formData.termsAccepted) {
       return 'Devam etmek için Kullanım Şartları ve Gizlilik Politikasını kabul etmelisiniz.';
     }
     return null;
+  }
+
+  function focusPasswordField() {
+    window.requestAnimationFrame(() => {
+      passwordInputRef.current?.focus();
+      passwordInputRef.current?.scrollIntoView({
+        block: 'center',
+        behavior: 'smooth',
+      });
+    });
+  }
+
+  function showFormValidationError(message: string) {
+    setOtpOpen(false);
+    setOtpError(null);
+    setError(message);
+    focusPasswordField();
   }
 
   async function requestOtp() {
@@ -122,6 +163,9 @@ export default function RegisterPage() {
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
+      if (getCustomerPasswordError(formData.password)) {
+        focusPasswordField();
+      }
       return;
     }
 
@@ -167,6 +211,13 @@ export default function RegisterPage() {
       setOtpError('6 haneli kodu girin.');
       return;
     }
+
+    const validationError = validateForm();
+    if (validationError) {
+      showFormValidationError(validationError);
+      return;
+    }
+
     setOtpPending(true);
     setOtpError(null);
     try {
@@ -183,9 +234,13 @@ export default function RegisterPage() {
       setOtpOpen(false);
       router.push('/tours');
     } catch (err) {
-      setOtpError(
-        err instanceof ApiError ? err.message : 'Kayıt başarısız oldu',
-      );
+      if (err instanceof ApiError && isOtpRelatedApiError(err)) {
+        setOtpError(err.message);
+      } else {
+        showFormValidationError(
+          err instanceof ApiError ? err.message : 'Kayıt başarısız oldu',
+        );
+      }
     } finally {
       setOtpPending(false);
     }
@@ -388,6 +443,7 @@ export default function RegisterPage() {
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
                 <input
+                  ref={passwordInputRef}
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
@@ -428,6 +484,9 @@ export default function RegisterPage() {
                   ))}
                 </div>
               ) : null}
+              <p className="mt-1 text-xs text-neutral-500">
+                {CUSTOMER_PASSWORD_HINT}
+              </p>
             </div>
 
             <div>

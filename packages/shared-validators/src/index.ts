@@ -131,3 +131,36 @@ export const createCommentSchema = z.object({
 });
 
 export type CreateCommentInput = z.infer<typeof createCommentSchema>;
+
+/** Matches Nest `RegisterUserDto` / `ResetPasswordDto` password rule (ASCII A–Z + digit). */
+const CUSTOMER_PASSWORD_ASCII_UPPERCASE = /[A-Z]/;
+const CUSTOMER_PASSWORD_DIGIT = /\d/;
+
+export const CUSTOMER_PASSWORD_MIN_LENGTH = 8;
+
+export const CUSTOMER_PASSWORD_VALIDATION_MESSAGE =
+  'Şifre en az 8 karakter, 1 büyük harf ve 1 rakam içermelidir.';
+
+export const CUSTOMER_PASSWORD_HINT =
+  'En az 8 karakter, 1 büyük harf (A–Z) ve 1 rakam.';
+
+export function isValidCustomerPassword(password: string): boolean {
+  return (
+    password.length >= CUSTOMER_PASSWORD_MIN_LENGTH &&
+    CUSTOMER_PASSWORD_ASCII_UPPERCASE.test(password) &&
+    CUSTOMER_PASSWORD_DIGIT.test(password)
+  );
+}
+
+export function getCustomerPasswordError(password: string): string | null {
+  return isValidCustomerPassword(password)
+    ? null
+    : CUSTOMER_PASSWORD_VALIDATION_MESSAGE;
+}
+
+export const customerPasswordSchema = z
+  .string()
+  .min(CUSTOMER_PASSWORD_MIN_LENGTH)
+  .regex(/^(?=.*[A-Z])(?=.*\d).+$/, {
+    message: 'Şifre en az 1 büyük harf ve 1 rakam içermelidir',
+  });

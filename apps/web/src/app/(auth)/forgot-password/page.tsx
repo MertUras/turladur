@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { FormEvent, useState } from 'react';
 import { ArrowLeft, CheckCircle, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 
+import { getCustomerPasswordError } from '@turta/shared-validators';
+
 import { BrandLogo } from '@/components/brand/brand-logo';
 import { EmailOtpPanel } from '@/components/features/auth/email-otp-panel';
 import { ApiError } from '@/services/api-client';
@@ -31,14 +33,9 @@ export default function ForgotPasswordPage() {
       setError('E-posta doğrulama kodunu girin.');
       return;
     }
-    if (
-      newPassword.length < 8 ||
-      !/[A-Z]/.test(newPassword) ||
-      !/\d/.test(newPassword)
-    ) {
-      setError(
-        'Yeni şifre en az 8 karakter, 1 büyük harf ve 1 rakam içermelidir.',
-      );
+    const passwordError = getCustomerPasswordError(newPassword);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
     if (newPassword !== confirmPassword) {

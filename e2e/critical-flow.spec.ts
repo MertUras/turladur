@@ -68,6 +68,40 @@ test.describe('API smoke', () => {
   });
 });
 
+test.describe('Login smoke', () => {
+  const customer = {
+    email: process.env.E2E_CUSTOMER_EMAIL ?? 'customer01@demo.turta.com',
+    password: process.env.E2E_CUSTOMER_PASSWORD ?? 'Demo1234!',
+  };
+
+  test('API login returns access token', async ({ request }) => {
+    const health = await request.get(`${apiBase}/health`);
+    test.skip(!health.ok(), 'API not running');
+
+    const login = await apiJson<{ accessToken: string }>(
+      request,
+      'post',
+      '/identity/login',
+      { data: customer },
+    );
+    test.skip(!login.body.success, 'Demo customer login failed — seed DB?');
+    expect(login.status).toBeLessThan(400);
+    expect(login.body.data?.accessToken).toBeTruthy();
+  });
+
+  test('web login form signs in demo customer', async ({ page }) => {
+    const response = await page.goto('/login');
+    test.skip(!response || !response.ok(), 'Web app not running');
+
+    await page.locator('#email').fill(customer.email);
+    await page.locator('#password').fill(customer.password);
+    await page.getByRole('button', { name: /Giriş Yap/i }).click();
+
+    await page.waitForURL(/\/(tours|admin|acente)/, { timeout: 15_000 });
+    await expect(page.locator('body')).toBeVisible();
+  });
+});
+
 test.describe('Web smoke', () => {
   test('home page renders', async ({ page }) => {
     const response = await page.goto('/');
