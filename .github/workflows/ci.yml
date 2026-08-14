@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop, 'feat/**']
+  push:
+    branches: [main, develop, feat/neon-setup, feat/sprint-11-monorepo]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-build:
+    name: Lint & Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HUSKY: 0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Module boundary check (API)
+        run: pnpm check:module-boundaries
+
+      - name: API unit tests (critical)
+        run: pnpm --filter api test -- --runInBand --forceExit
+
+      - name: Format check (monorepo apps & packages)
+        run: >
+          pnpm exec prettier --check
+          "apps/**/*.{ts,tsx,js,mjs,json,css}"
+          "packages/**/*.{ts,js,json}"
+          "infrastructure/**/*.{yml,yaml}"
+          "nx.json"
+          "pnpm-workspace.yaml"
+          "tsconfig.base.json"
+          "commitlint.config.js"
+
+      - name: Build shared packages
+        run: |
+          pnpm --filter @turta/shared-types build
+          pnpm --filter @turta/shared-validators build
+          pnpm --filter @turta/shared-constants build
+
+      - name: Build web
+        run: pnpm --filter web build
+
+      - name: Build api
+        run: pnpm --filter api build

@@ -1,0 +1,107 @@
+---
+description: turta platform mimarisi - Tüm geliştirme bu kurallara uymalıdır
+globs: 
+alwaysApply: true
+---
+
+# turta — Platform Mimarisi
+
+## Genel Bakış
+
+turta, Nx monorepo içinde **ayrı frontend ve backend uygulamaları** barındıran, modüler monolit mimariye sahip bir turizm platformudur.
+
+## Monorepo Yapısı
+
+```
+turta/
+├── apps/
+│   ├── web/          → Next.js 15 (App Router) — Sadece Frontend
+│   └── api/          → NestJS 11 — Modüler Monolit Backend
+├── packages/
+│   ├── shared-types/       → Frontend + Backend ortak TypeScript tipleri
+│   ├── shared-validators/  → Zod şemaları (her iki tarafta aynı validation)
+│   └── shared-constants/   → Enum, roller, status değerleri
+│   # (eslint-config paketi henüz yok — root eslint.config.mjs; Faz 5’te eklenebilir)
+├── infrastructure/
+│   └── docker/             → docker-compose (postgres, redis, minio, mailhog)
+│   # nginx: prod opsiyonel — bu repo’da klasör yok
+├── nx.json
+├── pnpm-workspace.yaml
+└── tsconfig.base.json
+```
+
+## Teknoloji Stack
+
+| Katman | Teknoloji |
+|--------|-----------|
+| Monorepo | Nx + pnpm |
+| Frontend | Next.js 15 (App Router) |
+| UI | Tailwind CSS 4 + Shadcn/ui |
+| State | TanStack Query + Zustand |
+| Forms | React Hook Form + Zod |
+| Backend | NestJS 11 |
+| ORM | Prisma 6 (multi-schema) |
+| DB | PostgreSQL 16 |
+| Cache | Redis 7 |
+| Queue | BullMQ |
+| Auth | Nest identity + Passport JWT (`passport-jwt`) — Keycloak/OIDC **ertelendi** (zorunlu değil) |
+| Storage | MinIO (dev) / S3 (prod) |
+| Email | Resend |
+| Logging | Pino |
+| CI/CD | GitHub Actions |
+| Deploy (Web) | Vercel |
+| Deploy (API) | Railway / Fly.io |
+
+## Kritik Mimari Kuralları
+
+### 1. Frontend ve Backend Tamamen Ayrıdır
+- `apps/web/` içinde hiçbir veritabanı kodu, Prisma import'u veya backend mantığı OLMAZ.
+- Frontend, backend ile SADECE HTTP API üzerinden (fetch/axios) haberleşir.
+- Ortak tipler `packages/shared-types/` üzerinden paylaşılır.
+
+### 2. Backend Modüler Monolittir
+- Her iş alanı (catalog, booking, payment, identity, notification, partner, review, analytics) kendi NestJS modülüdür.
+- Modüller birbirine ASLA doğrudan bağımlı değildir.
+- Modüller arası iletişim SADECE event (EventEmitter2 / BullMQ) ile olur.
+- Bir modül, başka modülün repository/service'ini import edemez.
+
+### 3. CQRS Deseni (opsiyonel — karmaşık yazma akışlarında)
+- Zorunlu iskelet değil: her domain’e boş command/query klasörü eklenmez.
+- Karmaşık yazma → Commands (CreateBookingCommand, UpdateTourCommand) + handler
+- Karmaşık okuma → Queries (SearchHotelsQuery, GetTourDetailQuery) + handler
+- Basit CRUD service metodları yeterli olabilir; mevcut CQRS kullanımı korunur.
+
+### 4. Event-Driven İletişim
+```
+Booking → BookingCreatedEvent → Payment (dinler, ödeme başlatır)
+Payment → PaymentCompletedEvent → Notification (dinler, email gönderir)
+Payment → PaymentCompletedEvent → Booking (dinler, status günceller)
+```
+
+### 5. Veritabanı Schema Ayrımı
+- Her modülün kendi PostgreSQL schema'sı vardır: `catalog.*`, `booking.*`, `payment.*`, `identity.*`
+- Bir modül SADECE kendi schema'sındaki tablolara erişebilir.
+- Cross-schema veri ihtiyacı → event veya shared query interface ile çözülür.
+
+### 6. Cache Stratejisi
+- Arama sonuçları → Redis (TTL: 5dk)
+- Otel/tur detay → Redis (TTL: 15dk, invalidate on update)
+- Session → Redis
+- Background job → BullMQ (Redis-backed)
+
+### 7. API Response Standardı
+Tüm API endpoint'leri şu formatta döner:
+```typescript
+{
+  success: boolean;
+  data: T | null;
+  error: { code: string; message: string } | null;
+  meta?: { page: number; limit: number; total: number };
+}
+```
+
+## Evrim Yolu (Değişiklik Gerektirmez)
+- 0-50K kullanıcı: Tek NestJS instance + PostgreSQL + Redis
+- 50K-500K: Horizontal scaling (multiple instances) + Read Replica + BullMQ workers
+- 500K+: Yoğun modülleri (payment, catalog) ayrı NestJS app olarak deploy et
+- 1M+: Kafka event streaming, Elasticsearch (catalog search), Kubernetes

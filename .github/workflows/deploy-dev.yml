@@ -1,0 +1,74 @@
+# Develop branch → Neon `develop` migrate + API build
+#
+# Gerekli GitHub Secrets:
+#   DEV_DATABASE_URL — Neon develop branch Direct connection URL
+#
+# Deploy host (Railway/Fly) ayrı bağlanır; bu workflow DB'yi güncel tutar + API derler.
+# Host deploy: Railway/Vercel dashboard'da develop branch trigger veya `railway up`.
+
+name: Deploy Dev
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  migrate-and-build:
+    name: Migrate (Neon develop) + Build API
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      HUSKY: 0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Require DEV_DATABASE_URL
+        env:
+          DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DEV_DATABASE_URL secret eksik. Neon → develop → Direct connection URL."
+            exit 1
+          fi
+
+      - name: Prisma migrate deploy (apps/api → Neon develop)
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+        run: pnpm exec prisma migrate deploy
+
+      - name: Prisma seed (idempotent demo data)
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+        run: pnpm exec prisma db seed
+
+      - name: Build shared packages
+        run: |
+          pnpm --filter @turta/shared-types build
+          pnpm --filter @turta/shared-validators build
+          pnpm --filter @turta/shared-constants build
+
+      - name: Build API
+        run: pnpm --filter api build

@@ -1,0 +1,1816 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["identity", "catalog", "booking", "payment", "review", "notification", "analytics", "content", "outbox", "promotion"]
+}
+
+// ─── identity ───────────────────────────────────────────
+
+enum UserRole {
+  CUSTOMER
+  PARTNER
+  PARTNER_STAFF
+  ADMIN
+  SUPER_ADMIN
+  /// Hedef platform rolleri (expand — eski ADMIN/SUPER_ADMIN ile birlikte).
+  PLATFORM_ADMIN
+  PLATFORM_SUPER_ADMIN
+
+  @@schema("identity")
+}
+
+model User {
+  id                String         @id @default(cuid())
+  /// Soft-delete: partial unique migrate SQL (User_email_active_key).
+  email             String
+  passwordHash      String
+  firstName         String?
+  lastName          String?
+  phone             String?
+  /// TC Kimlik No (11 hane) — fatura / rezervasyon misafir bilgisi.
+  identityNumber    String?
+  birthDate         DateTime?      @db.Date
+  /// Kişisel adres (tek satır / serbest metin).
+  address           String?
+  /// Fatura adresi alanları.
+  billingLine1      String?
+  billingLine2      String?
+  billingCity       String?
+  billingState      String?
+  billingPostalCode String?
+  billingCountry    String?        @default("Türkiye")
+  role              UserRole       @default(CUSTOMER)
+  isActive          Boolean        @default(true)
+  /// Staff izinleri (AgencyStaff.permissions tercih edilir).
+  permissions       Json?
+  refreshTokens     RefreshToken[]
+  favorites         Favorite[]
+  couponUsages      CouponUsage[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt         DateTime?
+
+  @@index([role])
+  @@index([email])
+  @@index([deletedAt])
+  @@schema("identity")
+}
+
+/// Kullanıcı favori tur/deneyim (tourId XOR experienceId).
+model Favorite {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tourId       String?
+  tour         Tour?       @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  experienceId String?
+  experience   Experience? @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt    DateTime?
+
+  /// Aktif unique: partial migrate SQL (userId,tourId) / (userId,experienceId).
+  @@index([userId])
+  @@index([tourId])
+  @@index([experienceId])
+  @@index([deletedAt])
+  @@schema("identity")
+}
+
+/// Email OTP — checkout, kayıt, şifre sıfırlama (SMS sonraki aşama).
+enum OtpPurpose {
+  CHECKOUT
+  REGISTER
+  PASSWORD_RESET
+
+  @@schema("identity")
+}
+
+model EmailOtp {
+  id         String     @id @default(cuid())
+  email      String
+  purpose    OtpPurpose
+  codeHash   String
+  attempts   Int        @default(0)
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  @@index([email, purpose])
+  @@index([expiresAt])
+  @@schema("identity")
+}
+
+
+
+
+// ─── identity: marketplace Agency (P0-A hard contract) ───
+
+enum AgencyStaffRole {
+  AGENCY_OWNER
+  AGENCY_ADMIN
+  AGENCY_STAFF
+
+  @@schema("identity")
+}
+
+enum AgencyStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+
+  @@schema("identity")
+}
+
+enum AgencyCapability {
+  TOURS
+
+  @@schema("identity")
+}
+
+enum SellerTier {
+  BRONZE
+  SILVER
+  GOLD
+
+  @@schema("identity")
+}
+
+enum BusCompanyStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+
+  @@schema("identity")
+}
+
+enum GuideStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+
+  @@schema("identity")
+}
+
+enum TursabVerificationStatus {
+  NOT_SUBMITTED
+  PENDING
+  VERIFIED
+  MISMATCH
+  NOT_FOUND
+  SUSPENDED
+  ERROR
+
+  @@schema("identity")
+}
+
+/// Tur otobüsü N+1 standartları (Vehicle.seatLayoutKind). BusSeatLayout Faz 5.
+enum BusLayoutKind {
+  BUS_19_PLUS_1
+  BUS_31_PLUS_1
+  BUS_35_PLUS_1
+  BUS_46_PLUS_1
+  BUS_50_PLUS_1
+
+  @@schema("identity")
+}
+
+/// Tüzel satıcı acente — giriş YOK. Sahip = AgencyStaff AGENCY_OWNER.
+/// Unique (taxNumber, contactEmail, tursabBelgeNo): partial index migrate SQL.
+model Agency {
+  id                       String                   @id @default(cuid())
+  companyName              String
+  taxNumber                String
+  legalTitle               String
+  address                  String
+  city                     String?
+  country                  String?                  @default("Türkiye")
+  contactEmail             String
+  contactPhone             String?
+  status                   AgencyStatus             @default(PENDING)
+  capabilities             AgencyCapability[]       @default([TOURS])
+  sellerTier               SellerTier               @default(BRONZE)
+  sellerScore              Decimal?                 @db.Decimal(5, 2)
+  sellerTierCalculatedAt   DateTime?
+  website                  String?
+  logo                     String?
+  license                  String?
+  verifiedAt               DateTime?
+  tursabBelgeNo            String?
+  tursabUnvan              String?
+  tursabGroup              String?
+  tursabCity               String?
+  tursabVerificationStatus TursabVerificationStatus @default(NOT_SUBMITTED)
+  tursabVerifiedAt         DateTime?
+  tursabLastCheckedAt      DateTime?
+  tursabExpiresAt          DateTime?
+  tursabRawSnapshot        Json?
+  averageRating            Decimal                  @default(0) @db.Decimal(3, 2)
+  reviewCount              Int                      @default(0)
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt                DateTime?
+
+  staff               AgencyStaff[]
+  tursabLogs          TursabVerificationLog[]
+  bankInfo            AgencyBankInfo?
+  tours               Tour[]
+  hotels              Hotel[]
+  tourDateAssignments TourDateAssignment[]
+  busSeatLayouts      BusSeatLayout[]
+  seatAssignments     SeatAssignment[]
+  commissionRates     AgencyCommissionRate[]
+  earnings            AgencyEarning[]
+  payouts             AgencyPayout[]
+  experiences         Experience[]
+
+  @@index([status])
+  @@index([taxNumber])
+  @@index([sellerTier])
+  @@index([deletedAt])
+  @@index([contactEmail])
+  @@schema("identity")
+}
+
+/// Giriş yapan gerçek kişi (sahip dahil). Partial unique: (agencyId, email) WHERE deletedAt IS NULL.
+model AgencyStaff {
+  id           String          @id @default(cuid())
+  agencyId     String
+  agency       Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name         String
+  email        String
+  passwordHash String
+  role         AgencyStaffRole
+  permissions  Json            @default("{}")
+  status       String          @default("ACTIVE") @db.VarChar(40)
+  lastLoginAt  DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt    DateTime?
+
+  refreshTokens       RefreshToken[]
+  tourDateAssignments TourDateAssignment[]
+  seatAssignments     SeatAssignment[]
+
+  @@index([agencyId])
+  @@index([email])
+  @@index([deletedAt])
+  @@schema("identity")
+}
+
+model BusCompany {
+  id            String           @id @default(cuid())
+  companyName   String
+  taxNumber     String?
+  contactEmail  String
+  passwordHash  String
+  contactPhone  String?
+  status        BusCompanyStatus @default(PENDING)
+  address       String?
+  city          String?
+  country       String?
+  website       String?
+  logo          String?
+  licenseNumber String?
+  vehicleCount  Int?
+  notes         String?          @db.Text
+  verifiedAt    DateTime?
+  averageRating Decimal?         @default(0) @db.Decimal(3, 2)
+  reviewCount   Int              @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  createdBy     String?
+  updatedBy     String?
+  deletedBy     String?
+  deletedAt     DateTime?
+
+  vehicles            Vehicle[]
+  refreshTokens       RefreshToken[]
+  tourDateAssignments TourDateAssignment[]
+  assignedTourDates   TourDate[]
+
+  @@index([status])
+  @@index([deletedAt])
+  @@index([contactEmail])
+  @@schema("identity")
+}
+
+model Guide {
+  id              String      @id @default(cuid())
+  identityNumber  String
+  firstName       String
+  lastName        String
+  email           String
+  passwordHash    String
+  phone           String?
+  birthDate       DateTime?   @db.Date
+  status          GuideStatus @default(PENDING)
+  languages       String[]    @default([])
+  oda             String?
+  sicilNo         String?
+  ruhsatNo        String?
+  ruhsatExpiresAt DateTime?
+  licenseNumber   String?
+  bio             String?     @db.Text
+  photoUrl        String?
+  city            String?
+  verifiedAt      DateTime?
+  averageRating   Decimal?    @default(0) @db.Decimal(3, 2)
+  reviewCount     Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt       DateTime?
+
+  availability        GuideAvailability[]
+  refreshTokens       RefreshToken[]
+  tourDateAssignments TourDateAssignment[]
+  assignedTourDates   TourDate[]
+
+  @@index([status])
+  @@index([city])
+  @@index([sicilNo])
+  @@index([deletedAt])
+  @@index([email])
+  @@index([identityNumber])
+  @@schema("identity")
+}
+
+model Vehicle {
+  id             String        @id @default(cuid())
+  busCompanyId   String
+  busCompany     BusCompany    @relation(fields: [busCompanyId], references: [id], onDelete: Cascade)
+  plateNumber    String
+  modelYear      Int?
+  seatLayoutKind BusLayoutKind
+  capacity       Int
+  isActive       Boolean       @default(true)
+  notes          String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt      DateTime?
+
+  availability      VehicleAvailability[]
+  assignedTourDates TourDate[]
+
+  @@index([busCompanyId])
+  @@index([seatLayoutKind])
+  @@index([deletedAt])
+  @@index([plateNumber])
+  @@schema("identity")
+}
+
+model GuideAvailability {
+  id          String    @id @default(cuid())
+  guideId     String
+  guide       Guide     @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  date        DateTime  @db.Date
+  isAvailable Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt   DateTime?
+
+  @@unique([guideId, date])
+  @@index([guideId, date, isAvailable])
+  @@schema("identity")
+}
+
+model VehicleAvailability {
+  id          String    @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  date        DateTime  @db.Date
+  isAvailable Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt   DateTime?
+
+  @@unique([vehicleId, date])
+  @@index([vehicleId, date, isAvailable])
+  @@schema("identity")
+}
+
+model TursabVerificationLog {
+  id              String                    @id @default(cuid())
+  agencyId        String
+  agency          Agency                    @relation(fields: [agencyId], references: [id])
+  belgeNo         String                    @db.VarChar(32)
+  trigger         String                    @db.VarChar(40)
+  success         Boolean
+  statusResult    TursabVerificationStatus?
+  httpStatus      Int?
+  requestId       String?
+  errorMessage    String?                   @db.Text
+  responseSummary Json?
+  createdAt       DateTime                  @default(now())
+  createdBy       String?
+
+  @@index([agencyId, createdAt])
+  @@index([belgeNo, createdAt])
+  @@index([success, createdAt])
+  @@schema("identity")
+}
+
+model AgencyBankInfo {
+  id          String    @id @default(cuid())
+  agencyId    String    @unique
+  agency      Agency    @relation(fields: [agencyId], references: [id])
+  iban        String    @db.VarChar(34)
+  accountName String    @db.VarChar(200)
+  bankName    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   String?
+  updatedBy   String?
+  deletedBy   String?
+  deletedAt   DateTime?
+
+  @@schema("identity")
+}
+
+/// userId XOR agencyStaffId XOR busCompanyId XOR guideId — uygulama katmanı.
+model RefreshToken {
+  id                 String         @id @default(cuid())
+  userId             String?
+  user               User?          @relation(fields: [userId], references: [id])
+  agencyStaffId      String?
+  agencyStaff        AgencyStaff?   @relation(fields: [agencyStaffId], references: [id])
+  busCompanyId       String?
+  busCompany         BusCompany?    @relation(fields: [busCompanyId], references: [id])
+  guideId            String?
+  guide              Guide?         @relation(fields: [guideId], references: [id])
+  tokenHash          String
+  familyId           String?
+  expiresAt          DateTime
+  idleTimeoutMinutes Int?
+  lastUsedAt         DateTime?
+  revokedAt          DateTime?
+  replacedById       String?
+  replacedBy         RefreshToken?  @relation("RefreshTokenRotation", fields: [replacedById], references: [id])
+  replaces           RefreshToken[] @relation("RefreshTokenRotation")
+  createdAt          DateTime       @default(now())
+  deletedAt          DateTime?
+
+  @@index([userId])
+  @@index([agencyStaffId])
+  @@index([busCompanyId])
+  @@index([guideId])
+  @@index([expiresAt])
+  @@index([familyId])
+  @@index([tokenHash])
+  @@schema("identity")
+}
+
+model IdempotencyKey {
+  id             String    @id @default(cuid())
+  key            String    @unique @db.VarChar(128)
+  userId         String?
+  agencyId       String?
+  agencyStaffId  String?
+  method         String    @db.VarChar(16)
+  path           String    @db.VarChar(256)
+  requestHash    String?
+  responseStatus Int?
+  responseBody   Json?
+  createdAt      DateTime  @default(now())
+  expiresAt      DateTime
+  deletedAt      DateTime?
+
+  @@index([expiresAt])
+  @@index([userId, createdAt])
+  @@schema("identity")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorType  String   @db.VarChar(40)
+  actorId    String?
+  action     String   @db.VarChar(80)
+  entityType String   @db.VarChar(80)
+  entityId   String?
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId, createdAt])
+  @@schema("identity")
+}
+
+// ─── catalog ────────────────────────────────────────────
+
+enum TourStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  ARCHIVED
+
+  @@schema("catalog")
+}
+
+enum TourCategory {
+  CULTURAL
+  ADVENTURE
+  GASTRONOMY
+  NATURE
+  CITY
+  BEACH
+
+  @@schema("catalog")
+}
+
+/// Rehber / otobüs atama yanıtı (TourDateAssignment).
+enum AssignmentStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+
+  @@schema("catalog")
+}
+
+model Tour {
+  id              String              @id @default(cuid())
+  title           String              @db.VarChar(200)
+  slug            String              @unique @db.VarChar(220)
+  description     String              @db.Text
+  coverUrl        String?
+  galleryUrls     String[]            @default([])
+  /// Legacy JSON bag — yeni opsiyoneller `TourExtra` tablosunda.
+  extras          Json                @default("{}")
+  price           Decimal             @db.Decimal(10, 2)
+  currency        String              @default("TRY") @db.VarChar(3)
+  category        TourCategory
+  status          TourStatus          @default(DRAFT)
+  durationDays    Int                 @default(1)
+  stayKind        TourStayKind        @default(OVERNIGHT)
+  destinationScope TourDestinationScope @default(DOMESTIC)
+  departureCities String[]            @default([])
+  childMaxAge     Int?
+  minParticipants Int?
+  /// Optimistic lock.
+  version         Int                 @default(1)
+  /// Legacy parity — öne çıkan turlar.
+  featured        Boolean             @default(false)
+  averageRating   Decimal             @default(0) @db.Decimal(3, 2)
+  reviewCount     Int                 @default(0)
+  agencyId         String
+  agency           Agency       @relation(fields: [agencyId], references: [id])
+  dates           TourDate[]
+  departureRules  TourDepartureRule[]
+  tourExtras      TourExtra[]
+  accommodation   TourAccommodation?
+  pickupPoints    TourPickupPoint[]
+  tourTags        TourTag[]
+  metrics         TourMetrics?
+  favorites       Favorite[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt       DateTime?
+
+  @@index([agencyId])
+  @@index([category, status])
+  @@index([slug])
+  @@index([featured, status])
+  @@index([stayKind, status])
+  @@index([destinationScope, status])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+enum TourStayKind {
+  DAY_TRIP
+  OVERNIGHT
+
+  @@schema("catalog")
+}
+
+enum TourDestinationScope {
+  DOMESTIC
+  INTERNATIONAL
+
+  @@schema("catalog")
+}
+
+enum TagKind {
+  DESTINATION
+  TOUR_CATEGORY
+  THEME
+  GENERIC
+
+  @@schema("catalog")
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @db.VarChar(120)
+  slug      String    @unique @db.VarChar(140)
+  kind      TagKind   @default(GENERIC)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt DateTime?
+
+  tourTags TourTag[]
+  postTags PostTag[]
+
+  @@index([kind, deletedAt])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+model TourTag {
+  tourId String
+  tour   Tour   @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  tagId  String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([tourId, tagId])
+  @@index([tagId])
+  @@schema("catalog")
+}
+
+model TourDepartureRule {
+  id                   String     @id @default(cuid())
+  tourId               String
+  tour                 Tour       @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  rangeStart           DateTime   @db.Date
+  rangeEnd             DateTime   @db.Date
+  weekdays             Int[]      @default([])
+  defaultCapacity      Int
+  defaultPriceOverride Decimal?   @db.Decimal(10, 2)
+  ageRangeTemplate     Json?
+  isActive             Boolean    @default(true)
+  lastGeneratedAt      DateTime?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  createdBy            String?
+  updatedBy            String?
+  deletedBy            String?
+  deletedAt            DateTime?
+  generatedDates       TourDate[]
+
+  @@index([tourId, isActive])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+model TourDate {
+  id                String               @id @default(cuid())
+  tourId            String
+  tour              Tour                 @relation(fields: [tourId], references: [id])
+  startDate         DateTime             @db.Date
+  endDate           DateTime             @db.Date
+  capacity          Int
+  remainingCapacity Int
+  priceOverride     Decimal?             @db.Decimal(10, 2)
+  isActive          Boolean              @default(true)
+  version           Int                  @default(1)
+  departureRuleId   String?
+  departureRule     TourDepartureRule?   @relation(fields: [departureRuleId], references: [id], onDelete: SetNull)
+  /// Mirror — Assignment ACCEPTED sonrası.
+  guideId           String?
+  guide             Guide?               @relation(fields: [guideId], references: [id], onDelete: SetNull)
+  busCompanyId      String?
+  busCompany        BusCompany?          @relation(fields: [busCompanyId], references: [id], onDelete: SetNull)
+  vehicleId         String?
+  vehicle           Vehicle?             @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  busSeatLayoutId   String?
+  busSeatLayout     BusSeatLayout?       @relation(fields: [busSeatLayoutId], references: [id], onDelete: SetNull)
+  ageRanges         TourDateAgeRange[]
+  assignments       TourDateAssignment[]
+  seatAssignments   SeatAssignment[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt         DateTime?
+
+  /// Doküman UNIQUE (tourId, startDate, endDate) — soft-delete için partial index migrate SQL.
+  @@index([tourId, startDate, endDate])
+  @@index([tourId, startDate])
+  @@index([departureRuleId])
+  @@index([guideId])
+  @@index([busCompanyId])
+  @@index([vehicleId])
+  @@index([busSeatLayoutId])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+/// Tur otobüsü N+1 standart planı (sistem seed: 5 kind).
+model BusSeatLayout {
+  id             String        @id @default(cuid())
+  kind           BusLayoutKind @unique
+  agencyId       String?
+  agency         Agency?       @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  name           String        @db.VarChar(120)
+  passengerSeats Int
+  crewSeats      Int           @default(1)
+  rows           Int
+  cols           Int
+  layoutJson     Json
+  isSystem       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt      DateTime?
+
+  tourDates TourDate[]
+
+  @@index([kind])
+  @@index([agencyId])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+/// Acente teklif → rehber/otobüs PENDING → ACCEPTED/REJECTED → TourDate mirror.
+model TourDateAssignment {
+  id                     String           @id @default(cuid())
+  tourDateId             String
+  tourDate               TourDate         @relation(fields: [tourDateId], references: [id], onDelete: Cascade)
+  /// GUIDE | BUS
+  role                   String           @db.VarChar(16)
+  guideId                String?
+  guide                  Guide?           @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  busCompanyId           String?
+  busCompany             BusCompany?      @relation(fields: [busCompanyId], references: [id], onDelete: Cascade)
+  status                 AssignmentStatus @default(PENDING)
+  invitedByAgencyId      String
+  invitedByAgency        Agency           @relation(fields: [invitedByAgencyId], references: [id])
+  invitedByAgencyStaffId String?
+  invitedByAgencyStaff   AgencyStaff?     @relation(fields: [invitedByAgencyStaffId], references: [id], onDelete: SetNull)
+  respondedAt            DateTime?
+  note                   String?          @db.Text
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt              DateTime?
+
+  /// Aktif PENDING|ACCEPTED role başına 1 — partial unique migrate SQL.
+  @@index([tourDateId])
+  @@index([guideId, status])
+  @@index([busCompanyId, status])
+  @@index([invitedByAgencyId])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+/// Tur içi opsiyonel ekstra (MVP “Ekstralar”). Bağımsız Experience mağazası değil.
+model TourExtra {
+  id          String    @id @default(cuid())
+  tourId      String
+  tour        Tour      @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  title       String    @db.VarChar(200)
+  description String?   @db.Text
+  dayNumber   Int?
+  price       Decimal   @db.Decimal(10, 2)
+  currency    String    @default("TRY") @db.VarChar(3)
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt   DateTime?
+
+  reservationExtras ReservationExtra[]
+
+  @@index([tourId, isActive])
+  @@index([sortOrder])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+/// Tur paketindeki konaklama özeti (expand: hotelId/dayNumber; UI legacy alanlar korunur).
+model TourAccommodation {
+  id          String    @id @default(cuid())
+  tourId      String    @unique
+  tour        Tour      @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  /// Hedef: gün numarası (1…N). Expand default 1.
+  dayNumber   Int       @default(1)
+  hotelId     String?
+  hotel       Hotel?    @relation(fields: [hotelId], references: [id])
+  nights      Int       @default(1)
+  note        String?   @db.Text
+  sortOrder   Int       @default(0)
+  /// Legacy UI parity alanları (partner form / detay).
+  name        String    @db.VarChar(200)
+  image       String
+  location    String    @db.VarChar(200)
+  type        String    @db.VarChar(80)
+  rating      Float     @default(0)
+  features    Json      @default("[]")
+  description String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt   DateTime?
+
+  @@index([hotelId])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+/// Kalkış / yolcu alma noktaları (çoklu). Checkout’ta boarding zorunlu seçim (Faz 3).
+model TourPickupPoint {
+  id                   String        @id @default(cuid())
+  tourId               String
+  tour                 Tour          @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  city                 String        @db.VarChar(120)
+  location             String        @db.VarChar(200)
+  time                 String        @db.VarChar(20)
+  description          String?
+  latitude             Float?
+  longitude            Float?
+  order                Int           @default(0)
+  /// Bilgilendirme (rota başı); boarding seçimini engellemez.
+  isFixedOrigin        Boolean       @default(false)
+  isActive             Boolean       @default(true)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt            DateTime?
+  boardingReservations Reservation[]
+
+  @@index([tourId, order])
+  @@index([city])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+enum AgePricingType {
+  FREE
+  HALF
+  PERCENTAGE
+  FIXED
+
+  @@schema("catalog")
+}
+
+/// Tur tarihi bazlı yaş fiyatlandırması (0–2 ücretsiz, çocuk %50, vb.).
+model TourDateAgeRange {
+  id          String         @id @default(cuid())
+  tourDateId  String
+  tourDate    TourDate       @relation(fields: [tourDateId], references: [id], onDelete: Cascade)
+  minAge      Int
+  maxAge      Int?
+  pricingType AgePricingType
+  value       Decimal        @db.Decimal(10, 2)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt   DateTime?
+
+  @@unique([tourDateId, minAge, maxAge])
+  @@index([tourDateId])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+enum HotelType {
+  HOTEL
+  BOUTIQUE_HOTEL
+  RESORT
+  HOSTEL
+  APARTMENT
+  VILLA
+  GUESTHOUSE
+
+  @@schema("catalog")
+}
+
+model Hotel {
+  id             String              @id @default(cuid())
+  name           String              @db.VarChar(200)
+  slug           String              @unique @db.VarChar(220)
+  description    String?             @db.Text
+  address        String?
+  city           String              @db.VarChar(120)
+  country        String              @default("Türkiye") @db.VarChar(120)
+  postalCode     String?
+  phone          String?
+  email          String?
+  website        String?
+  stars          Int?
+  type           HotelType           @default(HOTEL)
+  amenities      Json                @default("{}")
+  images         Json                @default("[]")
+  latitude       Float?
+  longitude      Float?
+  checkInTime    String?
+  checkOutTime   String?
+  /// Referans otel sahipliği (satış yok).
+  agencyId       String
+  agency         Agency    @relation(fields: [agencyId], references: [id])
+  averageRating  Decimal?            @default(0) @db.Decimal(3, 2)
+  reviewCount    Int                 @default(0)
+  accommodations TourAccommodation[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt      DateTime?
+
+  @@index([agencyId])
+  @@index([city])
+  @@index([type])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+/// Room DROP — otel satışı yok. Faz 2.
+
+enum ExperienceStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  ARCHIVED
+
+  @@schema("catalog")
+}
+
+/// Yerel deneyim / aktivite.
+/// Sahip: `Partner` with `capabilities` containing EXPERIENCES (legacy ExperienceOperator).
+model Experience {
+  id                  String           @id @default(cuid())
+  title               String           @db.VarChar(200)
+  slug                String           @unique @db.VarChar(220)
+  description         String           @db.Text
+  longDescription     String           @db.Text
+  category            String           @db.VarChar(120)
+  location            String           @db.VarChar(200)
+  duration            String           @db.VarChar(80)
+  price               Decimal          @db.Decimal(10, 2)
+  currency            String           @default("TRY") @db.VarChar(3)
+  ageRestriction      String?
+  imageUrl            String?
+  gallery             Json             @default("[]")
+  included            Json             @default("[]")
+  notIncluded         Json             @default("[]")
+  schedule            Json?
+  highlights          Json             @default("[]")
+  averageRating       Decimal          @default(0) @db.Decimal(3, 2)
+  reviewCount         Int              @default(0)
+  featured            Boolean          @default(false)
+  popularityRate      Float            @default(0)
+  status              ExperienceStatus @default(DRAFT)
+  meetingPoint        String?
+  meetingPointAddress String?
+  agencyId            String
+  agency              Agency           @relation(fields: [agencyId], references: [id])
+  dates               ActivityDate[]
+  favorites           Favorite[]
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt           DateTime?
+
+  @@index([agencyId])
+  @@index([category, status])
+  @@index([location])
+  @@index([slug])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+/// Legacy `ActivityDate` — deneyim müsaitlik / fiyat penceresi.
+model ActivityDate {
+  id                String                   @id @default(cuid())
+  experienceId      String
+  experience        Experience               @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  startDate         DateTime                 @db.Date
+  endDate           DateTime                 @db.Date
+  price             Decimal                  @db.Decimal(10, 2)
+  availableSeats    Int
+  remainingCapacity Int?
+  isActive          Boolean                  @default(true)
+  ageRanges         ExperienceDateAgeRange[]
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt         DateTime?
+
+  @@index([experienceId, startDate])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+/// Aktivite tarihi bazlı yaş fiyatlandırması (tur age range ile aynı mantık).
+model ExperienceDateAgeRange {
+  id             String         @id @default(cuid())
+  activityDateId String
+  activityDate   ActivityDate   @relation(fields: [activityDateId], references: [id], onDelete: Cascade)
+  minAge         Int
+  maxAge         Int?
+  pricingType    AgePricingType
+  value          Decimal        @db.Decimal(10, 2)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt      DateTime?
+
+  @@unique([activityDateId, minAge, maxAge])
+  @@index([activityDateId])
+  @@index([deletedAt])
+  @@schema("catalog")
+}
+
+// ─── booking ────────────────────────────────────────────
+
+enum BookingStatus {
+  PENDING
+  PENDING_PAYMENT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  SUSPENDED
+  PAYMENT_FAILED
+  EXPIRED
+
+  @@schema("booking")
+}
+
+enum ReservationPaymentStatus {
+  UNPAID
+  /// Expand uyumu — hedef dokümanda yok; yeni yazımlarda kullanılmaz.
+  PARTIALLY_PAID
+  PAID
+  REFUNDED
+
+  @@schema("booking")
+}
+
+enum PaymentMethod {
+  CARD
+  BANK_TRANSFER
+  WALLET
+  OTHER
+
+  @@schema("booking")
+}
+
+/// Tur rezervasyonu — hold 10 dk (PENDING_PAYMENT). Otel satışı yok.
+model Reservation {
+  id                    String                   @id @default(cuid())
+  bookingNumber         String                   @unique @db.VarChar(20)
+  userId                String
+  tourId                String?
+  tourDateId            String?
+  experienceId          String?
+  activityDateId        String?
+  agencyId               String
+  status                 BookingStatus            @default(PENDING_PAYMENT)
+  paymentStatus         ReservationPaymentStatus @default(UNPAID)
+  paymentMethod         PaymentMethod?
+  currency              String                   @default("TRY") @db.VarChar(3)
+  adults                Int                      @default(1)
+  children              Int                      @default(0)
+  totalAmount           Decimal                  @db.Decimal(10, 2)
+  boardingPickupPointId String?
+  boardingPickupPoint   TourPickupPoint?         @relation(fields: [boardingPickupPointId], references: [id])
+  contactEmail          String
+  contactPhone          String?
+  /// Legacy JSON; kaynak: ReservationGuest.
+  guests                Json?
+  specialRequests       String?                  @db.Text
+  metadata              Json?
+  startDate             DateTime?
+  endDate               DateTime?
+  holdExpiresAt         DateTime?
+  heldPartySize         Int?
+  cancelledAt           DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  createdBy             String?
+  updatedBy             String?
+  deletedBy             String?
+  deletedAt             DateTime?
+
+  reservationGuests ReservationGuest[]
+  reservationExtras ReservationExtra[]
+  voucher           Voucher?
+  seatAssignments   SeatAssignment[]
+  agencyEarnings    AgencyEarning[]
+
+  @@index([userId])
+  @@index([tourId])
+  @@index([tourDateId])
+  @@index([experienceId])
+  @@index([activityDateId])
+  @@index([agencyId])
+  @@index([status])
+  @@index([status, holdExpiresAt])
+  @@index([agencyId, status, createdAt])
+  @@index([deletedAt])
+  @@schema("booking")
+}
+
+model ReservationGuest {
+  id             String      @id @default(cuid())
+  reservationId  String
+  reservation    Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  fullName       String      @db.VarChar(200)
+  identityNumber String
+  birthDate      DateTime?   @db.Date
+  isChild        Boolean     @default(false)
+  sortOrder      Int         @default(0)
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt      DateTime?
+
+  seatAssignments SeatAssignment[]
+
+  @@index([reservationId])
+  @@schema("booking")
+}
+
+model ReservationExtra {
+  id            String      @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  tourExtraId   String
+  tourExtra     TourExtra   @relation(fields: [tourExtraId], references: [id])
+  quantity      Int
+  unitPrice     Decimal     @db.Decimal(10, 2)
+  currency      String      @db.VarChar(3)
+  createdAt     DateTime    @default(now())
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt     DateTime?
+
+  @@unique([reservationId, tourExtraId])
+  @@index([reservationId])
+  @@index([tourExtraId])
+  @@schema("booking")
+}
+
+model Voucher {
+  id            String      @id @default(cuid())
+  reservationId String      @unique
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  code          String      @unique @db.VarChar(40)
+  qrPayload     String?     @db.Text
+  issuedAt      DateTime    @default(now())
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt     DateTime?
+
+  @@schema("booking")
+}
+
+/// Yolcu → koltuk (ödeme sonrası / kalkış öncesi; müşteri checkout’ta seçmez).
+model SeatAssignment {
+  id                      String           @id @default(cuid())
+  tourDateId              String
+  tourDate                TourDate         @relation(fields: [tourDateId], references: [id], onDelete: Cascade)
+  seatCode                String           @db.VarChar(16)
+  reservationGuestId      String
+  reservationGuest        ReservationGuest @relation(fields: [reservationGuestId], references: [id], onDelete: Cascade)
+  reservationId           String
+  reservation             Reservation      @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  assignedByAgencyStaffId String?
+  assignedByAgencyStaff   AgencyStaff?     @relation(fields: [assignedByAgencyStaffId], references: [id], onDelete: SetNull)
+  assignedByAgencyId      String?
+  assignedByAgency        Agency?          @relation(fields: [assignedByAgencyId], references: [id], onDelete: SetNull)
+  assignedAt              DateTime         @default(now())
+  /// MANUAL | AUTO_FIFO
+  source                  String           @db.VarChar(20)
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt               DateTime?
+
+  /// Aktif unique'ler partial migrate SQL: (tourDateId,seatCode), reservationGuestId.
+  @@index([tourDateId, assignedAt])
+  @@index([reservationId])
+  @@index([reservationGuestId])
+  @@index([deletedAt])
+  @@schema("booking")
+}
+
+// ─── payment ────────────────────────────────────────────
+
+enum PaymentStatus {
+  PENDING
+  AWAITING_3DS
+  SUCCESS
+  FAILED
+  REFUNDED
+
+  @@schema("payment")
+}
+
+enum PaymentProvider {
+  IYZICO
+  MOCK
+
+  @@schema("payment")
+}
+
+enum InvoiceProvider {
+  MOCK
+  PARASUT
+  LOGO
+  UYUMSOFT
+  OTHER
+
+  @@schema("payment")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  QUEUED
+  ISSUED
+  FAILED
+  CANCELLED
+
+  @@schema("payment")
+}
+
+enum RefundStatus {
+  PENDING
+  SUCCESS
+  FAILED
+
+  @@schema("payment")
+}
+
+model PaymentTransaction {
+  id                String          @id @default(cuid())
+  reservationId     String
+  amount            Decimal         @db.Decimal(10, 2)
+  currency          String          @default("TRY") @db.VarChar(3)
+  status            PaymentStatus   @default(PENDING)
+  method            PaymentMethod   @default(CARD)
+  provider          PaymentProvider @default(IYZICO)
+  conversationId    String          @unique
+  providerPaymentId String?
+  errorMessage      String?
+  rawResponse       Json?
+  paidAt            DateTime?
+  refundedAt        DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt         DateTime?
+
+  invoices Invoice[]
+  refunds  Refund[]
+
+  @@index([reservationId])
+  @@index([status])
+  @@schema("payment")
+}
+
+model Refund {
+  id                   String             @id @default(cuid())
+  paymentTransactionId String
+  paymentTransaction   PaymentTransaction @relation(fields: [paymentTransactionId], references: [id])
+  reservationId        String
+  amount               Decimal            @db.Decimal(10, 2)
+  currency             String             @db.VarChar(3)
+  status               RefundStatus       @default(PENDING)
+  reason               String?            @db.Text
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt            DateTime?
+
+  @@index([reservationId])
+  @@schema("payment")
+}
+
+model Invoice {
+  id                   String              @id @default(cuid())
+  reservationId        String
+  paymentTransactionId String?
+  paymentTransaction   PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
+  userId               String
+  agencyId             String
+  provider             InvoiceProvider     @default(MOCK)
+  status               InvoiceStatus       @default(QUEUED)
+  externalId           String?
+  invoiceNumber        String?
+  amount               Decimal             @db.Decimal(12, 2)
+  currency             String              @db.VarChar(3)
+  buyerSnapshot        Json
+  sellerSnapshot       Json
+  linesSnapshot        Json
+  pdfUrl               String?
+  rawResponse          Json?
+  issuedAt             DateTime?
+  lastError            String?             @db.Text
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt            DateTime?
+
+  @@index([reservationId])
+  @@index([status, createdAt])
+  @@index([provider])
+  @@index([externalId])
+  @@schema("payment")
+}
+
+/// Acenteye özel platform komisyon oranı (örn. 10.00 = %10 platform payı).
+model AgencyCommissionRate {
+  id            String    @id @default(cuid())
+  agencyId      String
+  agency        Agency    @relation(fields: [agencyId], references: [id])
+  ratePercent   Decimal   @db.Decimal(5, 2)
+  effectiveFrom DateTime  @db.Date
+  effectiveTo   DateTime? @db.Date
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt     DateTime?
+
+  @@index([agencyId, effectiveFrom])
+  @@index([deletedAt])
+  @@schema("payment")
+}
+
+/// AgencyEarning = gross − platform komisyonu (acente neti).
+model AgencyEarning {
+  id                    String        @id @default(cuid())
+  agencyId              String
+  agency                Agency        @relation(fields: [agencyId], references: [id])
+  reservationId         String
+  reservation           Reservation   @relation(fields: [reservationId], references: [id])
+  /// Acente net tutar.
+  amount                Decimal       @db.Decimal(10, 2)
+  grossAmount           Decimal       @db.Decimal(10, 2)
+  commissionAmount      Decimal       @db.Decimal(10, 2)
+  commissionRatePercent Decimal       @db.Decimal(5, 2)
+  currency              String        @db.VarChar(3)
+  /// ACCRUED | PAYABLE | PAID
+  status                String        @db.VarChar(40)
+  payoutId              String?
+  payout                AgencyPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  createdAt             DateTime      @default(now())
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt             DateTime?
+
+  @@unique([reservationId])
+  @@index([agencyId, status])
+  @@index([payoutId])
+  @@index([deletedAt])
+  @@schema("payment")
+}
+
+model AgencyPayout {
+  id        String    @id @default(cuid())
+  agencyId  String
+  agency    Agency    @relation(fields: [agencyId], references: [id])
+  amount    Decimal   @db.Decimal(10, 2)
+  currency  String    @db.VarChar(3)
+  /// PENDING | PAID | FAILED
+  status    String    @db.VarChar(40)
+  paidAt    DateTime?
+  note      String?   @db.Text
+  createdAt DateTime  @default(now())
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt DateTime?
+
+  earnings AgencyEarning[]
+
+  @@index([agencyId, status])
+  @@index([deletedAt])
+  @@schema("payment")
+}
+
+// ─── review ─────────────────────────────────────────────
+
+enum ReviewTargetType {
+  TOUR
+  EXPERIENCE
+  HOTEL
+  PARTNER
+  AGENCY
+  GUIDE
+  BUS_COMPANY
+
+  @@schema("review")
+}
+
+/// Ürün / partner değerlendirmesi — expand: agencyId + kategori alanları; Outbox → TourMetrics.
+model Review {
+  id                    String           @id @default(cuid())
+  targetType            ReviewTargetType @default(TOUR)
+  tourId                String?
+  experienceId          String?
+  hotelId               String?
+  reservationId         String           @unique
+  userId                String
+  agencyId                String
+  guideId               String?
+  busCompanyId          String?
+  rating                Int
+  comment               String?          @db.Text
+  photoUrls             String[]         @default([])
+  guideRating           Int?
+  operatorRating        Int?
+  routeRating           Int?
+  foodRating            Int?
+  hotelRating           Int?
+  transportRating       Int?
+  accommodationRating   Int?
+  guideFeedback         String?          @db.Text
+  transportFeedback     String?          @db.Text
+  accommodationFeedback String?          @db.Text
+  /// Expand: partnerReply hâlâ; hedef agencyReply.
+  partnerReply          String?          @db.Text
+  partnerRepliedAt      DateTime?
+  agencyReply           String?          @db.Text
+  agencyRepliedAt       DateTime?
+  version               Int              @default(1)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  createdBy             String?
+  updatedBy             String?
+  deletedBy             String?
+  deletedAt             DateTime?
+
+  @@index([tourId])
+  @@index([experienceId])
+  @@index([hotelId])
+  @@index([agencyId])
+  @@index([guideId])
+  @@index([busCompanyId])
+  @@index([userId])
+  @@index([targetType])
+  @@index([rating])
+  @@index([guideRating])
+  @@index([transportRating])
+  @@index([accommodationRating])
+  @@index([tourId, deletedAt])
+  @@index([deletedAt])
+  @@schema("review")
+}
+
+/// Review OutboxWorker read-model → Tour.averageRating / reviewCount mirror.
+model TourMetrics {
+  id                         String    @id @default(cuid())
+  tourId                     String    @unique
+  tour                       Tour      @relation(fields: [tourId], references: [id], onDelete: Cascade)
+  reviewCount                Int       @default(0)
+  averageRating              Decimal   @default(0) @db.Decimal(3, 2)
+  averageGuideRating         Decimal   @default(0) @db.Decimal(3, 2)
+  averageTransportRating     Decimal   @default(0) @db.Decimal(3, 2)
+  averageAccommodationRating Decimal   @default(0) @db.Decimal(3, 2)
+  averageOperatorRating      Decimal?  @db.Decimal(3, 2)
+  averageRouteRating         Decimal?  @db.Decimal(3, 2)
+  averageFoodRating          Decimal?  @db.Decimal(3, 2)
+  lastReviewAt               DateTime?
+  updatedAt                  DateTime  @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt                  DateTime?
+
+  @@index([averageRating])
+  @@index([averageGuideRating])
+  @@index([averageTransportRating])
+  @@index([averageAccommodationRating])
+  @@index([reviewCount])
+  @@index([averageGuideRating, averageTransportRating, averageAccommodationRating])
+  @@index([deletedAt])
+  @@schema("review")
+}
+
+// ─── notification ───────────────────────────────────────
+
+enum NotificationRecipientType {
+  USER
+  AGENCY
+  AGENCY_STAFF
+  BUS_COMPANY
+  GUIDE
+  PLATFORM
+
+  @@schema("notification")
+}
+
+model Notification {
+  id            String                    @id @default(cuid())
+  recipientType NotificationRecipientType @default(USER)
+  userId        String?
+  agencyId      String?
+  agencyStaffId String?
+  busCompanyId  String?
+  guideId       String?
+  type          String                    @db.VarChar(64)
+  title         String                    @db.VarChar(200)
+  body          String                    @db.Text
+  data          Json?
+  readAt        DateTime?
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  @@index([recipientType, readAt])
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@index([agencyId])
+  @@index([agencyStaffId])
+  @@index([busCompanyId])
+  @@index([guideId])
+  @@schema("notification")
+}
+
+// ─── analytics ──────────────────────────────────────────
+
+model SearchQueryLog {
+  id          String   @id @default(cuid())
+  query       String   @db.VarChar(500)
+  category    String?  @db.VarChar(64)
+  resultCount Int      @default(0)
+  cacheHit    Boolean  @default(false)
+  /// Opsiyonel aktör (anonim arama null).
+  userId      String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([query])
+  @@index([userId])
+  @@schema("analytics")
+}
+
+// ─── content ────────────────────────────────────────────
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique @db.VarChar(120)
+  slug        String    @unique @db.VarChar(140)
+  description String?   @db.Text
+  posts       Post[]    @relation("CategoryToPost")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt   DateTime?
+
+  @@index([deletedAt])
+  @@schema("content")
+}
+
+model Post {
+  id          String     @id @default(cuid())
+  title       String     @db.VarChar(300)
+  slug        String     @unique @db.VarChar(320)
+  content     String     @db.Text
+  excerpt     String?    @db.Text
+  coverImage  String?
+  published   Boolean    @default(false)
+  publishedAt DateTime?
+  authorId    String
+  comments    Comment[]
+  categories  Category[] @relation("CategoryToPost")
+  postTags    PostTag[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt   DateTime?
+
+  @@index([authorId])
+  @@index([published, publishedAt])
+  @@index([deletedAt])
+  @@schema("content")
+}
+
+model PostTag {
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tagId  String
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+  @@schema("content")
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  content   String    @db.Text
+  authorId  String
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt DateTime?
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([deletedAt])
+  @@schema("content")
+}
+
+/// Public marketing page cover (e.g. /activities listing). Missing row = disabled.
+model SitePageCover {
+  id        String    @id @default(cuid())
+  key       String    @unique @db.VarChar(64)
+  enabled   Boolean   @default(false)
+  headline  String?   @db.VarChar(200)
+  subtitle  String?   @db.Text
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String?
+  updatedBy String?
+  deletedBy String?
+  deletedAt DateTime?
+
+  @@index([deletedAt])
+  @@schema("content")
+}
+
+/// SEO + copy overlay for curated catalog routes (keyed by catalog route id).
+model RoutePage {
+  id             String    @id @default(cuid())
+  routeKey       String    @unique @db.VarChar(64)
+  seoTitle       String?   @db.VarChar(120)
+  seoDescription String?   @db.VarChar(320)
+  summary        String?   @db.VarChar(500)
+  body           String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdBy      String?
+  updatedBy      String?
+  deletedBy      String?
+  deletedAt      DateTime?
+
+  @@index([deletedAt])
+  @@schema("content")
+}
+
+// ─── outbox ─────────────────────────────────────────────
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+
+  @@schema("outbox")
+}
+
+model OutboxEvent {
+  id            String       @id @default(cuid())
+  aggregateType String       @db.VarChar(64)
+  aggregateId   String       @db.VarChar(64)
+  eventType     String       @db.VarChar(96)
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  lastError     String?      @db.Text
+  availableAt   DateTime     @default(now())
+  processedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime?
+
+  @@index([status, availableAt])
+  @@index([aggregateType, aggregateId])
+  @@index([eventType, createdAt])
+  @@index([deletedAt])
+  @@schema("outbox")
+}
+
+// ─── promotion ──────────────────────────────────────────
+
+model Coupon {
+  id            String    @id @default(cuid())
+  code          String    @unique @db.VarChar(40)
+  /// PERCENT | FIXED
+  discountType  String    @db.VarChar(20)
+  discountValue Decimal   @db.Decimal(10, 2)
+  startsAt      DateTime?
+  endsAt        DateTime?
+  maxUses       Int?
+  usedCount     Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt     DateTime?
+
+  usages CouponUsage[]
+
+  @@index([isActive, deletedAt])
+  @@index([deletedAt])
+  @@schema("promotion")
+}
+
+model CouponUsage {
+  id            String   @id @default(cuid())
+  couponId      String
+  coupon        Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reservationId String?
+  createdAt     DateTime @default(now())
+
+  /// reservationId null iken çoklu validate kaydı mümkün; redeem app katmanında kontrol.
+  @@index([couponId, userId])
+  @@index([couponId])
+  @@index([userId])
+  @@schema("promotion")
+}
+
+model Campaign {
+  id        String    @id @default(cuid())
+  title     String    @db.VarChar(200)
+  slug      String    @unique @db.VarChar(220)
+  bannerUrl String?
+  startsAt  DateTime?
+  endsAt    DateTime?
+  payload   Json?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  createdBy  String?
+  updatedBy  String?
+  deletedBy  String?
+  deletedAt DateTime?
+
+  @@index([isActive, deletedAt])
+  @@index([deletedAt])
+  @@schema("promotion")
+}

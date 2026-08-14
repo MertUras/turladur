@@ -1,0 +1,326 @@
+---
+description: Dosya depolama, görsel yönetimi, upload ve CDN kuralları
+globs: "**/storage/**,**/upload/**"
+alwaysApply: false
+---
+
+# Dosya Depolama & Görsel Yönetimi
+
+## Teknoloji
+
+| Ortam | Servis | Kullanım |
+|-------|--------|----------|
+| Development | MinIO (S3-uyumlu) | Docker container, localhost:9000 |
+| Production | AWS S3 veya Cloudflare R2 | Uygun maliyetli, CDN entegreli |
+| CDN | Cloudflare veya AWS CloudFront | Görselleri edge'den sun |
+
+## Mimari Kural
+
+```
+Kullanıcı → Frontend (upload form)
+    ↓
+Frontend → Backend API (POST /api/v1/storage/presigned-url)
+    ↓
+Backend → MinIO/S3'ten presigned URL üretir, frontend'e döner
+    ↓
+Frontend → Doğrudan S3/MinIO'ya upload (presigned URL ile)
+    ↓
+Frontend → Backend'e dosya bilgisini bildirir (POST /api/v1/storage/confirm)
+    ↓
+Backend → DB'ye URL kaydeder
+```
+
+**Kritik:** Dosya ASLA backend'in memory'sinden geçmez. Presigned URL ile doğrudan storage'a yüklenir. Bu sayede backend'e yük binmez.
+
+## Bucket (Kova) Yapısı
+
+```
+tourtech-media/                       # Ana bucket
+├── hotels/                           # Otel görselleri
+│   └── {hotelId}/
+│       ├── cover.webp                # Kapak fotoğrafı
+│       ├── gallery/
+│       │   ├── 1.webp
+│       │   ├── 2.webp
+│       │   └── ...
+│       └── rooms/
+│           └── {roomId}/
+│               ├── 1.webp
+│               └── 2.webp
+├── tours/                            # Tur görselleri
+│   └── {tourId}/
+│       ├── cover.webp
+│       └── gallery/
+│           ├── 1.webp
+│           └── ...
+├── activities/                       # Aktivite görselleri
+│   └── {activityId}/
+│       ├── cover.webp
+│       └── gallery/
+├── operators/                        # Partner profil/logo
+│   └── {operatorId}/
+│       ├── logo.webp
+│       └── banner.webp
+├── users/                            # Kullanıcı avatarları
+│   └── {userId}/
+│       └── avatar.webp
+└── documents/                        # Belgeler (ruhsat, sertifika)
+    └── {partnerId}/
+        ├── license.pdf
+        └── certificate.pdf
+```
+
+## URL Formatı
+
+```
+# Development (MinIO)
+http://localhost:9000/tourtech-media/tours/{tourId}/cover.webp
+
+# Production (S3 + CDN)
+https://media.turta.com/tours/{tourId}/cover.webp
+
+# Thumbnail (on-the-fly resize)
+https://media.turta.com/tours/{tourId}/cover.webp?w=400&h=300&fit=cover
+```
+
+## Backend Storage Service
+
+```typescript
+// apps/api/src/core/storage/storage.service.ts
+import { Injectable } from '@nestjs/common';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+@Injectable()
+export class StorageService {
+  private readonly s3: S3Client;
+  private readonly bucket: string;
+  private readonly cdnUrl: string;
+
+  constructor(private readonly config: ConfigService) {
+    this.s3 = new S3Client({
+      endpoint: config.get('MINIO_ENDPOINT'),
+      region: config.get('S3_REGION', 'eu-central-1'),
+      credentials: {
+        accessKeyId: config.get('MINIO_ACCESS_KEY'),
+        secretAccessKey: config.get('MINIO_SECRET_KEY'),
+      },
+      forcePathStyle: true, // MinIO için gerekli
+    });
+    this.bucket = config.get('S3_BUCKET', 'tourtech-media');
+    this.cdnUrl = config.get('CDN_URL', 'http://localhost:9000/tourtech-media');
+  }
+
+  async getPresignedUploadUrl(key: string, contentType: string, expiresIn = 3600): Promise<string> {
+    const command = new PutObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ContentType: contentType,
+    });
+    return getSignedUrl(this.s3, command, { expiresIn });
+  }
+
+  async deleteFile(key: string): Promise<void> {
+    await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+  }
+
+  getPublicUrl(key: string): string {
+    return `${this.cdnUrl}/${key}`;
+  }
+
+  generateKey(folder: string, entityId: string, filename: string): string {
+    const ext = filename.split('.').pop()?.toLowerCase() || 'webp';
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    return `${folder}/${entityId}/${uniqueName}`;
+  }
+}
+```
+
+## Backend Controller
+
+```typescript
+// apps/api/src/core/storage/storage.controller.ts
+@Controller('storage')
+@ApiTags('Storage')
+@UseGuards(JwtAuthGuard)
+export class StorageController {
+  constructor(private readonly storageService: StorageService) {}
+
+  @Post('presigned-url')
+  @ApiOperation({ summary: 'Get presigned upload URL' })
+  async getPresignedUrl(@Body() dto: PresignedUrlDto, @CurrentUser() user: UserPayload) {
+    const key = this.storageService.generateKey(dto.folder, dto.entityId, dto.filename);
+    const uploadUrl = await this.storageService.getPresignedUploadUrl(key, dto.contentType);
+    const publicUrl = this.storageService.getPublicUrl(key);
+
+    return {
+      success: true,
+      data: { uploadUrl, publicUrl, key },
+      error: null,
+    };
+  }
+
+  @Post('confirm')
+  @ApiOperation({ summary: 'Confirm upload and save URL to entity' })
+  async confirmUpload(@Body() dto: ConfirmUploadDto) {
+    // Entity'nin imageUrl/gallery alanını güncelle
+    return { success: true, data: { url: dto.publicUrl }, error: null };
+  }
+
+  @Delete(':key')
+  @ApiOperation({ summary: 'Delete a file' })
+  async deleteFile(@Param('key') key: string) {
+    await this.storageService.deleteFile(key);
+    return { success: true, data: null, error: null };
+  }
+}
+```
+
+## Frontend Upload Component
+
+```typescript
+// apps/web/src/components/shared/image-upload.tsx
+'use client';
+
+import { useState, useCallback } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { storageService } from '@/services/storage.service';
+import { toast } from 'sonner';
+
+interface ImageUploadProps {
+  folder: string;          // 'tours', 'hotels', 'operators'
+  entityId: string;        // İlgili kaydın ID'si
+  onUploadComplete: (url: string) => void;
+  maxSize?: number;        // byte cinsinden (default: 5MB)
+  accept?: string[];       // ['image/jpeg', 'image/png', 'image/webp']
+}
+
+export function ImageUpload({ folder, entityId, onUploadComplete, maxSize = 5_242_880, accept }: ImageUploadProps) {
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const onDrop = useCallback(async (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      // 1. Backend'den presigned URL al
+      const { uploadUrl, publicUrl } = await storageService.getPresignedUrl({
+        folder,
+        entityId,
+        filename: file.name,
+        contentType: file.type,
+      });
+
+      // 2. Doğrudan S3/MinIO'ya yükle
+      await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      });
+
+      // 3. Başarılı — URL'i parent'a bildir
+      onUploadComplete(publicUrl);
+      toast.success('Görsel yüklendi');
+    } catch (error) {
+      toast.error('Yükleme başarısız');
+    } finally {
+      setUploading(false);
+    }
+  }, [folder, entityId, onUploadComplete]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    maxSize,
+    accept: { 'image/*': accept || ['.jpg', '.jpeg', '.png', '.webp'] },
+    maxFiles: 1,
+  });
+
+  return (
+    <div {...getRootProps()} className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:border-primary transition-colors">
+      <input {...getInputProps()} />
+      {uploading ? (
+        <p>Yükleniyor... {progress}%</p>
+      ) : isDragActive ? (
+        <p>Dosyayı buraya bırakın</p>
+      ) : (
+        <p>Görsel yüklemek için tıklayın veya sürükleyin</p>
+      )}
+    </div>
+  );
+}
+```
+
+## Görsel Optimizasyon Kuralları
+
+### Upload Sırasında (Backend/Client)
+- Maksimum boyut: **5MB** (görseller), **20MB** (PDF/belge)
+- Kabul edilen formatlar: `.jpg`, `.jpeg`, `.png`, `.webp`, `.avif`
+- Otomatik WebP dönüşümü: Upload sonrası backend worker ile (Sharp kütüphanesi)
+- Boyut limitleri: Orijinal max 4000x4000px, otomatik resize
+
+### Render Sırasında (Frontend)
+- Next.js `<Image>` komponenti ZORUNLU (`next/image`)
+- `width` ve `height` props her zaman belirtilmeli
+- `placeholder="blur"` ile lazy loading
+- Format: WebP öncelikli, tarayıcı desteğine göre fallback
+
+```typescript
+import Image from 'next/image';
+
+<Image
+  src={tour.coverImage}
+  alt={tour.title}
+  width={800}
+  height={450}
+  className="rounded-lg object-cover"
+  placeholder="blur"
+  blurDataURL="/images/placeholder-blur.webp"
+  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+/>
+```
+
+### CDN & Cache Stratejisi
+- Görseller CDN üzerinden sunulur (Cloudflare/CloudFront)
+- Cache-Control: `public, max-age=31536000, immutable` (1 yıl — dosya adı unique)
+- Görsel güncellendiğinde yeni dosya adı oluşturulur (cache busting)
+
+## Veritabanında Görsel Saklama
+
+```prisma
+model Tour {
+  // ...
+  coverImage   String?   @db.VarChar(500)  // CDN URL
+  galleryImages String[] @default([])       // CDN URL array
+  // ...
+}
+```
+
+**Kural:** Veritabanına ASLA binary veri (base64, blob) kaydedilmez. Sadece URL (string) saklanır.
+
+## Environment Variables
+
+```env
+# MinIO (Development)
+MINIO_ENDPOINT=http://localhost:9000
+MINIO_ACCESS_KEY=tourtech
+MINIO_SECRET_KEY=tourtech123
+S3_BUCKET=tourtech-media
+
+# Production (S3 veya R2)
+# MINIO_ENDPOINT=https://s3.eu-central-1.amazonaws.com
+# S3_REGION=eu-central-1
+
+# CDN
+CDN_URL=http://localhost:9000/tourtech-media
+# Production: CDN_URL=https://media.turta.com
+```
+
+## Güvenlik Kuralları (Tekrar)
+
+- Dosya tipi: MIME type + magic bytes kontrolü (sadece uzantıya güvenme)
+- Dosya adı: UUID/timestamp ile yeniden adlandır (orijinal ad KULLANILMAZ — path traversal riski)
+- Presigned URL: Kısa ömürlü (1 saat), tek kullanımlık
+- Public erişim: SADECE CDN üzerinden (direkt bucket erişimi kapalı)
+- Belge dosyaları (PDF): Presigned download URL ile geçici erişim (1 saat)

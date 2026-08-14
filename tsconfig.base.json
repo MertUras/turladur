@@ -1,0 +1,31 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": true,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@turta/shared-types": ["packages/shared-types/src/index.ts"],
+      "@turta/shared-types/*": ["packages/shared-types/src/*"],
+      "@turta/shared-validators": ["packages/shared-validators/src/index.ts"],
+      "@turta/shared-validators/*": ["packages/shared-validators/src/*"],
+      "@turta/shared-constants": ["packages/shared-constants/src/index.ts"],
+      "@turta/shared-constants/*": ["packages/shared-constants/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "tmp", "dist", ".next"]
+}

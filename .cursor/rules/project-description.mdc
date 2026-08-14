@@ -1,126 +1,138 @@
 ---
-description: 
+description: turta platform tanımı ve vizyon dokümanı
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
-# TurlaDur – Kapsamlı Turizm Ekosistem Platformu
 
-TurlaDur, Türkiye’nin turizm sektöründeki tüm paydaşları (küçük oteller, pansiyonlar, acenteler, tur operatörleri, yerel deneyim sağlayıcıları) tek bir dijital ekosistemde buluşturan, veri odaklı ve ölçeklenebilir bir platformdur. Başlangıç aşamasında Türkiye’de pilot bölgelerde uygulanarak, sonrasında Akdeniz bölgesindeki benzer turizm dinamiklerine sahip ülkelere (Yunanistan, İspanya, İtalya, Hırvatistan, Fas, Mısır vb.) açılma potansiyeline sahiptir.
+# turta — Kapsamlı Turizm Ekosistem Platformu
+
+## Platform Özeti
+
+turta, Türkiye'nin turizm sektöründeki tüm paydaşları (küçük oteller, pansiyonlar, acenteler, tur operatörleri, yerel deneyim sağlayıcıları) tek bir dijital ekosistemde buluşturan, veri odaklı ve ölçeklenebilir bir platformdur.
+
+**Hedef:** Pilot uygulama → Türkiye geneli → Akdeniz ülkeleri (Yunanistan, İspanya, İtalya, Hırvatistan, Fas, Mısır)
+
+---
+
+## Teknik Mimari
+
+- **Monorepo:** Nx + pnpm workspace
+- **Frontend:** Next.js 15 (App Router) — `apps/web/`
+- **Backend:** NestJS 11 (Modüler Monolit) — `apps/api/`
+- **Paylaşılan Paketler:** `packages/shared-types/`, `packages/shared-validators/`, `packages/shared-constants/` (`eslint-config` paketi henüz yok)
+- **Veritabanı:** PostgreSQL 16 (multi-schema: catalog, booking, payment, identity, review, notification)
+- **ORM:** Prisma 6
+- **Cache & Queue:** Redis 7 + BullMQ
+- **Auth:** Nest identity + Passport JWT (`passport-jwt`, Bearer access token). Keycloak/OIDC ertelendi — şu an kullanılmıyor.
+- **Storage:** MinIO (dev) / S3 (prod)
+- **Local altyapı:** `infrastructure/docker/docker-compose.yml` (nginx klasörü repo’da yok)
+- **Deploy:** Vercel (web) + Railway/Fly.io (api)
+
+---
+
+## İş Modülleri
+
+| Modül | Sorumluluk |
+|-------|-----------|
+| **Catalog** | Otel, oda, tur, aktivite CRUD + arama + dinamik fiyatlandırma |
+| **Booking** | Sepet, rezervasyon oluşturma, iptal, durum yönetimi |
+| **Payment** | Sanal POS (İyzico), ödeme akışı, fatura |
+| **Identity** | Kullanıcı, partner, admin kayıt/giriş, rol yönetimi |
+| **Notification** | Email, SMS, push bildirim |
+| **Partner** | Partner dashboard, tur/deneyim yönetimi, finansal raporlar |
+| **Review** | Değerlendirme, puanlama, partner rating |
+| **Analytics** | İstatistik, rapor, dashboard verileri |
 
 ---
 
 ## Temel Özellikler
 
 ### 1. Otel/Pansiyon Yönetim Modülü
-- **Bulut Tabanlı Rezervasyon ve Envanter Yönetimi:** Anlık güncellemelerle kesintisiz hizmet.
-- **Dinamik Fiyatlandırma & Gelir Optimizasyonu:** Gerçek zamanlı veri analitiği ile fiyat stratejileri.
-- **Misafir İlişkileri Yönetimi (CRM):** Kişiselleştirilmiş müşteri deneyimi.
-- **Operasyonel Verimlilik Araçları:** Temizlik, bakım ve personel yönetimi.
-- **Çok Kanallı Dağıtım Yönetimi:** OTA entegrasyonları ile geniş erişim.
+- Bulut tabanlı rezervasyon ve envanter yönetimi
+- Dinamik fiyatlandırma & gelir optimizasyonu
+- Misafir ilişkileri yönetimi (CRM)
+- Operasyonel verimlilik araçları
+- Çok kanallı dağıtım yönetimi (OTA entegrasyonları)
 
 ### 2. Acente Dashboard ve Yönetim Sistemi
-- **Gerçek Zamanlı Satış ve Performans Analitikleri:** Anlık verilerle stratejik karar alma.
-- **Rezervasyon Yönetimi ve Takibi:** Tüm rezervasyon süreçlerinin kontrolü.
-- **Komisyon Hesaplama & Faturalandırma Otomasyonu:** İşlemlerde şeffaflık.
-- **Müşteri Segmentasyonu & Hedefleme Araçları:** Doğru kitleye ulaşım.
-- **Özelleştirilebilir Raporlar & KPI Takibi:** Performans ölçümü.
-- **Sezonsal Trend Analizi & Tahminleme:** Geleceğe yönelik planlamalar.
+- Gerçek zamanlı satış ve performans analitikleri
+- Rezervasyon yönetimi ve takibi
+- Komisyon hesaplama & faturalandırma otomasyonu
+- Müşteri segmentasyonu & hedefleme araçları
+- Sezonsal trend analizi & tahminleme
 
 ### 3. Tur Operatörleri İçin Araçlar
-- **Dinamik Paket Oluşturma & Fiyatlandırma:** Esnek tur paketleri.
-- **Grup Rezervasyonları & Kontingent Yönetimi:** Toplu işlemlerde kolaylık.
-- **Tedarikçi İlişkileri Yönetimi:** İş ortaklıklarının etkin yönetimi.
-- **Transfer & Lojistik Optimizasyonu:** Verimli ulaşım ve transfer çözümleri.
-- **Rehber & Personel Yönetimi:** İhtiyaca özel ekip planlaması.
+- Dinamik paket oluşturma & fiyatlandırma
+- Grup rezervasyonları & kontingent yönetimi
+- Tedarikçi ilişkileri yönetimi
+- Transfer & lojistik optimizasyonu
+- Rehber & personel yönetimi
 
 ### 4. Yerel Deneyimler Pazar Yeri
-- **Dijital Vitrin:** Yerel aktivite sağlayıcılarının tanıtımı.
-- **Gerçek Zamanlı Müsaitlik & Rezervasyon:** Hızlı ve güncel rezervasyon imkanı.
-- **Kullanıcı Değerlendirmeleri & Kalite Kontrolü:** Güvenilir geri bildirimler.
-- **Kişiselleştirilmiş Deneyim Önerileri:** Kullanıcı profiline uygun tavsiyeler.
-- **Sezonluk & Niş Deneyimler:** Özel tanıtım ve pazarlama stratejileri.
+- Dijital vitrin
+- Gerçek zamanlı müsaitlik & rezervasyon
+- Kullanıcı değerlendirmeleri & kalite kontrolü
+- Kişiselleştirilmiş deneyim önerileri
 
 ### 5. Veri Analitik ve İş Zekası
-- **Sektörel Trend Analizi:** Geniş veri setleri ile sektör analizi.
-- **Rekabet İstihbaratı & Fiyat Karşılaştırma:** Piyasa dinamiklerine hızlı adaptasyon.
-- **Talep Tahmini & Sezonsal Planlama:** Geleceğe yönelik stratejik yaklaşımlar.
-- **Müşteri Davranış Analizi:** Kullanıcı verileriyle iyileştirme önerileri.
-- **Destinasyon Popülerlik Endeksi:** Bölgesel çekiciliğin ölçümlenmesi.
+- Sektörel trend analizi
+- Rekabet istihbaratı & fiyat karşılaştırma
+- Talep tahmini & sezonsal planlama
+- Müşteri davranış analizi
+- Destinasyon popülerlik endeksi
 
 ### 6. Çok Dilli İletişim ve Müşteri Hizmetleri
-- **Yapay Zeka Destekli Çeviri:** Çok dilli ve kültürel hassasiyete uygun iletişim.
-- **Otomatik Yanıt Sistemleri & Chatbotlar:** 7/24 müşteri desteği.
-- **Kültürel Tercih ve Hassasiyet Analizi:** Bölgesel uyum ve iletişim optimizasyonu.
-- **7/24 Destek Hizmetleri:** Kesintisiz müşteri hizmetleri.
-- **Çok Dilli Sözleşme & Belge Yönetimi:** Evrensel kullanım için dokümantasyon.
+- AI destekli çeviri
+- Chatbot ve otomatik yanıt sistemleri
+- 7/24 destek hizmetleri
 
 ### 7. B2B Ağ ve İşbirliği Platformu
-- **Otel, Acente ve Tur Operatörü Eşleştirme:** İş ortaklıklarının artırılması.
-- **İşbirliği Fırsatları & Ortak Paket Oluşturma:** Sinerji yaratma.
-- **Sektörel Bilgi Paylaşımı & En İyi Uygulamalar:** Bilgi transferi.
-- **Eğitim & Sertifikasyon Programları:** Kalite ve profesyonellik artışı.
-- **Networking Etkinlikleri & İş Geliştirme Fırsatları:** Sektörel bağlantıların güçlendirilmesi.
+- Otel, acente ve tur operatörü eşleştirme
+- Ortak paket oluşturma
+- Eğitim & sertifikasyon programları
 
 ### 8. Sürdürülebilirlik Araçları
-- **Karbon Ayak İzi Hesaplama & Azaltma:** Çevre dostu stratejiler.
-- **Sürdürülebilir Turizm Sertifikasyonu:** Güvenilirlik ve çevre bilinci.
-- **Yerel Ekonomiye Katkı Ölçümleri:** Bölgesel kalkınma destekleri.
-- **Sorumlu Turizm Uygulamaları:** Toplumsal ve çevresel duyarlılık.
-- **Çevre Dostu Tedarikçi Ağı:** Sürdürülebilir iş ortaklıkları.
+- Karbon ayak izi hesaplama
+- Sürdürülebilir turizm sertifikasyonu
+- Yerel ekonomiye katkı ölçümleri
 
 ---
 
 ## Gelir Modeli
 
-- **SaaS Abonelik Ücretleri:** İşletme büyüklüğüne göre kademeli planlar.
-- **Rezervasyon Başına Komisyon:** İşlem bazlı gelir modeli.
-- **Premium Özellikler:** Ekstra hizmetler için ilave ücretlendirme.
-- **Veri Analitik Raporları:** Abonelik bazında detaylı raporlar.
-- **Öne Çıkarma & Tanıtım Ücretleri:** Reklam ve promosyon hizmetleri.
-- **Eğitim & Danışmanlık Hizmetleri:** Kurumsal destek programları.
+- SaaS abonelik ücretleri (kademeli planlar)
+- Rezervasyon başına komisyon
+- Premium özellikler
+- Veri analitik raporları (abonelik)
+- Öne çıkarma & tanıtım ücretleri
+- Eğitim & danışmanlık hizmetleri
 
 ---
 
 ## Rekabet Avantajları
 
-- **Tüm Turizm Ekosistemini Tek Platformda Buluşturma:** Kapsamlı hizmet yelpazesi.
-- **Türkiye’nin Özgün Turizm Dinamiklerine Uygun Tasarım:** Yerel ihtiyaçlara özel çözümler.
-- **Küçük ve Orta Ölçekli İşletmelere Kurumsal Teknoloji Sunma:** Dijital dönüşüm desteği.
-- **Veri Odaklı Karar Alma Süreçleri:** İş zekası ve analitik destek.
-- **Çok Dilli ve Kültürel Hassasiyete Uygun Yapı:** Global pazara adaptasyon.
-- **Sezonsal İşletmelere Özel Çözümler:** Mevsimsel değişimlere hızlı yanıt.
+- Tüm turizm ekosistemini tek platformda buluşturma
+- Türkiye'nin özgün turizm dinamiklerine uygun tasarım
+- KOBİ'lere kurumsal teknoloji sunma
+- Veri odaklı karar alma süreçleri
+- Çok dilli ve kültürel hassasiyete uygun yapı
 
 ---
 
 ## Büyüme Stratejisi
 
-1. **Pilot Uygulama:** Türkiye’nin belirli turizm bölgelerinde (Antalya, Muğla, İstanbul) başlangıç uygulaması.
-2. **Türkiye Geneline Yaygınlaşma:** Başarılı pilot uygulama sonrası ülke çapında dağıtım.
-3. **Uluslararası Açılım:** Akdeniz ülkeleri ve benzeri turizm profiline sahip pazarlara giriş.
-4. **Stratejik Ortaklıklar:** Entegrasyonlar ve işbirlikleriyle ekosistemin güçlendirilmesi.
-5. **Niş Turizm Segmentleri:** Sağlık, kültür, gastronomi gibi alanlarda özel çözümler geliştirme.
+1. Pilot: Antalya, Muğla, İstanbul
+2. Türkiye geneline yaygınlaşma
+3. Uluslararası açılım (Akdeniz ülkeleri)
+4. Stratejik ortaklıklar
+5. Niş turizm segmentleri (sağlık, kültür, gastronomi)
 
 ---
 
 ## Exit Potansiyeli
 
-- **Global OTA’lar Tarafından Satın Alınma:** Booking.com, Expedia, TripAdvisor gibi firmaların ilgisi.
-- **Turizm Teknolojisi Devleri:** Oracle Hospitality, Amadeus gibi şirketler tarafından satın alma.
-- **Büyük Tur Operatörleri:** TUI, Thomas Cook gibi markaların birleşme stratejileri.
-- **Özel Sermaye Fonları:** Yatırım ve büyüme için potansiyel finansal destek.
-- **Halka Arz:** Globalleşme ve likidite sağlama imkanı.
-
----
-
-## Teknoloji Yığını ve Altyapı
-
-- **Frontend:** Next.js  
-  Modern, performans odaklı ve SEO uyumlu web uygulamaları geliştirmek için kullanılacaktır.
-- **Backend & ORM:** Prisma  
-  Tip güvenliği ve etkili veri modellemesi sağlayarak geliştirme sürecini hızlandıracaktır.
-- **Veritabanı:** PostgreSQL  
-  Güçlü, ölçeklenebilir ve güvenilir veritabanı çözümü sunar.
-- **Bulut Altyapısı:**  
-  Esnek ve güvenli bulut tabanlı servislerle kesintisiz hizmet sağlanacaktır.
-
----
+- Global OTA'lar (Booking.com, Expedia, TripAdvisor)
+- Turizm teknolojisi devleri (Oracle Hospitality, Amadeus)
+- Büyük tur operatörleri (TUI, Thomas Cook)
+- Özel sermaye fonları
+- Halka arz

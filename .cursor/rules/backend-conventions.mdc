@@ -1,0 +1,227 @@
+---
+description: NestJS backend geliştirme kuralları
+globs: apps/api/**
+alwaysApply: false
+---
+
+# Backend Kuralları (apps/api/)
+
+## Framework: NestJS 11 — Modüler Monolit
+
+### Klasör Yapısı
+
+```
+apps/api/src/
+├── main.ts                       # Bootstrap, Swagger, CORS, ValidationPipe
+├── app.module.ts                 # Root module
+├── core/                         # Framework-level altyapı
+│   ├── database/
+│   │   ├── prisma.module.ts
+│   │   ├── prisma.service.ts
+│   │   └── transaction.helper.ts
+│   ├── cache/
+│   │   ├── redis.module.ts
+│   │   └── cache.service.ts
+│   ├── queue/
+│   │   ├── queue.module.ts
+│   │   └── processors/
+│   ├── auth/
+│   │   ├── auth.module.ts
+│   │   ├── guards/
+│   │   │   ├── jwt-auth.guard.ts
+│   │   │   ├── roles.guard.ts
+│   │   │   └── partner.guard.ts
+│   │   ├── strategies/
+│   │   │   └── jwt.strategy.ts
+│   │   └── decorators/
+│   │       ├── current-user.decorator.ts
+│   │       ├── roles.decorator.ts
+│   │       └── public.decorator.ts
+│   ├── storage/
+│   │   ├── storage.module.ts
+│   │   └── storage.service.ts
+│   ├── mail/
+│   │   ├── mail.module.ts
+│   │   └── mail.service.ts
+│   ├── logger/
+│   │   └── logger.module.ts
+│   └── health/
+│       └── health.controller.ts
+├── modules/                      # İş modülleri
+│   ├── catalog/
+│   ├── booking/
+│   ├── payment/
+│   ├── identity/
+│   ├── notification/
+│   ├── partner/
+│   ├── review/
+│   └── analytics/
+└── shared/                       # Modüller arası paylaşılan utility
+    ├── constants/
+    ├── enums/
+    ├── exceptions/
+    ├── interfaces/
+    └── utils/
+```
+
+### Modül İç Yapısı (Her Modül İçin)
+
+```
+modules/catalog/
+├── catalog.module.ts             # Module tanımı
+├── controllers/
+│   ├── hotel.controller.ts       # HTTP endpoint'leri
+│   ├── tour.controller.ts
+│   └── activity.controller.ts
+├── services/
+│   ├── hotel.service.ts          # İş mantığı
+│   ├── tour.service.ts
+│   ├── search.service.ts
+│   └── pricing.service.ts
+├── commands/                     # CQRS Write
+│   ├── create-tour/
+│   │   ├── create-tour.command.ts
+│   │   └── create-tour.handler.ts
+│   └── update-availability/
+│       ├── update-availability.command.ts
+│       └── update-availability.handler.ts
+├── queries/                      # CQRS Read
+│   ├── search-hotels/
+│   │   ├── search-hotels.query.ts
+│   │   └── search-hotels.handler.ts
+│   └── get-tour-detail/
+│       ├── get-tour-detail.query.ts
+│       └── get-tour-detail.handler.ts
+├── events/                       # Domain Events
+│   ├── tour-created.event.ts
+│   └── price-updated.event.ts
+├── listeners/                    # Diğer modüllerden gelen event'leri dinler
+│   └── booking-confirmed.listener.ts
+├── dto/
+│   ├── create-tour.dto.ts
+│   ├── update-tour.dto.ts
+│   └── search-hotels.dto.ts
+├── interfaces/
+│   └── tour-repository.interface.ts
+└── __tests__/
+    ├── hotel.service.spec.ts
+    └── search-hotels.handler.spec.ts
+```
+
+## Kurallar
+
+### Modül Bağımsızlığı (EN KRİTİK KURAL)
+- Bir modül, başka bir modülün `service`, `repository` veya `entity`'sini ASLA import etmez.
+- Modüller arası iletişim SADECE şu yollarla olur:
+  1. **Event** (EventEmitter2): Asenkron, fire-and-forget
+  2. **BullMQ Queue**: Asenkron, güvenilir (retry ile)
+  3. **Shared Interface**: `shared/interfaces/` altında abstract contract tanımla, her modül kendi implementasyonunu sağlar
+- Yanlış: `import { PaymentService } from '../payment/services/payment.service'`
+- Doğru: `this.eventEmitter.emit('booking.created', new BookingCreatedEvent(data))`
+
+### Controller Kuralları
+- Controller'da iş mantığı OLMAZ. Sadece request parse + response format.
+- Her endpoint bir Command veya Query dispatch eder.
+- Route prefix: modül adı (`/api/v1/catalog/tours`, `/api/v1/booking/reservations`)
+- Swagger decorator'ları zorunlu: `@ApiTags`, `@ApiOperation`, `@ApiResponse`
+
+```typescript
+@Controller('catalog/tours')
+@ApiTags('Catalog - Tours')
+export class TourController {
+  constructor(private readonly commandBus: CommandBus, private readonly queryBus: QueryBus) {}
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.PARTNER, Role.ADMIN)
+  @ApiOperation({ summary: 'Yeni tur oluştur' })
+  async createTour(@Body() dto: CreateTourDto, @CurrentUser() user: UserPayload) {
+    return this.commandBus.execute(new CreateTourCommand(dto, user.id));
+  }
+
+  @Get('search')
+  @Public()
+  @ApiOperation({ summary: 'Tur ara' })
+  async searchTours(@Query() dto: SearchToursDto) {
+    return this.queryBus.execute(new SearchToursQuery(dto));
+  }
+}
+```
+
+### Service Kuralları
+- Service: iş mantığının yaşadığı yer.
+- Her service tek bir sorumluluk taşır (Single Responsibility).
+- External API çağrıları (İyzico, S3, vb.) adapter pattern ile sarılır.
+- Service hiçbir zaman `@Res()` veya HTTP-specific nesne kullanmaz.
+
+### DTO Kuralları
+- Her endpoint için ayrı DTO (request/response).
+- Validation: `class-validator` decorator'ları ile.
+- Transform: `class-transformer` ile (ör: trim, lowercase).
+- DTO'lar domain entity ile karıştırılmaz.
+
+```typescript
+export class CreateTourDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  title: string;
+
+  @IsNumber()
+  @Min(0)
+  price: number;
+
+  @IsEnum(TourCategory)
+  category: TourCategory;
+}
+```
+
+### Error Handling
+- Custom business exception'lar `shared/exceptions/` altında tanımlanır.
+- NestJS Exception Filter ile global yakalama yapılır.
+- Hata response formatı:
+
+```typescript
+{
+  success: false,
+  data: null,
+  error: {
+    code: "BOOKING_NOT_AVAILABLE",
+    message: "Seçilen tarihte müsaitlik bulunmamaktadır."
+  }
+}
+```
+
+### Güvenlik Kuralları
+- Tüm endpoint'ler default olarak `JwtAuthGuard` ile korunur.
+- Public endpoint'ler `@Public()` decorator ile işaretlenir.
+- Role kontrolü: `@Roles(Role.ADMIN)` decorator.
+- Rate limiting: `@Throttle()` ile (özellikle search, auth endpoint'leri).
+- Input sanitization: DTO validation + Prisma parametrized queries (SQL injection koruması).
+
+### Test Kuralları
+- Her service için unit test zorunlu (`*.spec.ts`).
+- Her modül için en az 1 integration test.
+- E2E testler `test/e2e/` altında.
+- Test coverage hedefi: %80+.
+
+### Import Sırası
+```typescript
+// 1. NestJS core
+import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+
+// 2. Üçüncü parti
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
+
+// 3. Shared packages
+import type { Tour } from '@turta/shared-types';
+
+// 4. Core (guards, decorators, pipes)
+import { JwtAuthGuard } from '@/core/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '@/core/auth/decorators/current-user.decorator';
+
+// 5. Aynı modül içi
+import { CreateTourCommand } from './commands/create-tour/create-tour.command';
+import { CreateTourDto } from './dto/create-tour.dto';
+```

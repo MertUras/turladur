@@ -1,0 +1,253 @@
+---
+description: Her görev öncesi ve sonrası kontrol + çıktı raporu kuralları
+globs: 
+alwaysApply: true
+---
+
+# İş Akışı — Kontrol & Rapor Kuralları
+
+## EN KRİTİK KURAL: Önce Anlat, Öner, Onay Al, Sonra Yap
+
+**Herhangi bir kod değişikliği yapmadan ÖNCE:**
+
+1. **Ne yapacağını açıkla** — Hangi dosyaları değiştireceksin, ne ekleyeceksin, ne sileceksin
+2. **Planını sun** — Adım adım ne yapılacak, hangi sırayla
+3. **Etkilenen alanları belirt** — Bu değişiklik başka nereleri etkiler
+4. **Risklerini söyle** — Bir şey bozulabilir mi, dikkat edilmesi gereken ne var
+5. **Önerilerini sun** — Mevcut yapıya daha mantıklı bir ekleme/değişiklik varsa öner (aşağıda detay)
+6. **ONAY BEKLE** — Kullanıcı "tamam", "yap", "devam" gibi bir onay verene kadar KOD YAZMA
+
+### Proaktif Öneri Kuralı (ÖNEMLİ)
+
+Körü körüne planı takip ETME. Her adımda şunları sorgula:
+
+- **Yapı uygun mu?** Mevcut koda baktığında daha iyi bir yol/pattern görüyor musun?
+- **Eksik var mı?** Plana yazılmamış ama mantıken olması gereken bir şey var mı?
+- **Tutarsızlık var mı?** Mevcut kodla çelişen / uyumsuz bir şey mi yapılacak?
+- **Gereksiz mi?** Yapılmak istenen şey zaten var mı veya anlamsız mı?
+- **Daha iyi alternatif var mı?** Aynı amaca daha temiz/performanslı/sürdürülebilir ulaşılabilir mi?
+
+Eğer bir önerim varsa, planın altına **ayrı bir blok** olarak sun:
+
+```
+💡 ÖNERİLERİM:
+  1. [Öneri açıklaması] — Neden: [gerekçe]
+  2. [Öneri açıklaması] — Neden: [gerekçe]
+  
+  Bu önerileri dahil edeyim mi, yoksa sadece isteneni mi yapayım?
+```
+
+**Öneri örnekleri:**
+- "Bu endpoint'e cache eklemek mantıklı olur çünkü read-heavy"
+- "Bu DTO'da validation eksik, ekleyelim mi?"
+- "Bu bileşen zaten var, yeni yapmak yerine mevcut olanı extend etmek daha iyi"
+- "Bu tablo için index eklenmemiş, performans sorunu olur"
+- "Bu yaklaşım yerine X pattern daha uygun çünkü..."
+- "Mevcut yapıda şu tutarsızlık var, düzelteyim mi?"
+- "Plan diyor ki A yap ama kodda B daha mantıklı çünkü..."
+
+**Ne zaman öneri YAPILMAZ:**
+- Kullanıcı "aynen yap, değiştirme" dediyse
+- Öneri önemsiz/kozmetik ise (import sırası gibi)
+- Zaten rules'da tanımlı ve uygulanıyorsa
+
+**Format:**
+```
+═══════════════════════════════════════════
+📋 YAPILACAK İŞ
+═══════════════════════════════════════════
+
+🎯 Hedef: [Ne yapılacak — 1 cümle]
+
+📁 Değişecek dosyalar:
+  ~ dosya1.ts (ne değişecek)
+  + dosya2.ts (yeni oluşturulacak)
+  - dosya3.ts (silinecek)
+
+📝 Adımlar:
+  1. ...
+  2. ...
+  3. ...
+
+⚠️ Riskler / dikkat:
+  - ...
+
+💡 Önerilerim (opsiyonel):
+  1. [Öneri] — Neden: [gerekçe]
+  2. [Öneri] — Neden: [gerekçe]
+
+═══════════════════════════════════════════
+Onaylıyor musun? Önerileri dahil edeyim mi?
+═══════════════════════════════════════════
+```
+
+**İstisnalar (onay gerekmez):**
+- Kullanıcı zaten açıkça "yap", "uygula", "implement et" dediyse
+- Sadece dosya okuma / analiz yapıyorsan
+- Sadece soru cevaplıyorsan
+- Lint hatası düzeltme (kendi yarattığın hata)
+
+---
+
+## Her Görev Başlamadan ÖNCE Kontrol Et
+
+Kod yazmaya başlamadan önce şu soruları cevapla:
+
+1. **Hangi modüle ait?** (catalog, booking, payment, identity, review, notification, partner, analytics)
+2. **Hangi katman?** (controller, service, command, query, dto, frontend page, component)
+3. **İlgili rules dosyalarını oku:** Hangi `.cursor/rules/*.mdc` bu göreve uygulanıyor?
+4. **Mevcut kodu incele:** Değiştireceğin dosyaları oku, mevcut yapıyı anla
+5. **Breaking change var mı?** Mevcut çalışan bir şeyi bozacak mısın?
+
+## Her Görev Bittikten SONRA Kontrol Et
+
+Kod yazdıktan sonra şu kontrolleri yap:
+
+### Backend Değişikliği Yapıldıysa:
+- [ ] Modül bağımsızlığı korunuyor mu? (başka modülden service import yok)
+- [ ] DTO'da class-validator decorator var mı?
+- [ ] Swagger decorator'ları (@ApiTags, @ApiOperation) eklendi mi?
+- [ ] Response formatı doğru mu? `{ success, data, error }`
+- [ ] Event emit gerekiyor mu? (başka modülleri ilgilendiriyor mu?)
+- [ ] Cache eklenmeli mi? (read-heavy endpoint ise)
+- [ ] Auth guard doğru mu? (@Public veya @Roles)
+- [ ] Error handling var mı? (NotFoundException, BusinessException)
+- [ ] Linter hatası var mı?
+
+### Frontend Değişikliği Yapıldıysa:
+- [ ] Doğru route group'ta mı? (marketing/customer/partner/admin)
+- [ ] Server vs Client component doğru seçildi mi?
+- [ ] Loading state var mı?
+- [ ] Error state var mı?
+- [ ] TanStack Query kullanıldı mı? (doğrudan fetch yok)
+- [ ] Responsive mi? (mobile-first)
+- [ ] SEO metadata var mı? (public sayfaysa)
+- [ ] Import sırası doğru mu?
+- [ ] Linter hatası var mı?
+
+### Veritabanı Değişikliği Yapıldıysa:
+- [ ] `@@schema("{modül}")` var mı?
+- [ ] `id`, `createdAt`, `updatedAt`, `deletedAt` var mı?
+- [ ] Foreign key'lerde `@@index` var mı?
+- [ ] Migration adı açıklayıcı İngilizce snake_case mi?
+- [ ] Shared types güncellendi mi?
+
+### Dosya Oluşturulduysa:
+- [ ] Dosya adı `kebab-case` mi?
+- [ ] Doğru klasörde mi?
+- [ ] İsimlendirme kurallarına uyuyor mu?
+
+## Görev Tamamlandığında Kullanıcıya RAPOR Ver
+
+Her görev bittiğinde aşağıdaki formatta özet çıktı ver:
+
+```
+═══════════════════════════════════════════
+✓ TAMAMLANDI
+═══════════════════════════════════════════
+
+📁 Oluşturulan dosyalar:
+  - apps/api/src/modules/review/controllers/review.controller.ts
+  - apps/api/src/modules/review/services/review.service.ts
+  - apps/api/src/modules/review/dto/create-review.dto.ts
+
+✏️  Değiştirilen dosyalar:
+  - apps/api/src/app.module.ts (ReviewModule import eklendi)
+  - packages/shared-types/src/index.ts (Review tipi export eklendi)
+
+🗑️  Silinen dosyalar:
+  - (yok)
+
+📋 Kontrol sonuçları:
+  ✓ Modül bağımsızlığı → Korunuyor
+  ✓ DTO validation → class-validator decorator'ları mevcut
+  ✓ Swagger → @ApiTags, @ApiOperation eklendi
+  ✓ Response format → { success, data, error } uygulandı
+  ✓ Auth guard → @UseGuards(JwtAuthGuard) aktif
+  ✓ Cache → GET /reviews/:tourId endpoint'inde Redis (TTL: 10dk)
+  ✓ Event → ReviewCreatedEvent emit ediliyor
+  ✓ Linter → Hata yok
+
+⚠️  Dikkat edilmesi gerekenler:
+  - Migration çalıştırılmalı: pnpm --filter api prisma migrate dev --name create_review_table
+  - Seed verisi henüz eklenmedi (opsiyonel)
+
+🔗 İlgili kurallar:
+  - backend-conventions.mdc ✓
+  - module-guide.mdc ✓
+  - api-design.mdc ✓
+  - naming-conventions.mdc ✓
+═══════════════════════════════════════════
+```
+
+## Rapor Kuralları
+
+1. **Her zaman Türkçe** rapor ver.
+2. **Dosya listesi tam olsun** — neyi oluşturdun, neyi değiştirdin, neyi sildin.
+3. **Kontrol sonuçlarını listele** — hangi kurallar kontrol edildi, geçti mi?
+4. **Uyarılar** — kullanıcının yapması gereken ek adımlar varsa belirt (migration çalıştır, env ekle, vb.).
+5. **Kısa ve net** — gereksiz açıklama yapma, sadece sonuçları göster.
+6. **Başarısız kontrol varsa** — ❌ ile işaretle ve nasıl düzeltileceğini yaz.
+
+## Birden Fazla Dosya Değiştirildiğinde
+
+Eğer görev büyükse ve çok dosya değiştiyse, raporu kategorize et:
+
+```
+📁 Backend (5 dosya):
+  + modules/review/review.module.ts (yeni)
+  + modules/review/controllers/review.controller.ts (yeni)
+  + modules/review/services/review.service.ts (yeni)
+  ~ app.module.ts (değiştirildi)
+  ~ prisma/schema.prisma (değiştirildi)
+
+📁 Frontend (3 dosya):
+  + components/features/review/review-form.tsx (yeni)
+  + components/features/review/review-list.tsx (yeni)
+  ~ app/(marketing)/tours/[id]/page.tsx (değiştirildi)
+
+📁 Shared (1 dosya):
+  ~ packages/shared-types/src/review.types.ts (yeni)
+```
+
+## Browser Test Kuralı
+
+> **Detaylı test senaryoları:** `docs/SPRINT_END_TEST_SCENARIOS.md`
+> **Sprint planındaki test tabloları:** `docs/SPRINT_19-24_MIGRATION_PLAN.md` → Browser Test bölümü
+
+Bir feature veya sprint görevi tamamlandığında:
+
+1. `pnpm dev:apps` çalıştığından emin ol (web:3001 + api:4000)
+2. Browser ile ilgili sayfayı aç ve kontrol et:
+   - Sayfa yükleniyor mu? (white screen yok)
+   - API çağrıları başarılı mı? (console'da 4xx/5xx yok)
+   - Temel UI render ediliyor mu? (bileşenler görünüyor)
+   - Form varsa: doldur + submit et → başarılı sonuç
+   - Responsive: viewport 375px'de de çalışıyor mu?
+3. Test sonuçlarını rapora ekle:
+
+```
+🌐 Browser Test:
+  ✓ http://localhost:3001/hotels → Sayfa yüklendi, otel kartları görünüyor
+  ✓ API: GET /api/v1/catalog/hotels → 200 OK
+  ✓ Mobil (375px) → Layout düzgün
+  ✗ Filtre butonu tıklanınca hata → [düzeltildi]
+```
+
+### Ne Zaman Browser Test YAPILIR?
+- Yeni sayfa oluşturulduğunda
+- Mevcut sayfa değiştirildiğinde
+- API endpoint eklendikten sonra (Swagger'dan kontrol)
+- Sprint görevi "Definition of Done" kontrol edilirken
+- Kullanıcı "test et" dediğinde
+
+### Ne Zaman Browser Test YAPILMAZ?
+- Sadece backend service/dto değişikliği (UI'a etkisi yoksa)
+- Sadece type/constant değişikliği
+- Sadece rules/docs dosyası düzenleme
+
+## Ne Zaman Rapor VERİLMEZ
+
+- Sadece soru cevaplıyorsan (kod değişikliği yoksa)
+- Sadece dosya okuyorsan
+- Kullanıcıyla plan tartışıyorsan

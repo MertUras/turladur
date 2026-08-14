@@ -1,0 +1,121 @@
+---
+description: Veritabanı, Prisma ORM ve PostgreSQL kuralları
+globs: "**/prisma/**,**/database/**"
+alwaysApply: false
+---
+
+# Veritabanı Kuralları
+
+## Teknoloji: Prisma 6 + PostgreSQL 16
+
+### Schema Ayrımı (Multi-Schema)
+
+Her modülün kendi PostgreSQL schema'sı vardır:
+
+```prisma
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["catalog", "booking", "payment", "identity", "review", "notification"]
+}
+
+model Hotel {
+  id    String @id @default(cuid())
+  name  String
+  // ...
+  @@schema("catalog")
+}
+
+model Reservation {
+  id     String @id @default(cuid())
+  status BookingStatus
+  // ...
+  @@schema("booking")
+}
+```
+
+### Schema Kuralları
+- `catalog` → Otel, Oda, Tur, TurTarihi, Aktivite, AktiviteTarihi, Rota
+- `booking` → Rezervasyon, Sepet, SepetÖğesi
+- `payment` → Ödeme, İşlem, Fatura
+- `identity` → Kullanıcı, Partner, AltKullanıcı, Rol
+- `review` → Değerlendirme, PartnerPuanlama
+- `notification` → Bildirim, BildirimTercihi
+
+### Tablo İsimlendirme
+- Tablo adı: **PascalCase**, **tekil** (ör: `Hotel`, `Reservation`, `TourDate`)
+- Kolon adı: **camelCase** (ör: `firstName`, `createdAt`, `tourOperatorId`)
+- Foreign key: `[ilişkiliModelAdı]Id` (ör: `userId`, `hotelId`, `tourDateId`)
+- Enum adı: **PascalCase** (ör: `BookingStatus`, `UserRole`, `PaymentMethod`)
+- Index adı: `idx_[tablo]_[kolon(lar)]` (ör: `idx_hotel_regionId`)
+
+### Migration Kuralları
+- Migration dosya adı otomatik oluşturulur: `npx prisma migrate dev --name açıklayıcı_isim`
+- İsim formatı: `snake_case` ve İngilizce (ör: `add_booking_status_field`, `create_payment_table`)
+- Migration'lar GERİ ALINMAZ — yeni migration ile düzelt.
+- Production'da: `prisma migrate deploy` (dev komutları KULLANILMAZ).
+
+### Seed Kuralları
+- Her modülün kendi seed dosyası: `prisma/seed/catalog.seed.ts`, `prisma/seed/identity.seed.ts`
+- Ana seed runner: `prisma/seed/index.ts` — tüm modül seed'lerini sırayla çağırır.
+- Seed verileri gerçekçi olmalı (Türkçe otel isimleri, gerçek şehirler, mantıklı fiyatlar).
+- Test kullanıcıları seed'de tanımlanır.
+
+### Query Kuralları
+- Prisma Client ile type-safe query yazılır.
+- N+1 problemi: `include` veya `select` ile eager loading kullan.
+- Büyük listelerde MUTLAKA pagination: `skip` + `take` + toplam count.
+- Full-text search gereken yerlerde PostgreSQL `@@fulltext` veya `tsvector` kullanılabilir.
+- Hot path (yüksek trafik) sorgularda Redis cache zorunlu.
+
+### Performance Kuralları
+- Sık sorgulanan kolonlara index ekle (`@@index`).
+- `createdAt`, `updatedAt` her tabloda olmalı.
+- Soft delete: `deletedAt DateTime?` — fiziksel silme YAPILMAZ.
+- Büyük text alanları (açıklama, içerik) ayrı tabloya taşınabilir.
+- Connection pooling: PgBouncer (production'da Neon pooler veya standalone).
+
+### İlişki Kuralları
+- One-to-Many: Alt tabloda foreign key (`hotelId` → `Hotel`)
+- Many-to-Many: Explicit join table (implicit `@relation` KULLANILMABİLİR ama complex ilişkilerde explicit tercih et)
+- Cascade delete dikkatli kullanılmalı — genelde `SET NULL` veya soft delete.
+
+### Güvenlik
+- Raw SQL SADECE performance-critical durumlarda ve `$queryRaw` ile (parameterized).
+- Kullanıcı girdisi ASLA string interpolation ile SQL'e girmez.
+- Hassas veriler (şifre hash'i) `select: false` ile default dışı bırakılır.
+
+### Örnek Model Yapısı
+
+```prisma
+model Tour {
+  id          String       @id @default(cuid())
+  title       String       @db.VarChar(200)
+  slug        String       @unique
+  description String       @db.Text
+  price       Decimal      @db.Decimal(10, 2)
+  currency    Currency     @default(TRY)
+  category    TourCategory
+  status      TourStatus   @default(DRAFT)
+  
+  operatorId  String
+  operator    TourOperator @relation(fields: [operatorId], references: [id])
+  
+  dates       TourDate[]
+  reviews     Review[]
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  deletedAt   DateTime?
+
+  @@index([operatorId])
+  @@index([category, status])
+  @@index([slug])
+  @@schema("catalog")
+}
+```

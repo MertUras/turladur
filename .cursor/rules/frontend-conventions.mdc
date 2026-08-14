@@ -1,0 +1,166 @@
+---
+description: Next.js frontend geliştirme kuralları
+globs: apps/web/**
+alwaysApply: false
+---
+
+# Frontend Kuralları (apps/web/)
+
+## Framework: Next.js 15 — App Router
+
+### Klasör Yapısı
+
+```
+apps/web/src/
+├── app/                          # App Router — Sayfalar
+│   ├── (marketing)/              # Herkese açık, SEO sayfaları (SSR)
+│   │   ├── page.tsx              # Ana sayfa
+│   │   ├── tours/
+│   │   │   ├── page.tsx          # Tur listesi
+│   │   │   └── [id]/page.tsx     # Tur detay
+│   │   ├── hotels/
+│   │   ├── activities/
+│   │   └── destinations/
+│   ├── (auth)/                   # Login, Register, Forgot Password
+│   │   ├── login/page.tsx
+│   │   ├── register/page.tsx
+│   │   └── forgot-password/page.tsx
+│   ├── (customer)/               # Giriş yapmış müşteri (protected)
+│   │   ├── bookings/
+│   │   ├── profile/
+│   │   └── checkout/
+│   ├── (partner)/                # Partner paneli (protected)
+│   │   ├── dashboard/
+│   │   ├── tours/
+│   │   ├── reservations/
+│   │   └── financials/
+│   ├── (admin)/                  # Admin paneli (protected)
+│   │   ├── dashboard/
+│   │   ├── users/
+│   │   └── settings/
+│   ├── layout.tsx                # Root layout
+│   ├── loading.tsx               # Global loading
+│   ├── error.tsx                 # Global error boundary
+│   └── not-found.tsx             # 404
+├── components/
+│   ├── ui/                       # Atomic bileşenler (Shadcn/ui)
+│   │   ├── button.tsx
+│   │   ├── input.tsx
+│   │   ├── modal.tsx
+│   │   ├── card.tsx
+│   │   ├── date-picker.tsx
+│   │   └── select.tsx
+│   ├── layout/                   # Layout bileşenleri
+│   │   ├── header.tsx
+│   │   ├── footer.tsx
+│   │   ├── sidebar.tsx
+│   │   └── mobile-nav.tsx
+│   ├── features/                 # Domain-specific bileşenler
+│   │   ├── search/
+│   │   │   ├── search-bar.tsx
+│   │   │   ├── search-filters.tsx
+│   │   │   └── search-results.tsx
+│   │   ├── booking/
+│   │   │   ├── booking-card.tsx
+│   │   │   ├── booking-form.tsx
+│   │   │   └── booking-summary.tsx
+│   │   ├── tour/
+│   │   │   ├── tour-card.tsx
+│   │   │   ├── tour-gallery.tsx
+│   │   │   └── tour-pricing.tsx
+│   │   └── hotel/
+│   │       ├── hotel-card.tsx
+│   │       └── room-selector.tsx
+│   └── shared/                   # Cross-cutting bileşenler
+│       ├── loading-spinner.tsx
+│       ├── error-boundary.tsx
+│       ├── empty-state.tsx
+│       └── pagination.tsx
+├── hooks/                        # Custom hooks
+│   ├── use-auth.ts
+│   ├── use-search.ts
+│   ├── use-booking.ts
+│   └── use-debounce.ts
+├── services/                     # API client katmanı
+│   ├── api-client.ts             # Axios instance + interceptors
+│   ├── catalog.service.ts        # Otel, tur, aktivite API çağrıları
+│   ├── booking.service.ts
+│   ├── auth.service.ts
+│   └── partner.service.ts
+├── stores/                       # Zustand client state
+│   ├── cart.store.ts
+│   ├── ui.store.ts
+│   └── search-filters.store.ts
+├── config/
+│   ├── routes.ts                 # Route sabitleri
+│   └── constants.ts
+└── styles/
+    └── globals.css
+```
+
+## Kurallar
+
+### Sayfa Bileşenleri
+- Sayfalar (`page.tsx`) mümkün olduğunca **Server Component** olmalı.
+- Client-side interaktivite gereken kısımlar ayrı `"use client"` bileşene çıkarılır.
+- Veri çekme sayfada `fetch` veya server action ile yapılır, TanStack Query client component'lerde kullanılır.
+
+### Bileşen Kuralları
+- Her bileşen **tek bir dosyada**, default export KULLANMA — named export kullan.
+- Props interface'i aynı dosyada tanımlanır: `interface TourCardProps { ... }`
+- Bileşen dosya adı: `kebab-case.tsx` (ör: `tour-card.tsx`, `booking-form.tsx`)
+- Bileşen adı: `PascalCase` (ör: `TourCard`, `BookingForm`)
+
+### State Yönetimi
+- **Server state** (API'den gelen veri): TanStack Query
+- **Client state** (UI durumu, cart): Zustand
+- **Form state**: React Hook Form
+- Redux, Context API (global state için) KULLANILMAZ.
+
+### Stil Kuralları
+- Tailwind CSS utility-first yaklaşımı kullanılır.
+- Inline style KULLANILMAZ.
+- Shadcn/ui bileşenlerini özelleştirmek için `cn()` utility kullanılır.
+- Responsive: mobile-first (`sm:`, `md:`, `lg:`, `xl:`)
+- Dark mode: `dark:` prefix ile.
+
+### API İletişimi
+- Tüm API çağrıları `services/` klasöründeki fonksiyonlar üzerinden yapılır.
+- Doğrudan `fetch()` veya `axios` çağrısı bileşen içinde YAPILMAZ.
+- API base URL: `NEXT_PUBLIC_API_URL` env değişkeninden gelir.
+- Auth token: axios interceptor ile otomatik eklenir.
+
+### SEO Kuralları
+- Marketing sayfaları (`(marketing)/`) mutlaka SSR olmalı.
+- Her sayfada `metadata` export'u veya `generateMetadata` olmalı.
+- Görsellerde `alt` attribute zorunlu.
+- Structured data (JSON-LD) tur ve otel sayfalarında olmalı.
+
+### Performance
+- Görseller: `next/image` ile optimize edilmeli.
+- Code splitting: dynamic import (`next/dynamic`) ağır bileşenler için.
+- Bundle size: `@next/bundle-analyzer` ile izlenmeli.
+- Web Vitals: LCP < 2.5s, FID < 100ms, CLS < 0.1 hedeflenmeli.
+
+### Import Sırası
+```typescript
+// 1. React/Next.js
+import { useState } from 'react';
+import Link from 'next/link';
+
+// 2. Üçüncü parti kütüphaneler
+import { useQuery } from '@tanstack/react-query';
+
+// 3. Shared packages
+import type { Tour } from '@turta/shared-types';
+
+// 4. Internal — services, hooks, stores
+import { catalogService } from '@/services/catalog.service';
+import { useSearch } from '@/hooks/use-search';
+
+// 5. Bileşenler
+import { TourCard } from '@/components/features/tour/tour-card';
+import { Button } from '@/components/ui/button';
+
+// 6. Styles, assets (varsa)
+```

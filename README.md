@@ -1,48 +1,132 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# turta (tourtech)
 
-## Getting Started
+Türkiye turizm ekosistemi için **Nx + pnpm** monorepo: NestJS API + Next.js web.
 
-First, run the development server:
+Tasarıma ve iş kurallarına dokunulmadan korunan hedef yapı: **modüler monolit backend** + **App Router frontend** + **paylaşılan paketler**.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+| Doküman                                      | İçerik                            |
+| -------------------------------------------- | --------------------------------- |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Klasör sözleşmesi, SoC, alias’lar |
+| [docs/ONBOARDING.md](docs/ONBOARDING.md)     | Yeni geliştirici kurulumu         |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)     | Production / ortamlar             |
+
+---
+
+## Tech stack
+
+| Katman   | Teknoloji                                                                    |
+| -------- | ---------------------------------------------------------------------------- |
+| Monorepo | Nx 20, pnpm 9, TypeScript 5.8                                                |
+| Web      | Next.js 15 (App Router), React 19, Tailwind 4, TanStack Query                |
+| API      | NestJS 11, CQRS, EventEmitter, BullMQ                                        |
+| Data     | PostgreSQL 16, Prisma 6 (multi-schema), Redis 7                              |
+| Shared   | `@turta/shared-types`, `@turta/shared-constants`, `@turta/shared-validators` |
+
+---
+
+## Repo haritası
+
+```
+turta/
+├── apps/
+│   ├── api/                 # NestJS — tek backend (web + mobil)
+│   │   ├── prisma/          # schema, migrations, seed
+│   │   └── src/
+│   │       ├── core/        # auth, db, cache, mail, queue, storage, filters
+│   │       ├── shared/      # BusinessException, utils
+│   │       └── modules/     # catalog | booking | payment | identity | …
+│   └── web/                 # Next.js — UI only (Prisma yok)
+│       └── src/
+│           ├── app/         # (marketing|customer|partner|admin|auth)
+│           ├── components/  # ui | layout | features/*
+│           ├── services/    # HTTP client’lar
+│           ├── lib/         # utils, constants
+│           └── providers/
+├── packages/                # shared-types | shared-constants | shared-validators
+├── infrastructure/docker/   # local Postgres, Redis, …
+├── e2e/                     # Playwright
+└── docs/
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Kural:** UI iş kuralı yazmaz; API başka modülün service’ini import etmez (event ile konuşur).
+
+Detay: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+---
+
+## Getting started
+
+```bash
+pnpm install
+pnpm docker:up
+pnpm --filter api prisma migrate deploy
+pnpm --filter api prisma db seed
+pnpm dev
+```
+
+| Servis           | URL                            |
+| ---------------- | ------------------------------ |
+| Web (`apps/web`) | http://localhost:3001          |
+| API (`apps/api`) | http://localhost:4000          |
+| Swagger          | http://localhost:4000/api/docs |
+
+`pnpm dev` = web + api paralel (`pnpm dev:apps`).
+
+### Ortam değişkenleri
+
+| Dosya                   | Rol                                            |
+| ----------------------- | ---------------------------------------------- |
+| `.env.example` (kök)    | Workspace örnekleri                            |
+| `apps/api/.env.example` | API (DB, JWT, SMTP, Redis, …)                  |
+| `apps/web`              | `NEXT_PUBLIC_*` / API base URL (onboarding’de) |
+
+Gerçek `.env` dosyaları commit edilmez.
 
 ### Dev server sorun giderme
 
-Dev sunucusu "duruyor" gibi görünüyorsa genelde çökme değil, **birden fazla `next dev` örneği** veya **bozuk `.next` önbelleği** kaynaklıdır.
+1. Tek örnek çalıştırın — birden fazla `pnpm dev` açmayın.
+2. Çalışırken `.next` silmeyin — yalnızca sunucu kapalıyken.
+3. Temiz yeniden başlatma: `pnpm dev:clean`
 
-1. **Tek örnek çalıştırın** — Aynı anda birden fazla terminalde `npm run dev` açmayın.
-2. **Çalışırken `.next` silmeyin** — `rm -rf .next` yalnızca sunucu kapalıyken yapılmalı.
-3. **Temiz yeniden başlatma** — Sorun devam ederse:
-   ```bash
-   npm run dev:clean
-   ```
-   Bu komut önce mevcut dev süreçlerini durdurur, `.next` klasörünü siler ve sunucuyu yeniden başlatır.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Useful scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Komut                            | Açıklama                   |
+| -------------------------------- | -------------------------- |
+| `pnpm dev` / `pnpm dev:apps`     | Web :3001 + API :4000      |
+| `pnpm build:apps`                | Shared + web + api build   |
+| `pnpm db:migrate:deploy`         | Prisma migrate (api)       |
+| `pnpm db:seed`                   | API seed                   |
+| `pnpm docker:up` / `docker:down` | Local infra                |
+| `pnpm test:e2e`                  | Playwright (baseURL :3001) |
+| `pnpm lint`                      | web + api lint             |
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## Docker (local)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm docker:up
+# veya
+docker compose -f infrastructure/docker/docker-compose.yml up -d
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+BullMQ için Redis `maxmemory-policy noeviction` compose içinde ayarlıdır.
 
-## Deploy on Vercel
+```bash
+docker exec turta-redis redis-cli CONFIG GET maxmemory-policy
+# beklenen: noeviction
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Mimari ilkeler (kısa)
+
+1. **apps/web** içinde DB / Prisma yok — sadece HTTP.
+2. **apps/api** domain modülleri bağımsız; cross-module = event.
+3. Response sözleşmesi: `{ success, data, error, meta? }`.
+4. Global hata: `GlobalExceptionFilter` + `BusinessException`.
+5. İsimlendirme: klasör/dosya `kebab-case` (bkz. `.cursor/rules`).
+
+Bu README yalnızca yapı ve çalıştırma bilgisini tanımlar; UI tasarımı veya iş akışı değiştirilmez.
