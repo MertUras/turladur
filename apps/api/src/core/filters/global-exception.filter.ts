@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { Response } from 'express';
 
 import { BusinessException } from '../../shared/exceptions/business.exception';
@@ -55,7 +56,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       this.logger.error(exception.message, exception.stack);
     }
 
+    // 4xx / BusinessException → Sentry'ye gitmez (free kota + noise).
     if (status >= 500) {
+      Sentry.captureException(exception);
       this.logger.error(
         `${code}: ${message}`,
         exception instanceof Error ? exception.stack : undefined,

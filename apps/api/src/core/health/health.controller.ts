@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, NotFoundException } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 
@@ -42,5 +42,19 @@ export class HealthController {
             message: 'One or more dependencies are unreachable',
           },
     };
+  }
+
+  /**
+   * Band 0 Sentry smoke — only when ENABLE_SENTRY_SMOKE=true.
+   * Remove or keep gated; never leave open in prod without the flag.
+   */
+  @Public()
+  @Get('debug-sentry')
+  @ApiOperation({ summary: 'Sentry smoke (ENABLE_SENTRY_SMOKE=true only)' })
+  debugSentry(): never {
+    if (process.env.ENABLE_SENTRY_SMOKE !== 'true') {
+      throw new NotFoundException();
+    }
+    throw new Error('Sentry smoke test');
   }
 }
