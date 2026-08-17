@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Montserrat, Poppins } from 'next/font/google';
 
 import { AuthProvider } from '@/providers/auth-provider';
+import { PostHogProvider } from '@/providers/posthog-provider';
 import { QueryProvider } from '@/providers/query-provider';
 
 import './globals.css';
@@ -39,7 +40,9 @@ export default function RootLayout({
         className={`${montserrat.variable} ${poppins.variable} font-[family-name:var(--font-poppins)] antialiased`}
       >
         <QueryProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <PostHogProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </PostHogProvider>
         </QueryProvider>
       </body>
     </html>

@@ -16,6 +16,7 @@ import {
   bindAuthTokenHandlers,
   refreshAccessToken,
 } from '@/services/api-client';
+import { captureProductEvent } from '@/lib/product-analytics';
 import {
   getProfile,
   loginAgencyStaff,
@@ -195,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     accessTokenRef.current = result.accessToken;
     setAccessToken(result.accessToken);
     setUser(result.user);
+    captureProductEvent('login_success', { role: result.user.role });
     return result.user;
   }, []);
 
@@ -224,6 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessTokenRef.current = result.accessToken;
       setAccessToken(result.accessToken);
       setUser(synthetic);
+      captureProductEvent('login_success', { role: synthetic.role });
       return synthetic;
     },
     [login, clearSessionLocal],
@@ -245,6 +248,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessTokenRef.current = result.accessToken;
       setAccessToken(result.accessToken);
       setUser(synthetic);
+      captureProductEvent('login_success', { role: 'GUIDE' });
       return synthetic;
     },
     [],
@@ -261,6 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     accessTokenRef.current = result.accessToken;
     setAccessToken(result.accessToken);
     setUser(synthetic);
+    captureProductEvent('login_success', { role: 'BUS_COMPANY' });
     return synthetic;
   }, []);
 
@@ -279,6 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessTokenRef.current = result.accessToken;
       setAccessToken(result.accessToken);
       setUser(result.user);
+      captureProductEvent('login_success', { role: result.user.role });
       return result.user;
     },
     [],
