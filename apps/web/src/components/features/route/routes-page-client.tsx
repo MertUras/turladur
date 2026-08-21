@@ -10,6 +10,8 @@ import {
   Heart as HeartIcon,
   Map as MapIcon,
   MapPin as MapPinIcon,
+  Mountain as MountainIcon,
+  Building2 as BuildingOfficeIcon,
   Star as StarIcon,
   Users as UserGroupIcon,
 } from 'lucide-react';
@@ -44,15 +46,23 @@ interface RoutesApiResponse {
   };
 }
 
+/** Tour.category keys — partner Tur Tipi feed. Legacy keys still resolve on API. */
 const CATEGORY_ICONS: Record<
   string,
   React.ComponentType<{ className?: string }>
 > = {
+  CULTURAL: GlobeAltIcon,
+  NATURE: MapIcon,
+  BEACH: HeartIcon,
+  GASTRONOMY: MapPinIcon,
+  ADVENTURE: MountainIcon,
+  CITY: BuildingOfficeIcon,
+  // legacy bookmarks
   historical: GlobeAltIcon,
   nature: MapIcon,
   beach: HeartIcon,
   gastronomy: MapPinIcon,
-  family: UserGroupIcon,
+  family: BuildingOfficeIcon,
 };
 
 function RouteCardSkeleton() {
@@ -165,7 +175,7 @@ export default function RoutesPageClient() {
                   </p>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-neutral-700">
-                      {category.count} rota
+                      {category.count} tur
                     </span>
                     <span className="inline-flex items-center text-sm font-semibold text-neutral-950">
                       Keşfet

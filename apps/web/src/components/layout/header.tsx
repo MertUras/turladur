@@ -16,7 +16,7 @@ import {
 import { BrandLogo } from '@/components/brand/brand-logo';
 import DealsPopup from '@/components/layout/deals-popup';
 import { useAuth } from '@/providers/auth-provider';
-import { getAcentePanelHrefForRole } from '@/lib/panel-routes';
+import { getPanelHrefForRole } from '@/lib/panel-routes';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -33,7 +33,7 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
-  const panelHref = getAcentePanelHrefForRole(user?.role);
+  const panelHref = getPanelHrefForRole(user?.role);
   const authStatus = isSigningOut
     ? 'unauthenticated'
     : isAuthenticated
@@ -197,7 +197,7 @@ export function Header() {
   const lightBackgroundPrefixes = [
     '/blog',
     '/checkout',
-    '/tour/',
+    '/tours/',
     '/activities/',
     '/routes/',
     '/gastronomi',

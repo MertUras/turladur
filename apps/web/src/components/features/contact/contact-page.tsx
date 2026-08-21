@@ -1,8 +1,5 @@
 'use client';
-import ContactForm from './contact-form';
 
-import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   MapPin as MapPinIcon,
@@ -15,8 +12,8 @@ import {
 } from 'lucide-react';
 
 import { FaqSection } from '@/components/features/faq/faq-section';
+import ContactForm from './contact-form';
 
-// Ofis bilgileri
 const officeLocations = [
   {
     city: 'İstanbul',
@@ -41,103 +38,109 @@ const officeLocations = [
   },
 ];
 
+const channelCards = [
+  {
+    icon: PhoneIcon,
+    title: 'Müşteri Hizmetleri',
+    text: '7/24 müşteri hizmetleri ekibimiz her türlü sorunuz için yanınızda. Dilediğiniz zaman bizimle iletişime geçebilirsiniz.',
+    phone: '+90 850 123 45 67',
+    email: 'destek@tourtech.com',
+  },
+  {
+    icon: ClockIcon,
+    title: 'Rezervasyon',
+    text: 'Rezervasyon yapmak, değişiklik veya iptal işlemleri için uzman ekibimizle iletişime geçebilirsiniz.',
+    phone: '+90 850 123 45 68',
+    email: 'rezervasyon@tourtech.com',
+  },
+  {
+    icon: UserGroupIcon,
+    title: 'İş Ortaklığı',
+    text: 'Otel, tur operatörü veya aktivite sağlayıcısı olarak turta ile iş birliği yapmak için bizimle iletişime geçin.',
+    phone: '+90 850 123 45 69',
+    email: 'partner@tourtech.com',
+  },
+];
+
 export default function ContactPageContent() {
   return (
     <main className="bg-neutral-50 text-neutral-800">
-      {/* Hero Bölümü */}
-      <div className="relative bg-white pt-32 pb-20 lg:pt-40 lg:pb-28 overflow-hidden">
-        <div className="absolute top-0 right-0 w-full h-full lg:w-1/2 hidden lg:block">
-          <div className="h-full w-full relative">
-            <Image
-              src="https://images.unsplash.com/photo-1577412647305-991150c7d163?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
-              alt="Kurumsal İletişim"
-              fill
-              className="object-cover"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-l from-white/0 via-white/70 to-white"></div>
-          </div>
+      {/* Hero — brand first; soft surface instead of inset photo panel */}
+      <section className="relative overflow-hidden border-b border-neutral-200/80 bg-gradient-to-b from-white via-neutral-50 to-neutral-100/80 pt-36 pb-20 lg:pt-44 lg:pb-28">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.35]">
+          <div className="absolute -top-24 right-0 h-80 w-80 rounded-full bg-neutral-200/60 blur-3xl" />
+          <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-neutral-300/40 blur-3xl" />
         </div>
 
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="max-w-xl">
-              <div className="inline-flex items-center px-3 py-1 bg-sky-100 rounded-full text-sky-700 font-medium text-xs mb-6">
-                <BuildingOffice2Icon className="w-4 h-4 mr-1.5" />
-                Kurumsal İletişim
-              </div>
+        <div className="container relative z-10 mx-auto px-6">
+          <div className="mx-auto max-w-3xl text-center lg:mx-0 lg:max-w-xl lg:text-left">
+            <p className="mb-4 text-sm font-semibold tracking-[0.2em] text-neutral-950 uppercase">
+              turta
+            </p>
+            <h1 className="mb-6 text-4xl !leading-tight font-bold text-neutral-900 md:text-5xl lg:text-6xl">
+              Sizinle İletişimde Olmaktan Memnuniyet Duyarız
+            </h1>
+            <p className="mb-10 text-lg leading-relaxed text-neutral-600">
+              turta olarak değerli müşterilerimize ve iş ortaklarımıza
+              profesyonel hizmet sunmaktayız. Sorularınız ve talepleriniz için
+              bizimle iletişime geçebilirsiniz.
+            </p>
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-neutral-900 mb-6 !leading-tight">
-                Sizinle İletişimde Olmaktan{' '}
-                <span className="text-sky-600">Memnuniyet</span> Duyarız
-              </h1>
-              <p className="text-lg text-neutral-600 mb-10 leading-relaxed">
-                turta olarak değerli müşterilerimize ve iş ortaklarımıza
-                profesyonel hizmet sunmaktayız. Sorularınız ve talepleriniz için
-                bizimle iletişime geçebilirsiniz.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
-                <div className="flex items-center p-5 bg-neutral-100/50 rounded-lg border border-neutral-200/80">
-                  <div className="flex-shrink-0 mr-4">
-                    <div className="w-10 h-10 bg-sky-100 rounded-md flex items-center justify-center">
-                      <PhoneIcon className="w-5 h-5 text-sky-600" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-neutral-500 font-medium uppercase tracking-wider">
-                      Müşteri Hizmetleri
-                    </p>
-                    <p className="text-base font-semibold text-neutral-900">
-                      +90 850 123 45 67
-                    </p>
-                  </div>
+            <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex items-center rounded-lg border border-neutral-200/80 bg-white/80 p-5">
+                <div className="mr-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-neutral-100">
+                  <PhoneIcon className="h-5 w-5 text-neutral-950" />
                 </div>
-
-                <div className="flex items-center p-5 bg-neutral-100/50 rounded-lg border border-neutral-200/80">
-                  <div className="flex-shrink-0 mr-4">
-                    <div className="w-10 h-10 bg-sky-100 rounded-md flex items-center justify-center">
-                      <EnvelopeIcon className="w-5 h-5 text-sky-600" />
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-neutral-500 font-medium uppercase tracking-wider">
-                      E-posta
-                    </p>
-                    <p className="text-base font-semibold text-neutral-900">
-                      iletisim@tourtech.com
-                    </p>
-                  </div>
+                <div className="text-left">
+                  <p className="text-xs font-medium tracking-wider text-neutral-500 uppercase">
+                    Müşteri Hizmetleri
+                  </p>
+                  <p className="text-base font-semibold text-neutral-900">
+                    +90 850 123 45 67
+                  </p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3">
-                <a
-                  href="#contactForm"
-                  className="px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-lg transition-colors shadow-sm inline-flex items-center text-sm"
-                >
-                  <UserIcon className="w-4 h-4 mr-2" />
-                  İletişim Formu
-                </a>
-                <a
-                  href="#offices"
-                  className="px-6 py-3 bg-white hover:bg-neutral-100 text-sky-600 font-medium rounded-lg transition-colors shadow-sm border border-neutral-200 inline-flex items-center text-sm"
-                >
-                  <MapPinIcon className="w-4 h-4 mr-2" />
-                  Ofislerimiz
-                </a>
+              <div className="flex items-center rounded-lg border border-neutral-200/80 bg-white/80 p-5">
+                <div className="mr-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-neutral-100">
+                  <EnvelopeIcon className="h-5 w-5 text-neutral-950" />
+                </div>
+                <div className="text-left">
+                  <p className="text-xs font-medium tracking-wider text-neutral-500 uppercase">
+                    E-posta
+                  </p>
+                  <p className="text-base font-semibold text-neutral-900">
+                    iletisim@tourtech.com
+                  </p>
+                </div>
               </div>
             </div>
-            <div></div>
+
+            <div className="flex flex-wrap justify-center gap-3 lg:justify-start">
+              <a
+                href="#contactForm"
+                className="inline-flex items-center rounded-lg bg-neutral-950 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-neutral-800"
+              >
+                <UserIcon className="mr-2 h-4 w-4" />
+                İletişim Formu
+              </a>
+              <a
+                href="#offices"
+                className="inline-flex items-center rounded-lg border border-neutral-200 bg-white px-6 py-3 text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-50"
+              >
+                <MapPinIcon className="mr-2 h-4 w-4" />
+                Ofislerimiz
+              </a>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* İletişim Kartları */}
-      <div className="py-24 bg-neutral-100/70">
+      {/* Channels */}
+      <section className="border-b border-neutral-200/80 bg-white py-20 md:py-24">
         <div className="container mx-auto px-6">
-          <div className="mb-16 text-center max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
+          <div className="mx-auto mb-14 max-w-3xl text-center">
+            <h2 className="mb-4 text-3xl font-bold text-neutral-900 md:text-4xl">
               İletişim Kanallarımız
             </h2>
             <p className="text-lg text-neutral-600">
@@ -147,79 +150,45 @@ export default function ContactPageContent() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: PhoneIcon,
-                color: 'sky',
-                title: 'Müşteri Hizmetleri',
-                text: '7/24 müşteri hizmetleri ekibimiz her türlü sorunuz için yanınızda. Dilediğiniz zaman bizimle iletişime geçebilirsiniz.',
-                phone: '+90 850 123 45 67',
-                email: 'destek@tourtech.com',
-              },
-              {
-                icon: ClockIcon,
-                color: 'green',
-                title: 'Rezervasyon',
-                text: 'Rezervasyon yapmak, değişiklik veya iptal işlemleri için uzman ekibimizle iletişime geçebilirsiniz.',
-                phone: '+90 850 123 45 68',
-                email: 'rezervasyon@tourtech.com',
-              },
-              {
-                icon: UserGroupIcon,
-                color: 'purple',
-                title: 'İş Ortaklığı',
-                text: 'Otel, tur operatörü veya aktivite sağlayıcısı olarak turta ile iş birliği yapmak için bizimle iletişime geçin.',
-                phone: '+90 850 123 45 69',
-                email: 'partner@tourtech.com',
-              },
-            ].map((card, index) => (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            {channelCards.map((card) => (
               <div
-                key={index}
-                className="bg-white rounded-xl p-8 shadow-sm hover:shadow-md transition-shadow duration-300 border border-neutral-200/80 flex flex-col"
+                key={card.title}
+                className="flex flex-col rounded-xl border border-neutral-200/80 bg-neutral-50/50 p-8 shadow-sm transition-shadow hover:shadow-md"
               >
-                <div
-                  className={`rounded-lg bg-${card.color}-100 p-3 inline-flex items-center justify-center w-12 h-12 mb-6`}
-                >
-                  <card.icon className={`w-6 h-6 text-${card.color}-600`} />
+                <div className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-lg bg-neutral-100">
+                  <card.icon className="h-6 w-6 text-neutral-950" />
                 </div>
-                <h3 className="text-xl font-semibold text-neutral-900 mb-3">
+                <h3 className="mb-3 text-xl font-semibold text-neutral-900">
                   {card.title}
                 </h3>
-                <p className="text-neutral-600 mb-6 flex-grow text-sm leading-relaxed">
+                <p className="mb-6 flex-grow text-sm leading-relaxed text-neutral-600">
                   {card.text}
                 </p>
-                <div className="space-y-3 pt-5 border-t border-neutral-100">
+                <div className="space-y-3 border-t border-neutral-200/80 pt-5">
                   <div className="flex items-center text-sm">
-                    <PhoneIcon
-                      className={`w-4 h-4 text-${card.color}-600 mr-3 flex-shrink-0`}
-                    />
+                    <PhoneIcon className="mr-3 h-4 w-4 shrink-0 text-neutral-950" />
                     <p className="font-medium text-neutral-800">{card.phone}</p>
                   </div>
                   <div className="flex items-center text-sm">
-                    <EnvelopeIcon
-                      className={`w-4 h-4 text-${card.color}-600 mr-3 flex-shrink-0`}
-                    />
-                    <p className="text-neutral-700 hover:text-neutral-900 transition-colors">
-                      {card.email}
-                    </p>
+                    <EnvelopeIcon className="mr-3 h-4 w-4 shrink-0 text-neutral-950" />
+                    <p className="text-neutral-700">{card.email}</p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* İletişim Formu ve Harita */}
-      <div id="contactForm" className="py-24 bg-white">
+      {/* Form + map */}
+      <section id="contactForm" className="bg-neutral-50 py-20 md:py-24">
         <div className="container mx-auto px-6">
-          <div className="mb-16 text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center px-3 py-1 bg-sky-100 rounded-full text-sky-700 font-medium text-xs mb-6">
-              <EnvelopeIcon className="w-4 h-4 mr-1.5" />
+          <div className="mx-auto mb-14 max-w-3xl text-center">
+            <p className="mb-3 text-sm font-semibold tracking-wider text-neutral-950 uppercase">
               İletişim Formu
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
+            </p>
+            <h2 className="mb-4 text-3xl font-bold text-neutral-900 md:text-4xl">
               Bizimle İletişime Geçin
             </h2>
             <p className="text-lg text-neutral-600">
@@ -228,14 +197,14 @@ export default function ContactPageContent() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-start">
-            <div className="bg-white rounded-xl p-8 lg:p-10 shadow-lg border border-neutral-200/60 lg:col-span-3">
+          <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-5 lg:gap-14">
+            <div className="rounded-xl border border-neutral-200/80 bg-white p-8 shadow-sm lg:col-span-3 lg:p-10">
               <ContactForm />
             </div>
 
-            <div className="lg:col-span-2 space-y-8">
-              <div className="bg-neutral-50/80 rounded-xl p-8 border border-neutral-200/80">
-                <h3 className="text-xl font-semibold text-neutral-900 mb-5 pb-4 border-b border-neutral-200">
+            <div className="space-y-6 lg:col-span-2">
+              <div className="rounded-xl border border-neutral-200/80 bg-white p-8">
+                <h3 className="mb-5 border-b border-neutral-200 pb-4 text-xl font-semibold text-neutral-900">
                   Genel Merkez
                 </h3>
                 <div className="space-y-4">
@@ -250,10 +219,10 @@ export default function ContactPageContent() {
                       icon: ClockIcon,
                       text: 'Pazartesi - Cuma: 09:00 - 18:00',
                     },
-                  ].map((item, index) => (
-                    <div key={index} className="flex items-start">
-                      <item.icon className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
-                      <p className="ml-3 text-neutral-700 text-sm">
+                  ].map((item) => (
+                    <div key={item.text} className="flex items-start">
+                      <item.icon className="mt-0.5 h-5 w-5 shrink-0 text-neutral-950" />
+                      <p className="ml-3 text-sm text-neutral-700">
                         {item.text}
                       </p>
                     </div>
@@ -261,7 +230,7 @@ export default function ContactPageContent() {
                 </div>
               </div>
 
-              <div className="rounded-xl overflow-hidden shadow-md border border-neutral-200/80 h-[300px] relative">
+              <div className="relative h-[300px] overflow-hidden rounded-xl border border-neutral-200/80 shadow-sm">
                 <iframe
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3008.2589461255607!2d29.004343316232286!3d41.07661201791399!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14cab63f6f4a844b%3A0x41e8e7a9ca36f0f3!2sLevent%2C%20B%C3%BCy%C3%BCkdere%20Cd.%20201%2C%2034394%20%C5%9Ei%C5%9Fli%2F%C4%B0stanbul!5e0!3m2!1str!2str!4v1615376568447!5m2!1str!2str"
                   width="100%"
@@ -272,22 +241,24 @@ export default function ContactPageContent() {
                   referrerPolicy="no-referrer-when-downgrade"
                   title="turta İstanbul Ofisi"
                   className="absolute inset-0"
-                ></iframe>
+                />
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Ofisler */}
-      <div id="offices" className="py-24 bg-neutral-50">
+      {/* Offices */}
+      <section
+        id="offices"
+        className="border-t border-neutral-200/80 bg-white py-20 md:py-24"
+      >
         <div className="container mx-auto px-6">
-          <div className="mb-16 text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center px-3 py-1 bg-sky-100 rounded-full text-sky-700 font-medium text-xs mb-6">
-              <BuildingOffice2Icon className="w-4 h-4 mr-1.5" />
+          <div className="mx-auto mb-14 max-w-3xl text-center">
+            <p className="mb-3 text-sm font-semibold tracking-wider text-neutral-950 uppercase">
               Ofislerimiz
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-neutral-900 mb-4">
+            </p>
+            <h2 className="mb-4 text-3xl font-bold text-neutral-900 md:text-4xl">
               Global Ağımız
             </h2>
             <p className="text-lg text-neutral-600">
@@ -297,46 +268,46 @@ export default function ContactPageContent() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {officeLocations.map((office, index) => (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {officeLocations.map((office) => (
               <div
-                key={index}
-                className="bg-white rounded-xl p-6 hover:shadow-lg transition-shadow duration-300 border border-neutral-200/80 flex flex-col"
+                key={office.city}
+                className="flex flex-col rounded-xl border border-neutral-200/80 bg-neutral-50/40 p-6 transition-shadow hover:shadow-md"
               >
-                <div className="flex items-center mb-6">
-                  <div className="w-11 h-11 bg-sky-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                    <BuildingOffice2Icon className="w-5 h-5 text-sky-600" />
+                <div className="mb-6 flex items-center">
+                  <div className="mr-4 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-neutral-100">
+                    <BuildingOffice2Icon className="h-5 w-5 text-neutral-950" />
                   </div>
                   <div>
-                    <span className="text-xs text-sky-600 font-medium uppercase tracking-wider">
+                    <span className="text-xs font-medium tracking-wider text-neutral-500 uppercase">
                       turta
                     </span>
-                    <h3 className="text-lg font-semibold text-neutral-900 leading-tight">
+                    <h3 className="text-lg leading-tight font-semibold text-neutral-900">
                       {office.city} Ofisi
                     </h3>
                   </div>
                 </div>
-                <div className="space-y-3 text-sm flex-grow mb-6">
+                <div className="mb-6 flex-grow space-y-3 text-sm">
                   {[
                     { icon: MapPinIcon, text: office.address },
                     { icon: PhoneIcon, text: office.phone },
                     { icon: EnvelopeIcon, text: office.email },
                     { icon: ClockIcon, text: office.hours },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start">
-                      <item.icon className="w-4 h-4 text-neutral-400 flex-shrink-0 mt-0.5" />
+                  ].map((item) => (
+                    <div key={item.text} className="flex items-start">
+                      <item.icon className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
                       <p className="ml-3 text-neutral-600">{item.text}</p>
                     </div>
                   ))}
                 </div>
-                <div className="mt-auto pt-5 border-t border-neutral-100">
+                <div className="mt-auto border-t border-neutral-200/80 pt-5">
                   <a
                     href={`https://maps.google.com/?q=${encodeURIComponent(office.address)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center text-sm text-sky-600 font-medium hover:text-sky-700 transition-colors group"
+                    className="inline-flex items-center text-sm font-medium text-neutral-950 transition-colors hover:text-neutral-700"
                   >
-                    <MapPinIcon className="w-4 h-4 mr-1.5 group-hover:animate-pulse" />
+                    <MapPinIcon className="mr-1.5 h-4 w-4" />
                     Yol Tarifi Al
                   </a>
                 </div>
@@ -344,59 +315,59 @@ export default function ContactPageContent() {
             ))}
           </div>
 
-          <div className="mt-16 bg-gradient-to-r from-sky-50 to-blue-50 rounded-xl p-8 md:p-10 border border-sky-100/70">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="mt-14 rounded-xl border border-neutral-200 bg-neutral-50 p-8 md:p-10">
+            <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
               <div className="max-w-lg">
-                <h3 className="text-xl font-semibold text-neutral-900 mb-2">
+                <h3 className="mb-2 text-xl font-semibold text-neutral-900">
                   Kurumsal Ziyaretçiler İçin
                 </h3>
-                <p className="text-neutral-600 text-sm">
+                <p className="text-sm text-neutral-600">
                   Kurumsal görüşmeler ve özel toplantılar için lütfen iletişim
                   formumuz üzerinden önceden randevu talep ediniz.
                 </p>
               </div>
               <a
                 href="#contactForm"
-                className="inline-flex items-center px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-lg transition-colors shadow-sm text-sm flex-shrink-0 whitespace-nowrap"
+                className="inline-flex shrink-0 items-center whitespace-nowrap rounded-lg bg-neutral-950 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-neutral-800"
               >
-                <UserIcon className="w-4 h-4 mr-2" />
+                <UserIcon className="mr-2 h-4 w-4" />
                 Randevu Talep Et
               </a>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <FaqSection contactHref="#contactForm" />
 
       {/* CTA */}
-      <div className="py-20 bg-gradient-to-r from-sky-600 to-blue-700">
+      <section className="bg-neutral-950 py-16 md:py-20">
         <div className="container mx-auto px-6 text-center">
-          <div className="max-w-3xl mx-auto">
-            <h3 className="text-3xl md:text-4xl font-bold text-white mb-5">
+          <div className="mx-auto max-w-3xl">
+            <h3 className="mb-5 text-3xl font-bold text-white md:text-4xl">
               Profesyonel Tatil Planlaması için turta
             </h3>
-            <p className="text-lg text-sky-100 mb-10">
+            <p className="mb-10 text-lg text-neutral-300">
               En iyi otel, tur ve aktivite seçenekleriyle unutulmaz bir tatil
               deneyimi için hemen keşfetmeye başlayın.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Link
                 href="/"
-                className="inline-block px-7 py-3 bg-white text-sky-700 font-medium rounded-lg transition-colors hover:bg-sky-50 shadow-sm text-sm"
+                className="inline-block rounded-lg bg-white px-7 py-3 text-sm font-semibold text-neutral-950 transition-colors hover:bg-neutral-100"
               >
                 Tüm Seyahat Seçenekleri
               </Link>
               <Link
                 href="/tours"
-                className="inline-block px-7 py-3 bg-sky-700/50 text-white border border-sky-400/50 font-medium rounded-lg transition-colors hover:bg-sky-700 hover:border-sky-400 shadow-sm text-sm"
+                className="inline-block rounded-lg border border-neutral-600 bg-transparent px-7 py-3 text-sm font-medium text-white transition-colors hover:border-neutral-400 hover:bg-neutral-900"
               >
                 Özel Turlar
               </Link>
             </div>
           </div>
         </div>
-      </div>
+      </section>
     </main>
   );
 }

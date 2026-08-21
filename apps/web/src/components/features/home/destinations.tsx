@@ -11,13 +11,17 @@ export async function Destinations() {
 
   try {
     const result = await listRoutes();
-    featuredRoutes = (result.routes ?? [])
-      .filter((route) => route.tourCount > 0)
-      .sort((a, b) => {
-        if (b.tourCount !== a.tourCount) return b.tourCount - a.tourCount;
-        return (b.avgRating ?? 0) - (a.avgRating ?? 0);
-      })
-      .slice(0, HOMEPAGE_ROUTE_LIMIT);
+    const sortedByReviews = [...(result.routes ?? [])].sort((a, b) => {
+      const aReviews = a.reviewCount ?? 0;
+      const bReviews = b.reviewCount ?? 0;
+      if (bReviews !== aReviews) return bReviews - aReviews;
+      if (b.tourCount !== a.tourCount) return b.tourCount - a.tourCount;
+      return (b.avgRating ?? 0) - (a.avgRating ?? 0);
+    });
+    const withTours = sortedByReviews.filter((route) => route.tourCount > 0);
+    featuredRoutes = (
+      withTours.length >= HOMEPAGE_ROUTE_LIMIT ? withTours : sortedByReviews
+    ).slice(0, HOMEPAGE_ROUTE_LIMIT);
   } catch {
     return null;
   }
@@ -31,10 +35,10 @@ export async function Destinations() {
       <div className="container mx-auto max-w-7xl px-6">
         <div className="mx-auto mb-12 max-w-3xl text-center">
           <div className="mb-6 inline-flex items-center justify-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-800">
-            Popüler Turlar
+            Rotalar
           </div>
           <h2 className="mb-4 text-3xl font-bold text-neutral-900 md:text-4xl">
-            Keşfedilecek Yeni Yerler
+            Popüler Rotalar
           </h2>
           <p className="text-lg text-neutral-600">
             Türkiye&apos;nin en çok tercih edilen seyahat rotalarını keşfedin.
@@ -90,7 +94,7 @@ export async function Destinations() {
             href="/routes"
             className="inline-flex items-center justify-center rounded-lg border border-neutral-300 bg-white px-7 py-3 text-sm font-medium text-neutral-800 shadow-sm transition-colors hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-950 focus:ring-offset-2"
           >
-            Tüm Turları Gör
+            Tüm Rotaları Gör
             <ChevronRight className="ml-1.5 h-5 w-5" />
           </Link>
         </div>

@@ -23,7 +23,7 @@ export function FaqSection({
     <div className="bg-white py-24">
       <div className="container mx-auto px-6">
         <div className="mx-auto mb-16 max-w-3xl text-center">
-          <div className="mb-6 inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-xs font-medium text-sky-700">
+          <div className="mb-6 inline-flex items-center rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-800">
             <QuestionMarkCircleIcon className="mr-1.5 h-4 w-4" />
             Sıkça Sorulan Sorular
           </div>
@@ -67,7 +67,7 @@ export function FaqSection({
             {isHash ? (
               <a
                 href={contactHref}
-                className="inline-flex items-center rounded-lg border border-neutral-200 bg-white px-6 py-3 text-sm font-medium text-sky-600 shadow-sm transition-colors hover:bg-neutral-100"
+                className="inline-flex items-center rounded-lg border border-neutral-200 bg-white px-6 py-3 text-sm font-medium text-neutral-950 shadow-sm transition-colors hover:bg-neutral-100"
               >
                 <EnvelopeIcon className="mr-2 h-4 w-4" />
                 Bize Sorun
@@ -75,7 +75,7 @@ export function FaqSection({
             ) : (
               <Link
                 href={contactHref}
-                className="inline-flex items-center rounded-lg border border-neutral-200 bg-white px-6 py-3 text-sm font-medium text-sky-600 shadow-sm transition-colors hover:bg-neutral-100"
+                className="inline-flex items-center rounded-lg border border-neutral-200 bg-white px-6 py-3 text-sm font-medium text-neutral-950 shadow-sm transition-colors hover:bg-neutral-100"
               >
                 <EnvelopeIcon className="mr-2 h-4 w-4" />
                 Bize Sorun

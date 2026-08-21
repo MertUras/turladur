@@ -45,6 +45,10 @@ function ToursPageContent() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [apiTourRows, setApiTourRows] = useState<Record<string, unknown>[]>([]);
+  /** Facet counts — exclude region/departure so selecting one chip doesn’t zero the others. */
+  const [facetSourceRows, setFacetSourceRows] = useState<
+    Record<string, unknown>[]
+  >([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('popular');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for desktop filter panel toggle
@@ -116,10 +120,10 @@ function ToursPageContent() {
     setFilteredRegions(regions);
   }, []);
 
-  // extras.departureCity / extras.region → facet sayaçları (API facet endpoint yok)
+  // Facet sayaçları: region/departure seçiminden bağımsız kaynak
   useEffect(() => {
-    const cities = buildDepartureFacets(apiTourRows);
-    const regions = buildRegionFacets(apiTourRows);
+    const cities = buildDepartureFacets(facetSourceRows);
+    const regions = buildRegionFacets(facetSourceRows);
     setDepartureCityOptions(cities);
     setRegionOptions(regions);
 
@@ -140,7 +144,7 @@ function ToursPageContent() {
           )
         : regions,
     );
-  }, [apiTourRows, departureSearch, regionSearch]);
+  }, [facetSourceRows, departureSearch, regionSearch]);
 
   // Hero ve header linklerinden gelen URL parametrelerini uygula
   useEffect(() => {
@@ -280,6 +284,7 @@ function ToursPageContent() {
   const serverStayKind = filterOptions.stayKind;
   const serverDestinationScope = filterOptions.destinationScope;
   const serverDepartureCity = filterOptions.departureCity;
+  const serverRegion = filterOptions.region;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -298,7 +303,6 @@ function ToursPageContent() {
                 : 'createdAt';
 
         const params = new URLSearchParams({
-          // extras (kalkış/bölge) client-side; facet + filtre için tek seferde yeterince tur çek
           page: '1',
           limit: String(TOURS_FACET_FETCH_LIMIT),
           sortBy: nestSort,
@@ -323,9 +327,6 @@ function ToursPageContent() {
         }
         if (serverDestinationScope) {
           params.set('destinationScope', serverDestinationScope);
-        }
-        if (serverDepartureCity) {
-          params.set('departureCity', serverDepartureCity);
         }
         if (serverDuration) {
           const allowedDurations = new Set(['1', '2-3', '4-6', '7+']);
@@ -356,17 +357,30 @@ function ToursPageContent() {
           }
         }
 
+        // List query: include region + departure (narrow results)
+        const listParams = new URLSearchParams(params);
+        if (serverDepartureCity) {
+          listParams.set('departureCity', serverDepartureCity);
+        }
+        if (serverRegion) {
+          listParams.set('region', serverRegion);
+        }
+        // Facet query: omit region + departure so chip counts stay stable
+        const facetParams = new URLSearchParams(params);
+
         try {
-          const { data: rows } = await searchToursByQueryString(
-            params.toString(),
-            controller.signal,
-          );
-          setApiTourRows(
-            (Array.isArray(rows) ? rows : []) as unknown as Record<
-              string,
-              unknown
-            >[],
-          );
+          const [listResult, facetResult] = await Promise.all([
+            searchToursByQueryString(listParams.toString(), controller.signal),
+            searchToursByQueryString(facetParams.toString(), controller.signal),
+          ]);
+          const listRows = Array.isArray(listResult.data)
+            ? listResult.data
+            : [];
+          const facetRows = Array.isArray(facetResult.data)
+            ? facetResult.data
+            : [];
+          setApiTourRows(listRows as unknown as Record<string, unknown>[]);
+          setFacetSourceRows(facetRows as unknown as Record<string, unknown>[]);
         } catch (error) {
           if (controller.signal.aborted) {
             return;
@@ -393,6 +407,7 @@ function ToursPageContent() {
               : 'Turlar yüklenirken bir sorun oluştu.',
           );
           setApiTourRows([]);
+          setFacetSourceRows([]);
         } finally {
           if (!controller.signal.aborted) {
             setIsLoading(false);
@@ -417,6 +432,7 @@ function ToursPageContent() {
     serverStayKind,
     serverDestinationScope,
     serverDepartureCity,
+    serverRegion,
   ]);
 
   const filteredTours = useMemo(() => {

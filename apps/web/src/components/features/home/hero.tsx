@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, type ComponentType } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import {
   MapPin as MapPinIcon,
   CalendarDays as CalendarDaysIcon,
@@ -82,14 +82,9 @@ type HeroProps = {
 
 export function Hero({ variant = 'default' }: HeroProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   // State'ler
   const [searchQuery, setSearchQuery] = useState('');
-  const [routeSearchQuery, setRouteSearchQuery] = useState('');
-  const [routeCategory, setRouteCategory] = useState('');
-  const [routeDuration, setRouteDuration] = useState('');
-  const [routeSeason, setRouteSeason] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedDepartureCity, setSelectedDepartureCity] = useState<
     string | null
@@ -696,117 +691,6 @@ export function Hero({ variant = 'default' }: HeroProps) {
   };
   // --- End Modal Render Fonksiyonu ---
 
-  useEffect(() => {
-    if (variant !== 'routes') return;
-    setRouteSearchQuery(searchParams.get('search') || '');
-    setRouteCategory(searchParams.get('category') || '');
-    setRouteDuration(searchParams.get('duration') || '');
-    setRouteSeason(searchParams.get('season') || '');
-  }, [variant, searchParams]);
-
-  const handleRouteSearch = () => {
-    const params = new URLSearchParams();
-    if (routeSearchQuery.trim()) params.set('search', routeSearchQuery.trim());
-    if (routeCategory) params.set('category', routeCategory);
-    if (routeDuration) params.set('duration', routeDuration);
-    if (routeSeason) params.set('season', routeSeason);
-
-    const query = params.toString();
-    router.push(query ? `/routes?${query}` : '/routes');
-    document
-      .getElementById('popular-routes')
-      ?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const renderRoutesSearchForm = () => (
-    <div className="w-full max-w-5xl animate-slideUp delay-200">
-      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg p-5 sm:p-6 text-left border border-neutral-200/30">
-        <div className="relative">
-          <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400 pointer-events-none" />
-          <input
-            type="text"
-            value={routeSearchQuery}
-            onChange={(e) => setRouteSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleRouteSearch()}
-            className="block w-full pl-12 pr-28 py-3.5 border border-neutral-300 rounded-xl text-neutral-900 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-neutral-400 focus:border-neutral-950 text-sm"
-            placeholder="Rota ara... (örn: Kapadokya, Likya Yolu)"
-          />
-          <button
-            type="button"
-            onClick={handleRouteSearch}
-            className="absolute right-2 top-2 px-4 py-1.5 bg-neutral-950 hover:bg-neutral-800 text-white font-medium rounded-lg transition-colors text-sm"
-          >
-            Ara
-          </button>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label
-              htmlFor="route-category"
-              className="block text-sm font-medium text-neutral-700 mb-1"
-            >
-              Kategori
-            </label>
-            <select
-              id="route-category"
-              value={routeCategory}
-              onChange={(e) => setRouteCategory(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2.5 border border-neutral-300 bg-white rounded-lg text-sm text-neutral-900 focus:outline-none focus:ring-neutral-400 focus:border-neutral-950"
-            >
-              <option value="">Tüm Kategoriler</option>
-              <option value="historical">Tarihi & Kültürel</option>
-              <option value="nature">Doğa & Manzara</option>
-              <option value="beach">Deniz & Plaj</option>
-              <option value="gastronomy">Gastronomi</option>
-              <option value="family">Aile Dostu</option>
-            </select>
-          </div>
-          <div>
-            <label
-              htmlFor="route-duration"
-              className="block text-sm font-medium text-neutral-700 mb-1"
-            >
-              Süre
-            </label>
-            <select
-              id="route-duration"
-              value={routeDuration}
-              onChange={(e) => setRouteDuration(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2.5 border border-neutral-300 bg-white rounded-lg text-sm text-neutral-900 focus:outline-none focus:ring-neutral-400 focus:border-neutral-950"
-            >
-              <option value="">Tüm Süreler</option>
-              <option value="1-day">1 gün</option>
-              <option value="2-3-days">2-3 gün</option>
-              <option value="4-7-days">4-7 gün</option>
-              <option value="7-plus-days">7+ gün</option>
-            </select>
-          </div>
-          <div>
-            <label
-              htmlFor="route-season"
-              className="block text-sm font-medium text-neutral-700 mb-1"
-            >
-              Sezon
-            </label>
-            <select
-              id="route-season"
-              value={routeSeason}
-              onChange={(e) => setRouteSeason(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2.5 border border-neutral-300 bg-white rounded-lg text-sm text-neutral-900 focus:outline-none focus:ring-neutral-400 focus:border-neutral-950"
-            >
-              <option value="">Tüm Sezonlar</option>
-              <option value="spring">İlkbahar</option>
-              <option value="summer">Yaz</option>
-              <option value="autumn">Sonbahar</option>
-              <option value="winter">Kış</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   const isRoutesVariant = variant === 'routes';
 
   const renderMobileSearchRow = ({
@@ -973,7 +857,7 @@ export function Hero({ variant = 'default' }: HeroProps) {
         }`}
       >
         <div
-          className={`w-full max-w-4xl animate-fadeIn ${isRoutesVariant ? 'mb-10 md:mb-12' : 'mb-4 md:mb-10'}`}
+          className={`w-full max-w-4xl animate-fadeIn ${isRoutesVariant ? 'mb-0' : 'mb-4 md:mb-10'}`}
         >
           <h1
             className="text-[1.75rem] leading-tight sm:text-4xl md:text-6xl lg:text-[64px] font-bold mb-3 md:mb-5 tracking-tight text-white"
@@ -998,9 +882,7 @@ export function Hero({ variant = 'default' }: HeroProps) {
           </p>
         </div>
 
-        {isRoutesVariant ? (
-          renderRoutesSearchForm()
-        ) : (
+        {!isRoutesVariant ? (
           <>
             <div className="md:hidden w-full max-w-lg">
               {renderMobileSearchCard()}
@@ -1009,7 +891,7 @@ export function Hero({ variant = 'default' }: HeroProps) {
               {renderDesktopSearchBar()}
             </div>
           </>
-        )}
+        ) : null}
       </div>
 
       {!isRoutesVariant && renderSearchModal()}

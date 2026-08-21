@@ -1,9 +1,17 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Search, X } from 'lucide-react';
+import { listRoutes } from '@/services/route';
 import { useToursPageUi } from './tours-page-context';
 
 const TOURS_RESULTS_ANCHOR_ID = 'tours-results';
+
+type MarketplaceStats = {
+  routeCount: number | null;
+  operatorCount: number | null;
+  avgRating: number | null;
+};
 
 function scrollToToursResults() {
   document.getElementById(TOURS_RESULTS_ANCHOR_ID)?.scrollIntoView({
@@ -12,9 +20,54 @@ function scrollToToursResults() {
   });
 }
 
-/** Split from tours-page-client.tsx (Faz 7) — hero; UI unchanged. */
+function formatStat(value: number | null, loading: boolean): string {
+  if (loading || value === null) return '—';
+  return String(value);
+}
+
+function formatRating(value: number | null, loading: boolean): string {
+  if (loading || value === null) return '—';
+  return `${value.toFixed(1)}/5`;
+}
+
+/** Split from tours-page-client.tsx (Faz 7) — hero; stats from Nest catalog routes. */
 export function ToursPageHero() {
   const { searchTerm, setSearchTerm, setLoading } = useToursPageUi();
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [stats, setStats] = useState<MarketplaceStats>({
+    routeCount: null,
+    operatorCount: null,
+    avgRating: null,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    setStatsLoading(true);
+    void listRoutes()
+      .then((body) => {
+        if (cancelled) return;
+        const next = body.stats;
+        setStats({
+          routeCount: next?.routeCount ?? null,
+          operatorCount: next?.operatorCount ?? null,
+          avgRating: next?.avgRating ?? null,
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setStats({
+          routeCount: null,
+          operatorCount: null,
+          avgRating: null,
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setStatsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleSearch() {
     setLoading(true);
@@ -85,18 +138,30 @@ export function ToursPageHero() {
           </div>
         </div>
 
-        {/* İstatistikler */}
+        {/* İstatistikler — Nest GET /catalog/routes stats (aynı kaynak: /routes) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 mt-12 max-w-4xl mx-auto">
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-            <div className="text-3xl font-bold text-white mb-1">100+</div>
+            <div
+              className={`text-3xl font-bold text-white mb-1 ${statsLoading ? 'animate-pulse' : ''}`}
+            >
+              {formatStat(stats.routeCount, statsLoading)}
+            </div>
             <div className="text-sm text-neutral-200">Tur Rotası</div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-            <div className="text-3xl font-bold text-white mb-1">50+</div>
+            <div
+              className={`text-3xl font-bold text-white mb-1 ${statsLoading ? 'animate-pulse' : ''}`}
+            >
+              {formatStat(stats.operatorCount, statsLoading)}
+            </div>
             <div className="text-sm text-neutral-200">Tur Operatörü</div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-            <div className="text-3xl font-bold text-white mb-1">4.8/5</div>
+            <div
+              className={`text-3xl font-bold text-white mb-1 ${statsLoading ? 'animate-pulse' : ''}`}
+            >
+              {formatRating(stats.avgRating, statsLoading)}
+            </div>
             <div className="text-sm text-neutral-200">Müşteri Puanı</div>
           </div>
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">

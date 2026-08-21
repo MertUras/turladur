@@ -2,6 +2,7 @@
 
 import type { LegacyTourCard as Tour } from '@/lib/tours/legacy-tour';
 import { DEFAULT_DEPARTURE_CITIES } from '@/lib/departure-cities';
+import { TOUR_GEO_REGIONS } from '@turta/shared-constants';
 import { resolveMediaUrl } from '@/lib/media';
 import type {
   DepartureCityOption,
@@ -125,10 +126,10 @@ export const mapTourFromApi = (tour: Record<string, unknown>): Tour => {
         ? destinations
         : JSON.stringify(destinations),
     region:
-      typeof extras.region === 'string'
-        ? extras.region
-        : typeof tour.region === 'string'
-          ? tour.region
+      typeof tour.region === 'string'
+        ? tour.region
+        : typeof extras.region === 'string'
+          ? extras.region
           : null,
     duration:
       tour.durationDays != null
@@ -186,7 +187,7 @@ export function matchesClientExtrasFilters(
   if (filterOptions.region) {
     const needle = normalizeFilterText(filterOptions.region);
     const region = normalizeFilterText(
-      String(extras.region ?? tour.region ?? ''),
+      String(tour.region ?? extras.region ?? ''),
     );
     if (!region || !(region === needle || region.includes(needle))) {
       return false;
@@ -214,15 +215,7 @@ export function matchesClientExtrasFilters(
   return true;
 }
 
-export const DEFAULT_TOUR_REGIONS = [
-  'Marmara',
-  'Ege',
-  'Akdeniz',
-  'İç Anadolu',
-  'Karadeniz',
-  'Doğu Anadolu',
-  'Güneydoğu Anadolu',
-] as const;
+export const DEFAULT_TOUR_REGIONS = TOUR_GEO_REGIONS;
 
 export const TOURS_FACET_FETCH_LIMIT = 100;
 
@@ -268,7 +261,7 @@ export function buildRegionFacets(
   const counts = new Map<string, number>();
   for (const tour of rows) {
     const extras = getTourExtrasRecord(tour);
-    const region = String(extras.region ?? tour.region ?? '').trim();
+    const region = String(tour.region ?? extras.region ?? '').trim();
     if (!region) continue;
     counts.set(region, (counts.get(region) ?? 0) + 1);
   }
