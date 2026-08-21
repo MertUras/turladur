@@ -75,6 +75,146 @@ export const TOUR_DESTINATION_SCOPE_LABELS: Record<
   [TourDestinationScope.INTERNATIONAL]: 'Yurtdışı',
 };
 
+/** Geographic regions for Tour.region / /tours Bölge filter (not curated routes). */
+export const TOUR_GEO_REGIONS = [
+  'Marmara',
+  'Ege',
+  'Akdeniz',
+  'İç Anadolu',
+  'Karadeniz',
+  'Doğu Anadolu',
+  'Güneydoğu Anadolu',
+] as const;
+
+export type TourGeoRegion = (typeof TOUR_GEO_REGIONS)[number];
+
+export const TOUR_GEO_REGION_CITIES: Record<TourGeoRegion, readonly string[]> =
+  {
+    Marmara: [
+      'İstanbul',
+      'Bursa',
+      'Kocaeli',
+      'Sakarya',
+      'Tekirdağ',
+      'Edirne',
+      'Kırklareli',
+      'Balıkesir',
+      'Çanakkale',
+      'Yalova',
+      'Bilecik',
+    ],
+    Ege: [
+      'İzmir',
+      'Aydın',
+      'Muğla',
+      'Denizli',
+      'Manisa',
+      'Afyonkarahisar',
+      'Kütahya',
+      'Uşak',
+    ],
+    Akdeniz: [
+      'Antalya',
+      'Mersin',
+      'Adana',
+      'Hatay',
+      'Osmaniye',
+      'Isparta',
+      'Burdur',
+      'Kahramanmaraş',
+    ],
+    'İç Anadolu': [
+      'Ankara',
+      'Konya',
+      'Kayseri',
+      'Eskişehir',
+      'Sivas',
+      'Aksaray',
+      'Karaman',
+      'Kırıkkale',
+      'Kırşehir',
+      'Nevşehir',
+      'Niğde',
+      'Yozgat',
+    ],
+    Karadeniz: [
+      'Trabzon',
+      'Rize',
+      'Artvin',
+      'Giresun',
+      'Ordu',
+      'Samsun',
+      'Sinop',
+      'Kastamonu',
+      'Zonguldak',
+      'Bartın',
+      'Düzce',
+      'Bolu',
+      'Amasya',
+      'Tokat',
+      'Gümüşhane',
+      'Bayburt',
+    ],
+    'Doğu Anadolu': [
+      'Erzurum',
+      'Erzincan',
+      'Kars',
+      'Ağrı',
+      'Iğdır',
+      'Ardahan',
+      'Malatya',
+      'Elazığ',
+      'Bingöl',
+      'Tunceli',
+      'Van',
+      'Bitlis',
+      'Muş',
+      'Hakkari',
+    ],
+    'Güneydoğu Anadolu': [
+      'Diyarbakır',
+      'Şanlıurfa',
+      'Mardin',
+      'Batman',
+      'Siirt',
+      'Şırnak',
+      'Adıyaman',
+      'Gaziantep',
+      'Kilis',
+    ],
+  };
+
+/** Map a TR city name to geographic region, or null if unknown. */
+export function resolveRegionFromCity(
+  city?: string | null,
+): TourGeoRegion | null {
+  const trimmed = city?.trim();
+  if (!trimmed) return null;
+  const folded = trimmed.toLocaleLowerCase('tr-TR');
+  for (const region of TOUR_GEO_REGIONS) {
+    if (
+      TOUR_GEO_REGION_CITIES[region].some(
+        (c) => c.toLocaleLowerCase('tr-TR') === folded,
+      )
+    ) {
+      return region;
+    }
+  }
+  return null;
+}
+
+/** Accept known region label or resolve from city; empty → null. */
+export function normalizeTourRegion(raw?: string | null): TourGeoRegion | null {
+  const trimmed = raw?.trim();
+  if (!trimmed) return null;
+  const folded = trimmed.toLocaleLowerCase('tr-TR');
+  const exact = TOUR_GEO_REGIONS.find(
+    (r) => r.toLocaleLowerCase('tr-TR') === folded,
+  );
+  if (exact) return exact;
+  return resolveRegionFromCity(trimmed);
+}
+
 export const CANONICAL_DEPARTURE_CITIES = [
   'İstanbul',
   'Ankara',
@@ -307,4 +447,50 @@ export function parseGoogleMapsUrl(
   }
 
   return null;
+}
+
+/** Partner form “Tur Tipi” labels (UI). */
+export const PARTNER_TOUR_TYPE_OPTIONS = [
+  'Kültür Turu',
+  'Doğa Turu',
+  'Balayı Turu',
+  'Yemek Turu',
+  'Macera Turu',
+  'Günübirlik Tur',
+] as const;
+
+export type PartnerTourTypeOption = (typeof PARTNER_TOUR_TYPE_OPTIONS)[number];
+
+/**
+ * Acente Tur Tipi / serbest metin → Tour.category.
+ * Feeds /routes interest cards and catalog filters.
+ */
+export function mapTourTypeToCategory(
+  tourType?: string | null,
+  region?: string | null,
+  features?: string[] | null,
+): TourCategory {
+  const haystack = [tourType ?? '', region ?? '', ...(features ?? [])]
+    .join(' ')
+    .toLocaleLowerCase('tr-TR');
+
+  if (/gastronomi|yemek|mutfak|gourmet|food/.test(haystack)) {
+    return TourCategory.GASTRONOMY;
+  }
+  if (/kültür|kultur|müze|muze|tarih|cultural/.test(haystack)) {
+    return TourCategory.CULTURAL;
+  }
+  if (/doğa|doga|nature|trek|yürüyüş|yuruyus/.test(haystack)) {
+    return TourCategory.NATURE;
+  }
+  if (/balayı|balayi|şehir|sehir|city|istanbul|ankara|izmir/.test(haystack)) {
+    return TourCategory.CITY;
+  }
+  if (/plaj|beach|deniz|kıyı|kiyi|antalya|muğla|mugla/.test(haystack)) {
+    return TourCategory.BEACH;
+  }
+  if (/macera|adventure|rafting|dalış|dalis|kayak/.test(haystack)) {
+    return TourCategory.ADVENTURE;
+  }
+  return TourCategory.ADVENTURE;
 }

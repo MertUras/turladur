@@ -7,6 +7,9 @@ export const ACENTE_BASE = '/acente';
 export const ACENTE_LOGIN = '/acente/giris';
 export const ACENTE_DASHBOARD = '/acente/dashboard';
 
+export const ADMIN_BASE = '/admin';
+export const ADMIN_DASHBOARD = '/admin/dashboard';
+
 export const ACENTE_ROUTES = {
   dashboard: '/acente/dashboard',
   tours: '/acente/tours',
@@ -25,20 +28,39 @@ export const ACENTE_ROUTES = {
     `/acente/tours/${tourId}/dates/${tourDateId}/seats`,
 } as const;
 
-/** Public site header “Panele Dön” — mirrors agency “Siteye Dön”. */
+const ADMIN_PANEL_ROLES = new Set([
+  'ADMIN',
+  'SUPER_ADMIN',
+  'PLATFORM_ADMIN',
+  'PLATFORM_SUPER_ADMIN',
+]);
+
+const ACENTE_PANEL_ROLES = new Set([
+  'PARTNER',
+  'PARTNER_STAFF',
+  'AGENCY_OWNER',
+  'AGENCY_ADMIN',
+  'AGENCY_STAFF',
+]);
+
+/**
+ * Public site header “Panele Dön” — mirrors panel “Site” / “Siteye Dön”.
+ * Returns the correct dashboard for the signed-in role, or null.
+ */
+export function getPanelHrefForRole(
+  role: string | null | undefined,
+): string | null {
+  if (!role) return null;
+  if (ADMIN_PANEL_ROLES.has(role)) return ADMIN_DASHBOARD;
+  if (ACENTE_PANEL_ROLES.has(role)) return ACENTE_DASHBOARD;
+  return null;
+}
+
+/** @deprecated Prefer getPanelHrefForRole — kept for existing imports. */
 export function getAcentePanelHrefForRole(
   role: string | null | undefined,
 ): string | null {
-  if (
-    role === 'PARTNER' ||
-    role === 'PARTNER_STAFF' ||
-    role === 'AGENCY_OWNER' ||
-    role === 'AGENCY_ADMIN' ||
-    role === 'AGENCY_STAFF'
-  ) {
-    return ACENTE_DASHBOARD;
-  }
-  return null;
+  return getPanelHrefForRole(role);
 }
 
 export const REHBER_BASE = '/rehber';

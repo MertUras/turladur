@@ -190,6 +190,10 @@ export interface Tour {
   stayKind?: TourStayKind;
   destinationScope?: TourDestinationScope;
   departureCities?: string[];
+  /** Geographic TR region (Marmara, Ege, …) — public /tours Bölge filter. */
+  region?: string | null;
+  /** Curated catalog route ids (kapadokya, istanbul, …). */
+  routeKeys?: string[];
   featured: boolean;
   averageRating: string;
   reviewCount: number;

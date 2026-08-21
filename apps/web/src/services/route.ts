@@ -1,7 +1,18 @@
 import { apiRequest } from './api-client';
 
+/** Curated destination route label (Kapadokya vs interest filter). */
 export type RouteCategory =
   'historical' | 'nature' | 'beach' | 'gastronomy' | 'family';
+
+/** Partner Tur Tipi → Tour.category interest card keys (+ legacy query aliases). */
+export type InterestCategoryKey =
+  | 'CULTURAL'
+  | 'NATURE'
+  | 'BEACH'
+  | 'GASTRONOMY'
+  | 'ADVENTURE'
+  | 'CITY'
+  | RouteCategory;
 
 export type RouteDefinition = {
   id: string;
@@ -21,6 +32,8 @@ export type RouteDefinition = {
 
 export type RouteWithStats = RouteDefinition & {
   tourCount: number;
+  /** Present when catalog API aggregates reviews; older payloads omit it. */
+  reviewCount?: number;
   priceRange: string | null;
   avgRating: number | null;
   computedDuration: string | null;
@@ -29,7 +42,7 @@ export type RouteWithStats = RouteDefinition & {
 export type RoutesListResponse = {
   routes: RouteWithStats[];
   categories: Array<{
-    key: RouteCategory;
+    key: InterestCategoryKey | string;
     name: string;
     description: string;
     color: string;
