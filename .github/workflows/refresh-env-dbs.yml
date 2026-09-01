@@ -1,20 +1,19 @@
-# Neon develop + staging: migrate + idempotent seed on a schedule.
-# Keeps shared demo data fresh for web Preview, Nest API, and mobile (via API).
+# Neon develop: migrate + idempotent seed (manual or scheduled).
+# Staging Neon branch removed (Free tier — single prod branch on Railway).
 #
-# Secrets (Direct connection URLs — not pooler):
-#   DEV_DATABASE_URL      → Neon branch `develop`
-#   STAGING_DATABASE_URL  → Neon branch `staging`
+# Secrets (Direct connection URL — not pooler):
+#   DEV_DATABASE_URL → Neon branch `develop` (must NOT be production host — see docs/CYBERPARK_PLAN.md §0)
 #
-# Note: cron only runs from the repo default branch. Use workflow_dispatch anytime.
+# DAILY CRON: disabled 2026-09-01 — Neon Free compute limit. Re-enable after Launch (§0.3).
+# Manual: Actions → Refresh Env DBs → Run workflow (workflow_dispatch).
 
 name: Refresh Env DBs
 
 on:
-  schedule:
-    # Dev: every day 03:00 UTC (06:00 TR)
-    - cron: '0 3 * * *'
-    # Staging: every 2 days 04:00 UTC (07:00 TR)
-    - cron: '0 4 */2 * *'
+  # --- Daily auto seed (OFF until Neon Launch — uncomment to restore) ---
+  # schedule:
+  #   # Dev: every day 03:00 UTC (06:00 TR)
+  #   - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       target:
@@ -23,9 +22,7 @@ on:
         type: choice
         options:
           - develop
-          - staging
-          - both
-        default: both
+        default: develop
 
 concurrency:
   group: refresh-env-dbs
@@ -35,8 +32,8 @@ jobs:
   refresh-develop:
     name: Refresh Neon develop
     if: >
-      github.event_name == 'schedule' && github.event.schedule == '0 3 * * *'
-      || (github.event_name == 'workflow_dispatch' && (inputs.target == 'develop' || inputs.target == 'both'))
+      github.event_name == 'schedule'
+      || (github.event_name == 'workflow_dispatch' && inputs.target == 'develop')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -68,46 +65,6 @@ jobs:
         working-directory: apps/api
         env:
           DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
-        run: |
-          pnpm exec prisma migrate deploy
-          pnpm exec prisma db seed
-
-  refresh-staging:
-    name: Refresh Neon staging
-    if: >
-      github.event_name == 'schedule' && github.event.schedule == '0 4 */2 * *'
-      || (github.event_name == 'workflow_dispatch' && (inputs.target == 'staging' || inputs.target == 'both'))
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      HUSKY: 0
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Require STAGING_DATABASE_URL
-        env:
-          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-        run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "::error::STAGING_DATABASE_URL secret eksik (Neon staging Direct URL)."
-            exit 1
-          fi
-
-      - name: Migrate + seed (staging)
-        working-directory: apps/api
-        env:
-          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
           pnpm exec prisma migrate deploy
           pnpm exec prisma db seed

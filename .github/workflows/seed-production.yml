@@ -1,0 +1,79 @@
+# One-off / manual: Neon production → migrate + demo seed (canlı turlar).
+#
+# Tetik: Sadece workflow_dispatch — otomatik cron YOK (Neon Free CU).
+# Secret: PRODUCTION_DATABASE_URL — Neon `production` branch **Direct** URL (?sslmode=require)
+#   Pooler URL migrate/seed için kullanılmaz.
+#
+# Önkoşul: Railway API DATABASE_URL = aynı branch **pooled** URL + redeploy.
+# Bkz. docs/CYBERPARK_PLAN.md §0.5
+
+name: Seed Production (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_seed:
+        description: 'Migrate only (seed atla)'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: seed-production
+  cancel-in-progress: false
+
+jobs:
+  migrate-and-seed:
+    name: Production migrate + seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      HUSKY: 0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Require PRODUCTION_DATABASE_URL
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::PRODUCTION_DATABASE_URL secret eksik."
+            echo "Neon → production branch → Connect → Direct → GitHub Secrets."
+            echo "DEV_DATABASE_URL production ile aynı host ise aynı Direct URL'yi PRODUCTION_DATABASE_URL olarak ekleyin."
+            exit 1
+          fi
+
+      - name: Prisma migrate deploy (production)
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: pnpm exec prisma migrate deploy
+
+      - name: Prisma seed (demo tours — idempotent)
+        if: inputs.skip_seed != true
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        run: pnpm exec prisma db seed
+
+      - name: Done
+        run: |
+          echo "✓ Production DB güncellendi."
+          echo "Doğrula: curl https://turladur-zjyf.vercel.app/api/v1/health"
+          echo "         curl 'https://turladur-zjyf.vercel.app/api/v1/catalog/tours/search?limit=3'"
